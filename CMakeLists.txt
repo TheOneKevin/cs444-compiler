@@ -35,9 +35,9 @@ add_flex_bison_dependency(LEXER PARSER)
 message(STATUS "${LEXER_OUT}")
 
 add_executable(
-    helloworld
+    scanner
     "${LEXER_OUT}"
     "${PARSER_OUT}"
-    "tools/helloworld/main.cc"
+    "tools/scanner/main.cc"
 )
-target_include_directories(helloworld PRIVATE "${PARSER_DIR}")
+target_include_directories(scanner PRIVATE "${PARSER_DIR}")

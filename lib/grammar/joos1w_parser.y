@@ -14,6 +14,7 @@
 // Terminals
 
 %token NUMBER PLUS MINUS TIMES UMINUS LPAREN RPAREN
+%token FINAL
 
 // Precedence and associativity
 

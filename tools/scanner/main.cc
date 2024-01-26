@@ -20,11 +20,8 @@ int main(void) {
             continue;
         }
 
-        int ret;
-
-        if (yyparse(&ret) == 0) {
-            printf("= %d\n", ret);
-        }
+        while(int ret = yylex())
+            printf("%d\n", ret);
 
         yy_delete_buffer(state);
     }

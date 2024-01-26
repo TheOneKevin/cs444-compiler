@@ -13,6 +13,7 @@ INTEGER [0-9]+
 "*" { return TIMES; }
 "(" { return LPAREN; }
 ")" { return RPAREN; }
+"final" { return FINAL; }
 
 {INTEGER} {
     yylval = atoi(yytext);
