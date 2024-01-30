@@ -52,6 +52,8 @@ struct Operator {
         Or,
         BitwiseAnd,
         BitwiseOr,
+        BitwiseXor,
+        BitwiseNot,
         Increment,
         Decrement,
         Add,

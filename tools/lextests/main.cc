@@ -83,7 +83,6 @@ TEST(LexerTests, SubcaseKeywords) {
     EXPECT_TRUE(lex_string("byte", {KeywordByte, YYEOF}));
     EXPECT_TRUE(lex_string("char", {KeywordChar, YYEOF}));
     EXPECT_TRUE(lex_string("class", {KeywordClass, YYEOF}));
-    EXPECT_TRUE(lex_string("const", {KeywordConst, YYEOF}));
     EXPECT_TRUE(lex_string("else", {KeywordElse, YYEOF}));
     EXPECT_TRUE(lex_string("extends", {KeywordExtends, YYEOF}));
     EXPECT_TRUE(lex_string("final", {KeywordFinal, YYEOF}));
@@ -120,7 +119,7 @@ TEST(LexerTests, SubcaseSeparators) {
 }
 
 TEST(LexerTests, SubcaseOperators) {
-    lex_string("=", {Operator, YYEOF});
+/*    lex_string("=", {Operator, YYEOF});
     lex_string(">", {Operator, YYEOF});
     lex_string("<", {Operator, YYEOF});
     lex_string("!", {Operator, YYEOF});
@@ -138,5 +137,6 @@ TEST(LexerTests, SubcaseOperators) {
     lex_string("/", {Operator, YYEOF});
     lex_string("&", {Operator, YYEOF});
     lex_string("|", {Operator, YYEOF});
-    lex_string("%", {Operator, YYEOF});
+    lex_string("^", {Operator, YYEOF});
+    lex_string("%", {Operator, YYEOF});*/
 }

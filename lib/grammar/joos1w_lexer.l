@@ -31,7 +31,7 @@ Identifier              [a-zA-Z_][a-zA-Z0-9_]*
 
 /*
 Keyword: one of
-    abstract    boolean       byte      char        class     const
+    abstract    boolean       byte      char        class
     else        extends       final     for         if        implements 
     import      instanceof    int       interface   native    new       
     package     protected     public    return      short     static    
@@ -44,7 +44,6 @@ Keyword: one of
 "byte"          { return KeywordByte; }
 "char"          { return KeywordChar; }
 "class"         { return KeywordClass; }
-"const"         { return KeywordConst; }
 "else"          { return KeywordElse; }
 "extends"       { return KeywordExtends; }
 "final"         { return KeywordFinal; }
@@ -148,88 +147,33 @@ Operator: one of
  	=	>	<	! 
  	==	<=	>=	!=
     &&	||	&   |   
-    ++	--  +	-	
-    *	/	% 
+    ++	--  +	-
+    *	/	%   ^
+    ~
 */
 %}
 
-"=" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::Assign); 
-    return Operator;
-}
-">" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::GreaterThan); 
-    return Operator;
-}
-"<" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::LessThan);
-    return Operator;
-}
-"!" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::Not);
-    return Operator;
-}
-"==" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::Equal);
-    return Operator;
-}
-"<=" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::LessThanOrEqual);
-    return Operator;
-}
-">=" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::GreaterThanOrEqual);
-    return Operator;
-}
-"!=" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::NotEqual);
-    return Operator;
-}
-"&&" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::And);
-    return Operator;
-}
-"||" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::Or);
-    return Operator;
-}
-"&" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::BitwiseAnd);
-    return Operator;
-}
-"|" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::BitwiseOr);
-    return Operator;
-}
-"++" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::Increment);
-    return Operator;
-}
-"--" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::Decrement);
-    return Operator;
-}
-"+" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::Plus);
-    return Operator;
-}
-"-" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::Minus);
-    return Operator;
-}
-"*" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::Multiply);
-    return Operator;
-}
-
-"/" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::Divide);
-    return Operator;
-}
-"%" {
-    yylval.op = new parsetree::Operator(parsetree::Operator::Type::Modulo);
-    return Operator;
-}
+"="  { return OperatorAssign; }
+">"  { return OperatorGreaterThan; }
+"<"  { return OperatorLessThan; }
+"!"  { return OperatorNot; }
+"==" { return OperatorEqual; }
+"<=" { return OperatorLessThanOrEqual; }
+">=" { return OperatorGreaterThanOrEqual; }
+"!=" { return OperatorNotEqual; }
+"&&" { return OperatorAnd; }
+"||" { return OperatorOr; }
+"&"  { return OperatorBitwiseAnd; }
+"|"  { return OperatorBitwiseOr; }
+"++" { return OperatorIncrement; }
+"--" { return OperatorDecrement; }
+"+"  { return OperatorPlus; }
+"-"  { return OperatorMinus; }
+"*"  { return OperatorMultiply; }
+"/"  { return OperatorDivide; }
+"%"  { return OperatorModulo; }
+"^"  { return OperatorXor; }
+"~"  { return OperatorBitwiseNot; }
 
 {Identifier} {
     yylval.id = new parsetree::Identifier(yytext);
