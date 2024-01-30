@@ -67,7 +67,6 @@
 %token KeywordThis;
 %token KeywordVoid;
 %token KeywordWhile;
-%token Whitespace;
 %token Comment;
 
 // Precedence and associativity

@@ -11,13 +11,15 @@
 /* ========================================================================== */
 %}
 
-DecimalIntegerLiteral   [1-9][0-9]*[lL]?
+JavaCharacter           (\\b|\\t|\\n|\\f|\\r|\\\"|\\\'|\\\\|\\0|.)
+
+DecimalIntegerLiteral   (-?)(0|[1-9][0-9]*)
 BooleanLiteral          (true|false)
-CharacterLiteral        (x)
-StringLiteral           (x)
+CharacterLiteral        \'{JavaCharacter}\'
+StringLiteral           \"{JavaCharacter}*\"
 
 Whitespace              [ \t\r\n\f]+
-Comment                 (\/\/[^\n]*[\n])|((\/(\*|\*\*))[.\n]*\*\/)
+Comment                 (\/\/[^\n]*[\n])|((\/(\*|\*\*))(.*\n*)*\*\/)
 Identifier              [a-zA-Z_][a-zA-Z0-9_]*
 
 %%
@@ -64,6 +66,16 @@ Keyword: one of
 "this"          { return KeywordThis; }
 "void"          { return KeywordVoid; }
 "while"         { return KeywordWhile; }
+
+%{
+/* ========================================================================== */
+/*                        Whitespace & comment                                */
+/* ========================================================================== */
+%}
+
+{Whitespace} { }
+
+{Comment} { return Comment; }
 
 %{
 /* ========================================================================== */
@@ -218,16 +230,6 @@ Operator: one of
     yylval.op = new parsetree::Operator(parsetree::Operator::Type::Modulo);
     return Operator;
 }
-
-%{
-/* ========================================================================== */
-/*                        Whitespace & comment                                */
-/* ========================================================================== */
-%}
-
-{Whitespace} { return Whitespace; }
-
-{Comment} { return Comment; }
 
 {Identifier} {
     yylval.id = new parsetree::Identifier(yytext);

@@ -53,12 +53,28 @@ TEST(LexerTests, SubcaseHelloWorld) {
     ));
 }
 
+TEST(LexerTests, IntegerLiteral) {
+    EXPECT_TRUE(lex_string("-10 43532 0", {IntegerLiteral, IntegerLiteral, IntegerLiteral, YYEOF}));
+}
+
+TEST(LexerTests, CharacterLiteral) {
+   EXPECT_TRUE(lex_string("'a'", {CharacterLiteral, YYEOF}));
+   EXPECT_TRUE(lex_string("'%'", {CharacterLiteral, YYEOF}));
+   EXPECT_TRUE(lex_string("'\\b'", {CharacterLiteral, YYEOF}));
+}
+
+TEST(LexerTests, StringLiteral) {
+   EXPECT_TRUE(lex_string("\"\"", {StringLiteral, YYEOF}));
+   EXPECT_TRUE(lex_string("\"foo\"", {StringLiteral, YYEOF}));
+   EXPECT_TRUE(lex_string("\"\\b\\t\\n\\f\\r\\\"\\'064\"", {StringLiteral, YYEOF}));
+}
+
 TEST(LexerTests, SubcaseWhitespace) {
-    EXPECT_TRUE(lex_string("   ", {Whitespace, YYEOF}));
-    EXPECT_TRUE(lex_string(" \f  \t\t \n\n  \r \f  ", {Whitespace, YYEOF}));
-    EXPECT_TRUE(lex_string("//this is a comment \n", {YYEOF}));
-    EXPECT_TRUE(lex_string("/* this \n is \n a \n comment */", {YYEOF}));
-    EXPECT_TRUE(lex_string("/** this \n is \n a \n comment */", {YYEOF}));
+    EXPECT_TRUE(lex_string(" ", {YYEOF}));
+    EXPECT_TRUE(lex_string(" \f  \t\t \n\n  \r \f  ", {YYEOF}));
+    EXPECT_TRUE(lex_string("//this is a comment \n", {Comment, YYEOF}));
+    EXPECT_TRUE(lex_string("/* this is a comment */", {Comment, YYEOF}));
+    EXPECT_TRUE(lex_string("/** this \n is \n a \n comment */", {Comment, YYEOF}));
 }
 
 TEST(LexerTests, SubcaseKeywords) {
