@@ -54,6 +54,8 @@ struct Operator {
         BitwiseOr,
         Increment,
         Decrement,
+        Add,
+        Subtract,
         Multiply,
         Divide,
         Modulo,

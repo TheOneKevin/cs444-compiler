@@ -19,16 +19,23 @@ bool lex_string(
     if (!(state = yy_scan_bytes(str.c_str(), str.size()))) {
         return false;
     }
+
+    int i = 0;
     auto ptr = expected_tokens.begin();
     while(int ret = yylex()) {
         if (ret != *ptr) {
-            std::cout << "Expected token " << *ptr << " but got " << ret << "\n";
+            std::cout << "Expected token[" << i << "] to be " << *ptr << " but got " << ret << "\n";
             return false;
         }
         ptr++;
+        i++;
     }
-    if (ptr != expected_tokens.end()) {
-        std::cout << "Expected token " << *ptr << " but got EOF\n";
+    if(*ptr++ != YYEOF) {
+        std::cout << "Expected EOF but got " << *ptr << "\n";
+        return false;
+    }
+    if(ptr != expected_tokens.end()) {
+        std::cout << "Expected end of initializer list\n";
         return false;
     }
     yy_delete_buffer(state);
@@ -49,9 +56,9 @@ TEST(LexerTests, SubcaseHelloWorld) {
 TEST(LexerTests, SubcaseWhitespace) {
     EXPECT_TRUE(lex_string("   ", {Whitespace, YYEOF}));
     EXPECT_TRUE(lex_string(" \f  \t\t \n\n  \r \f  ", {Whitespace, YYEOF}));
-    // EXPECT_TRUE(lex_string("//this is a comment \n", {YYEOF}));
-    // EXPECT_TRUE(lex_string("/* this \n is \n a \n comment */", {YYEOF}));
-    // EXPECT_TRUE(lex_string("/** this \n is \n a \n comment */", {YYEOF}));
+    EXPECT_TRUE(lex_string("//this is a comment \n", {YYEOF}));
+    EXPECT_TRUE(lex_string("/* this \n is \n a \n comment */", {YYEOF}));
+    EXPECT_TRUE(lex_string("/** this \n is \n a \n comment */", {YYEOF}));
 }
 
 TEST(LexerTests, SubcaseKeywords) {
