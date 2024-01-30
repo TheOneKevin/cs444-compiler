@@ -52,15 +52,6 @@
 %token OperatorXor;
 %token OperatorBitwiseNot;
 
-%token SeparatorLeftParenthesis;
-%token SeparatorRightParenthesis;
-%token SeparatorLeftBrace;
-%token SeparatorRightBrace;
-%token SeparatorLeftBracket;
-%token SeparatorRightBracket;
-%token SeparatorSemicolon;
-%token SeparatorComma;
-%token SeparatorDot;
 
 %token KeywordAbstract;
 %token KeywordBoolean;
@@ -109,7 +100,7 @@ CompilationUnit
 
 PackageDeclaration
     : /* empty */
-    | KeywordPackage QualifiedIdentifier SeparatorSemicolon
+    | KeywordPackage QualifiedIdentifier ';'
     ;
 
 ImportDeclarations
@@ -118,7 +109,7 @@ ImportDeclarations
     ;
 
 ImportDeclaration
-    : KeywordImport QualifiedIdentifier SeparatorSemicolon
+    : KeywordImport QualifiedIdentifier ';'
     ;
 
 TypeDeclarations
@@ -147,7 +138,7 @@ ClassDeclaration
     ;
     
 ClassBody
-    : SeparatorLeftBrace ClassBodyList SeparatorRightBrace
+    : '{' ClassBodyList '}'
     ;
 
 ClassBodyList
@@ -156,7 +147,7 @@ ClassBodyList
     ;
 
 ClassBodyDeclaration
-    : SeparatorSemicolon
+    : ';'
     | ModifiersOpt MemberDecl
     ;
 
@@ -170,7 +161,7 @@ InterfaceDeclaration
     ;
 
 InterfaceBody
-    : SeparatorLeftBrace InterfaceBodyDeclList SeparatorRightBrace
+    : '{' InterfaceBodyDeclList '}'
     ;
 
 InterfaceBodyDeclList
@@ -179,13 +170,13 @@ InterfaceBodyDeclList
     ;
 
 InterfaceBodyDeclaration
-    : SeparatorSemicolon
+    : ';'
     | ModifiersOpt InterfaceMemberDecl
     ;
 
 InterfaceMemberDecl
-    : Type Identifier FormalParameters SeparatorSemicolon
-    | KeywordVoid Identifier FormalParameters SeparatorSemicolon
+    : Type Identifier FormalParameters ';'
+    | KeywordVoid Identifier FormalParameters ';'
     ;
 
 /* ========================================================================== */
@@ -209,7 +200,7 @@ MethodOrFieldRest
 
 MethodDeclaratorRest
     : FormalParameters Block
-    | FormalParameters SeparatorSemicolon
+    | FormalParameters ';'
     ;
 
 ConstructorDeclaratorRest
@@ -217,13 +208,13 @@ ConstructorDeclaratorRest
     ;
 
 FormalParameters
-    : SeparatorLeftParenthesis SeparatorRightParenthesis
-    | SeparatorLeftParenthesis FormalParameterList SeparatorRightParenthesis
+    : '(' ')'
+    | '(' FormalParameterList ')'
     ;
 
 FormalParameterList
     : FormalParameter
-    | FormalParameterList SeparatorComma FormalParameter
+    | FormalParameterList ',' FormalParameter
     ;
 
 FormalParameter
@@ -235,7 +226,7 @@ FormalParameter
 /* ========================================================================== */
 
 Block
-    : SeparatorLeftBrace BlockStatements SeparatorRightBrace
+    : '{' BlockStatements '}'
     ;
 
 BlockStatements
@@ -253,17 +244,17 @@ BlockStatement
 /* ========================================================================== */
 
 LocalVariableDeclarationStatement
-    : Type VariableDeclarators SeparatorSemicolon
+    : Type VariableDeclarators ';'
     ;
 
 VariableDeclaratorId
     : Identifier
-    | VariableDeclaratorId SeparatorLeftBracket SeparatorRightBracket
+    | VariableDeclaratorId '[' ']'
     ;
 
 VariableDeclarators
     : VariableDeclarator
-    | VariableDeclarators SeparatorComma VariableDeclarator
+    | VariableDeclarators ',' VariableDeclarator
     ;
 
 VariableDeclarator
@@ -272,8 +263,8 @@ VariableDeclarator
     
 VariableDeclaratorRest
     : /* empty */
-    | SeparatorLeftBracket SeparatorRightBrace
-    | SeparatorLeftBracket SeparatorRightBrace OperatorAssign VariableInitializer  
+    | '[' '}'
+    | '[' '}' OperatorAssign VariableInitializer  
     ;  
 
 VariableInitializer
@@ -282,12 +273,12 @@ VariableInitializer
     ;
 
 ArrayInitializer
-    : SeparatorLeftBrace ArrayInitializerList SeparatorRightBrace
+    : '{' ArrayInitializerList '}'
     ;
 
 ArrayInitializerList
     : Expression
-    | ArrayInitializerList SeparatorComma Expression
+    | ArrayInitializerList ',' Expression
     ;
 
 /* ========================================================================== */
@@ -298,21 +289,21 @@ Statement
     : Block
     | KeywordIf ParExpression Statement
     | KeywordIf ParExpression Statement KeywordElse Statement
-    | KeywordFor SeparatorLeftParenthesis
+    | KeywordFor '('
         LocalVariableDeclarationStatement
-        Expression SeparatorRightParenthesis
+        Expression ')'
         Statement
-    | KeywordFor SeparatorLeftParenthesis
+    | KeywordFor '('
         LocalVariableDeclarationStatement
-        Expression SeparatorSemicolon
-        Expression SeparatorRightParenthesis
+        Expression ';'
+        Expression ')'
         Statement
     | KeywordWhile ParExpression Statement
-    | KeywordReturn SeparatorSemicolon
-    | KeywordReturn Expression SeparatorSemicolon
-    | SeparatorSemicolon
-    | Expression SeparatorSemicolon
-    | Identifier SeparatorSemicolon
+    | KeywordReturn ';'
+    | KeywordReturn Expression ';'
+    | ';'
+    | Expression ';'
+    | Identifier ';'
     ;
 
 /* ========================================================================== */
@@ -321,12 +312,12 @@ Statement
 
 TypeList
     : Type
-    | TypeList SeparatorComma Type
+    | TypeList ',' Type
     ;
 
 Type
     : QualifiedIdentifier
-    | QualifiedIdentifier SeparatorLeftBracket SeparatorRightBracket
+    | QualifiedIdentifier '[' ']'
     | BasicType
     ;
 
@@ -359,14 +350,14 @@ Expression2Rest
 
 Expression3
     : PrefixOp Expression3
-    | SeparatorLeftParenthesis Type SeparatorRightParenthesis Expression3
+    | '(' Type ')' Expression3
     | Primary
     | PrimaryNoNewArray Selector
     | PrimaryNoNewArray Selector PostfixOp
     ;
 
 ParExpression
-    : SeparatorLeftParenthesis Expression SeparatorRightParenthesis
+    : '(' Expression ')'
     ;
 
 Primary
@@ -384,20 +375,20 @@ PrimaryNoNewArray
     ;
 
 Selector
-    : SeparatorDot Identifier
-    | SeparatorDot Identifier Arguments
-    | SeparatorDot KeywordThis
-    | SeparatorDot NewObjectExpr
-    | SeparatorLeftBracket Expression SeparatorRightBracket
+    : '.' Identifier
+    | '.' Identifier Arguments
+    | '.' KeywordThis
+    | '.' NewObjectExpr
+    | '[' Expression ']'
     ;
 
 Arguments
-    : SeparatorLeftParenthesis ArgumentList SeparatorRightParenthesis
+    : '(' ArgumentList ')'
     ;
 
 ArgumentList
     : Expression
-    | ArgumentList SeparatorComma Expression
+    | ArgumentList ',' Expression
     ;
 
 NewObjectExpr
@@ -414,7 +405,7 @@ DimExprs
     ;
     
 DimExpr
-    : SeparatorLeftBracket Expression SeparatorRightBracket
+    : '[' Expression ']'
     ;
 
 PostfixOp
@@ -456,7 +447,7 @@ InfixOp
 
 QualifiedIdentifier
     : Identifier
-    | QualifiedIdentifier SeparatorDot Identifier
+    | QualifiedIdentifier '.' Identifier
     ;
 
 Modifier

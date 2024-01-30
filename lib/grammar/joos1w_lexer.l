@@ -127,15 +127,15 @@ Separator: one of
 */
 %}
 
-"(" { return SeparatorLeftParenthesis; }
-")" { return SeparatorRightParenthesis; }
-"{" { return SeparatorLeftBrace; }
-"}" { return SeparatorRightBrace; }
-"[" { return SeparatorLeftBracket; }
-"]" { return SeparatorRightBracket; }
-";" { return SeparatorSemicolon; }
-"," { return SeparatorComma; }
-"." { return SeparatorDot; }
+"(" { return '('; }
+")" { return ')'; }
+"{" { return '{'; }
+"}" { return '}'; }
+"[" { return '['; }
+"]" { return ']'; }
+";" { return ';'; }
+"," { return ','; }
+"." { return '.'; }
 
 %{
 /* ========================================================================== */
