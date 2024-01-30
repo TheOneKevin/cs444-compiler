@@ -1,0 +1,6 @@
+{
+    "cmake.configureOnOpen": true,
+    "git.enableCommitSigning": false,
+    "yash.YYTYPE": "struct parsetree::Node*",
+    "editor.rulers": [80, 160]
+}
