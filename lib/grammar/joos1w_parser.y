@@ -23,291 +23,171 @@
     struct parsetree::Identifier *id;
 }
 
-%token<lit> IntegerLiteral;
-%token<lit> BooleanLiteral;
-%token<lit> StringLiteral;
-%token<lit> CharacterLiteral;
-%token<lit> NullLiteral;
-%token<id> Identifier;
+/* Literal, identifier and comment tokens */
+%token<lit> LITERAL;
+%token<id>  IDENTIFIER;
+%token COMMENT
 
-%token OperatorAssign;
-%token OperatorGreaterThan;
-%token OperatorLessThan;
-%token OperatorNot;
-%token OperatorEqual;
-%token OperatorLessThanOrEqual;
-%token OperatorGreaterThanOrEqual;
-%token OperatorNotEqual;
-%token OperatorAnd;
-%token OperatorOr;
-%token OperatorBitwiseAnd;
-%token OperatorBitwiseOr;
-%token OperatorIncrement;
-%token OperatorDecrement;
-%token OperatorPlus;
-%token OperatorMinus;
-%token OperatorMultiply;
-%token OperatorDivide;
-%token OperatorModulo;
-%token OperatorXor;
-%token OperatorBitwiseNot;
+/* Keyword tokens */
+%token ABSTRACT BOOLEAN BYTE CHAR CLASS ELSE EXTENDS FINAL FOR IF IMPLEMENTS
+%token IMPORT INSTANCEOF INT INTERFACE NATIVE NEW PACKAGE PROTECTED
+%token PUBLIC RETURN SHORT STATIC THIS VOID WHILE
 
+/* Operator tokens */
+%token OP_ASSIGN OP_GT OP_LT OP_NOT OP_EQ OP_LTE OP_GTE OP_NEQ OP_AND
+%token OP_OR OP_BIT_AND OP_BIT_OR OP_PLUS OP_MINUS OP_MUL OP_DIV OP_MOD
+%token OP_XOR OP_BIT_NOT
 
-%token KeywordAbstract;
-%token KeywordBoolean;
-%token KeywordByte;
-%token KeywordChar;
-%token KeywordClass;
-%token KeywordElse;
-%token KeywordExtends;
-%token KeywordFinal;
-%token KeywordFor;
-%token KeywordIf;
-%token KeywordImplements;
-%token KeywordImport;
-%token KeywordInstanceof;
-%token KeywordInt;
-%token KeywordInterface;
-%token KeywordNative;
-%token KeywordNew;
-%token KeywordPackage;
-%token KeywordProtected;
-%token KeywordPublic;
-%token KeywordReturn;
-%token KeywordShort;
-%token KeywordStatic;
-%token KeywordThis;
-%token KeywordVoid;
-%token KeywordWhile;
-%token Comment;
-
-%precedence KeywordIf
-%precedence KeywordElse
+%start Expression
 
 %%
 
 /* ========================================================================== */
-/*                               Grammar rules                                */
+/*            Assignment and Operator Expressions (non-primary)               */
 /* ========================================================================== */
 
-start
-    : CompilationUnit
+Expression
+    : AssignmentExpression
     ;
 
-CompilationUnit
-    : PackageDeclaration ImportDeclarations TypeDeclarations
+AssignmentExpression
+    : Assignment
+    | ConditionalOrExpression
     ;
 
-PackageDeclaration
-    : /* empty */
-    | KeywordPackage QualifiedIdentifier ';'
+Assignment
+    : AssignmentLhsExpression OP_ASSIGN AssignmentExpression
     ;
 
-ImportDeclarations
-    : /* empty */
-    | ImportDeclarations ImportDeclaration
+AssignmentLhsExpression
+    : ExpressionName
+    | FieldAccess
+    | ArrayAccess
     ;
 
-ImportDeclaration
-    : KeywordImport QualifiedIdentifier ';'
+PostfixExpression
+    : Primary
+    | ExpressionName
     ;
 
-TypeDeclarations
-    : /* empty */
-    | TypeDeclarations TypeDeclaration
+ConditionalOrExpression
+    : ConditionalAndExpression
+    | ConditionalOrExpression OP_OR ConditionalAndExpression
     ;
 
-TypeDeclaration
-    : ClassOrInterfaceDeclaration
+ConditionalAndExpression
+    : InclusiveOrExpression
+    | ConditionalAndExpression OP_AND InclusiveOrExpression
     ;
 
-/* ========================================================================== */
-/*                          Class declarations                                */
-/* ========================================================================== */
-
-ClassOrInterfaceDeclaration
-    : ModifiersOpt ClassDeclaration
-    | ModifiersOpt InterfaceDeclaration
+InclusiveOrExpression
+    : ExclusiveOrExpression
+    | InclusiveOrExpression OP_BIT_OR ExclusiveOrExpression
     ;
 
-ClassDeclaration
-    : KeywordClass Identifier ClassBody
-    | KeywordClass Identifier KeywordExtends Type ClassBody
-    | KeywordClass Identifier KeywordImplements Type ClassBody
-    | KeywordClass Identifier KeywordExtends Type KeywordImplements TypeList ClassBody
-    ;
-    
-ClassBody
-    : '{' ClassBodyList '}'
+ExclusiveOrExpression
+    : AndExpression
+    | ExclusiveOrExpression OP_XOR AndExpression
     ;
 
-ClassBodyList
-    : /* empty */
-    | ClassBodyList ClassBodyDeclaration
+AndExpression
+    : EqualityExpression
+    | AndExpression OP_BIT_AND EqualityExpression
     ;
 
-ClassBodyDeclaration
-    : ';'
-    | ModifiersOpt MemberDecl
+EqualityExpression
+    : RelationalExpression
+    | EqualityExpression OP_EQ RelationalExpression
+    | EqualityExpression OP_NEQ RelationalExpression
     ;
 
-/* ========================================================================== */
-/*                          Interface declarations                            */
-/* ========================================================================== */
-
-InterfaceDeclaration
-    : KeywordInterface Identifier InterfaceBody
-    | KeywordInterface Identifier KeywordExtends TypeList InterfaceBody
+RelationalExpression
+    : AdditiveExpression
+    | RelationalExpression OP_LT AdditiveExpression
+    | RelationalExpression OP_GT AdditiveExpression
+    | RelationalExpression OP_LTE AdditiveExpression
+    | RelationalExpression OP_GTE AdditiveExpression
+    | RelationalExpression INSTANCEOF Type
     ;
 
-InterfaceBody
-    : '{' InterfaceBodyDeclList '}'
+AdditiveExpression
+    : MultiplicativeExpression
+    | AdditiveExpression OP_PLUS MultiplicativeExpression
+    | AdditiveExpression OP_MINUS MultiplicativeExpression
     ;
 
-InterfaceBodyDeclList
-    : /* empty */
-    | InterfaceBodyDeclList InterfaceBodyDeclaration
+MultiplicativeExpression
+    : UnaryExpression
+    | MultiplicativeExpression OP_MUL UnaryExpression
+    | MultiplicativeExpression OP_DIV UnaryExpression
+    | MultiplicativeExpression OP_MOD UnaryExpression
     ;
 
-InterfaceBodyDeclaration
-    : ';'
-    | ModifiersOpt InterfaceMemberDecl
+UnaryExpression
+    : PostfixExpression
+    | OP_NOT UnaryExpression
+    | OP_BIT_NOT UnaryExpression
+    | CastExpression
     ;
 
-InterfaceMemberDecl
-    : Type Identifier FormalParameters ';'
-    | KeywordVoid Identifier FormalParameters ';'
-    ;
-
-/* ========================================================================== */
-/*                              Member declarations                           */
-/* ========================================================================== */
-
-MemberDecl
-    : MethodOrFieldDecl
-    | KeywordVoid Identifier MethodDeclaratorRest
-	| Identifier ConstructorDeclaratorRest
-    ;
-
-MethodOrFieldDecl
-    : Type Identifier MethodOrFieldRest
-    ;
-
-MethodOrFieldRest
-    : VariableDeclaratorRest
-    | MethodDeclaratorRest
-    ;
-
-MethodDeclaratorRest
-    : FormalParameters Block
-    | FormalParameters ';'
-    ;
-
-ConstructorDeclaratorRest
-    : FormalParameters Block
-    ;
-
-FormalParameters
-    : '(' ')'
-    | '(' FormalParameterList ')'
-    ;
-
-FormalParameterList
-    : FormalParameter
-    | FormalParameterList ',' FormalParameter
-    ;
-
-FormalParameter
-    : Type VariableDeclaratorId
+CastExpression
+    : '(' Type ')' UnaryExpression
     ;
 
 /* ========================================================================== */
-/*                              Block declarations                            */
+/*                          Primary expressions                               */
 /* ========================================================================== */
 
-Block
-    : '{' BlockStatements '}'
+Primary
+    : PrimaryNoNewArray
+    | ArrayCreationExpression
     ;
 
-BlockStatements
-    : /* empty */
-    | BlockStatements BlockStatement
+PrimaryNoNewArray
+    : LITERAL
+    | THIS
+    | '(' Expression ')'
+    | ClassInstanceCreationExpression
+    | FieldAccess
+    | ArrayAccess
+    | MethodInvocation
     ;
 
-BlockStatement
-    : LocalVariableDeclarationStatement
-    | Statement
+FieldAccess
+    : Primary '.' IDENTIFIER
     ;
 
-/* ========================================================================== */
-/*                           Variable declarations                            */
-/* ========================================================================== */
-
-LocalVariableDeclarationStatement
-    : Type VariableDeclarators ';'
+ArrayAccess
+    : PrimaryNoNewArray '[' Expression ']'
+    | ExpressionName '[' Expression ']'
     ;
 
-VariableDeclaratorId
-    : Identifier
-    | VariableDeclaratorId '[' ']'
+MethodInvocation
+    : IDENTIFIER '(' ArgumentList ')'
+    | Primary '.' IDENTIFIER '(' ArgumentList ')'
     ;
 
-VariableDeclarators
-    : VariableDeclarator
-    | VariableDeclarators ',' VariableDeclarator
+ArrayCreationExpression
+    : NEW QualifiedIdentifier '[' Expression ']'
     ;
 
-VariableDeclarator
-    : Identifier VariableDeclaratorRest
-    ;
-    
-VariableDeclaratorRest
-    : /* empty */
-    | '[' '}'
-    | '[' '}' OperatorAssign VariableInitializer  
-    ;  
-
-VariableInitializer
-    : ArrayInitializer
-    | Expression
+ClassInstanceCreationExpression
+    : NEW QualifiedIdentifier '(' ArgumentList ')'
+    | Primary '.' NEW QualifiedIdentifier '(' ArgumentList ')'
     ;
 
-ArrayInitializer
-    : '{' ArrayInitializerList '}'
-    ;
-
-ArrayInitializerList
+ArgumentList
     : Expression
-    | ArrayInitializerList ',' Expression
+    | ArgumentList ',' Expression
+    ;
+
+ExpressionName
+    : IDENTIFIER
+/*  | QualifiedIdentifier */
     ;
 
 /* ========================================================================== */
-/*                          Statement declarations                            */
-/* ========================================================================== */
-
-Statement
-    : Block
-    | KeywordIf ParExpression Statement
-    | KeywordIf ParExpression Statement KeywordElse Statement
-    | KeywordFor '('
-        LocalVariableDeclarationStatement
-        Expression ')'
-        Statement
-    | KeywordFor '('
-        LocalVariableDeclarationStatement
-        Expression ';'
-        Expression ')'
-        Statement
-    | KeywordWhile ParExpression Statement
-    | KeywordReturn ';'
-    | KeywordReturn Expression ';'
-    | ';'
-    | Expression ';'
-    | Identifier ';'
-    ;
-
-/* ========================================================================== */
-/*                          Type declarations                                 */
+/*                   Type, Modifiers and Identifiers                          */
 /* ========================================================================== */
 
 TypeList
@@ -322,152 +202,14 @@ Type
     ;
 
 BasicType
-    : KeywordBoolean
-    | KeywordByte
-    | KeywordChar
-    | KeywordShort
-    | KeywordInt
+    : BOOLEAN
+    | BYTE
+    | CHAR
+    | SHORT
+    | INT
     ;
-
-/* ========================================================================== */
-/*                      Expressions and statements                            */
-/* ========================================================================== */
-
-Expression
-    : Expression2
-    | Expression2 OperatorAssign Expression2
-    ;
-
-Expression2
-    : Expression3
-    | Expression3 Expression2Rest
-    ;
-
-Expression2Rest
-    : Expression2Rest InfixOp Expression3
-    | Expression3 KeywordInstanceof Type
-    ;
-
-Expression3
-    : PrefixOp Expression3
-    | '(' Type ')' Expression3
-    | Primary
-    | PrimaryNoNewArray Selector
-    | PrimaryNoNewArray Selector PostfixOp
-    ;
-
-ParExpression
-    : '(' Expression ')'
-    ;
-
-Primary
-    : PrimaryNoNewArray
-    | NewArrayExpr
-    ;
-
-PrimaryNoNewArray
-    : ParExpression
-    | KeywordThis
-    | Literal
-    | NewObjectExpr
-    | QualifiedIdentifier Identifier
-    | QualifiedIdentifier Arguments
-    ;
-
-Selector
-    : '.' Identifier
-    | '.' Identifier Arguments
-    | '.' KeywordThis
-    | '.' NewObjectExpr
-    | '[' Expression ']'
-    ;
-
-Arguments
-    : '(' ArgumentList ')'
-    ;
-
-ArgumentList
-    : Expression
-    | ArgumentList ',' Expression
-    ;
-
-NewObjectExpr
-    : KeywordNew QualifiedIdentifier Arguments
-    ;
-
-NewArrayExpr
-    : KeywordNew Type DimExprs
-    ;
-
-DimExprs
-    : DimExpr
-    | DimExprs DimExpr
-    ;
-    
-DimExpr
-    : '[' Expression ']'
-    ;
-
-PostfixOp
-    : OperatorIncrement
-    | OperatorDecrement
-    ;
-
-PrefixOp
-    : OperatorIncrement
-    | OperatorDecrement
-    | OperatorPlus
-    | OperatorMinus
-    | OperatorBitwiseNot
-    | OperatorNot
-    ;
-
-InfixOp
-    : OperatorPlus
-    | OperatorMinus
-    | OperatorMultiply
-    | OperatorDivide
-    | OperatorModulo
-    | OperatorXor
-    | OperatorBitwiseAnd
-    | OperatorBitwiseOr
-    | OperatorLessThan
-    | OperatorGreaterThan
-    | OperatorLessThanOrEqual
-    | OperatorGreaterThanOrEqual
-    | OperatorEqual
-    | OperatorNotEqual
-    | OperatorAnd
-    | OperatorOr
-    ;
-
-/* ========================================================================== */
-/*                                  Other rules                               */
-/* ========================================================================== */
 
 QualifiedIdentifier
-    : Identifier
-    | QualifiedIdentifier '.' Identifier
-    ;
-
-Modifier
-    : KeywordPublic
-    | KeywordProtected
-    | KeywordStatic
-    | KeywordFinal
-    | KeywordAbstract
-    | KeywordNative
-    ;
-
-ModifiersOpt
-    : /* empty */
-    | ModifiersOpt Modifier
-    ;
-
-Literal
-    : IntegerLiteral
-    | BooleanLiteral
-    | StringLiteral
-    | CharacterLiteral
-    | NullLiteral
+    : IDENTIFIER '.' IDENTIFIER
+    | QualifiedIdentifier '.' IDENTIFIER
     ;

@@ -39,32 +39,32 @@ Keyword: one of
 */
 %}
 
-"abstract"      { return KeywordAbstract; }
-"boolean"       { return KeywordBoolean; }
-"byte"          { return KeywordByte; }
-"char"          { return KeywordChar; }
-"class"         { return KeywordClass; }
-"else"          { return KeywordElse; }
-"extends"       { return KeywordExtends; }
-"final"         { return KeywordFinal; }
-"for"           { return KeywordFor; }
-"if"            { return KeywordIf; }
-"implements"    { return KeywordImplements; }
-"import"        { return KeywordImport; }
-"instanceof"    { return KeywordInstanceof; }
-"int"           { return KeywordInt; }
-"interface"     { return KeywordInterface; }
-"native"        { return KeywordNative; }
-"new"           { return KeywordNew; }
-"package"       { return KeywordPackage; }
-"protected"     { return KeywordProtected; }
-"public"        { return KeywordPublic; }
-"return"        { return KeywordReturn; }
-"short"         { return KeywordShort; }
-"static"        { return KeywordStatic; }
-"this"          { return KeywordThis; }
-"void"          { return KeywordVoid; }
-"while"         { return KeywordWhile; }
+"abstract"      { return ABSTRACT; }
+"boolean"       { return BOOLEAN; }
+"byte"          { return BYTE; }
+"char"          { return CHAR; }
+"class"         { return CLASS; }
+"else"          { return ELSE; }
+"extends"       { return EXTENDS; }
+"final"         { return FINAL; }
+"for"           { return FOR; }
+"if"            { return IF; }
+"implements"    { return IMPLEMENTS; }
+"import"        { return IMPORT; }
+"instanceof"    { return INSTANCEOF; }
+"int"           { return INT; }
+"interface"     { return INTERFACE; }
+"native"        { return NATIVE; }
+"new"           { return NEW; }
+"package"       { return PACKAGE; }
+"protected"     { return PROTECTED; }
+"public"        { return PUBLIC; }
+"return"        { return RETURN; }
+"short"         { return SHORT; }
+"static"        { return STATIC; }
+"this"          { return THIS; }
+"void"          { return VOID; }
+"while"         { return WHILE; }
 
 %{
 /* ========================================================================== */
@@ -74,7 +74,7 @@ Keyword: one of
 
 {Whitespace} { }
 
-{Comment} { return Comment; }
+{Comment} { return COMMENT; }
 
 %{
 /* ========================================================================== */
@@ -93,27 +93,27 @@ Literal: one of
 
 {DecimalIntegerLiteral} {
     yylval.lit = new parsetree::Literal(parsetree::Literal::Type::Integer, yytext);
-    return IntegerLiteral;
+    return LITERAL;
 }
 
 {BooleanLiteral} {
     yylval.lit = new parsetree::Literal(parsetree::Literal::Type::Boolean, yytext); 
-    return BooleanLiteral;
+    return LITERAL;
 }
 
 {CharacterLiteral} {
     yylval.lit = new parsetree::Literal(parsetree::Literal::Type::Character, yytext); 
-    return CharacterLiteral;
+    return LITERAL;
 }
 
 {StringLiteral} {
     yylval.lit = new parsetree::Literal(parsetree::Literal::Type::String, yytext); 
-    return StringLiteral;
+    return LITERAL;
 }
 
 "null" {
     yylval.lit = new parsetree::Literal(parsetree::Literal::Type::Null, yytext); 
-    return NullLiteral;
+    return LITERAL;
 }
 
 %{
@@ -153,31 +153,31 @@ Operator: one of
 */
 %}
 
-"="  { return OperatorAssign; }
-">"  { return OperatorGreaterThan; }
-"<"  { return OperatorLessThan; }
-"!"  { return OperatorNot; }
-"==" { return OperatorEqual; }
-"<=" { return OperatorLessThanOrEqual; }
-">=" { return OperatorGreaterThanOrEqual; }
-"!=" { return OperatorNotEqual; }
-"&&" { return OperatorAnd; }
-"||" { return OperatorOr; }
-"&"  { return OperatorBitwiseAnd; }
-"|"  { return OperatorBitwiseOr; }
-"++" { return OperatorIncrement; }
-"--" { return OperatorDecrement; }
-"+"  { return OperatorPlus; }
-"-"  { return OperatorMinus; }
-"*"  { return OperatorMultiply; }
-"/"  { return OperatorDivide; }
-"%"  { return OperatorModulo; }
-"^"  { return OperatorXor; }
-"~"  { return OperatorBitwiseNot; }
+"="  { return OP_ASSIGN; }
+">"  { return OP_GT; }
+"<"  { return OP_LT; }
+"!"  { return OP_NOT; }
+"==" { return OP_EQ; }
+"<=" { return OP_LTE; }
+">=" { return OP_GTE; }
+"!=" { return OP_NEQ; }
+"&&" { return OP_AND; }
+"||" { return OP_OR; }
+"&"  { return OP_BIT_AND; }
+"|"  { return OP_BIT_OR; }
+"++" { return OP_INC; }
+"--" { return OP_DEC; }
+"+"  { return OP_PLUS; }
+"-"  { return OP_MINUS; }
+"*"  { return OP_MUL; }
+"/"  { return OP_DIV; }
+"%"  { return OP_MOD; }
+"^"  { return OP_XOR; }
+"~"  { return OP_BIT_NOT; }
 
 {Identifier} {
     yylval.id = new parsetree::Identifier(yytext);
-    return Identifier;
+    return IDENTIFIER;
 }
 
 %{
