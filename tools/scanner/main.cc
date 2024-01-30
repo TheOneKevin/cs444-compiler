@@ -1,9 +1,7 @@
 #include <stdio.h>
 
-extern "C" {
 #include "lexer.h"
 #include "parser.h"
-}
 
 int main(void) {
     while (1) {

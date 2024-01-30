@@ -2,15 +2,21 @@ cmake_minimum_required(VERSION 3.21)
 
 project(OLKCompiler VERSION 1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+include(FetchContent)
+enable_testing()
+
+################################################################################
+# Flex and Bison targets
+################################################################################
 
 find_package(FLEX 2.6 REQUIRED)
 find_package(BISON 3.8 REQUIRED)
 
 set(PARSER_DIR "${CMAKE_CURRENT_BINARY_DIR}")
-set(LEXER_OUT "${PARSER_DIR}/joos1w_lexer.c")
-set(PARSER_OUT "${PARSER_DIR}/joos1w_parser.c")
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(LEXER_OUT "${PARSER_DIR}/joos1w_lexer.cpp")
+set(PARSER_OUT "${PARSER_DIR}/joos1w_parser.cpp")
 
 flex_target(
     LEXER
@@ -29,15 +35,48 @@ bison_target(
 add_flex_bison_dependency(LEXER PARSER)
 
 ################################################################################
-#           For every tool, create a new add_executable() call below           #
+# Testing and macros
 ################################################################################
 
-message(STATUS "${LEXER_OUT}")
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+)
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+include(GoogleTest)
 
-add_executable(
+# Macro to add an executable with lexer and parser sources
+macro(add_tool TARGET_NAME)
+    add_executable(${TARGET_NAME}
+        "${LEXER_OUT}"
+        "${PARSER_OUT}"
+        ${ARGN}
+    )
+    target_include_directories(${TARGET_NAME} PRIVATE
+        "${PARSER_DIR}"
+        lib
+    )
+endmacro()
+
+# Macro to add a test executable with lexer and parser sources
+macro(add_my_test TARGET_NAME)
+    add_tool(${TARGET_NAME} ${ARGN})
+    target_link_libraries(${TARGET_NAME} GTest::gtest_main)
+    gtest_discover_tests(${TARGET_NAME})
+endmacro()
+
+################################################################################
+#           For every tool, create a new add_*() call below                    #
+################################################################################
+
+add_my_test(
+    lextests
+    "tools/lextests/main.cc"
+)
+
+add_tool(
     scanner
-    "${LEXER_OUT}"
-    "${PARSER_OUT}"
     "tools/scanner/main.cc"
 )
-target_include_directories(scanner PRIVATE "${PARSER_DIR}")
