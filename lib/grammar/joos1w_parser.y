@@ -38,9 +38,19 @@
 %token OP_INC OP_DEC OP_OR OP_BIT_AND OP_BIT_OR OP_PLUS OP_MINUS OP_MUL
 %token OP_DIV OP_MOD OP_XOR OP_BIT_NOT INSTANCEOF
 
-%start Block // ExpressionOpt
+%start CompilationUnit
 
 %%
+
+/* ========================================================================== */
+/*                          Compliation Unit                                  */
+/* ========================================================================== */
+
+CompilationUnit
+    : Expression                                                                { *parse_tree_out = $1; }
+    //: PackageDeclaration ImportDeclarationsOpt TypeDeclarationsOpt
+    ;
+
 
 /* ========================================================================== */
 /*            Assignment and Operator Expressions (non-primary)               */
@@ -52,7 +62,7 @@ ExpressionOpt
     ;
 
 Expression
-    : AssignmentExpression { *parse_tree_out = $1; } /* TODO: Move this to compilation unit */
+    : AssignmentExpression
     ;
 
 AssignmentExpression
@@ -61,7 +71,7 @@ AssignmentExpression
     ;
 
 Assignment
-    : AssignmentLhsExpression OP_ASSIGN AssignmentExpression                    { $$ = new pt::Node(pty::Expression, $1, $3); }
+    : AssignmentLhsExpression OP_ASSIGN AssignmentExpression                    { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
     ;
 
 AssignmentLhsExpression
@@ -178,7 +188,7 @@ ArrayCreationExpression
 
 ClassInstanceCreationExpression
     : NEW QualifiedIdentifier '(' ArgumentList ')'                              { $$ = new pt::Node(pty::ClassInstanceCreationExpression, $2, $4); }
-    | Primary '.' NEW QualifiedIdentifier '(' ArgumentList ')'                  { $$ = new pt::Node(pty::ClassInstanceCreationExpression, $1, $3, $5); }
+    | Primary '.' NEW QualifiedIdentifier '(' ArgumentList ')'                  { $$ = new pt::Node(pty::ClassInstanceCreationExpression, $1, $4, $6); }
     ;
 
 ArgumentList
@@ -224,7 +234,7 @@ QualifiedIdentifier
 /* ========================================================================== */
 
 Block
-    : '{' BlockStatementsOpt '}'
+    : '{' BlockStatementsOpt '}'                                                { $$ = new pt::Node(pty::Block, $2); }
     ;
 
 BlockStatementsOpt
@@ -234,7 +244,7 @@ BlockStatementsOpt
 
 BlockStatements
     : BlockStatement
-    | BlockStatements BlockStatement
+    | BlockStatements BlockStatement                                            { $$ = new pt::Node(pty::BlockStatements, $1, $2); }
     ;
 
 // Assume not possible to have a class declaration here
@@ -270,11 +280,11 @@ StatementNoShortIf
     ;
 
 ExpressionStatement
-    : StatementExpression ';'
+    : StatementExpression ';'                                                   { $$ = $1; }
     ;
 
 ReturnStatement
-    : RETURN ExpressionOpt ';'
+    : RETURN ExpressionOpt ';'                                                  { $$ = $2; }
     ;
 
 StatementExpression

@@ -24,7 +24,9 @@ struct Node {
         MethodInvocation,
         ArrayCreationExpression,
         ClassInstanceCreationExpression,
-        ArgumentList
+        ArgumentList,
+        Block,
+        BlockStatements
     };
 
     Type type;
