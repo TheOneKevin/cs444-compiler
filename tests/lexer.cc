@@ -147,3 +147,16 @@ TEST(LexerTests, SubcaseOperators) {
     lex_string("^", {OP_XOR, YYEOF});
     lex_string("%", {OP_MOD, YYEOF});
 }
+
+TEST(LexerTests, SubcaseComplexOperators) {
+    lex_string("===", {OP_EQ, OP_ASSIGN, YYEOF});
+    lex_string("====", {OP_EQ, OP_EQ, YYEOF});
+
+    lex_string("==>", {OP_ASSIGN, OP_GTE, OP_ASSIGN, YYEOF});
+    lex_string(">==", {OP_GTE, OP_ASSIGN, YYEOF});
+    lex_string("=>=", {OP_ASSIGN, OP_GTE, OP_ASSIGN, YYEOF});
+    lex_string("==>", {OP_ASSIGN, OP_GTE, OP_ASSIGN, YYEOF});
+
+
+    lex_string("!==", {OP_NEQ, OP_ASSIGN, YYEOF})
+}

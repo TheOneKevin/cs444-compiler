@@ -36,7 +36,8 @@ StringLiteral           \"{JavaCharacter}*\"
 
 Whitespace              [ \t\r\f]+
 Newline                 \n
-Comment                 (\/\/[^\n]*)|((\/(\*|\*\*))(.*\n*)*\*\/)
+InlineComment           \/\/.*
+MultilineComment        \/(\*|\*\*)
 Identifier              [a-zA-Z_][a-zA-Z0-9_]*
 
 %%
@@ -105,17 +106,12 @@ Keyword: one of
     yycolumn = 1;
 }
 
-{Comment} {
-    // Iterate through the comment and count the number of newlines
-    // so we can update the line number
-    for (int i = 0; i < yyleng; i++) {
-        yycolumn++;
-        if (yytext[i] == '\n') {
-            yylineno++;
-            yycolumn = 1;
-        }
-    }
+{InlineComment} {
     return COMMENT;
+}
+
+{MultilineComment} {
+    
 }
 
 %{
@@ -189,7 +185,7 @@ Operator: one of
  	=	>	<	! 
  	==	<=	>=	!=
     &&	||	&   |   
-    ++	--  +	-
+    +	-
     *	/	%   ^
     ~
 */
@@ -237,4 +233,27 @@ int yylex(void) {
     (void) lexval;
     (void) location;
     return yylex(&yylval, &yylloc);
+}
+
+static void yyerror(const char* s) {
+    std::cerr << "Lexing error: " << s << std::endl;
+}
+
+static void comment(void) {
+    // Iterate through the comment and count the number of newlines
+    // so we can update the line number
+    int c;
+    while ((c = yyinput()) != 0) {
+        yycolumn++;
+        if (c == '*') {
+            while ((c = yyinput()) == '*') 
+            if (c == '/') return;
+            if (c == 0) break;
+        }
+        if (yytext[i] == '\n') {
+            yylineno++;
+            yycolumn = 1;
+        }
+    }
+    yyerror("unterminated comment");
 }
