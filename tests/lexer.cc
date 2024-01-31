@@ -138,8 +138,6 @@ TEST(LexerTests, SubcaseOperators) {
     lex_string("!=", {OP_NEQ, YYEOF});
     lex_string("&&", {OP_AND, YYEOF});
     lex_string("||", {OP_OR, YYEOF});
-    lex_string("++", {OP_INC, YYEOF});
-    lex_string("--", {OP_DEC, YYEOF});
     lex_string("+", {OP_PLUS, YYEOF});
     lex_string("-", {OP_MINUS, YYEOF});
     lex_string("*", {OP_MUL, YYEOF});

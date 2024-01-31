@@ -15,6 +15,7 @@ struct Node {
         Identifier,
         Operator,
         Type,
+        Modifier,
 
         // Rules
         CompilationUnit,
@@ -48,7 +49,10 @@ struct Node {
         VariableDeclarators,
         IfThenStatement,
         WhileStatement,
-        ForStatement
+        ForStatement,
+        ClassDeclaration,
+        Extends,
+        MethodHeader
     };
 
     Type type;
@@ -69,6 +73,7 @@ struct Node {
     {}
 
     virtual std::ostream& print(std::ostream& os) const;
+    void print_type(std::ostream& os) const;
 
     ~Node() {
         delete[] args;

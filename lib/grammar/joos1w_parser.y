@@ -35,7 +35,7 @@
 
 /* Operator tokens */
 %token OP_ASSIGN OP_GT OP_LT OP_NOT OP_EQ OP_LTE OP_GTE OP_NEQ OP_AND
-%token OP_INC OP_DEC OP_OR OP_BIT_AND OP_BIT_OR OP_PLUS OP_MINUS OP_MUL
+%token OP_OR OP_BIT_AND OP_BIT_OR OP_PLUS OP_MINUS OP_MUL
 %token OP_DIV OP_MOD OP_XOR OP_BIT_NOT INSTANCEOF
 
 %start CompilationUnit
@@ -47,7 +47,7 @@
 /* ========================================================================== */
 
 CompilationUnit
-    : PackageDeclarationOpt ImportDeclarationsOpt TypeDeclarationsOpt           { $$ = new pt::Node(pty::CompilationUnit, $1, $2, $3); }               
+    : PackageDeclarationOpt ImportDeclarationsOpt TypeDeclarationsOpt           { *parse_tree_out = new pt::Node(pty::CompilationUnit, $1, $2, $3); }               
     ;
 
 PackageDeclarationOpt
@@ -104,7 +104,7 @@ TypeDeclaration
 /* ========================================================================== */
 
 ClassDeclaration
-    : ClassModifiersOpt CLASS IDENTIFIER SuperOpt InterfaceOpt ClassBody                                    
+    : ClassModifiersOpt CLASS IDENTIFIER SuperOpt InterfaceOpt ClassBody        { $$ = new pt::Node(pty::ClassDeclaration, $1, $3, $4, $5, $6 ); }
     ;
 
 ClassModifiersOpt
@@ -113,7 +113,7 @@ ClassModifiersOpt
     ;
 
 ClassOrInterfaceModifiers
-    : ClassOrInterfaceModifier
+    : ClassOrInterfaceModifier                                                  { $$ = new pt::Node(pty::ClassModifiers); }
     | ClassOrInterfaceModifiers ClassOrInterfaceModifier                        { $$ = new pt::Node(pty::ClassModifiers, $1, $2); }
     ;
 
@@ -124,9 +124,9 @@ ClassOrInterfaceModifier
     ;
 
 SuperOpt
-    : %empty
-    | EXTENDS IDENTIFIER                                                        { $$ = $2; }
-    | EXTENDS QualifiedIdentifier                                               { $$ = $2; }
+    : %empty                                                                    { $$ = nullptr; }
+    | EXTENDS IDENTIFIER                                                        { $$ = new pt::Node(pty::Extends, $2); }
+    | EXTENDS QualifiedIdentifier                                               { $$ = new pt::Node(pty::Extends, $2); }
     ;
 
 InterfaceOpt
@@ -135,7 +135,7 @@ InterfaceOpt
     ;
 
 InterfaceTypeList
-    : InterfaceType
+    : InterfaceType                                                             { $$ = new pt::Node(pty::InterfaceTypeList, $1); }
     | InterfaceTypeList ',' InterfaceType                                       { $$ = new pt::Node(pty::InterfaceTypeList, $1, $3); }
     ;
 
@@ -196,8 +196,8 @@ MethodDeclaration
     ;
 
 MethodHeader
-    : MemberModifiersOpt VOID IDENTIFIER '(' FormalParameterListOpt ')'         { $$ = new pt::Node(pty::MethodDeclaration, $1, $3, $5); }
-    | MemberModifiersOpt Type IDENTIFIER '(' FormalParameterListOpt ')'         { $$ = new pt::Node(pty::MethodDeclaration, $1, $2, $3, $5); }
+    : MemberModifiersOpt VOID IDENTIFIER '(' FormalParameterListOpt ')'         { $$ = new pt::Node(pty::MethodHeader, $1, $3, $5); }
+    | MemberModifiersOpt Type IDENTIFIER '(' FormalParameterListOpt ')'         { $$ = new pt::Node(pty::MethodHeader, $1, $2, $3, $5); }
     ;
 
 
