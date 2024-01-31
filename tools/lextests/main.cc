@@ -61,56 +61,56 @@ TEST(LexerTests, SubcaseHelloWorld) {
 }
 
 TEST(LexerTests, IntegerLiteral) {
-    EXPECT_TRUE(lex_string("-10 43532 0", {IntegerLiteral, IntegerLiteral, IntegerLiteral, YYEOF}));
+    EXPECT_TRUE(lex_string("-10 43532 0", {LITERAL, LITERAL, LITERAL, YYEOF}));
 }
 
 TEST(LexerTests, CharacterLiteral) {
-   EXPECT_TRUE(lex_string("'a'", {CharacterLiteral, YYEOF}));
-   EXPECT_TRUE(lex_string("'%'", {CharacterLiteral, YYEOF}));
-   EXPECT_TRUE(lex_string("'\\b'", {CharacterLiteral, YYEOF}));
+   EXPECT_TRUE(lex_string("'a'", {LITERAL, YYEOF}));
+   EXPECT_TRUE(lex_string("'%'", {LITERAL, YYEOF}));
+   EXPECT_TRUE(lex_string("'\\b'", {LITERAL, YYEOF}));
 }
 
 TEST(LexerTests, StringLiteral) {
-   EXPECT_TRUE(lex_string("\"\"", {StringLiteral, YYEOF}));
-   EXPECT_TRUE(lex_string("\"foo\"", {StringLiteral, YYEOF}));
-   EXPECT_TRUE(lex_string("\"\\b\\t\\n\\f\\r\\\"\\'064\"", {StringLiteral, YYEOF}));
+   EXPECT_TRUE(lex_string("\"\"", {LITERAL, YYEOF}));
+   EXPECT_TRUE(lex_string("\"foo\"", {LITERAL, YYEOF}));
+   EXPECT_TRUE(lex_string("\"\\b\\t\\n\\f\\r\\\"\\'064\"", {LITERAL, YYEOF}));
 }
 
 TEST(LexerTests, SubcaseWhitespace) {
     EXPECT_TRUE(lex_string(" ", {YYEOF}));
     EXPECT_TRUE(lex_string(" \f  \t\t \n\n  \r \f  ", {YYEOF}));
-    EXPECT_TRUE(lex_string("//this is a comment \n", {Comment, YYEOF}));
-    EXPECT_TRUE(lex_string("/* this is a comment */", {Comment, YYEOF}));
-    EXPECT_TRUE(lex_string("/** this \n is \n a \n comment */", {Comment, YYEOF}));
+    EXPECT_TRUE(lex_string("//this is a comment \n", {COMMENT, YYEOF}));
+    EXPECT_TRUE(lex_string("/* this is a comment */", {COMMENT, YYEOF}));
+    EXPECT_TRUE(lex_string("/** this \n is \n a \n comment */", {COMMENT, YYEOF}));
 }
 
 TEST(LexerTests, SubcaseKeywords) {
-    EXPECT_TRUE(lex_string("abstract", {KeywordAbstract, YYEOF}));
-    EXPECT_TRUE(lex_string("boolean", {KeywordBoolean, YYEOF}));
-    EXPECT_TRUE(lex_string("byte", {KeywordByte, YYEOF}));
-    EXPECT_TRUE(lex_string("char", {KeywordChar, YYEOF}));
-    EXPECT_TRUE(lex_string("class", {KeywordClass, YYEOF}));
-    EXPECT_TRUE(lex_string("else", {KeywordElse, YYEOF}));
-    EXPECT_TRUE(lex_string("extends", {KeywordExtends, YYEOF}));
-    EXPECT_TRUE(lex_string("final", {KeywordFinal, YYEOF}));
-    EXPECT_TRUE(lex_string("for", {KeywordFor, YYEOF}));
-    EXPECT_TRUE(lex_string("if", {KeywordIf, YYEOF}));
-    EXPECT_TRUE(lex_string("implements", {KeywordImplements, YYEOF}));
-    EXPECT_TRUE(lex_string("import", {KeywordImport, YYEOF}));
-    EXPECT_TRUE(lex_string("instanceof", {KeywordInstanceof, YYEOF}));
-    EXPECT_TRUE(lex_string("int", {KeywordInt, YYEOF}));
-    EXPECT_TRUE(lex_string("interface", {KeywordInterface, YYEOF}));
-    EXPECT_TRUE(lex_string("native", {KeywordNative, YYEOF}));
-    EXPECT_TRUE(lex_string("new", {KeywordNew, YYEOF}));
-    EXPECT_TRUE(lex_string("package", {KeywordPackage, YYEOF}));
-    EXPECT_TRUE(lex_string("protected", {KeywordProtected, YYEOF}));
-    EXPECT_TRUE(lex_string("public", {KeywordPublic, YYEOF}));
-    EXPECT_TRUE(lex_string("return", {KeywordReturn, YYEOF}));
-    EXPECT_TRUE(lex_string("short", {KeywordShort, YYEOF}));
-    EXPECT_TRUE(lex_string("static", {KeywordStatic, YYEOF}));
-    EXPECT_TRUE(lex_string("this", {KeywordThis, YYEOF}));
-    EXPECT_TRUE(lex_string("void", {KeywordVoid, YYEOF}));
-    EXPECT_TRUE(lex_string("while", {KeywordWhile, YYEOF}));
+    EXPECT_TRUE(lex_string("abstract", {ABSTRACT, YYEOF}));
+    EXPECT_TRUE(lex_string("boolean", {BOOLEAN, YYEOF}));
+    EXPECT_TRUE(lex_string("byte", {BYTE, YYEOF}));
+    EXPECT_TRUE(lex_string("char", {CHAR, YYEOF}));
+    EXPECT_TRUE(lex_string("class", {CLASS, YYEOF}));
+    EXPECT_TRUE(lex_string("else", {ELSE, YYEOF}));
+    EXPECT_TRUE(lex_string("extends", {EXTENDS, YYEOF}));
+    EXPECT_TRUE(lex_string("final", {FINAL, YYEOF}));
+    EXPECT_TRUE(lex_string("for", {FOR, YYEOF}));
+    EXPECT_TRUE(lex_string("if", {IF, YYEOF}));
+    EXPECT_TRUE(lex_string("implements", {IMPLEMENTS, YYEOF}));
+    EXPECT_TRUE(lex_string("import", {IMPORT, YYEOF}));
+    EXPECT_TRUE(lex_string("instanceof", {INSTANCEOF, YYEOF}));
+    EXPECT_TRUE(lex_string("int", {INT, YYEOF}));
+    EXPECT_TRUE(lex_string("interface", {INTERFACE, YYEOF}));
+    EXPECT_TRUE(lex_string("native", {NATIVE, YYEOF}));
+    EXPECT_TRUE(lex_string("new", {NEW, YYEOF}));
+    EXPECT_TRUE(lex_string("package", {PACKAGE, YYEOF}));
+    EXPECT_TRUE(lex_string("protected", {PROTECTED, YYEOF}));
+    EXPECT_TRUE(lex_string("public", {PUBLIC, YYEOF}));
+    EXPECT_TRUE(lex_string("return", {RETURN, YYEOF}));
+    EXPECT_TRUE(lex_string("short", {SHORT, YYEOF}));
+    EXPECT_TRUE(lex_string("static", {STATIC, YYEOF}));
+    EXPECT_TRUE(lex_string("this", {THIS, YYEOF}));
+    EXPECT_TRUE(lex_string("void", {VOID, YYEOF}));
+    EXPECT_TRUE(lex_string("while", {WHILE, YYEOF}));
 }
 
 TEST(LexerTests, SubcaseSeparators) {
