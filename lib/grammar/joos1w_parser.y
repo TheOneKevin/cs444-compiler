@@ -22,6 +22,9 @@
 %define api.value.type { struct parsetree::Node* }
 %parse-param { struct parsetree::Node** parse_tree_out }
 
+%define parse.error verbose
+%locations
+
 /* Literal, IDENTIFIER and comment tokens */
 %token LITERAL;
 %token IDENTIFIER;
