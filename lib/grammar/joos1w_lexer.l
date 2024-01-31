@@ -1,4 +1,6 @@
 %option noyywrap
+%option bison-locations bison-bridge
+%option yylineno
 
 %top {
     #include "parser.h"
@@ -7,6 +9,15 @@
     using plt = parsetree::Literal::Type;
     using pot = parsetree::Operator::Type;
 }
+
+%{
+    int yycolumn = 1;
+    #define YY_USER_ACTION \
+        yylloc->first_line = yylloc->last_line = yylineno; \
+        yylloc->first_column = yycolumn; \
+        yylloc->last_column = yycolumn + yyleng - 1; \
+        yycolumn += yyleng;
+%}
 
 %{
 /* ========================================================================== */
@@ -21,7 +32,8 @@ BooleanLiteral          (true|false)
 CharacterLiteral        \'{JavaCharacter}\'
 StringLiteral           \"{JavaCharacter}*\"
 
-Whitespace              [ \t\r\n\f]+
+Whitespace              [ \t\r\f]+
+Newline                 \n
 Comment                 (\/\/[^\n]*[\n])|((\/(\*|\*\*))(.*\n*)*\*\/)
 Identifier              [a-zA-Z_][a-zA-Z0-9_]*
 
@@ -68,12 +80,12 @@ Keyword: one of
 "while"         { return WHILE; }
 
 "instanceof"    {
-    yylval = new pt::Operator(pot::InstanceOf);
+    *yylval = new pt::Operator(pot::InstanceOf);
     return INSTANCEOF;
 }
 
 "this"          {
-    yylval = new pt::Identifier(yytext);
+    *yylval = new pt::Identifier(yytext);
     return THIS;
 }
 
@@ -85,7 +97,22 @@ Keyword: one of
 
 {Whitespace} { }
 
-{Comment} { return COMMENT; }
+{Newline} {
+    yycolumn = 1;
+}
+
+{Comment} {
+    // Iterate through the comment and count the number of newlines
+    // so we can update the line number
+    for (int i = 0; i < yyleng; i++) {
+        yycolumn++;
+        if (yytext[i] == '\n') {
+            yylineno++;
+            yycolumn = 1;
+        }
+    }
+    return COMMENT;
+}
 
 %{
 /* ========================================================================== */
@@ -103,27 +130,27 @@ Literal: one of
 %}
 
 {DecimalIntegerLiteral} {
-    yylval = new pt::Literal(plt::Integer, yytext);
+    *yylval = new pt::Literal(plt::Integer, yytext);
     return LITERAL;
 }
 
 {BooleanLiteral} {
-    yylval = new pt::Literal(plt::Boolean, yytext); 
+    *yylval = new pt::Literal(plt::Boolean, yytext); 
     return LITERAL;
 }
 
 {CharacterLiteral} {
-    yylval = new pt::Literal(plt::Character, yytext); 
+    *yylval = new pt::Literal(plt::Character, yytext); 
     return LITERAL;
 }
 
 {StringLiteral} {
-    yylval = new pt::Literal(plt::String, yytext); 
+    *yylval = new pt::Literal(plt::String, yytext); 
     return LITERAL;
 }
 
 "null" {
-    yylval = new pt::Literal(plt::Null, yytext); 
+    *yylval = new pt::Literal(plt::Null, yytext); 
     return LITERAL;
 }
 
@@ -165,84 +192,84 @@ Operator: one of
 %}
 
 "="  {
-    yylval = new pt::Operator(pot::Assign);
+    *yylval = new pt::Operator(pot::Assign);
     return OP_ASSIGN;
 }
 ">"  {
-    yylval = new pt::Operator(pot::GreaterThan);
+    *yylval = new pt::Operator(pot::GreaterThan);
     return OP_GT;
 }
 "<"  {
-    yylval = new pt::Operator(pot::LessThan);
+    *yylval = new pt::Operator(pot::LessThan);
     return OP_LT;
 }
 "!"  {
-    yylval = new pt::Operator(pot::Not);
+    *yylval = new pt::Operator(pot::Not);
     return OP_NOT;
 }
 "==" {
-    yylval = new pt::Operator(pot::Equal);
+    *yylval = new pt::Operator(pot::Equal);
     return OP_EQ;
 }
 "<=" {
-    yylval = new pt::Operator(pot::LessThanOrEqual);
+    *yylval = new pt::Operator(pot::LessThanOrEqual);
     return OP_LTE;
 }
 ">=" {
-    yylval = new pt::Operator(pot::GreaterThanOrEqual);
+    *yylval = new pt::Operator(pot::GreaterThanOrEqual);
     return OP_GTE;
 }
 "!=" {
-    yylval = new pt::Operator(pot::NotEqual);
+    *yylval = new pt::Operator(pot::NotEqual);
     return OP_NEQ;
 }
 "&&" {
-    yylval = new pt::Operator(pot::And);
+    *yylval = new pt::Operator(pot::And);
     return OP_AND;
 }
 "||" {
-    yylval = new pt::Operator(pot::Or);
+    *yylval = new pt::Operator(pot::Or);
     return OP_OR;
 }
 "&"  {
-    yylval = new pt::Operator(pot::BitwiseAnd);
+    *yylval = new pt::Operator(pot::BitwiseAnd);
     return OP_BIT_AND;
 }
 "|"  {
-    yylval = new pt::Operator(pot::BitwiseOr);
+    *yylval = new pt::Operator(pot::BitwiseOr);
     return OP_BIT_OR;
 }
 "+"  {
-    yylval = new pt::Operator(pot::Plus);
+    *yylval = new pt::Operator(pot::Plus);
     return OP_PLUS;
 }
 "-"  {
-    yylval = new pt::Operator(pot::Minus);
+    *yylval = new pt::Operator(pot::Minus);
     return OP_MINUS;
 }
 "*"  {
-    yylval = new pt::Operator(pot::Multiply);
+    *yylval = new pt::Operator(pot::Multiply);
     return OP_MUL;
 }
 "/"  {
-    yylval = new pt::Operator(pot::Divide);
+    *yylval = new pt::Operator(pot::Divide);
     return OP_DIV;
 }
 "%"  {
-    yylval = new pt::Operator(pot::Modulo);
+    *yylval = new pt::Operator(pot::Modulo);
     return OP_MOD;
 }
 "^"  {
-    yylval = new pt::Operator(pot::BitwiseXor);
+    *yylval = new pt::Operator(pot::BitwiseXor);
     return OP_XOR;
 }
 "~"  {
-    yylval = new pt::Operator(pot::BitwiseNot);
+    *yylval = new pt::Operator(pot::BitwiseNot);
     return OP_BIT_NOT;
 }
 
 {Identifier} {
-    yylval = new pt::Identifier(yytext);
+    *yylval = new pt::Identifier(yytext);
     return IDENTIFIER;
 }
 
@@ -253,3 +280,12 @@ Operator: one of
 %}
 
 . { return YYUNDEF;}
+
+%%
+
+int yylex(void) {
+    // FIXME(kevin): What the fuck is happening here??
+    YYSTYPE lexval;
+    YYLTYPE location;
+    return yylex(&yylval, &yylloc);
+}

@@ -1,6 +1,85 @@
 #include "ParseTreeTypes.h"
 #include <iostream>
 
+using namespace parsetree;
+
+std::ostream& Node::print(std::ostream& os) const {
+    os << "(" << (int) type;
+    for(size_t i = 0; i < num_args; ++i) {
+        os << " ";
+        args[i]->print(os);
+    }
+    os << ")";
+    return os;
+}
+
+std::ostream& Operator::print(std::ostream& os) const {
+    // Grab the operator string
+    os << to_string();
+    return os;
+}
+
+std::string Operator::to_string() const {
+    using T = Operator::Type;
+    switch(type) {
+        case T::Assign:
+            return "=";
+        case T::GreaterThan:
+            return ">";
+        case T::LessThan:
+            return "<";
+        case T::Not:
+            return "!";
+        case T::Equal:
+            return "==";
+        case T::LessThanOrEqual:
+            return "<=";
+        case T::GreaterThanOrEqual:
+            return ">=";
+        case T::NotEqual:
+            return "!=";
+        case T::And:
+            return "&&";
+        case T::Or:
+            return "||";
+        case T::BitwiseAnd:
+            return "&";
+        case T::BitwiseOr:
+            return "|";
+        case T::BitwiseXor:
+            return "^";
+        case T::BitwiseNot:
+            return "~";
+        case T::Add:
+            return "+";
+        case T::Subtract:
+            return "-";
+        case T::Multiply:
+            return "*";
+        case T::Divide:
+            return "/";
+        case T::Modulo:
+            return "%";
+        case T::Plus:
+            return "+";
+        case T::Minus:
+            return "-";
+        case T::InstanceOf:
+            return "instanceof";
+    }
+    return "";
+}
+
+std::ostream& Identifier::print(std::ostream& os) const {
+    os << "(Id " << name << ")";
+    return os;
+}
+
+std::ostream& Literal::print(std::ostream& os) const {
+    os << "(Literal " << (int) type << " " << value << ")";
+    return os;
+}
+
 std::ostream& parsetree::operator<< (std::ostream& os, const Node& node) {
     node.print(os);
     return os;
