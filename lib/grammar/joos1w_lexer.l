@@ -8,6 +8,8 @@
     namespace pt = parsetree;
     using plt = parsetree::Literal::Type;
     using pot = parsetree::Operator::Type;
+    using pmt = parsetree::Modifier::Type;
+    using pbtt = parsetree::BasicType::Type;
 }
 
 %{
@@ -54,37 +56,39 @@ Keyword: one of
 */
 %}
 
-"abstract"      { return ABSTRACT; }
-"boolean"       { return BOOLEAN; }
-"byte"          { return BYTE; }
-"char"          { return CHAR; }
 "class"         { return CLASS; }
 "else"          { return ELSE; }
 "extends"       { return EXTENDS; }
-"final"         { return FINAL; }
 "for"           { return FOR; }
 "if"            { return IF; }
 "implements"    { return IMPLEMENTS; }
 "import"        { return IMPORT; }
-"int"           { return INT; }
 "interface"     { return INTERFACE; }
-"native"        { return NATIVE; }
 "new"           { return NEW; }
 "package"       { return PACKAGE; }
-"protected"     { return PROTECTED; }
-"public"        { return PUBLIC; }
 "return"        { return RETURN; }
-"short"         { return SHORT; }
-"static"        { return STATIC; }
 "void"          { return VOID; }
 "while"         { return WHILE; }
 
-"instanceof"    {
+"abstract"  { *yylval = new pt::Modifier(pmt::Abstract);    return ABSTRACT; }
+"final"     { *yylval = new pt::Modifier(pmt::Final);       return FINAL; }
+"native"    { *yylval = new pt::Modifier(pmt::Native);      return NATIVE; }
+"protected" { *yylval = new pt::Modifier(pmt::Protected);   return PROTECTED; }
+"public"    { *yylval = new pt::Modifier(pmt::Public);      return PUBLIC; }
+"static"    { *yylval = new pt::Modifier(pmt::Static);      return STATIC; }
+
+"boolean"   { *yylval = new pt::BasicType(pbtt::Boolean);   return BOOLEAN; }
+"byte"      { *yylval = new pt::BasicType(pbtt::Byte);      return BYTE; }
+"char"      { *yylval = new pt::BasicType(pbtt::Char);      return CHAR; }
+"short"     { *yylval = new pt::BasicType(pbtt::Short);     return SHORT; }
+"int"       { *yylval = new pt::BasicType(pbtt::Int);       return INT; }
+
+"instanceof" {
     *yylval = new pt::Operator(pot::InstanceOf);
     return INSTANCEOF;
 }
 
-"this"          {
+"this" {
     *yylval = new pt::Identifier(yytext);
     return THIS;
 }
@@ -177,7 +181,7 @@ Separator: one of
 
 %{
 /* ========================================================================== */
-/*                                 Operators                                  */
+/*                      Operators and Identifiers                             */
 /* ========================================================================== */
 
 /* 
@@ -191,82 +195,25 @@ Operator: one of
 */
 %}
 
-"="  {
-    *yylval = new pt::Operator(pot::Assign);
-    return OP_ASSIGN;
-}
-">"  {
-    *yylval = new pt::Operator(pot::GreaterThan);
-    return OP_GT;
-}
-"<"  {
-    *yylval = new pt::Operator(pot::LessThan);
-    return OP_LT;
-}
-"!"  {
-    *yylval = new pt::Operator(pot::Not);
-    return OP_NOT;
-}
-"==" {
-    *yylval = new pt::Operator(pot::Equal);
-    return OP_EQ;
-}
-"<=" {
-    *yylval = new pt::Operator(pot::LessThanOrEqual);
-    return OP_LTE;
-}
-">=" {
-    *yylval = new pt::Operator(pot::GreaterThanOrEqual);
-    return OP_GTE;
-}
-"!=" {
-    *yylval = new pt::Operator(pot::NotEqual);
-    return OP_NEQ;
-}
-"&&" {
-    *yylval = new pt::Operator(pot::And);
-    return OP_AND;
-}
-"||" {
-    *yylval = new pt::Operator(pot::Or);
-    return OP_OR;
-}
-"&"  {
-    *yylval = new pt::Operator(pot::BitwiseAnd);
-    return OP_BIT_AND;
-}
-"|"  {
-    *yylval = new pt::Operator(pot::BitwiseOr);
-    return OP_BIT_OR;
-}
-"+"  {
-    *yylval = new pt::Operator(pot::Plus);
-    return OP_PLUS;
-}
-"-"  {
-    *yylval = new pt::Operator(pot::Minus);
-    return OP_MINUS;
-}
-"*"  {
-    *yylval = new pt::Operator(pot::Multiply);
-    return OP_MUL;
-}
-"/"  {
-    *yylval = new pt::Operator(pot::Divide);
-    return OP_DIV;
-}
-"%"  {
-    *yylval = new pt::Operator(pot::Modulo);
-    return OP_MOD;
-}
-"^"  {
-    *yylval = new pt::Operator(pot::BitwiseXor);
-    return OP_XOR;
-}
-"~"  {
-    *yylval = new pt::Operator(pot::BitwiseNot);
-    return OP_BIT_NOT;
-}
+"="  { *yylval = new pt::Operator(pot::Assign);             return OP_ASSIGN; }
+">"  { *yylval = new pt::Operator(pot::GreaterThan);        return OP_GT; }
+"<"  { *yylval = new pt::Operator(pot::LessThan);           return OP_LT; }
+"!"  { *yylval = new pt::Operator(pot::Not);                return OP_NOT; }
+"==" { *yylval = new pt::Operator(pot::Equal);              return OP_EQ; }
+"<=" { *yylval = new pt::Operator(pot::LessThanOrEqual);    return OP_LTE; }
+">=" { *yylval = new pt::Operator(pot::GreaterThanOrEqual); return OP_GTE; }
+"!=" { *yylval = new pt::Operator(pot::NotEqual);           return OP_NEQ; }
+"&&" { *yylval = new pt::Operator(pot::And);                return OP_AND; }
+"||" { *yylval = new pt::Operator(pot::Or);                 return OP_OR; }
+"&"  { *yylval = new pt::Operator(pot::BitwiseAnd);         return OP_BIT_AND; }
+"|"  { *yylval = new pt::Operator(pot::BitwiseOr);          return OP_BIT_OR; }
+"+"  { *yylval = new pt::Operator(pot::Plus);               return OP_PLUS; }
+"-"  { *yylval = new pt::Operator(pot::Minus);              return OP_MINUS; }
+"*"  { *yylval = new pt::Operator(pot::Multiply);           return OP_MUL; }
+"/"  { *yylval = new pt::Operator(pot::Divide);             return OP_DIV; }
+"%"  { *yylval = new pt::Operator(pot::Modulo);             return OP_MOD; }
+"^"  { *yylval = new pt::Operator(pot::BitwiseXor);         return OP_XOR; }
+"~"  { *yylval = new pt::Operator(pot::BitwiseNot);         return OP_BIT_NOT; }
 
 {Identifier} {
     *yylval = new pt::Identifier(yytext);
@@ -287,5 +234,7 @@ int yylex(void) {
     // FIXME(kevin): What the fuck is happening here??
     YYSTYPE lexval;
     YYLTYPE location;
+    (void) lexval;
+    (void) location;
     return yylex(&yylval, &yylloc);
 }

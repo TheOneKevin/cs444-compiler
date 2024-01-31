@@ -14,8 +14,10 @@ struct Node {
         Literal,
         Identifier,
         Operator,
-        Type,
+        BasicType,
         Modifier,
+        ArrayType,
+        Type,
 
         // Rules
         CompilationUnit,
@@ -101,7 +103,7 @@ struct Literal : public Node {
     std::string value;
 
     Literal(Type type, char const* value)
-        : type{type}, value{value}, Node{Node::Type::Literal}
+        : Node{Node::Type::Literal}, type{type}, value{value}
     { }
 
     std::ostream& print(std::ostream& os) const override;
@@ -114,7 +116,7 @@ struct Identifier : public Node {
     std::string name;
 
     Identifier(char const* name)
-        : name{name}, Node{Node::Type::Identifier}
+        : Node{Node::Type::Identifier}, name{name}
     { }
 
     std::ostream& print(std::ostream& os) const override;
@@ -152,11 +154,47 @@ struct Operator : public Node {
     Type type;
 
     Operator(Type type)
-        : type{type}, Node{Node::Type::Operator}
+        : Node{Node::Type::Operator}, type{type}
     { }
 
     std::ostream& print(std::ostream& os) const override;
     std::string to_string() const;
+};
+
+struct Modifier : public Node {
+    enum class Type {
+        Public,
+        Protected,
+        Static,
+        Abstract,
+        Final,
+        Native
+    };
+
+    Type type;
+
+    Modifier(Type type)
+        : Node{Node::Type::Modifier}, type{type}
+    { }
+
+    std::ostream& print(std::ostream& os) const;
+};
+
+struct BasicType : public Node {
+    enum class Type {
+        Byte,
+        Short,
+        Int,
+        Char,
+        Boolean
+    };
+    Type type;
+
+    BasicType(Type type)
+        : Node{Node::Type::BasicType}, type{type}
+    { }
+
+    std::ostream& print(std::ostream& os) const;
 };
 
 } // namespace parsetree

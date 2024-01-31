@@ -51,7 +51,7 @@ CompilationUnit
     ;
 
 PackageDeclarationOpt
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | PackageDeclaration
     ;
 
@@ -60,7 +60,7 @@ PackageDeclaration
     ;
 
 ImportDeclarationsOpt
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | ImportDeclarations
     ;
 
@@ -85,7 +85,7 @@ TypeImportOnDemandDeclaration
     ;
 
 TypeDeclarationsOpt
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | TypeDeclarations
     ;
 
@@ -108,12 +108,12 @@ ClassDeclaration
     ;
 
 ClassModifiersOpt
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | ClassOrInterfaceModifiers
     ;
 
 ClassOrInterfaceModifiers
-    : ClassOrInterfaceModifier                                                  { $$ = new pt::Node(pty::ClassModifiers); }
+    : ClassOrInterfaceModifier                                                  { $$ = new pt::Node(pty::ClassModifiers, $1); }
     | ClassOrInterfaceModifiers ClassOrInterfaceModifier                        { $$ = new pt::Node(pty::ClassModifiers, $1, $2); }
     ;
 
@@ -130,7 +130,7 @@ SuperOpt
     ;
 
 InterfaceOpt
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | IMPLEMENTS InterfaceTypeList                                              { $$ = $2; }
     ;
 
@@ -149,7 +149,7 @@ ClassBody
     ;
 
 ClassBodyDeclarationsOpt
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | ClassBodyDeclarations
     ;
 
@@ -173,7 +173,7 @@ FieldDeclaration
     ;
 
 MemberModifiersOpt
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | MemberModifiers
     ;
 
@@ -202,7 +202,7 @@ MethodHeader
 
 
 FormalParameterListOpt
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | FormalParameterList
     ;
 
@@ -242,7 +242,7 @@ InterfaceDeclaration
     ;
 
 ExtendsInterfacesOpt
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | ExtendsInterfaces
     ;
 
@@ -256,7 +256,7 @@ InterfaceBody
     ;
 
 InterfaceMemberDeclarationsOpt
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | InterfaceMemberDeclarations
     ;
 
@@ -282,7 +282,7 @@ AbstractMethodDeclaration
 /* ========================================================================== */
 
 ExpressionOpt
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | Expression
     ;
 
@@ -430,16 +430,11 @@ ExpressionName
 /*                   Type, Modifiers and Identifiers                          */
 /* ========================================================================== */
 
-TypeList
-    : Type
-    | TypeList ',' Type
-    ;
-
 Type
-    : QualifiedIdentifier                                                       { $$ = new pt::Node(pty::Type); }
-    | QualifiedIdentifier '[' ']'                                               { $$ = new pt::Node(pty::Type); }
-    | BasicType                                                                 { $$ = new pt::Node(pty::Type); }
-    | BasicType '[' ']'                                                         { $$ = new pt::Node(pty::Type); }
+    : QualifiedIdentifier                                                       { $$ = new pt::Node(pty::Type, $1); }
+    | QualifiedIdentifier '[' ']'                                               { $$ = new pt::Node(pty::ArrayType, $1); }
+    | BasicType                                                                 { $$ = new pt::Node(pty::Type, $1); }
+    | BasicType '[' ']'                                                         { $$ = new pt::Node(pty::ArrayType, $1); }
     ;
 
 BasicType
@@ -464,7 +459,7 @@ Block
     ;
 
 BlockStatementsOpt
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | BlockStatements
     ;
 
@@ -558,13 +553,13 @@ ForStatementNoShortIf
     ;
 
 ForInit
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | LocalVariableDeclaration
     | StatementExpression
     ;
 
 ForUpdate
-    : %empty
+    : %empty                                                                    { $$ = nullptr; }
     | StatementExpression
     ;
 

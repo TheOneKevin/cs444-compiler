@@ -9,7 +9,7 @@ void Node::print_type(std::ostream& os) const {
         case Type::Literal: os << "Literal"; break;
         case Type::Identifier: os << "Identifier"; break;
         case Type::Operator: os << "Operator"; break;
-        case Type::Type: os << "Type"; break;
+        case Type::BasicType: os << "BasicType"; break;
         case Type::Modifier: os << "Modifier"; break;
 
         // Rules
@@ -136,5 +136,15 @@ std::ostream& Literal::print(std::ostream& os) const {
 
 std::ostream& parsetree::operator<< (std::ostream& os, const Node& node) {
     node.print(os);
+    return os;
+}
+
+std::ostream& Modifier::print(std::ostream& os) const {
+    os << "(Modifier " << (int) type << ")";
+    return os;
+}
+
+std::ostream& BasicType::print(std::ostream& os) const {
+    os << "(BasicType " << (int) type << ")";
     return os;
 }
