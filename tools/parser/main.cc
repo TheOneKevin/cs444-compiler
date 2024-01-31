@@ -7,6 +7,7 @@
 #include "parser.h"
 
 int main() {
+    yydebug = 1;
     // Check if input is being piped in
     bool is_piped = !isatty(STDIN_FILENO);
     // Print the banner

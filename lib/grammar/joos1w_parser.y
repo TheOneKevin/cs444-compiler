@@ -60,12 +60,12 @@ PackageDeclaration
 
 ImportDeclarationsOpt
     : %empty                                                                    { $$ = nullptr; }
-    | ImportDeclarations
+    | ImportDeclarationList
     ;
 
-ImportDeclarations
-    : ImportDeclaration
-    | ImportDeclarations ImportDeclaration                                      { $$ = new pt::Node(pty::ImportDeclarations, $1, $2); }
+ImportDeclarationList
+    : ImportDeclaration                                                         { $$ = new pt::Node(pty::ImportDeclarationList, $1); }
+    | ImportDeclarationList ImportDeclaration                                   { $$ = new pt::Node(pty::ImportDeclarationList, $1, $2); }
     ;
 
 ImportDeclaration
@@ -74,23 +74,23 @@ ImportDeclaration
     ;
 
 SingleTypeImportDeclaration
-    : IMPORT IDENTIFIER ';'                                                     { $$ = $2; }
-    | IMPORT QualifiedIdentifier ';'                                            { $$ = $2; }
+    : IMPORT IDENTIFIER ';'                                                     { $$ = new pt::Node(pty::SingleTypeImportDeclaration, $2); }
+    | IMPORT QualifiedIdentifier ';'                                            { $$ = new pt::Node(pty::SingleTypeImportDeclaration, $2); }
     ;
 
 TypeImportOnDemandDeclaration
-    : IMPORT IDENTIFIER '.' '*' ';'                                             { $$ = $2; }
-    | IMPORT QualifiedIdentifier '.' '*' ';'                                    { $$ = $2; }
+    : IMPORT IDENTIFIER '.' '*' ';'                                             { $$ = new pt::Node(pty::TypeImportOnDemandDeclaration, $2); }
+    | IMPORT QualifiedIdentifier '.' '*' ';'                                    { $$ = new pt::Node(pty::TypeImportOnDemandDeclaration, $2); }
     ;
 
 TypeDeclarationsOpt
     : %empty                                                                    { $$ = nullptr; }
-    | TypeDeclarations
+    | TypeDeclarationList
     ;
 
-TypeDeclarations
-    : TypeDeclaration
-    | TypeDeclarations TypeDeclaration                                          { $$ = new pt::Node(pty::TypeDeclarations, $1, $2); }
+TypeDeclarationList
+    : TypeDeclaration                                                           { $$ = new pt::Node(pty::TypeDeclarationList, $1); }
+    | TypeDeclarationList TypeDeclaration                                       { $$ = new pt::Node(pty::TypeDeclarationList, $1, $2); }
     ;
 
 TypeDeclaration
@@ -108,12 +108,12 @@ ClassDeclaration
 
 ClassModifiersOpt
     : %empty                                                                    { $$ = nullptr; }
-    | ClassOrInterfaceModifiers
+    | ClassOrInterfaceModifierList
     ;
 
-ClassOrInterfaceModifiers
-    : ClassOrInterfaceModifier                                                  { $$ = new pt::Node(pty::ClassModifiers, $1); }
-    | ClassOrInterfaceModifiers ClassOrInterfaceModifier                        { $$ = new pt::Node(pty::ClassModifiers, $1, $2); }
+ClassOrInterfaceModifierList
+    : ClassOrInterfaceModifier                                                  { $$ = new pt::Node(pty::ClassOrInterfaceModifierList, $1); }
+    | ClassOrInterfaceModifierList ClassOrInterfaceModifier                     { $$ = new pt::Node(pty::ClassOrInterfaceModifierList, $1, $2); }
     ;
 
 ClassOrInterfaceModifier
@@ -124,8 +124,8 @@ ClassOrInterfaceModifier
 
 SuperOpt
     : %empty                                                                    { $$ = nullptr; }
-    | EXTENDS IDENTIFIER                                                        { $$ = new pt::Node(pty::Extends, $2); }
-    | EXTENDS QualifiedIdentifier                                               { $$ = new pt::Node(pty::Extends, $2); }
+    | EXTENDS IDENTIFIER                                                        { $$ = new pt::Node(pty::SuperOpt, $2); }
+    | EXTENDS QualifiedIdentifier                                               { $$ = new pt::Node(pty::SuperOpt, $2); }
     ;
 
 InterfaceOpt
@@ -149,12 +149,12 @@ ClassBody
 
 ClassBodyDeclarationsOpt
     : %empty                                                                    { $$ = nullptr; }
-    | ClassBodyDeclarations
+    | ClassBodyDeclarationList
     ;
 
-ClassBodyDeclarations
-    : ClassBodyDeclaration
-    | ClassBodyDeclarations ClassBodyDeclaration                                { $$ = new pt::Node(pty::ClassBodyDeclarations, $1, $2); }
+ClassBodyDeclarationList
+    : ClassBodyDeclaration                                                      { $$ = new pt::Node(pty::ClassBodyDeclarationList, $1); }
+    | ClassBodyDeclarationList ClassBodyDeclaration                             { $$ = new pt::Node(pty::ClassBodyDeclarationList, $1, $2); }
     ;
 
 ClassBodyDeclaration    
@@ -168,17 +168,17 @@ ClassMemberDeclaration
     ;
 
 FieldDeclaration
-    : MemberModifiersOpt Type VariableDeclarators ';'                           { $$ = new pt::Node(pty::FieldDeclaration, $1, $2, $3); }
+    : MemberModifiersOpt Type VariableDeclaratorList ';'                        { $$ = new pt::Node(pty::FieldDeclaration, $1, $2, $3); }
     ;
 
 MemberModifiersOpt
     : %empty                                                                    { $$ = nullptr; }
-    | MemberModifiers
+    | MemberModifierList
     ;
 
-MemberModifiers
-    : MemberModifier
-    | MemberModifiers MemberModifier                                            { $$ = new pt::Node(pty::MemberModifiers, $1, $2); }
+MemberModifierList
+    : MemberModifier                                                            { $$ = new pt::Node(pty::MemberModifierList, $1); }
+    | MemberModifierList MemberModifier                                         { $$ = new pt::Node(pty::MemberModifierList, $1, $2); }
     ;
 
 MemberModifier
@@ -206,7 +206,7 @@ FormalParameterListOpt
     ;
 
 FormalParameterList
-    : FormalParameter
+    : FormalParameter                                                           { $$ = new pt::Node(pty::FormalParameterList, $1); }
     | FormalParameterList ',' FormalParameter                                   { $$ = new pt::Node(pty::FormalParameterList, $1, $3); }
     ;
 
@@ -236,7 +236,7 @@ ConstructorBody
 /* ========================================================================== */
 
 InterfaceDeclaration
-    : ClassOrInterfaceModifiers INTERFACE IDENTIFIER 
+    : ClassOrInterfaceModifierList INTERFACE IDENTIFIER 
         ExtendsInterfacesOpt InterfaceBody                                      { $$ = new pt::Node(pty::InterfaceDeclaration, $1, $3, $4, $5); }
     ;
 
@@ -256,16 +256,12 @@ InterfaceBody
 
 InterfaceMemberDeclarationsOpt
     : %empty                                                                    { $$ = nullptr; }
-    | InterfaceMemberDeclarations
+    | InterfaceMemberDeclarationList                                              
     ;
 
-InterfaceMemberDeclarations
-    : InterfaceMemberDeclaration
-    | InterfaceMemberDeclarations InterfaceMemberDeclaration                    { $$ = new pt::Node(pty::InterfaceMemberDeclarations, $1, $2); }
-    ;
-
-InterfaceMemberDeclaration
-    : AbstractMethodDeclaration
+InterfaceMemberDeclarationList
+    : AbstractMethodDeclaration                                                 { $$ = new pt::Node(pty::InterfaceMemberDeclarationList, $1); }
+    | InterfaceMemberDeclarationList AbstractMethodDeclaration                  { $$ = new pt::Node(pty::InterfaceMemberDeclarationList, $1, $2); }
     ;
 
 // Note: Constructors modifiers needs to be checked in the weeder, can only be
@@ -416,7 +412,7 @@ ClassInstanceCreationExpression
     ;
 
 ArgumentList
-    : Expression
+    : Expression                                                                { $$ = new pt::Node(pty::ArgumentList, $1); }
     | ArgumentList ',' Expression                                               { $$ = new pt::Node(pty::ArgumentList, $1, $3); }
     ;
 
@@ -485,10 +481,10 @@ Statement
     ;
 
 StatementWithoutTrailingSubstatement
-    : Block
-	| EmptyStatement
-    | ExpressionStatement 
-    | ReturnStatement
+    : Block                                                                     { $$ = new pt::Node(pty::Statement, $1); }
+	| EmptyStatement                                                            /* No action as EmptyStatement returns Statement */
+    | ExpressionStatement                                                       /* No action as ExpressionStatement returns Statement */
+    | ReturnStatement                                                           /* No action as ReturnStatement returns Statement */
     ;
 
 StatementNoShortIf
@@ -499,21 +495,21 @@ StatementNoShortIf
     ;
 
 ExpressionStatement
-    : StatementExpression ';'                                                   { $$ = $1; }
+    : StatementExpression ';'                                                   { $$ = new pt::Node(pty::Statement, $1); }
     ;
 
 ReturnStatement
-    : RETURN ExpressionOpt ';'                                                  { $$ = $2; }
+    : RETURN ExpressionOpt ';'                                                  { $$ = new pt::Node(pty::ReturnStatement, $2); }
     ;
 
 StatementExpression
-    : Assignment
-    | MethodInvocation
-    | ClassInstanceCreationExpression
+    : Assignment                                                                { $$ = new pt::Node(pty::StatementExpression, $1); }
+    | MethodInvocation                                                          { $$ = new pt::Node(pty::StatementExpression, $1); }
+    | ClassInstanceCreationExpression                                           { $$ = new pt::Node(pty::StatementExpression, $1); }
     ;
 
 EmptyStatement
-    : ';'
+    : ';'                                                                       { $$ = new pt::Node(pty::Statement); }
 	;
 
 /* ========================================================================== */
@@ -553,13 +549,13 @@ ForStatementNoShortIf
 
 ForInit
     : %empty                                                                    { $$ = nullptr; }
-    | LocalVariableDeclaration
-    | StatementExpression
+    | LocalVariableDeclaration                                                  /* No action for union type */
+    | StatementExpression                                                       /* No action for union type */
     ;
 
 ForUpdate
     : %empty                                                                    { $$ = nullptr; }
-    | StatementExpression
+    | StatementExpression                                                       /* No action for optional type */
     ;
 
 /* ========================================================================== */
@@ -567,21 +563,21 @@ ForUpdate
 /* ========================================================================== */
 
 LocalVariableDeclarationStatement
-    : LocalVariableDeclaration ';'                                              { $$ = $1; }
+    : LocalVariableDeclaration ';'                                              { $$ = new pt::Node(pty::Statement, $1); }
     ;
 
 LocalVariableDeclaration                                                        
     : Type VariableDeclarator                                                   { $$ = new pt::Node(pty::LocalVariableDeclaration, $1, $2); }
     ;
 
-VariableDeclarators
-    : VariableDeclarator
-    | VariableDeclarators ',' VariableDeclarator                                { $$ = new pt::Node(pty::VariableDeclarators, $1, $3); }
+VariableDeclaratorList
+    : VariableDeclarator                                                        { $$ = new pt::Node(pty::VariableDeclaratorList, $1); }
+    | VariableDeclaratorList ',' VariableDeclarator                             { $$ = new pt::Node(pty::VariableDeclaratorList, $1, $3); }
     ;
 
 VariableDeclarator
-    : IDENTIFIER
-    | IDENTIFIER OP_ASSIGN Expression                                           { $$ = $3; }
+    : IDENTIFIER                                                                { $$ = new pt::Node(pty::VariableDeclarator, $1); }
+    | IDENTIFIER OP_ASSIGN Expression                                           { $$ = new pt::Node(pty::VariableDeclarator, $1, $3); }
     ;
 
 %%
@@ -603,9 +599,8 @@ std::string joos1w_parser_resolve_token (int yysymbol) {
     }
 }
 
-static void yyerror(int *ret, parsetree::Node** unused, const char* s) {
+static void yyerror(int *ret, parsetree::Node** parse_tree, const char* s) {
     (void) ret;
-    (void) unused;
     // TODO: Grab the location somehow
     std::cerr << "Parse error: " << s << std::endl;
     std::cerr

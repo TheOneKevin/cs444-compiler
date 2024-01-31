@@ -9,6 +9,9 @@ enable_testing()
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -Wpedantic -Wno-unused-function -g -Og")
 
+# Define YYDEBUG for bison
+add_compile_definitions(YYDEBUG=1)
+
 ################################################################################
 #                         Flex and Bison targets                               #
 ################################################################################
@@ -61,6 +64,7 @@ macro(add_tool TARGET_NAME)
         "${PARSER_OUT}"
         ${ARGN}
         "lib/parsetree/ParseTreePrinter.cc"
+        "lib/parsetree/ParseTreeDotPrinter.cc"
     )
     target_include_directories(${TARGET_NAME} PRIVATE
         "${PARSER_DIR}"

@@ -20,53 +20,67 @@ struct Node {
         F(Modifier) \
         F(ArrayType) \
         F(Type) \
-        /* Rule nodes */ \
+        /* Compilation Unit */ \
         F(CompilationUnit) \
         F(PackageDeclaration) \
-        F(ImportDeclarations) \
-        F(TypeDeclarations) \
-        F(ClassModifiers) \
-        F(InterfaceTypeList) \
-        F(ClassBodyDeclarations) \
+        F(TypeDeclarationList) \
         F(FieldDeclaration) \
-        F(MemberModifiers) \
+        F(ArgumentList) \
+        /* Import declarations */ \
+        F(ImportDeclarationList) \
+        F(SingleTypeImportDeclaration) \
+        F(TypeImportOnDemandDeclaration) \
+        /* Modifiers */ \
+        F(ClassOrInterfaceModifierList) \
+        F(MemberModifierList) \
+        F(SuperOpt) \
+        F(InterfaceTypeList) \
+        /* Classes */ \
+        F(ClassBodyDeclarationList) \
+        F(ClassDeclaration) \
+        F(ConstructorDeclaration) \
+        /* Interfaces */ \
+        F(InterfaceDeclaration) \
+        F(ExtendsInterfaces) \
+        F(InterfaceMemberDeclarationList) \
+        F(AbstractMethodDeclaration) \
+        /* Methods */ \
+        F(MethodHeader) \
         F(MethodDeclaration) \
         F(FormalParameterList) \
         F(FormalParameter) \
-        F(ConstructorDeclaration) \
-        F(ConstructorModifiers) \
-        F(InterfaceDeclaration) \
-        F(ExtendsInterfaces) \
-        F(InterfaceMemberDeclarations) \
-        F(AbstractMethodDeclaration) \
+        /* Statements */ \
+        F(Statement) \
+        F(Block) \
+        F(IfThenStatement) \
+        F(WhileStatement) \
+        F(ForStatement) \
+        F(ReturnStatement) \
+        F(StatementExpression) \
+        /* Variable declarations and such */ \
+        F(VariableDeclarator) \
+        F(LocalVariableDeclaration) \
+        F(VariableDeclaratorList) \
+        /* Expressions  */ \
         F(Expression) \
         F(FieldAccess) \
         F(ArrayAccess) \
         F(CastExpression) \
         F(MethodInvocation) \
         F(ArrayCreationExpression) \
-        F(ClassInstanceCreationExpression) \
-        F(ArgumentList) \
-        F(Block) \
-        F(LocalVariableDeclaration) \
-        F(VariableDeclarators) \
-        F(IfThenStatement) \
-        F(WhileStatement) \
-        F(ForStatement) \
-        F(ClassDeclaration) \
-        F(Extends) \
-        F(MethodHeader)
-    
+        F(ClassInstanceCreationExpression)
+public:
     DECLARE_ENUM(Type, NODE_TYPE_LIST)
-
+private:
     DECLARE_STRING_TABLE(Type, type_strings, NODE_TYPE_LIST)
-
     #undef NODE_TYPE_LIST
 
+private:
     Type type;
     Node** args;
     size_t num_args;
-    
+
+public:
     Node(Type type)
         : type{type}
         , args{nullptr}
@@ -81,8 +95,12 @@ struct Node {
     {}
 
     virtual std::ostream& print(std::ostream& os) const;
+    virtual std::ostream& print_dot(std::ostream& os) const;
+
+private:
     void print_type(std::ostream& os) const;
 
+public:
     virtual ~Node() {
         delete[] args;
     }
@@ -96,20 +114,24 @@ std::ostream& operator<< (std::ostream& os, const Node& node);
 /**
  * @brief A lex node in the parse tree representing a literal value.
  */
-struct Literal : public Node {
+class Literal : public Node {
     #define LITERAL_TYPE_LIST(F) \
         F(Integer) \
         F(Character) \
         F(String) \
         F(Boolean) \
         F(Null)
+public:
     DECLARE_ENUM(Type, LITERAL_TYPE_LIST)
+private:
     DECLARE_STRING_TABLE(Type, literal_strings, LITERAL_TYPE_LIST)
     #undef LITERAL_TYPE_LIST
-    
+
+private:
     Type type;
     std::string value;
 
+public:
     Literal(Type type, char const* value)
         : Node{Node::Type::Literal}, type{type}, value{value}
     { }
@@ -120,9 +142,10 @@ struct Literal : public Node {
 /**
  * @brief A lex node in the parse tree representing an identifier.
  */
-struct Identifier : public Node {
+class Identifier : public Node {
+private:
     std::string name;
-
+public:
     Identifier(char const* name)
         : Node{Node::Type::Identifier}, name{name}
     { }
@@ -133,7 +156,8 @@ struct Identifier : public Node {
 /**
  * @brief A lex node in the parse tree representing an operator.
  */
-struct Operator : public Node {
+class Operator : public Node {
+public:
     enum class Type {
         Assign,
         GreaterThan,
@@ -158,9 +182,9 @@ struct Operator : public Node {
         Minus,
         InstanceOf
     };
-
+private:
     Type type;
-
+public:
     Operator(Type type)
         : Node{Node::Type::Operator}, type{type}
     { }
@@ -169,7 +193,7 @@ struct Operator : public Node {
     std::string to_string() const;
 };
 
-struct Modifier : public Node {
+class Modifier : public Node {
     #define MODIFIER_TYPE_LIST(F) \
         F(Public) \
         F(Protected) \
@@ -177,12 +201,14 @@ struct Modifier : public Node {
         F(Abstract) \
         F(Final) \
         F(Native)
+public:
     DECLARE_ENUM(Type, MODIFIER_TYPE_LIST)
+private:
     DECLARE_STRING_TABLE(Type, modifier_strings, MODIFIER_TYPE_LIST)
     #undef MODIFIER_TYPE_LIST
-
+private:
     Type type;
-
+public:
     Modifier(Type type)
         : Node{Node::Type::Modifier}, type{type}
     { }
@@ -190,19 +216,21 @@ struct Modifier : public Node {
     std::ostream& print(std::ostream& os) const;
 };
 
-struct BasicType : public Node {
+class BasicType : public Node {
     #define BASIC_TYPE_LIST(F) \
         F(Byte) \
         F(Short) \
         F(Int) \
         F(Char) \
         F(Boolean)
+public:
     DECLARE_ENUM(Type, BASIC_TYPE_LIST)
+private:
     DECLARE_STRING_TABLE(Type, basic_type_strings, BASIC_TYPE_LIST)
     #undef BASIC_TYPE_LIST
-    
+private:
     Type type;
-
+public:
     BasicType(Type type)
         : Node{Node::Type::BasicType}, type{type}
     { }
