@@ -34,7 +34,7 @@ StringLiteral           \"{JavaCharacter}*\"
 
 Whitespace              [ \t\r\f]+
 Newline                 \n
-Comment                 (\/\/[^\n]*[\n])|((\/(\*|\*\*))(.*\n*)*\*\/)
+Comment                 (\/\/[^\n]*)|((\/(\*|\*\*))(.*\n*)*\*\/)
 Identifier              [a-zA-Z_][a-zA-Z0-9_]*
 
 %%
