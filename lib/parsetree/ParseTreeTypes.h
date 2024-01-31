@@ -5,9 +5,53 @@
 namespace parsetree {
 
 /**
+ * @brief A parse tree node base class.
+ */
+struct Node {
+    enum class Type {
+        // Leafs
+        Literal,
+        Identifier,
+        Operator,
+        Type,
+
+        // Rules
+        Expression,
+        FieldAccess,
+        ArrayAccess,
+        CastExpression,
+        MethodInvocation,
+        ArrayCreationExpression,
+        ClassInstanceCreationExpression,
+        ArgumentList
+    };
+
+    Type type;
+    Node** args;
+    size_t num_args;
+    
+    Node(Type type)
+        : type{type}
+        , args{nullptr}
+        , num_args{0}
+    { }
+
+    template<typename... Args>
+    Node(Type type, Args&&... args)
+        : type{type}
+        , args{new Node*[sizeof...(Args)]{args...}}
+        , num_args{sizeof...(Args)}
+    {}
+
+    ~Node() {
+        delete[] args;
+    }
+};
+
+/**
  * @brief A lex node in the parse tree representing a literal value.
  */
-struct Literal {
+struct Literal : public Node {
     enum class Type {
         Integer,
         Character,
@@ -20,25 +64,25 @@ struct Literal {
     std::string value;
 
     Literal(Type type, char const* value)
-        : type{type}, value{value}
+        : type{type}, value{value}, Node{Node::Type::Literal}
     { }
 };
 
 /**
  * @brief A lex node in the parse tree representing an identifier.
  */
-struct Identifier {
+struct Identifier : public Node {
     std::string name;
 
     Identifier(char const* name)
-        : name{name}
+        : name{name}, Node{Node::Type::Identifier}
     { }
 };
 
 /**
  * @brief A lex node in the parse tree representing an operator.
  */
-struct Operator {
+struct Operator : public Node {
     enum class Type {
         Assign,
         GreaterThan,
@@ -54,21 +98,20 @@ struct Operator {
         BitwiseOr,
         BitwiseXor,
         BitwiseNot,
-        Increment,
-        Decrement,
         Add,
         Subtract,
         Multiply,
         Divide,
         Modulo,
         Plus, 
-        Minus
+        Minus,
+        InstanceOf
     };
 
     Type type;
 
     Operator(Type type)
-        : type{type}
+        : type{type}, Node{Node::Type::Operator}
     { }
 };
 

@@ -3,6 +3,9 @@
 %top {
     #include "parser.h"
     #include "parsetree/ParseTreeTypes.h"
+    namespace pt = parsetree;
+    using plt = parsetree::Literal::Type;
+    using pot = parsetree::Operator::Type;
 }
 
 %{
@@ -51,7 +54,6 @@ Keyword: one of
 "if"            { return IF; }
 "implements"    { return IMPLEMENTS; }
 "import"        { return IMPORT; }
-"instanceof"    { return INSTANCEOF; }
 "int"           { return INT; }
 "interface"     { return INTERFACE; }
 "native"        { return NATIVE; }
@@ -62,9 +64,18 @@ Keyword: one of
 "return"        { return RETURN; }
 "short"         { return SHORT; }
 "static"        { return STATIC; }
-"this"          { return THIS; }
 "void"          { return VOID; }
 "while"         { return WHILE; }
+
+"instanceof"    {
+    yylval = new pt::Operator(pot::InstanceOf);
+    return INSTANCEOF;
+}
+
+"this"          {
+    yylval = new pt::Identifier(yytext);
+    return THIS;
+}
 
 %{
 /* ========================================================================== */
@@ -92,27 +103,27 @@ Literal: one of
 %}
 
 {DecimalIntegerLiteral} {
-    yylval.lit = new parsetree::Literal(parsetree::Literal::Type::Integer, yytext);
+    yylval = new pt::Literal(plt::Integer, yytext);
     return LITERAL;
 }
 
 {BooleanLiteral} {
-    yylval.lit = new parsetree::Literal(parsetree::Literal::Type::Boolean, yytext); 
+    yylval = new pt::Literal(plt::Boolean, yytext); 
     return LITERAL;
 }
 
 {CharacterLiteral} {
-    yylval.lit = new parsetree::Literal(parsetree::Literal::Type::Character, yytext); 
+    yylval = new pt::Literal(plt::Character, yytext); 
     return LITERAL;
 }
 
 {StringLiteral} {
-    yylval.lit = new parsetree::Literal(parsetree::Literal::Type::String, yytext); 
+    yylval = new pt::Literal(plt::String, yytext); 
     return LITERAL;
 }
 
 "null" {
-    yylval.lit = new parsetree::Literal(parsetree::Literal::Type::Null, yytext); 
+    yylval = new pt::Literal(plt::Null, yytext); 
     return LITERAL;
 }
 
@@ -153,30 +164,85 @@ Operator: one of
 */
 %}
 
-"="  { return OP_ASSIGN; }
-">"  { return OP_GT; }
-"<"  { return OP_LT; }
-"!"  { return OP_NOT; }
-"==" { return OP_EQ; }
-"<=" { return OP_LTE; }
-">=" { return OP_GTE; }
-"!=" { return OP_NEQ; }
-"&&" { return OP_AND; }
-"||" { return OP_OR; }
-"&"  { return OP_BIT_AND; }
-"|"  { return OP_BIT_OR; }
-"++" { return OP_INC; }
-"--" { return OP_DEC; }
-"+"  { return OP_PLUS; }
-"-"  { return OP_MINUS; }
-"*"  { return OP_MUL; }
-"/"  { return OP_DIV; }
-"%"  { return OP_MOD; }
-"^"  { return OP_XOR; }
-"~"  { return OP_BIT_NOT; }
+"="  {
+    yylval = new pt::Operator(pot::Assign);
+    return OP_ASSIGN;
+}
+">"  {
+    yylval = new pt::Operator(pot::GreaterThan);
+    return OP_GT;
+}
+"<"  {
+    yylval = new pt::Operator(pot::LessThan);
+    return OP_LT;
+}
+"!"  {
+    yylval = new pt::Operator(pot::Not);
+    return OP_NOT;
+}
+"==" {
+    yylval = new pt::Operator(pot::Equal);
+    return OP_EQ;
+}
+"<=" {
+    yylval = new pt::Operator(pot::LessThanOrEqual);
+    return OP_LTE;
+}
+">=" {
+    yylval = new pt::Operator(pot::GreaterThanOrEqual);
+    return OP_GTE;
+}
+"!=" {
+    yylval = new pt::Operator(pot::NotEqual);
+    return OP_NEQ;
+}
+"&&" {
+    yylval = new pt::Operator(pot::And);
+    return OP_AND;
+}
+"||" {
+    yylval = new pt::Operator(pot::Or);
+    return OP_OR;
+}
+"&"  {
+    yylval = new pt::Operator(pot::BitwiseAnd);
+    return OP_BIT_AND;
+}
+"|"  {
+    yylval = new pt::Operator(pot::BitwiseOr);
+    return OP_BIT_OR;
+}
+"+"  {
+    yylval = new pt::Operator(pot::Plus);
+    return OP_PLUS;
+}
+"-"  {
+    yylval = new pt::Operator(pot::Minus);
+    return OP_MINUS;
+}
+"*"  {
+    yylval = new pt::Operator(pot::Multiply);
+    return OP_MUL;
+}
+"/"  {
+    yylval = new pt::Operator(pot::Divide);
+    return OP_DIV;
+}
+"%"  {
+    yylval = new pt::Operator(pot::Modulo);
+    return OP_MOD;
+}
+"^"  {
+    yylval = new pt::Operator(pot::BitwiseXor);
+    return OP_XOR;
+}
+"~"  {
+    yylval = new pt::Operator(pot::BitwiseNot);
+    return OP_BIT_NOT;
+}
 
 {Identifier} {
-    yylval.id = new parsetree::Identifier(yytext);
+    yylval = new pt::Identifier(yytext);
     return IDENTIFIER;
 }
 
