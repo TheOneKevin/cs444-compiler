@@ -17,6 +17,24 @@ struct Node {
         Type,
 
         // Rules
+        CompilationUnit,
+        PackageDeclaration,
+        ImportDeclarations,
+        TypeDeclarations,
+        ClassModifiers,
+        InterfaceTypeList,
+        ClassBodyDeclarations,
+        FieldDeclaration,
+        MemberModifiers,
+        MethodDeclaration,
+        FormalParameterList,
+        FormalParameter,
+        ConstructorDeclaration,
+        ConstructorModifiers,
+        InterfaceDeclaration,
+        ExtendsInterfaces,
+        InterfaceMemberDeclarations,
+        AbstractMethodDeclaration,
         Expression,
         FieldAccess,
         ArrayAccess,
@@ -26,7 +44,11 @@ struct Node {
         ClassInstanceCreationExpression,
         ArgumentList,
         Block,
-        BlockStatements
+        LocalVariableDeclaration,
+        VariableDeclarators,
+        IfThenStatement,
+        WhileStatement,
+        ForStatement
     };
 
     Type type;

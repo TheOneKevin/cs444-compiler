@@ -50,10 +50,235 @@
 /* ========================================================================== */
 
 CompilationUnit
-    : Expression                                                                { *parse_tree_out = $1; }
-    //: PackageDeclaration ImportDeclarationsOpt TypeDeclarationsOpt
+    : PackageDeclarationOpt ImportDeclarationsOpt TypeDeclarationsOpt           { $$ = new pt::Node(pty::CompilationUnit, $1, $2, $3); }               
     ;
 
+PackageDeclarationOpt
+    : %empty
+    | PackageDeclaration
+    ;
+
+PackageDeclaration
+    : PACKAGE QualifiedIdentifier ';'                                           { $$ = new pt::Node(pty::PackageDeclaration, $2); }
+    ;
+
+ImportDeclarationsOpt
+    : %empty
+    | ImportDeclarations
+    ;
+
+ImportDeclarations
+    : ImportDeclaration
+    | ImportDeclarations ImportDeclaration                                      { $$ = new pt::Node(pty::ImportDeclarations, $1, $2); }
+    ;
+
+ImportDeclaration
+    : SingleTypeImportDeclaration
+    | TypeImportOnDemandDeclaration
+    ;
+
+SingleTypeImportDeclaration
+    : IMPORT IDENTIFIER ';'                                                     { $$ = $2; }
+    | IMPORT QualifiedIdentifier ';'                                            { $$ = $2; }
+    ;
+
+TypeImportOnDemandDeclaration
+    : IMPORT IDENTIFIER '.' '*' ';'                                             { $$ = $2; }
+    | IMPORT QualifiedIdentifier '.' '*' ';'                                    { $$ = $2; }
+    ;
+
+TypeDeclarationsOpt
+    : %empty
+    | TypeDeclarations
+    ;
+
+TypeDeclarations
+    : TypeDeclaration
+    | TypeDeclarations TypeDeclaration                                          { $$ = new pt::Node(pty::TypeDeclarations, $1, $2); }
+    ;
+
+TypeDeclaration
+    : ClassDeclaration
+    | InterfaceDeclaration
+    ;
+
+/* ========================================================================== */
+/*                              Classes                                       */
+/* ========================================================================== */
+
+ClassDeclaration
+    : ClassModifiersOpt CLASS IDENTIFIER SuperOpt InterfaceOpt ClassBody                                    
+    ;
+
+ClassModifiersOpt
+    : %empty
+    | ClassOrInterfaceModifiers
+    ;
+
+ClassOrInterfaceModifiers
+    : ClassOrInterfaceModifier
+    | ClassOrInterfaceModifiers ClassOrInterfaceModifier                        { $$ = new pt::Node(pty::ClassModifiers, $1, $2); }
+    ;
+
+ClassOrInterfaceModifier
+    : PUBLIC
+    | ABSTRACT
+    | FINAL
+    ;
+
+SuperOpt
+    : %empty
+    | EXTENDS IDENTIFIER                                                        { $$ = $2; }
+    | EXTENDS QualifiedIdentifier                                               { $$ = $2; }
+    ;
+
+InterfaceOpt
+    : %empty
+    | IMPLEMENTS InterfaceTypeList                                              { $$ = $2; }
+    ;
+
+InterfaceTypeList
+    : InterfaceType
+    | InterfaceTypeList ',' InterfaceType                                       { $$ = new pt::Node(pty::InterfaceTypeList, $1, $3); }
+    ;
+
+InterfaceType
+    : IDENTIFIER
+    | QualifiedIdentifier
+    ;
+
+ClassBody
+    : '{' ClassBodyDeclarationsOpt '}'                                          { $$ = $2; }
+    ;
+
+ClassBodyDeclarationsOpt
+    : %empty
+    | ClassBodyDeclarations
+    ;
+
+ClassBodyDeclarations
+    : ClassBodyDeclaration
+    | ClassBodyDeclarations ClassBodyDeclaration                                { $$ = new pt::Node(pty::ClassBodyDeclarations, $1, $2); }
+    ;
+
+ClassBodyDeclaration    
+    : ClassMemberDeclaration 
+    | ConstructorDeclaration
+    ;
+
+ClassMemberDeclaration
+    : FieldDeclaration
+    | MethodDeclaration
+    ;
+
+FieldDeclaration
+    : MemberModifiersOpt Type VariableDeclarators ';'                           { $$ = new pt::Node(pty::FieldDeclaration, $1, $2, $3); }
+    ;
+
+MemberModifiersOpt
+    : %empty
+    | MemberModifiers
+    ;
+
+MemberModifiers
+    : MemberModifier
+    | MemberModifiers MemberModifier                                            { $$ = new pt::Node(pty::MemberModifiers, $1, $2); }
+    ;
+
+MemberModifier
+    : PUBLIC
+    | ABSTRACT
+    | PROTECTED
+    | STATIC
+    | FINAL
+    | NATIVE
+    ;
+
+MethodDeclaration
+    : MethodHeader MethodBody                                                   { $$ = new pt::Node(pty::MethodDeclaration, $1, $2); }
+    ;
+
+MethodHeader
+    : MemberModifiersOpt VOID IDENTIFIER '(' FormalParameterListOpt ')'         { $$ = new pt::Node(pty::MethodDeclaration, $1, $3, $5); }
+    | MemberModifiersOpt Type IDENTIFIER '(' FormalParameterListOpt ')'         { $$ = new pt::Node(pty::MethodDeclaration, $1, $2, $3, $5); }
+    ;
+
+
+FormalParameterListOpt
+    : %empty
+    | FormalParameterList
+    ;
+
+FormalParameterList
+    : FormalParameter
+    | FormalParameterList ',' FormalParameter                                   { $$ = new pt::Node(pty::FormalParameterList, $1, $3); }
+    ;
+
+FormalParameter
+    : Type IDENTIFIER                                                           { $$ = new pt::Node(pty::FormalParameter, $1, $2); }
+    ;
+
+MethodBody
+    : Block 
+    | ';'
+    ;
+
+// Note: Constructors modifiers needs to be checked in the weeder, can only be
+//       public or protected
+
+ConstructorDeclaration
+    : MemberModifiersOpt IDENTIFIER '(' FormalParameterListOpt ')' 
+        ConstructorBody                                                         { $$ = new pt::Node(pty::ConstructorDeclaration, $1, $2, $4, $6); }
+    ;
+
+ConstructorBody
+    : '{' BlockStatementsOpt '}'                                                { $$ = $2; }
+    ;
+
+/* ========================================================================== */
+/*                            Interfaces                                      */
+/* ========================================================================== */
+
+InterfaceDeclaration
+    : ClassOrInterfaceModifiers INTERFACE IDENTIFIER 
+        ExtendsInterfacesOpt InterfaceBody                                      { $$ = new pt::Node(pty::InterfaceDeclaration, $1, $3, $4, $5); }
+    ;
+
+ExtendsInterfacesOpt
+    : %empty
+    | ExtendsInterfaces
+    ;
+
+ExtendsInterfaces
+    : EXTENDS InterfaceType                                                     { $$ = $2; }
+    | ExtendsInterfaces ',' InterfaceType                                       { $$ = new pt::Node(pty::ExtendsInterfaces, $1, $3); }
+    ;
+
+InterfaceBody
+    : '{' InterfaceMemberDeclarationsOpt '}'                                    { $$ = $2; }
+    ;
+
+InterfaceMemberDeclarationsOpt
+    : %empty
+    | InterfaceMemberDeclarations
+    ;
+
+InterfaceMemberDeclarations
+    : InterfaceMemberDeclaration
+    | InterfaceMemberDeclarations InterfaceMemberDeclaration                    { $$ = new pt::Node(pty::InterfaceMemberDeclarations, $1, $2); }
+    ;
+
+InterfaceMemberDeclaration
+    : AbstractMethodDeclaration
+    ;
+
+// Note: Constructors modifiers needs to be checked in the weeder, can only be
+//       public or protected
+
+AbstractMethodDeclaration
+    : MemberModifiersOpt Type IDENTIFIER '(' FormalParameterListOpt ')' ';'     { $$ = new pt::Node(pty::AbstractMethodDeclaration, $1, $2, $3, $5); }
+    | MemberModifiersOpt VOID IDENTIFIER '(' FormalParameterListOpt ')' ';'     { $$ = new pt::Node(pty::AbstractMethodDeclaration, $1, $3, $5); }
+    ;
 
 /* ========================================================================== */
 /*            Assignment and Operator Expressions (non-primary)               */
@@ -149,7 +374,7 @@ UnaryExpression
     ;
 
 CastExpression
-    : '(' Type ')' UnaryExpression                                              { $$ = new pt::Node(pty::CastExpression, $1, $2); }
+    : '(' Type ')' UnaryExpression                                              { $$ = new pt::Node(pty::CastExpression, $2, $4); }
     ;
 
 /* ========================================================================== */
@@ -217,6 +442,7 @@ Type
     : QualifiedIdentifier                                                       { $$ = new pt::Node(pty::Type); }
     | QualifiedIdentifier '[' ']'                                               { $$ = new pt::Node(pty::Type); }
     | BasicType                                                                 { $$ = new pt::Node(pty::Type); }
+    | BasicType '[' ']'                                                         { $$ = new pt::Node(pty::Type); }
     ;
 
 BasicType
@@ -247,10 +473,9 @@ BlockStatementsOpt
 
 BlockStatements
     : BlockStatement
-    | BlockStatements BlockStatement                                            { $$ = new pt::Node(pty::BlockStatements, $1, $2); }
+    | BlockStatements BlockStatement                                            { $$ = new pt::Node(pty::Block, $1, $2); }
     ;
 
-// Assume not possible to have a class declaration here
 BlockStatement
     : LocalVariableDeclarationStatement
     | Statement
@@ -308,31 +533,31 @@ EmptyStatement
 //       Though we don't check for that here, need to check in the weeder
 
 IfThenStatement
-    : IF '(' Expression ')' Statement
+    : IF '(' Expression ')' Statement                                           { $$ = new pt::Node(pty::IfThenStatement, $3, $5); }
     ;
 
 IfThenElseStatement
-    : IF '(' Expression ')' StatementNoShortIf ELSE Statement
+    : IF '(' Expression ')' StatementNoShortIf ELSE Statement                   { $$ = new pt::Node(pty::IfThenStatement, $3, $5, $7); }
     ;
 
 IfThenElseStatementNoShortIf
-    : IF '(' Expression ')' StatementNoShortIf ELSE StatementNoShortIf
+    : IF '(' Expression ')' StatementNoShortIf ELSE StatementNoShortIf          { $$ = new pt::Node(pty::IfThenStatement, $3, $5, $7); }
     ;
 
 WhileStatement
-    : WHILE '(' Expression ')' Statement
+    : WHILE '(' Expression ')' Statement                                        { $$ = new pt::Node(pty::WhileStatement, $3, $5); }
     ;
 
 WhileStatementNoShortIf
-    : WHILE '(' Expression ')' StatementNoShortIf
+    : WHILE '(' Expression ')' StatementNoShortIf                               { $$ = new pt::Node(pty::WhileStatement, $3, $5); }    
     ;
 
 ForStatement
-    : FOR '(' ForInit ';' ExpressionOpt ';' ForUpdate ')' Statement
+    : FOR '(' ForInit ';' ExpressionOpt ';' ForUpdate ')' Statement             { $$ = new pt::Node(pty::ForStatement, $3, $5, $7, $9); }
     ;
 
 ForStatementNoShortIf
-    : FOR '(' ForInit ';' ExpressionOpt ';' ForUpdate ')' StatementNoShortIf
+    : FOR '(' ForInit ';' ExpressionOpt ';' ForUpdate ')' StatementNoShortIf    { $$ = new pt::Node(pty::ForStatement, $3, $5, $7, $9); }
     ;
 
 ForInit
@@ -351,16 +576,21 @@ ForUpdate
 /* ========================================================================== */
 
 LocalVariableDeclarationStatement
-    : LocalVariableDeclaration ';'
+    : LocalVariableDeclaration ';'                                              { $$ = $1; }
     ;
 
-LocalVariableDeclaration
-    : Type VariableDeclarator
+LocalVariableDeclaration                                                        
+    : Type VariableDeclarator                                                   { $$ = new pt::Node(pty::LocalVariableDeclaration, $1, $2); }
+    ;
+
+VariableDeclarators
+    : VariableDeclarator
+    | VariableDeclarators ',' VariableDeclarator                                { $$ = new pt::Node(pty::VariableDeclarators, $1, $3); }
     ;
 
 VariableDeclarator
     : IDENTIFIER
-    | IDENTIFIER OP_ASSIGN Expression
+    | IDENTIFIER OP_ASSIGN Expression                                           { $$ = $3; }
     ;
 
 %%
