@@ -35,16 +35,21 @@
 
 /* Operator tokens */
 %token OP_ASSIGN OP_GT OP_LT OP_NOT OP_EQ OP_LTE OP_GTE OP_NEQ OP_AND
-%token OP_OR OP_BIT_AND OP_BIT_OR OP_PLUS OP_MINUS OP_MUL OP_DIV OP_MOD
-%token OP_XOR OP_BIT_NOT
+%token OP_INC OP_DEC OP_OR OP_BIT_AND OP_BIT_OR OP_PLUS OP_MINUS OP_MUL
+%token OP_DIV OP_MOD OP_XOR OP_BIT_NOT
 
-%start Expression
+%start Block // ExpressionOpt
 
 %%
 
 /* ========================================================================== */
 /*            Assignment and Operator Expressions (non-primary)               */
 /* ========================================================================== */
+
+ExpressionOpt
+    : %empty
+    | Expression
+    ;
 
 Expression
     : AssignmentExpression
@@ -212,4 +217,135 @@ BasicType
 QualifiedIdentifier
     : IDENTIFIER '.' IDENTIFIER
     | QualifiedIdentifier '.' IDENTIFIER
+    ;
+
+/* ========================================================================== */
+/*                          Block and statements                              */
+/* ========================================================================== */
+
+Block
+    : '{' BlockStatementsOpt '}'
+    ;
+
+BlockStatementsOpt
+    : %empty
+    | BlockStatements
+    ;
+
+BlockStatements
+    : BlockStatement
+    | BlockStatements BlockStatement
+    ;
+
+// Assume not possible to have a class declaration here
+BlockStatement
+    : LocalVariableDeclarationStatement
+    | Statement
+    ;
+
+/* ========================================================================== */
+/*                          Block and statements                              */
+/* ========================================================================== */
+
+Statement
+    : StatementWithoutTrailingSubstatement
+    | IfThenStatement
+	| IfThenElseStatement
+	| WhileStatement
+	| ForStatement
+    ;
+
+StatementWithoutTrailingSubstatement
+    : Block
+	| EmptyStatement
+    | ExpressionStatement 
+    | ReturnStatement
+    ;
+
+StatementNoShortIf
+    : StatementWithoutTrailingSubstatement
+    | IfThenElseStatementNoShortIf
+    | WhileStatementNoShortIf
+    | ForStatementNoShortIf
+    ;
+
+ExpressionStatement
+    : StatementExpression ';'
+    ;
+
+ReturnStatement
+    : RETURN ExpressionOpt ';'
+    ;
+
+StatementExpression
+    : Assignment
+    | MethodInvocation
+    | ClassInstanceCreationExpression
+    ;
+
+EmptyStatement
+    : ';'
+	;
+
+/* ========================================================================== */
+/*                              Control flows                                 */
+/* ========================================================================== */
+
+// Note: Expressions for these control flows MUST be of type boolean
+//       Though we don't check for that here, need to check in the weeder
+
+IfThenStatement
+    : IF '(' Expression ')' Statement
+    ;
+
+IfThenElseStatement
+    : IF '(' Expression ')' StatementNoShortIf ELSE Statement
+    ;
+
+IfThenElseStatementNoShortIf
+    : IF '(' Expression ')' StatementNoShortIf ELSE StatementNoShortIf
+    ;
+
+WhileStatement
+    : WHILE '(' Expression ')' Statement
+    ;
+
+WhileStatementNoShortIf
+    : WHILE '(' Expression ')' StatementNoShortIf
+    ;
+
+ForStatement
+    : FOR '(' ForInit ';' ExpressionOpt ';' ForUpdate ')' Statement
+    ;
+
+ForStatementNoShortIf
+    : FOR '(' ForInit ';' ExpressionOpt ';' ForUpdate ')' StatementNoShortIf
+    ;
+
+ForInit
+    : %empty
+    | LocalVariableDeclaration
+    | StatementExpression
+    ;
+
+ForUpdate
+    : %empty
+    | StatementExpression
+    ;
+
+/* ========================================================================== */
+/*                          Variables and Arrays                              */
+/* ========================================================================== */
+
+LocalVariableDeclarationStatement
+    : LocalVariableDeclaration ';'
+    ;
+
+LocalVariableDeclaration
+    : Type VariableDeclarator
+    ;
+
+VariableDeclarator
+    : IDENTIFIER
+    | IDENTIFIER OP_ASSIGN Expression
     ;
