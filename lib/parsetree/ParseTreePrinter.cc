@@ -4,52 +4,7 @@
 using namespace parsetree;
 
 void Node::print_type(std::ostream& os) const {
-    switch(type) {
-        // Leafs
-        case Type::Literal: os << "Literal"; break;
-        case Type::Identifier: os << "Identifier"; break;
-        case Type::Operator: os << "Operator"; break;
-        case Type::BasicType: os << "BasicType"; break;
-        case Type::Modifier: os << "Modifier"; break;
-
-        // Rules
-        case Type::CompilationUnit: os << "CompilationUnit"; break;
-        case Type::PackageDeclaration: os << "PackageDeclaration"; break;
-        case Type::ImportDeclarations: os << "ImportDeclarations"; break;
-        case Type::TypeDeclarations: os << "TypeDeclarations"; break;
-        case Type::ClassModifiers: os << "ClassModifiers"; break;
-        case Type::InterfaceTypeList: os << "InterfaceTypeList"; break;
-        case Type::ClassBodyDeclarations: os << "ClassBodyDeclarations"; break;
-        case Type::FieldDeclaration: os << "FieldDeclaration"; break;
-        case Type::MemberModifiers: os << "MemberModifiers"; break;
-        case Type::MethodDeclaration: os << "MethodDeclaration"; break;
-        case Type::FormalParameterList: os << "FormalParameterList"; break;
-        case Type::FormalParameter: os << "FormalParameter"; break;
-        case Type::ConstructorDeclaration: os << "ConstructorDeclaration"; break;
-        case Type::ConstructorModifiers: os << "ConstructorModifiers"; break;
-        case Type::InterfaceDeclaration: os << "InterfaceDeclaration"; break;
-        case Type::ExtendsInterfaces: os << "ExtendsInterfaces"; break;
-        case Type::InterfaceMemberDeclarations: os << "InterfaceMemberDeclarations"; break;
-        case Type::AbstractMethodDeclaration: os << "AbstractMethodDeclaration"; break;
-        case Type::Expression: os << "Expression"; break;
-        case Type::FieldAccess: os << "FieldAccess"; break;
-        case Type::ArrayAccess: os << "ArrayAccess"; break;
-        case Type::CastExpression: os << "CastExpression"; break;
-        case Type::MethodInvocation: os << "MethodInvocation"; break;
-        case Type::ArrayCreationExpression: os << "ArrayCreationExpression"; break;
-        case Type::ClassInstanceCreationExpression: os << "ClassInstanceCreationExpression"; break;
-        case Type::ArgumentList: os << "ArgumentList"; break;
-        case Type::Block: os << "Block"; break;
-        case Type::LocalVariableDeclaration: os << "LocalVariableDeclaration"; break;
-        case Type::VariableDeclarators: os << "VariableDeclarators"; break;
-        case Type::IfThenStatement: os << "IfThenStatement"; break;
-        case Type::WhileStatement: os << "WhileStatement"; break;
-        case Type::ForStatement: os << "ForStatement"; break;
-        case Type::ClassDeclaration: os << "ClassDeclaration"; break;
-        case Type::Extends: os << "Extends"; break;
-        case Type::MethodHeader: os << "MethodHeader"; break;
-        default: os << (int) type; break;
-    }
+    os << Type_to_string(type, "Unknown");
 }
 
 std::ostream& Node::print(std::ostream& os) const {
@@ -58,7 +13,7 @@ std::ostream& Node::print(std::ostream& os) const {
     for(size_t i = 0; i < num_args; ++i) {
         os << " ";
         if(args[i] == nullptr) {
-            os << "null";
+            os << "ε";
         } else {
             args[i]->print(os);
         }
@@ -140,11 +95,11 @@ std::ostream& parsetree::operator<< (std::ostream& os, const Node& node) {
 }
 
 std::ostream& Modifier::print(std::ostream& os) const {
-    os << "(Modifier " << (int) type << ")";
+    os << "(Modifier " << Type_to_string(type, "??") << ")";
     return os;
 }
 
 std::ostream& BasicType::print(std::ostream& os) const {
-    os << "(BasicType " << (int) type << ")";
+    os << "(BasicType " << Type_to_string(type, "??") << ")";
     return os;
 }

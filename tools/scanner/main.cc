@@ -37,7 +37,7 @@ int main(void) {
         // Now that we have the string, lex it
         YY_BUFFER_STATE state;
         if (!(state = yy_scan_bytes(str.c_str(), str.size()))) {
-            return false;
+            return 1;
         }
 
         // Lex the tokens using Flex generated lexer

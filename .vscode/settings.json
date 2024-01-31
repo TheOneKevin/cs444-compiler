@@ -2,5 +2,9 @@
     "cmake.configureOnOpen": true,
     "git.enableCommitSigning": false,
     "yash.YYTYPE": "struct parsetree::Node*",
-    "editor.rulers": [80, 160]
+    "editor.rulers": [
+        80,
+        160
+    ],
+    "C_Cpp.default.compilerPath": "/usr/bin/clang++"
 }

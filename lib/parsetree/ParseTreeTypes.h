@@ -2,6 +2,8 @@
 
 #include <string>
 #include <iostream>
+#include <array>
+#include "utils/EnumMacros.h"
 
 namespace parsetree {
 
@@ -9,53 +11,57 @@ namespace parsetree {
  * @brief A parse tree node base class.
  */
 struct Node {
-    enum class Type {
-        // Leafs
-        Literal,
-        Identifier,
-        Operator,
-        BasicType,
-        Modifier,
-        ArrayType,
-        Type,
+    #define NODE_TYPE_LIST(F) \
+        /* Leaf nodes */ \
+        F(Literal) \
+        F(Identifier) \
+        F(Operator) \
+        F(BasicType) \
+        F(Modifier) \
+        F(ArrayType) \
+        F(Type) \
+        /* Rule nodes */ \
+        F(CompilationUnit) \
+        F(PackageDeclaration) \
+        F(ImportDeclarations) \
+        F(TypeDeclarations) \
+        F(ClassModifiers) \
+        F(InterfaceTypeList) \
+        F(ClassBodyDeclarations) \
+        F(FieldDeclaration) \
+        F(MemberModifiers) \
+        F(MethodDeclaration) \
+        F(FormalParameterList) \
+        F(FormalParameter) \
+        F(ConstructorDeclaration) \
+        F(ConstructorModifiers) \
+        F(InterfaceDeclaration) \
+        F(ExtendsInterfaces) \
+        F(InterfaceMemberDeclarations) \
+        F(AbstractMethodDeclaration) \
+        F(Expression) \
+        F(FieldAccess) \
+        F(ArrayAccess) \
+        F(CastExpression) \
+        F(MethodInvocation) \
+        F(ArrayCreationExpression) \
+        F(ClassInstanceCreationExpression) \
+        F(ArgumentList) \
+        F(Block) \
+        F(LocalVariableDeclaration) \
+        F(VariableDeclarators) \
+        F(IfThenStatement) \
+        F(WhileStatement) \
+        F(ForStatement) \
+        F(ClassDeclaration) \
+        F(Extends) \
+        F(MethodHeader)
+    
+    DECLARE_ENUM(Type, NODE_TYPE_LIST)
 
-        // Rules
-        CompilationUnit,
-        PackageDeclaration,
-        ImportDeclarations,
-        TypeDeclarations,
-        ClassModifiers,
-        InterfaceTypeList,
-        ClassBodyDeclarations,
-        FieldDeclaration,
-        MemberModifiers,
-        MethodDeclaration,
-        FormalParameterList,
-        FormalParameter,
-        ConstructorDeclaration,
-        ConstructorModifiers,
-        InterfaceDeclaration,
-        ExtendsInterfaces,
-        InterfaceMemberDeclarations,
-        AbstractMethodDeclaration,
-        Expression,
-        FieldAccess,
-        ArrayAccess,
-        CastExpression,
-        MethodInvocation,
-        ArrayCreationExpression,
-        ClassInstanceCreationExpression,
-        ArgumentList,
-        Block,
-        LocalVariableDeclaration,
-        VariableDeclarators,
-        IfThenStatement,
-        WhileStatement,
-        ForStatement,
-        ClassDeclaration,
-        Extends,
-        MethodHeader
-    };
+    DECLARE_STRING_TABLE(Type, type_strings, NODE_TYPE_LIST)
+
+    #undef NODE_TYPE_LIST
 
     Type type;
     Node** args;
@@ -77,7 +83,7 @@ struct Node {
     virtual std::ostream& print(std::ostream& os) const;
     void print_type(std::ostream& os) const;
 
-    ~Node() {
+    virtual ~Node() {
         delete[] args;
     }
 };
@@ -91,13 +97,15 @@ std::ostream& operator<< (std::ostream& os, const Node& node);
  * @brief A lex node in the parse tree representing a literal value.
  */
 struct Literal : public Node {
-    enum class Type {
-        Integer,
-        Character,
-        String,
-        Boolean,
-        Null,
-    };
+    #define LITERAL_TYPE_LIST(F) \
+        F(Integer) \
+        F(Character) \
+        F(String) \
+        F(Boolean) \
+        F(Null)
+    DECLARE_ENUM(Type, LITERAL_TYPE_LIST)
+    DECLARE_STRING_TABLE(Type, literal_strings, LITERAL_TYPE_LIST)
+    #undef LITERAL_TYPE_LIST
     
     Type type;
     std::string value;
@@ -162,14 +170,16 @@ struct Operator : public Node {
 };
 
 struct Modifier : public Node {
-    enum class Type {
-        Public,
-        Protected,
-        Static,
-        Abstract,
-        Final,
-        Native
-    };
+    #define MODIFIER_TYPE_LIST(F) \
+        F(Public) \
+        F(Protected) \
+        F(Static) \
+        F(Abstract) \
+        F(Final) \
+        F(Native)
+    DECLARE_ENUM(Type, MODIFIER_TYPE_LIST)
+    DECLARE_STRING_TABLE(Type, modifier_strings, MODIFIER_TYPE_LIST)
+    #undef MODIFIER_TYPE_LIST
 
     Type type;
 
@@ -181,13 +191,16 @@ struct Modifier : public Node {
 };
 
 struct BasicType : public Node {
-    enum class Type {
-        Byte,
-        Short,
-        Int,
-        Char,
-        Boolean
-    };
+    #define BASIC_TYPE_LIST(F) \
+        F(Byte) \
+        F(Short) \
+        F(Int) \
+        F(Char) \
+        F(Boolean)
+    DECLARE_ENUM(Type, BASIC_TYPE_LIST)
+    DECLARE_STRING_TABLE(Type, basic_type_strings, BASIC_TYPE_LIST)
+    #undef BASIC_TYPE_LIST
+    
     Type type;
 
     BasicType(Type type)

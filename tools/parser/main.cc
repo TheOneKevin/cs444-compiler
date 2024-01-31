@@ -37,7 +37,7 @@ int main() {
         // Now that we have the string, lex it
         YY_BUFFER_STATE state;
         if (!(state = yy_scan_bytes(str.c_str(), str.size()))) {
-            return false;
+            return 1;
         }
 
         // Parse the tokens using Bison generated parser

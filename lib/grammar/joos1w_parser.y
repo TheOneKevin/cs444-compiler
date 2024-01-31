@@ -592,7 +592,7 @@ std::string joos1w_parser_resolve_token (int yysymbol) {
     if(yysymbol >= 256) {
         yysymbol -= 255;
         // Also check if yysymbol is greater than the end of the array
-        if(yysymbol >= sizeof(yytname)/sizeof(yytname[0])) {
+        if((unsigned) yysymbol >= sizeof(yytname)/sizeof(yytname[0])) {
             return std::string{"<unknown>"};
         }
         // Then return the symbol name
@@ -604,7 +604,9 @@ std::string joos1w_parser_resolve_token (int yysymbol) {
     }
 }
 
-static void yyerror(int *ret, parsetree::Node** _, const char* s) {
+static void yyerror(int *ret, parsetree::Node** unused, const char* s) {
+    (void) ret;
+    (void) unused;
     // TODO: Grab the location somehow
     std::cerr << "Parse error: " << s << std::endl;
     std::cerr
