@@ -44,7 +44,9 @@ int main() {
         int what;
         parsetree::Node* parse_tree = nullptr;
         int result = yyparse(&what, &parse_tree);
-        std::cout << "Result: " << result << std::endl;
+        if(!is_piped) {
+            std::cout << "Result: " << result << std::endl;
+        }
 
         // Clean up Bison stuff
         yy_delete_buffer(state);
@@ -53,6 +55,10 @@ int main() {
         if (parse_tree) {
             std::cout << *parse_tree << std::endl;
             delete parse_tree;
+        }
+
+        if(is_piped) {
+            return result;
         }
     } while(!is_piped);
     return 0;
