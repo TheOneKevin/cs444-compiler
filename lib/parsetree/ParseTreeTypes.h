@@ -68,15 +68,7 @@ struct Node {
         , num_args{sizeof...(Args)}
     {}
 
-    virtual std::ostream& print(std::ostream& os) const {
-        os << "(" << (int) type;
-        for(size_t i = 0; i < num_args; ++i) {
-            os << " ";
-            args[i]->print(os);
-        }
-        os << ")";
-        return os;
-    }
+    virtual std::ostream& print(std::ostream& os) const;
 
     ~Node() {
         delete[] args;
@@ -107,10 +99,7 @@ struct Literal : public Node {
         : type{type}, value{value}, Node{Node::Type::Literal}
     { }
 
-    std::ostream& print(std::ostream& os) const override {
-        os << "(Literal " << (int) type << " " << value << ")";
-        return os;
-    }
+    std::ostream& print(std::ostream& os) const override;
 };
 
 /**
@@ -123,10 +112,7 @@ struct Identifier : public Node {
         : name{name}, Node{Node::Type::Identifier}
     { }
 
-    std::ostream& print(std::ostream& os) const override {
-        os << "(Id " << name << ")";
-        return os;
-    }
+    std::ostream& print(std::ostream& os) const override;
 };
 
 /**
@@ -164,10 +150,8 @@ struct Operator : public Node {
         : type{type}, Node{Node::Type::Operator}
     { }
 
-    std::ostream& print(std::ostream& os) const override {
-        os << "(Op " << (int) type << ")";
-        return os;
-    }
+    std::ostream& print(std::ostream& os) const override;
+    std::string to_string() const;
 };
 
 } // namespace parsetree

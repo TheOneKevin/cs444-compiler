@@ -31,7 +31,9 @@ bool lex_string(
 
     int i = 0;
     auto ptr = expected_tokens.begin();
-    while(int lextok = yylex()) {
+    YYSTYPE lexval;
+    YYLTYPE location;
+    while(int lextok = yylex(&lexval, &location)) {
         auto exptok = extract_token(*ptr);
         if (lextok != exptok) {
             std::cout << "Expected token[" << i << "] to be "

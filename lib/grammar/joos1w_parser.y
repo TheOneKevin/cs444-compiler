@@ -1,14 +1,11 @@
 %parse-param {int *ret}
 
 %code top {
-    #include <stdio.h>
+    #include <iostream>
     #include "parsetree/ParseTreeTypes.h"
 
     extern int yylex(void);
-
-    static void yyerror(int *ret, parsetree::Node** _, const char* s) {
-        fprintf(stderr, "%s\n", s);
-    }
+    static void yyerror(int *ret, parsetree::Node** _, const char* s);
 }
 
 // Tokens and whatnot
@@ -599,10 +596,26 @@ std::string joos1w_parser_resolve_token (int yysymbol) {
     if(yysymbol <= 0) return "EOF";
     if(yysymbol >= 256) {
         yysymbol -= 255;
+        // Also check if yysymbol is greater than the end of the array
+        if(yysymbol >= sizeof(yytname)/sizeof(yytname[0])) {
+            return std::string{"<unknown>"};
+        }
+        // Then return the symbol name
         return std::string{
             yysymbol_name(static_cast<yysymbol_kind_t>(yysymbol))
         };
     } else {
         return std::string{static_cast<char>(yysymbol)};
     }
+}
+
+static void yyerror(int *ret, parsetree::Node** _, const char* s) {
+    // TODO: Grab the location somehow
+    std::cerr << "Parse error: " << s << std::endl;
+    std::cerr
+        << "At: "
+        << yylloc.first_line << ":" << yylloc.first_column
+        << "-"
+        << yylloc.last_line << ":" << yylloc.last_column
+        << std::endl;
 }
