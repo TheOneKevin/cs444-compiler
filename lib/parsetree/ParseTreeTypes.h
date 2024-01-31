@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <iostream>
 
 namespace parsetree {
 
@@ -43,10 +44,25 @@ struct Node {
         , num_args{sizeof...(Args)}
     {}
 
+    virtual std::ostream& print(std::ostream& os) const {
+        os << "(" << (int) type;
+        for(size_t i = 0; i < num_args; ++i) {
+            os << " ";
+            args[i]->print(os);
+        }
+        os << ")";
+        return os;
+    }
+
     ~Node() {
         delete[] args;
     }
 };
+
+/**
+ * @brief Output stream operator for a parse tree node.
+ */
+std::ostream& operator<< (std::ostream& os, const Node& node);
 
 /**
  * @brief A lex node in the parse tree representing a literal value.
@@ -66,6 +82,11 @@ struct Literal : public Node {
     Literal(Type type, char const* value)
         : type{type}, value{value}, Node{Node::Type::Literal}
     { }
+
+    std::ostream& print(std::ostream& os) const override {
+        os << "(Literal " << (int) type << " " << value << ")";
+        return os;
+    }
 };
 
 /**
@@ -77,6 +98,11 @@ struct Identifier : public Node {
     Identifier(char const* name)
         : name{name}, Node{Node::Type::Identifier}
     { }
+
+    std::ostream& print(std::ostream& os) const override {
+        os << "(Id " << name << ")";
+        return os;
+    }
 };
 
 /**
@@ -113,6 +139,11 @@ struct Operator : public Node {
     Operator(Type type)
         : type{type}, Node{Node::Type::Operator}
     { }
+
+    std::ostream& print(std::ostream& os) const override {
+        os << "(Op " << (int) type << ")";
+        return os;
+    }
 };
 
 } // namespace parsetree

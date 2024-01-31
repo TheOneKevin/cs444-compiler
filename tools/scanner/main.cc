@@ -3,6 +3,8 @@
 #include "lexer.h"
 #include "parser.h"
 
+extern std::string joos1w_parser_resolve_token (int yysymbol);
+
 int main(void) {
     while (1) {
         fflush(stdin);
@@ -18,8 +20,10 @@ int main(void) {
             continue;
         }
 
-        while(int ret = yylex())
-            printf("%d\n", ret);
+        while(int ret = yylex()) {
+            printf("%d ", ret);
+            printf("%s\n", joos1w_parser_resolve_token(ret).c_str());
+        }
 
         yy_delete_buffer(state);
     }

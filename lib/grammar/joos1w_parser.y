@@ -2,10 +2,11 @@
 
 %code top {
     #include <stdio.h>
+    #include "parsetree/ParseTreeTypes.h"
 
     extern int yylex(void);
 
-    static void yyerror(int *ret, const char* s) {
+    static void yyerror(int *ret, parsetree::Node** _, const char* s) {
         fprintf(stderr, "%s\n", s);
     }
 }
@@ -19,6 +20,7 @@
 }
 
 %define api.value.type { struct parsetree::Node* }
+%parse-param { struct parsetree::Node** parse_tree_out }
 
 /* Literal, IDENTIFIER and comment tokens */
 %token LITERAL;
@@ -50,7 +52,7 @@ ExpressionOpt
     ;
 
 Expression
-    : AssignmentExpression
+    : AssignmentExpression { *parse_tree_out = $1; } /* TODO: Move this to compilation unit */
     ;
 
 AssignmentExpression
@@ -347,3 +349,17 @@ VariableDeclarator
     : IDENTIFIER
     | IDENTIFIER OP_ASSIGN Expression
     ;
+
+%%
+
+std::string joos1w_parser_resolve_token (int yysymbol) {
+    if(yysymbol <= 0) return "EOF";
+    if(yysymbol >= 256) {
+        yysymbol -= 255;
+        return std::string{
+            yysymbol_name(static_cast<yysymbol_kind_t>(yysymbol))
+        };
+    } else {
+        return std::string{static_cast<char>(yysymbol)};
+    }
+}

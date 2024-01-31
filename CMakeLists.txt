@@ -8,7 +8,7 @@ include(FetchContent)
 enable_testing()
 
 ################################################################################
-# Flex and Bison targets
+#                         Flex and Bison targets                               #
 ################################################################################
 
 find_package(FLEX 2.6 REQUIRED)
@@ -25,22 +25,27 @@ flex_target(
     DEFINES_FILE
     "${PARSER_DIR}/lexer.h"
 )
+
 bison_target(
     PARSER
     "lib/grammar/joos1w_parser.y"
     "${PARSER_OUT}"
     DEFINES_FILE
     "${PARSER_DIR}/parser.h"
+    COMPILE_FLAGS
+    "-Wcounterexamples --report=state -v --locations --html --graph -k"
 )
+
 add_flex_bison_dependency(LEXER PARSER)
 
 ################################################################################
-# Testing and macros
+#                          Testing and macros                                  #
 ################################################################################
 
 FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+    googletest
+    URL
+    https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
 )
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -53,6 +58,7 @@ macro(add_tool TARGET_NAME)
         "${LEXER_OUT}"
         "${PARSER_OUT}"
         ${ARGN}
+        "lib/parsetree/ParseTreePrinter.cc"
     )
     target_include_directories(${TARGET_NAME} PRIVATE
         "${PARSER_DIR}"
@@ -68,15 +74,20 @@ macro(add_my_test TARGET_NAME)
 endmacro()
 
 ################################################################################
-#           For every tool, create a new add_*() call below                    #
+#            For every tool, create a new add_*() call below                   #
 ################################################################################
 
 add_my_test(
-    lextests
-    "tools/lextests/main.cc"
+    lexer_tests
+    "tests/lexer.cc"
 )
 
 add_tool(
     scanner
     "tools/scanner/main.cc"
+)
+
+add_tool(
+    parser
+    "tools/parser/main.cc"
 )
