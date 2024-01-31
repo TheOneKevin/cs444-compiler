@@ -81,9 +81,11 @@ TEST(LexerTests, StringLiteral) {
 TEST(LexerTests, SubcaseWhitespace) {
     EXPECT_TRUE(lex_string(" ", {YYEOF}));
     EXPECT_TRUE(lex_string(" \f  \t\t \n\n  \r \f  ", {YYEOF}));
-    EXPECT_TRUE(lex_string("//this is a comment \n", {COMMENT, YYEOF}));
-    EXPECT_TRUE(lex_string("/* this is a comment */", {COMMENT, YYEOF}));
-    EXPECT_TRUE(lex_string("/** this \n is \n a \n comment */", {COMMENT, YYEOF}));
+    EXPECT_TRUE(lex_string("//this is a comment \n", {YYEOF}));
+    EXPECT_TRUE(lex_string("/* this is a comment */", {YYEOF}));
+    EXPECT_TRUE(lex_string("/** this \n is \n a \n comment */", {YYEOF}));
+    EXPECT_TRUE(lex_string("/**comment*/ +  /*comment\n2\n*/ +", {OP_PLUS, OP_PLUS, YYEOF}));
+    EXPECT_TRUE(lex_string("/******//", {OP_DIV, YYEOF}));
 }
 
 TEST(LexerTests, SubcaseKeywords) {
@@ -158,5 +160,5 @@ TEST(LexerTests, SubcaseComplexOperators) {
     lex_string("==>", {OP_ASSIGN, OP_GTE, OP_ASSIGN, YYEOF});
 
 
-    lex_string("!==", {OP_NEQ, OP_ASSIGN, YYEOF})
+    lex_string("!==", {OP_NEQ, OP_ASSIGN, YYEOF});
 }

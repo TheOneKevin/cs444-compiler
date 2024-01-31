@@ -19,6 +19,8 @@
         yylloc->first_column = yycolumn; \
         yylloc->last_column = yycolumn + yyleng - 1; \
         yycolumn += yyleng;
+
+    static void comment(void);
 %}
 
 %{
@@ -106,12 +108,10 @@ Keyword: one of
     yycolumn = 1;
 }
 
-{InlineComment} {
-    return COMMENT;
-}
+{InlineComment} {}
 
 {MultilineComment} {
-    
+    comment();
 }
 
 %{
@@ -246,11 +246,11 @@ static void comment(void) {
     while ((c = yyinput()) != 0) {
         yycolumn++;
         if (c == '*') {
-            while ((c = yyinput()) == '*') 
+            while ((c = yyinput()) == '*');
             if (c == '/') return;
             if (c == 0) break;
         }
-        if (yytext[i] == '\n') {
+        if (c == '\n') {
             yylineno++;
             yycolumn = 1;
         }

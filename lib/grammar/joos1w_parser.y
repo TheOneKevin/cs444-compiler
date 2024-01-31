@@ -22,11 +22,10 @@
 %define parse.error verbose
 %locations
 
-/* Literal, IDENTIFIER and comment tokens */
+/* Literal, IDENTIFIER tokens */
 %token LITERAL;
 %token IDENTIFIER;
 %token THIS;
-%token COMMENT
 
 /* Keyword tokens */
 %token ABSTRACT BOOLEAN BYTE CHAR CLASS ELSE EXTENDS FINAL FOR IF IMPLEMENTS
