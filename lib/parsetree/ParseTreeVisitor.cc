@@ -69,7 +69,7 @@ ast::Import* parsetree::visitImport(Node *node) {
 }
 
 ast::TypeDeclarations* parsetree::visitTypeDeclarations(Node* node) {
-
+    
 }
 
 ast::QualifiedIdentifier* parsetree::visitQualifiedIdentifier(Node *node, std::vector<ast::Identifier* >& identifiers) {

@@ -30,6 +30,8 @@ int main(int argc, char **argv) {
     // Clean up Bison stuff
     yy_delete_buffer(state);
     
-    parsetree::visitCompilationUnit(parse_tree);
+    ast::CompilationUnit* ast = parsetree::visitCompilationUnit(parse_tree);
+
+    delete ast;
     return 0;
 }

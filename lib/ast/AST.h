@@ -18,7 +18,8 @@ class QualifiedIdentifier;
 class Identifier;
 
 class AstNode {
-    // ...
+public:
+    virtual std::ostream& print(std::ostream& os) const;
 };
 
 class CompilationUnit : public AstNode {
@@ -31,6 +32,8 @@ public:
         ImportDeclarations* importDeclarations,
         TypeDeclarations* typeDeclarations
     ) : packageDeclaration{packageDeclaration}, importDeclarations{importDeclarations}, typeDeclarations{typeDeclarations} {}
+
+    std::ostream& print(std::ostream& os) const;
 };
 
 class PackageDeclaration : public AstNode {
