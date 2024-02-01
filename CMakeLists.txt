@@ -7,6 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(FetchContent)
 enable_testing()
 
+# Set debug mode flags
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -Wpedantic -Wno-unused-function -g -Og")
 
 # Define YYDEBUG for bison
@@ -65,6 +66,7 @@ macro(add_tool TARGET_NAME)
         ${ARGN}
         "lib/parsetree/ParseTreePrinter.cc"
         "lib/parsetree/ParseTreeDotPrinter.cc"
+        "lib/utils/FragmentGenerator.cc"
     )
     target_include_directories(${TARGET_NAME} PRIVATE
         "${PARSER_DIR}"
@@ -92,13 +94,13 @@ add_my_test(
 add_my_test(
     parser_tests
     "tests/parser_tester.cc"
-    "tools/gen_fragments/FragmentGenerator.cc"
+    "tools/gen_fragments/basic_fragments.cc"
 )
 
 add_tool(
     gen_fragments
     "tools/gen_fragments/main.cc"
-    "tools/gen_fragments/FragmentGenerator.cc"
+    "tools/gen_fragments/basic_fragments.cc"
 )
 
 add_tool(

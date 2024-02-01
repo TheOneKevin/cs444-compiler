@@ -1,13 +1,13 @@
-#include "tools/gen_fragments/FragmentGenerator.h"
+#include <iostream>
+#include <string>
 #include <unordered_set>
+#include "utils/FragmentGenerator.h"
+#include "basic_fragments.h"
 
 int main() {
-    SearchSpace<string> g{get_statement};
-    std::unordered_set<string> results;
-    g.enumerate([&results](string s) {
-        results.insert(s);
-    });
-    for(auto &s : results) {
-        std::cout << s << std::endl;
+    testing::BasicGrammarGenerator g{};
+    for(auto outputs : g.match_string("$<stmt>$")) {
+        std::cout << outputs << std::endl;
     }
+    return 0;
 }
