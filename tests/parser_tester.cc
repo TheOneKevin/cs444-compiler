@@ -3,7 +3,7 @@
 #include <unordered_set>
 #include <gtest/gtest.h>
 
-#include "tools/gen_fragments/FragmentGenerator.h"
+#include "tools/gen_fragments/basic_fragments.h"
 
 #include "parser.h"
 #include "lexer.h"
@@ -38,14 +38,12 @@ bool parse_grammar(const string& str) {
 }
 
 TEST(ParserTests, SimpleGrammar) {
-    SearchSpace<string> g{get_statement};
-    std::unordered_set<string> results;
-    g.enumerate([&results](string s) {
-        // Construct template
-        results.insert("class T{void f(){"+s+"}}");
-    });
-    for(auto& s : results) {
-        std::cout << "Testing: " << s << "\n";
-        EXPECT_TRUE(parse_grammar(s));
+    testing::BasicGrammarGenerator g{};
+    for(auto x : g.match_string("class T{void f(){$<stmt>$}}")) {
+        if(!parse_grammar(x)) {
+            std::cout << "Failed to parse: " << x << std::endl;
+            EXPECT_TRUE(false);
+        }
+        EXPECT_TRUE(true);
     }
 }
