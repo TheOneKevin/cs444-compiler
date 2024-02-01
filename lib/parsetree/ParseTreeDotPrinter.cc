@@ -9,7 +9,7 @@ int print_dot_recursive(std::ostream& os, const Node& node, int& id_counter) {
     const int id = id_counter++;
     os << "  " << id << " [label=\"";
     node.print_type_and_value(os);
-    os << "\"];\n";
+    os << "\" shape=rect];\n";
     for(size_t i = 0; i < node.num_children(); i++) {
         const Node* child = node.child(i);
         int child_id = 0;
@@ -17,7 +17,7 @@ int print_dot_recursive(std::ostream& os, const Node& node, int& id_counter) {
             child_id = print_dot_recursive(os, *child, id_counter);
         } else {
             child_id = id_counter++;
-            os << child_id << " [label=\"ε\"];\n";
+            os << child_id << " [label=\"ε\" shape=rect style=filled fillcolor=lightgrey width=0.25 height=0.25 fontsize=20];\n";
         }
         os << "  " << id << " -> " << child_id << ";\n";
     }

@@ -10,8 +10,7 @@ void Node::print_type(std::ostream& os) const {
 }
 
 void Node::print_type_and_value(std::ostream& os) const {
-    if (type == Type::Literal || type == Type::Operator || type == Type::Identifier ||
-        type == Type::QualifiedIdentifier || type == Type::BasicType || type == Type::ArrayType || type == Type::Type) {
+    if (num_children() == 0) {
         print(os);
     } else {
         print_type(os);
@@ -98,7 +97,7 @@ std::ostream& Identifier::print(std::ostream& os) const {
 std::ostream& Literal::print(std::ostream& os) const {
     std::string formattedValue = value;
     std::replace(formattedValue.begin(), formattedValue.end(), '\"', ' ');
-    os << "(Literal " << (int) type << " " << formattedValue << ")";
+    os << "(Literal " << Type_to_string(type, "??") << " " << formattedValue << ")";
     return os;
 }
 
