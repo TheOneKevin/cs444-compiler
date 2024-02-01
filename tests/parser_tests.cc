@@ -3,7 +3,7 @@
 #include <unordered_set>
 #include <gtest/gtest.h>
 
-#include "tools/gen_fragments/basic_fragments.h"
+#include "tools/genfrags/basic_fragments.h"
 
 #include "parser.h"
 #include "lexer.h"

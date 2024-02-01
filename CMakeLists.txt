@@ -7,6 +7,16 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(FetchContent)
 enable_testing()
 
+# Option to always produce colored output
+option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
+if (${FORCE_COLORED_OUTPUT})
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+       add_compile_options (-fdiagnostics-color=always)
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+       add_compile_options (-fcolor-diagnostics)
+    endif()
+endif()
+
 # Set debug mode flags
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -Wpedantic -Wno-unused-function -g -Og")
 
@@ -67,6 +77,8 @@ macro(add_tool TARGET_NAME)
         "lib/parsetree/ParseTreePrinter.cc"
         "lib/parsetree/ParseTreeDotPrinter.cc"
         "lib/utils/FragmentGenerator.cc"
+        "lib/parsetree/ParseTreeVisitor.cc"
+        "lib/ast/ASTPrinter.cc"
     )
     target_include_directories(${TARGET_NAME} PRIVATE
         "${PARSER_DIR}"
@@ -90,13 +102,13 @@ add_my_test(
     all_tests
     "tests/lexer_tests.cc"
     "tests/parser_tests.cc"
-    "tools/gen_fragments/basic_fragments.cc"
+    "tools/genfrags/basic_fragments.cc"
 )
 
 add_tool(
-    gen_fragments
-    "tools/gen_fragments/main.cc"
-    "tools/gen_fragments/basic_fragments.cc"
+    genfrags
+    "tools/genfrags/main.cc"
+    "tools/genfrags/basic_fragments.cc"
 )
 
 add_tool(
@@ -110,8 +122,11 @@ add_tool(
 )
 
 add_tool(
-    AST
-    "lib/ast/main.cc"
-    "lib/parsetree/ParseTreeVisitor.cc"
-    "lib/ast/ast_printer.cc"
+    joosc
+    "tools/joosc/main.cc"
+)
+
+add_tool(
+    astprinter
+    "tools/astprinter/main.cc"
 )
