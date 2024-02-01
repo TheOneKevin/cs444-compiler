@@ -103,6 +103,10 @@ public:
         return args[i];
     }
 
+    Type get_type() const {
+        return type;
+    }
+
     virtual std::ostream& print(std::ostream& os) const;
 
     void print_type(std::ostream& os) const;
