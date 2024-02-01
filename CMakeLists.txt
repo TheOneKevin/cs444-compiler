@@ -87,13 +87,9 @@ endmacro()
 ################################################################################
 
 add_my_test(
-    lexer_tests
-    "tests/lexer_tester.cc"
-)
-
-add_my_test(
-    parser_tests
-    "tests/parser_tester.cc"
+    all_tests
+    "tests/lexer_tests.cc"
+    "tests/parser_tests.cc"
     "tools/gen_fragments/basic_fragments.cc"
 )
 
