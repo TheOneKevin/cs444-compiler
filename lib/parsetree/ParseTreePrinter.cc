@@ -1,10 +1,21 @@
 #include "ParseTreeTypes.h"
 #include <iostream>
+#include <string>
+#include <algorithm>
 
 using namespace parsetree;
 
 void Node::print_type(std::ostream& os) const {
     os << Type_to_string(type, "Unknown");
+}
+
+void Node::print_type_and_value(std::ostream& os) const {
+    if (type == Type::Literal || type == Type::Operator || type == Type::Identifier ||
+        type == Type::QualifiedIdentifier || type == Type::BasicType || type == Type::ArrayType || type == Type::Type) {
+        print(os);
+    } else {
+        print_type(os);
+    }
 }
 
 std::ostream& Node::print(std::ostream& os) const {
@@ -85,7 +96,9 @@ std::ostream& Identifier::print(std::ostream& os) const {
 }
 
 std::ostream& Literal::print(std::ostream& os) const {
-    os << "(Literal " << (int) type << " " << value << ")";
+    std::string formattedValue = value;
+    std::replace(formattedValue.begin(), formattedValue.end(), '\"', ' ');
+    os << "(Literal " << (int) type << " " << formattedValue << ")";
     return os;
 }
 

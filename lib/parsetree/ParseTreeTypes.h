@@ -14,6 +14,7 @@ struct Node {
     #define NODE_TYPE_LIST(F) \
         /* Leaf nodes */ \
         F(Literal) \
+        F(QualifiedIdentifier) \
         F(Identifier) \
         F(Operator) \
         F(BasicType) \
@@ -94,11 +95,19 @@ public:
         , num_args{sizeof...(Args)}
     {}
 
-    virtual std::ostream& print(std::ostream& os) const;
-    virtual std::ostream& print_dot(std::ostream& os) const;
+    size_t num_children() const {
+        return num_args;
+    }
 
-private:
+    Node* child(size_t i) const {
+        return args[i];
+    }
+
+    virtual std::ostream& print(std::ostream& os) const;
+
     void print_type(std::ostream& os) const;
+
+    void print_type_and_value(std::ostream& os) const;
 
 public:
     virtual ~Node() {
@@ -110,6 +119,11 @@ public:
  * @brief Output stream operator for a parse tree node.
  */
 std::ostream& operator<< (std::ostream& os, const Node& node);
+
+/**
+ * @brief 
+ */
+void print_dot(std::ostream& os, const Node& root);
 
 /**
  * @brief A lex node in the parse tree representing a literal value.

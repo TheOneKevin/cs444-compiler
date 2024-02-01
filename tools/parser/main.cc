@@ -6,8 +6,24 @@
 #include "lexer.h"
 #include "parser.h"
 
-int main() {
-    yydebug = 1;
+#include "utils/CommandLine.h"
+
+int main(int argc, char **argv) {
+    InputParser input(argc, argv);
+    
+    // Flag to enable bison debug
+    if(input.cmdOptionExists("-d")) {
+        yydebug = 1;
+    } else {
+        yydebug = 0;
+    }
+
+    // Flag to print the parse tree in dot format
+    bool print_dot = false;
+    if(input.cmdOptionExists("-x")) {
+        print_dot = true;
+    }
+
     // Check if input is being piped in
     bool is_piped = !isatty(STDIN_FILENO);
     // Print the banner
@@ -54,7 +70,11 @@ int main() {
 
         // Now print the parse tree
         if (parse_tree) {
-            std::cout << *parse_tree << std::endl;
+            if(print_dot) {
+                parsetree::print_dot(std::cout, *parse_tree);
+            } else {
+                std::cout << *parse_tree << std::endl;
+            }
             delete parse_tree;
         }
 

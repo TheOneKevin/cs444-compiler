@@ -38,7 +38,7 @@ bison_target(
     DEFINES_FILE
     "${PARSER_DIR}/parser.h"
     COMPILE_FLAGS
-    "-Wcounterexamples --report=state -v --locations --html --graph -k"
+    "-Wcounterexamples --report=state -v --locations --html --graph -k --color=always"
 )
 
 add_flex_bison_dependency(LEXER PARSER)
@@ -69,6 +69,7 @@ macro(add_tool TARGET_NAME)
     target_include_directories(${TARGET_NAME} PRIVATE
         "${PARSER_DIR}"
         lib
+        "."
     )
 endmacro()
 
@@ -85,7 +86,19 @@ endmacro()
 
 add_my_test(
     lexer_tests
-    "tests/lexer.cc"
+    "tests/lexer_tester.cc"
+)
+
+add_my_test(
+    parser_tests
+    "tests/parser_tester.cc"
+    "tools/gen_fragments/FragmentGenerator.cc"
+)
+
+add_tool(
+    gen_fragments
+    "tools/gen_fragments/main.cc"
+    "tools/gen_fragments/FragmentGenerator.cc"
 )
 
 add_tool(

@@ -46,7 +46,7 @@
 /* ========================================================================== */
 
 CompilationUnit
-    : PackageDeclarationOpt ImportDeclarationsOpt TypeDeclarationsOpt           { *parse_tree_out = new pt::Node(pty::CompilationUnit, $1, $2, $3); }               
+    : PackageDeclarationOpt ImportDeclarationsOpt TypeDeclarationsOpt           { *parse_tree_out = new pt::Node(pty::CompilationUnit, $1, $2, $3); }
     ;
 
 PackageDeclarationOpt
@@ -74,13 +74,11 @@ ImportDeclaration
     ;
 
 SingleTypeImportDeclaration
-    : IMPORT IDENTIFIER ';'                                                     { $$ = new pt::Node(pty::SingleTypeImportDeclaration, $2); }
-    | IMPORT QualifiedIdentifier ';'                                            { $$ = new pt::Node(pty::SingleTypeImportDeclaration, $2); }
+    : IMPORT QualifiedIdentifier ';'                                            { $$ = new pt::Node(pty::SingleTypeImportDeclaration, $2); }
     ;
 
 TypeImportOnDemandDeclaration
-    : IMPORT IDENTIFIER '.' '*' ';'                                             { $$ = new pt::Node(pty::TypeImportOnDemandDeclaration, $2); }
-    | IMPORT QualifiedIdentifier '.' '*' ';'                                    { $$ = new pt::Node(pty::TypeImportOnDemandDeclaration, $2); }
+    : IMPORT QualifiedIdentifier '.' '*' ';'                                    { $$ = new pt::Node(pty::TypeImportOnDemandDeclaration, $2); }
     ;
 
 TypeDeclarationsOpt
@@ -99,7 +97,7 @@ TypeDeclaration
     ;
 
 /* ========================================================================== */
-/*                              Classes                                       */
+/*                                 Classes                                    */
 /* ========================================================================== */
 
 ClassDeclaration
@@ -124,7 +122,6 @@ ClassOrInterfaceModifier
 
 SuperOpt
     : %empty                                                                    { $$ = nullptr; }
-    | EXTENDS IDENTIFIER                                                        { $$ = new pt::Node(pty::SuperOpt, $2); }
     | EXTENDS QualifiedIdentifier                                               { $$ = new pt::Node(pty::SuperOpt, $2); }
     ;
 
@@ -139,8 +136,7 @@ InterfaceTypeList
     ;
 
 InterfaceType
-    : IDENTIFIER
-    | QualifiedIdentifier
+    : QualifiedIdentifier
     ;
 
 ClassBody
@@ -199,7 +195,6 @@ MethodHeader
     | MemberModifiersOpt Type IDENTIFIER '(' FormalParameterListOpt ')'         { $$ = new pt::Node(pty::MethodHeader, $1, $2, $3, $5); }
     ;
 
-
 FormalParameterListOpt
     : %empty                                                                    { $$ = nullptr; }
     | FormalParameterList
@@ -232,7 +227,7 @@ ConstructorBody
     ;
 
 /* ========================================================================== */
-/*                            Interfaces                                      */
+/*                                Interfaces                                  */
 /* ========================================================================== */
 
 InterfaceDeclaration
@@ -273,7 +268,7 @@ AbstractMethodDeclaration
     ;
 
 /* ========================================================================== */
-/*            Assignment and Operator Expressions (non-primary)               */
+/*             Assignment and Operator Expressions (non-primary)              */
 /* ========================================================================== */
 
 ExpressionOpt
@@ -295,14 +290,14 @@ Assignment
     ;
 
 AssignmentLhsExpression
-    : ExpressionName
+    : QualifiedIdentifier
     | FieldAccess
     | ArrayAccess
     ;
 
 PostfixExpression
     : Primary
-    | ExpressionName
+    | QualifiedIdentifier
     ;
 
 ConditionalOrExpression
@@ -359,6 +354,11 @@ MultiplicativeExpression
     ;
 
 UnaryExpression
+    : OP_MINUS UnaryExpression                                                  { $$ = new pt::Node(pty::Expression, $1, $2); }
+    | UnaryExpressionNotPlusMinus
+    ;
+
+UnaryExpressionNotPlusMinus
     : PostfixExpression
     | OP_NOT UnaryExpression                                                    { $$ = new pt::Node(pty::Expression, $1, $2); }
     | OP_BIT_NOT UnaryExpression                                                { $$ = new pt::Node(pty::Expression, $1, $2); }
@@ -366,7 +366,13 @@ UnaryExpression
     ;
 
 CastExpression
-    : '(' Type ')' UnaryExpression                                              { $$ = new pt::Node(pty::CastExpression, $2, $4); }
+    : '(' BasicType Dims ')' UnaryExpression                                    { $$ = new pt::Node(pty::CastExpression, $2, $4); }
+    | '(' Expression ')' UnaryExpressionNotPlusMinus                            { $$ = new pt::Node(pty::CastExpression, $2, $4); }
+    ;
+
+Dims
+    : %empty                                                                    { $$ = nullptr; }
+    | '[' ']'
     ;
 
 /* ========================================================================== */
@@ -394,11 +400,15 @@ FieldAccess
 
 ArrayAccess
     : PrimaryNoNewArray '[' Expression ']'                                      { $$ = new pt::Node(pty::ArrayAccess, $1, $3); }
-    | ExpressionName '[' Expression ']'                                         { $$ = new pt::Node(pty::ArrayAccess, $1, $3); }
+    | QualifiedIdentifier '[' Expression ']'                                    { $$ = new pt::Node(pty::ArrayAccess, $1, $3); }
+    // FIXME(kevin): This rule is a hack because cast type is actually an expression
+    // and needs to be handled in the semantic analysis phase. This rule is to
+    // support (x[]) y !!ONLY!! and should be invalid in all other expressions.
+    | QualifiedIdentifier '[' ']'                                               { $$ = new pt::Node(pty::ArrayAccess, $1); }
     ;
 
 MethodInvocation
-    : IDENTIFIER '(' ArgumentList ')'                                           { $$ = new pt::Node(pty::MethodInvocation, $1, $3); }
+    : QualifiedIdentifier '(' ArgumentList ')'                                  { $$ = new pt::Node(pty::MethodInvocation, $1, $3); }
     | Primary '.' IDENTIFIER '(' ArgumentList ')'                               { $$ = new pt::Node(pty::MethodInvocation, $1, $3, $5); }
     ;
 
@@ -414,11 +424,6 @@ ClassInstanceCreationExpression
 ArgumentList
     : Expression                                                                { $$ = new pt::Node(pty::ArgumentList, $1); }
     | ArgumentList ',' Expression                                               { $$ = new pt::Node(pty::ArgumentList, $1, $3); }
-    ;
-
-ExpressionName
-    : IDENTIFIER
-/*  | QualifiedIdentifier */
     ;
 
 /* ========================================================================== */
@@ -441,8 +446,8 @@ BasicType
     ;
 
 QualifiedIdentifier
-    : IDENTIFIER '.' IDENTIFIER                                                 { $$ = new pt::Node(pty::Identifier); }
-    | QualifiedIdentifier '.' IDENTIFIER                                        { $$ = new pt::Node(pty::Identifier); }
+    : IDENTIFIER                                                                { $$ = new pt::Node(pty::QualifiedIdentifier, $1); }
+    | QualifiedIdentifier '.' IDENTIFIER                                        { $$ = new pt::Node(pty::QualifiedIdentifier, $1, $3); }
     ;
 
 /* ========================================================================== */
@@ -601,6 +606,7 @@ std::string joos1w_parser_resolve_token (int yysymbol) {
 
 static void yyerror(int *ret, parsetree::Node** parse_tree, const char* s) {
     (void) ret;
+    (void) parse_tree;
     // TODO: Grab the location somehow
     std::cerr << "Parse error: " << s << std::endl;
     std::cerr
