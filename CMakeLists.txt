@@ -110,3 +110,9 @@ add_tool(
     parser
     "tools/parser/main.cc"
 )
+
+add_tool(
+    AST
+    "lib/ast/main.cc"
+    "lib/parsetree/ParseTreeVisitor.cc"
+)

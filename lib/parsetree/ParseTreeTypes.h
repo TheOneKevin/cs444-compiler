@@ -168,6 +168,10 @@ public:
         : Node{Node::Type::Identifier}, name{name}
     { }
 
+    std::string get_name() const {
+        return name;
+    }
+
     std::ostream& print(std::ostream& os) const override;
 };
 
