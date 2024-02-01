@@ -62,6 +62,10 @@ TEST(LexerTests, SubcaseHelloWorld) {
     ));
 }
 
+TEST(LexerTests, SubcaseImports) {
+    EXPECT_TRUE(lex_string("import java.util.*;", { IMPORT, IDENTIFIER, '.', IDENTIFIER, '.', OP_MUL, ';', YYEOF }));
+}
+
 TEST(LexerTests, IntegerLiteral) {
     EXPECT_TRUE(lex_string("-10 43532 0", {LITERAL, LITERAL, LITERAL, YYEOF}));
 }

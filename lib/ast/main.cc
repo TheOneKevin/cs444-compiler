@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
     
     ast::CompilationUnit* ast = parsetree::visitCompilationUnit(parse_tree);
 
+    std::cout << (*ast) << std::endl;
     delete ast;
     return 0;
 }

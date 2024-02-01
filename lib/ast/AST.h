@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 namespace ast {
 
@@ -42,6 +43,8 @@ public:
     PackageDeclaration(
         QualifiedIdentifier* qualifiedIdentifier
     ) : qualifiedIdentifier{qualifiedIdentifier} {}
+
+    std::ostream& print(std::ostream& os) const;
 };
 
 class ImportDeclarations : public AstNode {
@@ -50,6 +53,8 @@ public:
     ImportDeclarations(
         std::vector<Import *> imports
     ): imports{imports} {}
+
+    std::ostream& print(std::ostream& os) const;
 };
 
 class Import : public AstNode {
@@ -60,6 +65,8 @@ public:
         bool isSingleType,
         QualifiedIdentifier* qualifiedIdentifier
     ): isSingleType{isSingleType}, qualifiedIdentifier{qualifiedIdentifier} {}
+
+    std::ostream& print(std::ostream& os) const;
 };
 
 class TypeDeclarations : public AstNode {
@@ -73,6 +80,8 @@ public:
     QualifiedIdentifier(
         std::vector<Identifier*> identifiers
     ): identifiers {identifiers} {};
+
+    std::ostream& print(std::ostream& os) const;
 };
 
 
@@ -86,6 +95,10 @@ public:
     Identifier(
         std::string value
     ) : value{value} {}
+
+    std::ostream& print(std::ostream& os) const;
 };
+
+std::ostream& operator<< (std::ostream& os, const AstNode& astNode);
 
 } // namespace ast

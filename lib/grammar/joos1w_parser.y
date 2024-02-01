@@ -78,7 +78,7 @@ SingleTypeImportDeclaration
     ;
 
 TypeImportOnDemandDeclaration
-    : IMPORT QualifiedIdentifier '.' '*' ';'                                    { $$ = new pt::Node(pty::TypeImportOnDemandDeclaration, $2); }
+    : IMPORT QualifiedIdentifier '.' OP_MUL ';'                                 { $$ = new pt::Node(pty::TypeImportOnDemandDeclaration, $2); }
     ;
 
 TypeDeclarationsOpt

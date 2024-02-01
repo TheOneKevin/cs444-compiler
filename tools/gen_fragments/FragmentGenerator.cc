@@ -3,6 +3,9 @@
 string get_primary_expression(SearchSpace<string> &g) {
     // Our repository of expression fragments
     constexpr char const* fragments[] = {
+        "-(1 + 2)",
+        "(1-2)-(1 + 2)",
+        "-(1-2)-(1 + 2)",
         "a + b",
         "a && b",
         "a.b.c = 5",

@@ -55,6 +55,16 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "cinttypes": "cpp",
-        "typeinfo": "cpp"
-    }
+        "typeinfo": "cpp",
+        "clocale": "cpp",
+        "ctime": "cpp",
+        "cwctype": "cpp",
+        "any": "cpp",
+        "deque": "cpp",
+        "variant": "cpp",
+        "iomanip": "cpp",
+        "thread": "cpp",
+        "chrono": "cpp"
+    },
+    "cmake.sourceDirectory": "${workspaceFolder}/Applications/zoom.us.app/Contents/Frameworks/curl64.framework/Versions/A/Resources"
 }
