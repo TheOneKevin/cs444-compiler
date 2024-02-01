@@ -15,7 +15,7 @@ ast::CompilationUnit* parsetree::visitCompilationUnit(Node* node) {
     return new ast::CompilationUnit {
         visitPackageDeclaration(node->child(0)),
         visitImportDeclarations(node->child(1), *(new std::vector<ast::Import*>())),
-        visitTypeDeclarations(node->child(2))
+        visitTypeDeclaration(node->child(2))
     };
 }
 
@@ -68,8 +68,20 @@ ast::Import* parsetree::visitImport(Node *node) {
     }
 }
 
-ast::TypeDeclarations* parsetree::visitTypeDeclarations(Node* node) {
-    
+ast::TypeDeclaration* parsetree::visitTypeDeclaration(Node* node) {
+    if (node == nullptr) return nullptr; // nullable
+    // Type check the children nodes
+    if (node->num_children() != 1) {
+        throw std::runtime_error("typeDeclaration node must have 1 children");
+    }
+
+    if (node->get_type() == Node::Type::ClassDeclaration) {
+
+    } else if (node->get_type() == Node::Type::InterfaceDeclaration) {
+
+    } else {
+        
+    }
 }
 
 ast::QualifiedIdentifier* parsetree::visitQualifiedIdentifier(Node *node, std::vector<ast::Identifier* >& identifiers) {

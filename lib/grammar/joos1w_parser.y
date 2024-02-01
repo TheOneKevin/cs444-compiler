@@ -83,12 +83,7 @@ TypeImportOnDemandDeclaration
 
 TypeDeclarationsOpt
     : %empty                                                                    { $$ = nullptr; }
-    | TypeDeclarationList
-    ;
-
-TypeDeclarationList
-    : TypeDeclaration                                                           { $$ = new pt::Node(pty::TypeDeclarationList, $1); }
-    | TypeDeclarationList TypeDeclaration                                       { $$ = new pt::Node(pty::TypeDeclarationList, $1, $2); }
+    | TypeDeclaration
     ;
 
 TypeDeclaration

@@ -15,7 +15,7 @@ std::ostream& CompilationUnit::print(std::ostream& os) const {
     os << "(CompilationUnit: ";
     if (packageDeclaration != nullptr) os << (*packageDeclaration);
     if (importDeclarations != nullptr) os << (*importDeclarations);
-    if (typeDeclarations != nullptr) os << (*typeDeclarations);
+    if (typeDeclaration != nullptr) os << (*typeDeclaration);
     os << ")";
     return os;
 }

@@ -9,7 +9,10 @@ ast::CompilationUnit* visitCompilationUnit(Node* node);
 ast::PackageDeclaration* visitPackageDeclaration(Node* node);
 ast::ImportDeclarations* visitImportDeclarations(Node* node, std::vector<ast::Import *>& imports);
 ast::Import* visitImport(Node *node);
-ast::TypeDeclarations* visitTypeDeclarations(Node* node);
+ast::TypeDeclaration* visitTypeDeclaration(Node* node);
+
+// Classes
+ast::ClassDeclaration* visitClassDeclaration(Node* node);
 
 ast::QualifiedIdentifier* visitQualifiedIdentifier(Node *node, std::vector<ast::Identifier*>& identifiers);
 

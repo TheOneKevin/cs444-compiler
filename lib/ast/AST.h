@@ -12,7 +12,10 @@ class CompilationUnit;
 class PackageDeclaration;
 class ImportDeclarations;
 class Import;
-class TypeDeclarations;
+class TypeDeclaration;
+
+class ClassDeclaration;
+class InterfaceDeclaration;
 
 class QualifiedIdentifier;
 
@@ -26,13 +29,13 @@ public:
 class CompilationUnit : public AstNode {
     PackageDeclaration* packageDeclaration;
     ImportDeclarations* importDeclarations;
-    TypeDeclarations* typeDeclarations;
+    TypeDeclaration* typeDeclaration;
 public:
     CompilationUnit(
         PackageDeclaration* packageDeclaration,
         ImportDeclarations* importDeclarations,
-        TypeDeclarations* typeDeclarations
-    ) : packageDeclaration{packageDeclaration}, importDeclarations{importDeclarations}, typeDeclarations{typeDeclarations} {}
+        TypeDeclaration* typeDeclaration
+    ) : packageDeclaration{packageDeclaration}, importDeclarations{importDeclarations}, typeDeclaration{typeDeclaration} {}
 
     std::ostream& print(std::ostream& os) const;
 };
@@ -69,9 +72,14 @@ public:
     std::ostream& print(std::ostream& os) const;
 };
 
-class TypeDeclarations : public AstNode {
-public:
+class TypeDeclaration : public AstNode{};
 
+class ClassDeclaration : public TypeDeclaration{
+public:
+};
+
+class InterfaceDeclaration : public TypeDeclaration{
+    
 };
 
 class QualifiedIdentifier : public AstNode {

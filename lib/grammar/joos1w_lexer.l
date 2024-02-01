@@ -38,7 +38,7 @@ StringLiteral           \"{JavaCharacter}*\"
 
 Whitespace              [ \t\r\f]+
 Newline                 \n
-InlineComment           \/\/.*
+InlineComment           (\/\/.*)|(\/\*\*\/)
 MultilineComment        \/(\*|\*\*)
 Identifier              [a-zA-Z_][a-zA-Z0-9_]*
 
