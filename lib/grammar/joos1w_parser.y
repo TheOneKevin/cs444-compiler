@@ -408,8 +408,8 @@ ArrayAccess
     ;
 
 MethodInvocation
-    : QualifiedIdentifier '(' ArgumentList ')'                                  { $$ = new pt::Node(pty::MethodInvocation, $1, $3); }
-    | Primary '.' IDENTIFIER '(' ArgumentList ')'                               { $$ = new pt::Node(pty::MethodInvocation, $1, $3, $5); }
+    : QualifiedIdentifier '(' ArgumentListOpt ')'                                  { $$ = new pt::Node(pty::MethodInvocation, $1, $3); }
+    | Primary '.' IDENTIFIER '(' ArgumentListOpt ')'                               { $$ = new pt::Node(pty::MethodInvocation, $1, $3, $5); }
     ;
 
 ArrayCreationExpression
@@ -420,6 +420,10 @@ ClassInstanceCreationExpression
     : NEW QualifiedIdentifier '(' ArgumentList ')'                              { $$ = new pt::Node(pty::ClassInstanceCreationExpression, $2, $4); }
     | Primary '.' NEW QualifiedIdentifier '(' ArgumentList ')'                  { $$ = new pt::Node(pty::ClassInstanceCreationExpression, $1, $4, $6); }
     ;
+
+ArgumentListOpt
+    : %empty                                                                    { $$ = nullptr; }
+    | ArgumentList
 
 ArgumentList
     : Expression                                                                { $$ = new pt::Node(pty::ArgumentList, $1); }
@@ -545,20 +549,21 @@ WhileStatementNoShortIf
     ;
 
 ForStatement
-    : FOR '(' ForInit ';' ExpressionOpt ';' ForUpdate ')' Statement             { $$ = new pt::Node(pty::ForStatement, $3, $5, $7, $9); }
+    : FOR '(' ForInitOpt ';' ExpressionOpt ';' ForUpdateOpt ')' Statement       { $$ = new pt::Node(pty::ForStatement, $3, $5, $7, $9); }
     ;
 
 ForStatementNoShortIf
-    : FOR '(' ForInit ';' ExpressionOpt ';' ForUpdate ')' StatementNoShortIf    { $$ = new pt::Node(pty::ForStatement, $3, $5, $7, $9); }
+    : FOR '(' ForInitOpt ';' ExpressionOpt ';' ForUpdateOpt ')' 
+        StatementNoShortIf                                                      { $$ = new pt::Node(pty::ForStatement, $3, $5, $7, $9); }
     ;
 
-ForInit
+ForInitOpt
     : %empty                                                                    { $$ = nullptr; }
     | LocalVariableDeclaration                                                  /* No action for union type */
     | StatementExpression                                                       /* No action for union type */
     ;
 
-ForUpdate
+ForUpdateOpt
     : %empty                                                                    { $$ = nullptr; }
     | StatementExpression                                                       /* No action for optional type */
     ;
