@@ -14,7 +14,7 @@ ast::CompilationUnit* parsetree::visitCompilationUnit(Node* node) {
     }
     return new ast::CompilationUnit {
         visitPackageDeclaration(node->child(0)),
-        visitImportDeclarations(node->child(1)),
+        visitImportDeclarations(node->child(1), *(new std::vector<ast::Import*>())),
         visitTypeDeclarations(node->child(2))
     };
 }
@@ -33,8 +33,42 @@ ast::PackageDeclaration* parsetree::visitPackageDeclaration(Node* node) {
     };
 }
 
-ast::ImportDeclarations* parsetree::visitImportDeclarations(Node* node) {
-    
+ast::ImportDeclarations* parsetree::visitImportDeclarations(Node* node, std::vector<ast::Import *> &imports) {
+    if (node == nullptr) return nullptr; // nullable
+    if (node->get_type() != Node::Type::ImportDeclarationList) {
+        throw std::runtime_error("ImportDeclarationList called on a node that is not a ImportDeclarationList");
+    }
+    if (node->child(0)->get_type() == Node::Type::SingleTypeImportDeclaration) {
+        imports.push_back(visitImport(node->child(0)));
+    } else if (node->child(0)->get_type() == Node::Type::TypeImportOnDemandDeclaration) {
+        imports.push_back(visitImport(node->child(0)));
+    } else if (node->child(0)->get_type() == Node::Type::ImportDeclarationList) {
+        visitImportDeclarations(node->child(0), imports);
+        imports.push_back(visitImport(node->child(0)));
+    } else {
+        throw std::runtime_error("ImportDeclarationList node has incorrect children nodes");
+    }
+}
+
+ast::Import* parsetree::visitImport(Node *node) {
+    // Type check the children nodes
+    if (node->num_children() != 1) {
+        throw std::runtime_error("Import node must have 3 children");
+    }
+
+    if (node->get_type() == Node::Type::SingleTypeImportDeclaration) {
+        return new ast::Import(
+            true, 
+            visitQualifiedIdentifier(node->child(0), *(new std::vector<ast::Identifier*>()))
+        );
+    } else if (node->get_type() == Node::Type::SingleTypeImportDeclaration) {
+        return new ast::Import(
+            false, 
+            visitQualifiedIdentifier(node->child(0), *(new std::vector<ast::Identifier*>()))
+        );
+    } else {
+        throw std::runtime_error("VisitImport called on a node that is not a VisitImport");
+    }
 }
 
 ast::TypeDeclarations* parsetree::visitTypeDeclarations(Node* node) {

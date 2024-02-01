@@ -10,6 +10,7 @@ namespace ast {
 class CompilationUnit;
 class PackageDeclaration;
 class ImportDeclarations;
+class Import;
 class TypeDeclarations;
 
 class QualifiedIdentifier;
@@ -41,8 +42,21 @@ public:
 };
 
 class ImportDeclarations : public AstNode {
+    std::vector<Import *> imports;
 public:
+    ImportDeclarations(
+        std::vector<Import *> imports
+    ): imports{imports} {}
+};
 
+class Import : public AstNode {
+    bool isSingleType;
+    QualifiedIdentifier* qualifiedIdentifier;
+public:
+    Import(
+        bool isSingleType,
+        QualifiedIdentifier* qualifiedIdentifier
+    ): isSingleType{isSingleType}, qualifiedIdentifier{qualifiedIdentifier} {}
 };
 
 class TypeDeclarations : public AstNode {
