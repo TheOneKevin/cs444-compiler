@@ -71,8 +71,8 @@ string get_statement(SearchSpace<string> &g) {
         case 4: return "{ { return; } { return; } return; }";
         case 5: return "{{{}{{}{}}{}}{}}}";
         case 6: return "int x = 5;";
-        case 7: return "x[] = " + get_primary_expression(g) + "";
-        case 8: return "a.b.c.d. x = " + get_primary_expression(g) + "";
+        case 7: return "x[] = " + get_primary_expression(g) + ";";
+        case 8: return "a.b.c.d. x = " + get_primary_expression(g) + ";";
         case 9: return "int x = " + get_primary_expression(g) + ";";
         case 10: return "return x;";
         case 11: return "return " + get_primary_expression(g) + ";";
