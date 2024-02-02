@@ -32,7 +32,7 @@ ast::ClassDeclaration* parsetree::visitClassDeclaration(Node* node) {
 
 void parsetree::visitClassOrInterfaceModifiers(Node* node, std::vector<ast::ClassOrInterfaceModifier*>& modifiers) {
     if (node == nullptr) return; // nullable
-    if (node->child(0)->get_type() == Node::Type::ClassOrInterfaceModifierList) {
+    if (node->child(0)->get_type() == Node::Type::ModifierList) {
         visitClassOrInterfaceModifiers(node->child(0), modifiers);
         modifiers.push_back(visitClassOrInterfaceModifier(node->child(1)));
     } else {

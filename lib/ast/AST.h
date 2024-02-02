@@ -29,7 +29,6 @@ public:
 class CompilationUnit : public AstNode {
     QualifiedIdentifier* packageDeclaration;
     std::vector<Import*> imports;
-    TypeDeclaration* typeDeclaration;
 public:
     CompilationUnit(
         QualifiedIdentifier* packageDeclaration,
@@ -59,7 +58,10 @@ class ClassDeclaration : public TypeDeclaration{
     Identifier* identifier;
     QualifiedIdentifier* superClass; // Extends super class , null if no extends
     std::vector<QualifiedIdentifier*> interfaces; // Implements interfaces, empty if no implements
-    std::vector<ClassBodyDeclaration*> classBodyDeclarations; // class members + constructors
+    std::vector<MethodDeclaration*> methods;
+    std::vector<FieldDeclaration*> fields;
+    std::vector<MethodDeclaration*> abstractMethods;
+    std::vector<MethodDeclaration*> constructors;
 public:
     ClassDeclaration(
         std::vector<ClassOrInterfaceModifier*> modifiers,
@@ -67,10 +69,19 @@ public:
         QualifiedIdentifier* superClass,
         std::vector<QualifiedIdentifier*> interfaces,
         std::vector<ClassBodyDeclaration*> classBodyDeclarations
-    ): modifiers{modifiers}, identifier{identifier}, superClass{superClass}, interfaces{interfaces}, classBodyDeclarations{classBodyDeclarations} {};
+    ): modifiers{modifiers}, identifier{identifier}, superClass{superClass}, interfaces{interfaces} {
+        // Check classBodyDeclarations and sort into ....
+        
+    };
 };
 
-class ClassBodyDeclaration : public AstNode {
+class ClassBodyDeclaration : public AstNode { };
+
+class MethodDeclaration : public ClassBodyDeclaration {
+
+};
+
+class FieldDeclaration : public ClassBodyDeclaration {
 
 };
 

@@ -74,11 +74,19 @@ macro(add_tool TARGET_NAME)
         "${LEXER_OUT}"
         "${PARSER_OUT}"
         ${ARGN}
-        "lib/parsetree/ParseTreePrinter.cc"
-        "lib/parsetree/ParseTreeDotPrinter.cc"
-        "lib/utils/FragmentGenerator.cc"
-        "lib/parsetree/ParseTreeVisitor.cc"
+        # ast
         "lib/ast/ASTPrinter.cc"
+        # parsetree
+        "lib/parsetree/ParseTreeDotPrinter.cc"
+        "lib/parsetree/ParseTreePrinter.cc"
+        "lib/parsetree/ParseTreeVisitor.cc"
+        "lib/parsetree/VisitClassInterface.cc"
+        "lib/parsetree/VisitDeclaration.cc"
+        "lib/parsetree/VisitExpression.cc"
+        "lib/parsetree/VisitLeaf.cc"
+        "lib/parsetree/VisitStatement.cc"
+        # utils
+        "lib/utils/FragmentGenerator.cc"
     )
     target_include_directories(${TARGET_NAME} PRIVATE
         "${PARSER_DIR}"
@@ -143,7 +151,5 @@ add_tool(
 
 add_tool(
     astprinter
-    "lib/parsetree/VisitClassInterface.cc"
     "tools/astprinter/main.cc"
-
 )

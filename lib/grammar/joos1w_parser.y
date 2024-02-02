@@ -428,7 +428,6 @@ ArrayCreationExpression
 
 ClassInstanceCreationExpression
     : NEW QualifiedIdentifier '(' ArgumentList ')'                              { $$ = new pt::Node(pty::ClassInstanceCreationExpression, $2, $4); }
-    | Primary '.' NEW QualifiedIdentifier '(' ArgumentList ')'                  { $$ = new pt::Node(pty::ClassInstanceCreationExpression, $1, $4, $6); }
     ;
 
 ArgumentListOpt
