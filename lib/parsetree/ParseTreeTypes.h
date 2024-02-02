@@ -24,27 +24,24 @@ struct Node {
         /* Compilation Unit */ \
         F(CompilationUnit) \
         F(PackageDeclaration) \
-        F(TypeDeclarationList) \
-        F(FieldDeclaration) \
-        F(ArgumentList) \
-        /* Import declarations */ \
         F(ImportDeclarationList) \
         F(SingleTypeImportDeclaration) \
         F(TypeImportOnDemandDeclaration) \
         /* Modifiers */ \
         F(ModifierList) \
-        F(SuperOpt) \
-        F(InterfaceTypeList) \
         /* Classes */ \
-        F(ClassBodyDeclarationList) \
         F(ClassDeclaration) \
+        F(FieldDeclaration) \
+        F(ClassBodyDeclarationList) \
         F(ConstructorDeclaration) \
+        F(SuperOpt) \
         /* Interfaces */ \
         F(InterfaceDeclaration) \
         F(ExtendsInterfaces) \
         F(InterfaceMemberDeclarationList) \
-        F(AbstractMethodDeclaration) \
+        F(InterfaceTypeList) \
         /* Methods */ \
+        F(AbstractMethodDeclaration) \
         F(MethodHeader) \
         F(MethodDeclaration) \
         F(FormalParameterList) \
@@ -63,6 +60,7 @@ struct Node {
         F(VariableDeclaratorList) \
         /* Expressions  */ \
         F(Expression) \
+        F(ArgumentList) \
         F(FieldAccess) \
         F(ArrayAccess) \
         F(CastExpression) \
@@ -111,6 +109,16 @@ public:
     void print_type(std::ostream& os) const;
 
     void print_type_and_value(std::ostream& os) const;
+
+    // Operator to turn Type into a string
+    std::string type_string() const {
+        return type_strings[static_cast<int>(type)];
+    }
+
+    // Operator to turn Type into a string
+    static std::string type_string(Type type) {
+        return type_strings[static_cast<int>(type)];
+    }
 
 public:
     virtual ~Node() {

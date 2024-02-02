@@ -206,8 +206,8 @@ FormalParameter
     ;
 
 MethodBody
-    : Block 
-    | ';'
+    : Block                                                                     { $$ = $1;}
+    | ';'                                                                       { $$ = nullptr; }
     ;
 
 // Note: Constructors modifiers needs to be checked in the weeder, can only be

@@ -2,24 +2,34 @@
 #include "parsetree/ParseTreeTypes.h"
 #include "parsetree/ParseTreeVisitor.h"
 
-using namespace parsetree;
+namespace parsetree {
 
-ast::ClassDecl* parsetree::visitClassDeclaration(Node* node) {
-    if (node->get_type() != Node::Type::ClassDeclaration) {
-        throw std::runtime_error("VisitClassDeclaration called on a node that is not a ClassDeclaration");
-    }
-    if (node->num_children() != 5) {
-        throw std::runtime_error("ClassDeclaration node must have 5 children");
-    }
-    // get the interface type list
+using pty = Node::Type;
+
+// pty::ClassDeclaration ///////////////////////////////////////////////////////
+
+ast::ClassDecl* visitClassDeclaration(Node* node) {
+    check_node_type(node, pty::ClassDeclaration);
+    check_num_children(node, 5, 5);
+    // $1: Visit the modifiers
+    auto modifiers = visitModifierList(node->child(0));
+    // $3: Visit identifier
+    auto name = visitIdentifier(node->child(1));
+    // $4: Visit SuperOpt
+    auto super = visitSuperOpt(node->child(2));
+    // $5: Visit InterfaceTypeList
     std::vector<ast::QualifiedIdentifier*> interfaces;
-    visitInterfaceTypeList(node->child(3), interfaces);
-
-    // get the class body declarations
-    std::vector<ast::DeclContext*> classBodyDeclarations;
-    visitClassBodyDeclarations(node->child(4), classBodyDeclarations);
+    visitListPattern<
+        pty::InterfaceTypeList, ast::QualifiedIdentifier*, true
+    >(node->child(3), interfaces);
+    // $6: Visit ClassBody
+    std::vector<ast::Decl*> classBodyDeclarations;
+    visitListPattern<
+        pty::ClassBodyDeclarationList, ast::Decl*, true
+    >(node->child(4), classBodyDeclarations);
+    // Return the constructed AST node
     return new ast::ClassDecl {
-        visitClassOrInterfaceModifiers(node->child(0), ast::Modifiers{}),
+        visitModifierList(node->child(0), ast::Modifiers{}),
         visitIdentifier(node->child(1)),
         visitSuperOpt(node->child(2)),
         interfaces,
@@ -27,57 +37,146 @@ ast::ClassDecl* parsetree::visitClassDeclaration(Node* node) {
     };
 }
 
-ast::Modifiers parsetree::visitClassOrInterfaceModifiers(Node* node, ast::Modifiers modifiers) {
-    if (node == nullptr) return modifiers; // nullable
-    if (node->child(0)->get_type() == Node::Type::ModifierList) {
-        visitClassOrInterfaceModifiers(node->child(0), modifiers);
-        modifiers.set(visitClassOrInterfaceModifier(node->child(1)));
-    } else {
-        modifiers.set(visitClassOrInterfaceModifier(node->child(0)));
-    }
-}
-
-ast::Modifiers parsetree::visitClassOrInterfaceModifier(Node* node) {
-    if (node->get_type() != Node::Type::Modifier) {
-        throw std::runtime_error("visitClassOrInterfaceModifier called on a node that is not a Modifier");
-    }
-    Modifier::Type type = dynamic_cast<Modifier*>(node)->get_type();
-    if (!(type == Modifier::Type::Abstract || type == Modifier::Type::Final || type == Modifier::Type::Public)) {
-        throw std::runtime_error("Incorrect Modifier type for ClassOrInterfaceModifier");
-    }
-    auto modifiers = ast::Modifiers{};
-    modifiers.set(type);
-    return modifiers;
-}
-
-ast::QualifiedIdentifier* parsetree::visitSuperOpt(Node* node) {
-    if (node == nullptr) return nullptr; // nullable
-    if (node->get_type() != Node::Type::SuperOpt) {
-        throw std::runtime_error("visitSuperOpt called on a node that is not a SuperOpt");
-    }
-    if (node->num_children() != 1) {
-        throw std::runtime_error("SuperOpt node must have 1 children");
-    }
-    return visitQualifiedIdentifier(node->child(0), new ast::QualifiedIdentifier{});
+ast::QualifiedIdentifier* visitSuperOpt(Node* node) {
+    if (node == nullptr) return nullptr;
+    check_node_type(node, pty::SuperOpt);
+    check_num_children(node, 1, 1);
+    return visitQualifiedIdentifier(node->child(0));
 
 }
 
-void parsetree::visitInterfaceTypeList(Node* node, std::vector<ast::QualifiedIdentifier*>& interfaces) {
-    if (node == nullptr) return; // nullable
-    auto id_node = new ast::QualifiedIdentifier{};
-    if (node->child(0)->get_type() == Node::Type::InterfaceTypeList) {
-        visitInterfaceTypeList(node->child(0), interfaces);
-        visitQualifiedIdentifier(node->child(1), id_node);
-    } else {
-        visitQualifiedIdentifier(node->child(0), id_node);
+template<>
+ast::QualifiedIdentifier* visit<pty::InterfaceTypeList>(Node* node) {
+    return visitQualifiedIdentifier(node);
+}
+
+template<>
+ast::Decl* visit<pty::ClassBodyDeclarationList>(Node* node) {
+    auto nodety = node->get_type();
+    switch(nodety) {
+        case pty::FieldDeclaration:
+            return visitFieldDeclaration(node);
+        case pty::MethodDeclaration:
+            return visitMethodDeclaration(node);
+        case pty::ConstructorDeclaration:
+            return visitConstructorDeclaration(node);
+        default:
+            visit(node);
     }
-    interfaces.push_back(id_node);
 }
 
-void parsetree::visitClassBodyDeclarations(Node* node, std::vector<ast::DeclContext*>& declarations) {
+// pty::FieldDeclaration ///////////////////////////////////////////////////////
 
+ast::FieldDecl* visitFieldDeclaration(Node* node) {
+    check_node_type(node, pty::FieldDeclaration);
+    check_num_children(node, 3, 3);
+    // $1: Visit the modifiers
+    auto modifiers = visitModifierList(node->child(0));
+    // $2: Visit the type
+    auto type = visitType(node->child(1));
+    // $3: Visit the declarators
+    std::vector<ast::VarDecl*> declarators;
+    visitListPattern<
+        pty::VariableDeclaratorList, ast::VarDecl*, false
+    >(node->child(2), declarators);
+    return new ast::FieldDecl{modifiers, type, ""};
 }
 
-ast::InterfaceDecl* parsetree::visitInterfaceDeclaration(Node* node) {
-
+template<>
+ast::VarDecl* visit<pty::VariableDeclaratorList>(Node* node) {
+    check_node_type(node, pty::VariableDeclarator);
+    check_num_children(node, 1, 2);
+    // FIXME(kevin): Implement this
+    return new ast::VarDecl{nullptr, ""};
 }
+
+// pty::MethodDeclaration //////////////////////////////////////////////////////
+
+ast::MethodDecl* visitMethodDeclaration(Node* node) {
+    check_node_type(node, pty::MethodDeclaration);
+    check_num_children(node, 2, 2);
+
+    // $1: Visit the header
+    auto pt_header = node->child(0);
+    check_node_type(pt_header, pty::MethodHeader);
+    check_num_children(pt_header, 3, 4);
+    ast::Modifiers modifiers;
+    ast::Type* type;
+    std::string name;
+    std::vector<ast::VarDecl*> params;
+    if(pt_header->num_children() == 3) {
+        // $1: Visit the modifiers
+        modifiers = visitModifierList(pt_header->child(0));
+        // The type is void
+        type = nullptr;
+        // $2: Visit the identifier
+        name = visitIdentifier(pt_header->child(2));
+        // $3: Visit the formal parameters
+        visitListPattern<
+            pty::FormalParameterList, ast::VarDecl*, true
+        >(pt_header->child(2), params);
+    } else if(pt_header->num_children() == 4) {
+        // $1: Visit the modifiers
+        modifiers = visitModifierList(pt_header->child(0));
+        // $2: Visit the type
+        type = visitType(pt_header->child(1));
+        // $3: Visit the identifier
+        name = visitIdentifier(pt_header->child(2));
+        // $4: Visit the formal parameters
+        visitListPattern<
+            pty::FormalParameterList, ast::VarDecl*, true
+        >(pt_header->child(3), params);
+    }
+    
+    // $2: Visit the body
+    auto pt_body = node->child(1);
+    ast::Stmt* body = nullptr;
+    if(pt_body != nullptr) {
+        body = visitBlock(pt_body);
+    }
+
+    // Return the constructed AST node
+    return new ast::MethodDecl{modifiers, name, type, params, false, body};
+}
+
+ast::MethodDecl* visitConstructorDeclaration(Node* node) {
+    check_node_type(node, pty::ConstructorDeclaration);
+    check_num_children(node, 4, 4);
+
+    // $1: Visit the modifiers
+    auto modifiers = visitModifierList(node->child(0));
+    // $2: Visit the identifier
+    auto name = visitIdentifier(node->child(1));
+    // $3: Visit the formal parameters
+    std::vector<ast::VarDecl*> params;
+    visitListPattern<
+        pty::FormalParameterList, ast::VarDecl*, true
+    >(node->child(2), params);
+    // $4: Visit the body
+    ast::Stmt* body = nullptr;
+    if(node->child(3) != nullptr) {
+        body = visitBlock(node->child(3));
+    }
+
+    return new ast::MethodDecl{modifiers, name, nullptr, params, true, body};
+}
+
+template<>
+ast::VarDecl* visit<pty::FormalParameterList>(Node* node) {
+    check_node_type(node, pty::FormalParameter);
+    check_num_children(node, 2, 2);
+    // $1: Visit the type
+    auto type = visitType(node->child(0));
+    // $2: Visit the identifier
+    auto name = visitIdentifier(node->child(1));
+    // Return the constructed AST node
+    return new ast::VarDecl{type, name};
+}
+
+// pty::InterfaceDeclaration ///////////////////////////////////////////////////
+
+ast::InterfaceDecl* visitInterfaceDeclaration(Node* node) {
+    return nullptr;
+}
+
+} // namespace parsetree

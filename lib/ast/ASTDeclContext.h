@@ -21,7 +21,7 @@ public:
         std::string name,
         QualifiedIdentifier* superClass,
         std::vector<QualifiedIdentifier*> interfaces,
-        std::vector<DeclContext*> classBodyDecls
+        std::vector<Decl*> classBodyDecls
     ): Decl{name}, modifiers{modifiers}, superClass{superClass}, interfaces{interfaces} {
         // Check classBodyDecls and sort into fields, methods, and constructors
         

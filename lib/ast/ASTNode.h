@@ -48,6 +48,9 @@ class Stmt : public AstNode {
 
 struct QualifiedIdentifier {
     std::vector<std::string> identifiers;
+    void add_identifier(std::string identifier) {
+        identifiers.push_back(identifier);
+    }
 };
 
 struct ImportDeclaration {
