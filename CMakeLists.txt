@@ -7,6 +7,16 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(FetchContent)
 enable_testing()
 
+# Option to always produce colored output
+option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
+if (${FORCE_COLORED_OUTPUT})
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+       add_compile_options (-fdiagnostics-color=always)
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+       add_compile_options (-fcolor-diagnostics)
+    endif()
+endif()
+
 # Set debug mode flags
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -Wpedantic -Wno-unused-function -g -Og")
 
@@ -39,7 +49,7 @@ bison_target(
     DEFINES_FILE
     "${PARSER_DIR}/parser.h"
     COMPILE_FLAGS
-    "-Wcounterexamples --report=state -v --locations --html --graph -k --color=always"
+    "--report=state -v --locations --html --graph -k --color=always"
 )
 
 add_flex_bison_dependency(LEXER PARSER)
@@ -67,6 +77,8 @@ macro(add_tool TARGET_NAME)
         "lib/parsetree/ParseTreePrinter.cc"
         "lib/parsetree/ParseTreeDotPrinter.cc"
         "lib/utils/FragmentGenerator.cc"
+        "lib/parsetree/ParseTreeVisitor.cc"
+        "lib/ast/ASTPrinter.cc"
     )
     target_include_directories(${TARGET_NAME} PRIVATE
         "${PARSER_DIR}"
@@ -83,24 +95,35 @@ macro(add_my_test TARGET_NAME)
 endmacro()
 
 ################################################################################
-#            For every tool, create a new add_*() call below                   #
+#            Run python program right now to generate the tests                #
+################################################################################
+
+execute_process(
+    COMMAND python3 "tests/generate_gtest.py"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+file(GLOB GENERATED_TEST_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/tests/generated/*.cc)
+
+################################################################################
+#              For every tool, create a new add_*() call below                 #
 ################################################################################
 
 add_my_test(
-    lexer_tests
-    "tests/lexer_tester.cc"
-)
-
-add_my_test(
-    parser_tests
-    "tests/parser_tester.cc"
-    "tools/gen_fragments/basic_fragments.cc"
+    all_tests
+    "tests/common.cc"
+    "tests/lexer_tests.cc"
+    "tests/parser_tests.cc"
+    "tools/genfrags/basic_fragments.cc"
+    "tools/genfrags/class_fragments.cc"
+    ${GENERATED_TEST_SRCS}
 )
 
 add_tool(
-    gen_fragments
-    "tools/gen_fragments/main.cc"
-    "tools/gen_fragments/basic_fragments.cc"
+    genfrags
+    "tools/genfrags/main.cc"
+    "tools/genfrags/basic_fragments.cc"
+    "tools/genfrags/class_fragments.cc"
 )
 
 add_tool(
@@ -114,10 +137,13 @@ add_tool(
 )
 
 add_tool(
-    AST
-    "lib/ast/main.cc"
-    "lib/parsetree/ParseTreeVisitor.cc"
+    joosc
+    "tools/joosc/main.cc"
+)
+
+add_tool(
+    astprinter
     "lib/parsetree/VisitClassInterface.cc"
-    "lib/ast/ast_printer.cc"
+    "tools/astprinter/main.cc"
 
 )

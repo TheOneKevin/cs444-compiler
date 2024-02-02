@@ -66,5 +66,5 @@
         "thread": "cpp",
         "chrono": "cpp"
     },
-    "cmake.sourceDirectory": "${workspaceFolder}/Applications/zoom.us.app/Contents/Frameworks/curl64.framework/Versions/A/Resources"
+    "cmake.sourceDirectory": "${workspaceFolder}"
 }

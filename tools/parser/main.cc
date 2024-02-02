@@ -9,7 +9,7 @@
 #include "utils/CommandLine.h"
 
 int main(int argc, char **argv) {
-    InputParser input(argc, argv);
+    utils::InputParser input(argc, argv);
     
     // Flag to enable bison debug
     if(input.cmdOptionExists("-d")) {

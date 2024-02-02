@@ -1,5 +1,5 @@
-#include "AST.h"
-#include "../parsetree/ParseTreeVisitor.h"
+#include "ast/AST.h"
+#include "parsetree/ParseTreeVisitor.h"
 
 #include <unistd.h>
 #include <iostream>

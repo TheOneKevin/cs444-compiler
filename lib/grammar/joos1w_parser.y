@@ -96,17 +96,17 @@ TypeDeclaration
 /* ========================================================================== */
 
 ClassDeclaration
-    : ClassModifiersOpt CLASS IDENTIFIER SuperOpt InterfaceOpt ClassBody        { $$ = new pt::Node(pty::ClassDeclaration, $1, $3, $4, $5, $6 ); }
+    : ClassOrInterfaceModifierOpt CLASS IDENTIFIER SuperOpt InterfaceOpt ClassBody        { $$ = new pt::Node(pty::ClassDeclaration, $1, $3, $4, $5, $6 ); }
     ;
 
-ClassModifiersOpt
+ClassOrInterfaceModifierOpt
     : %empty                                                                    { $$ = nullptr; }
     | ClassOrInterfaceModifierList
     ;
 
 ClassOrInterfaceModifierList
-    : ClassOrInterfaceModifier                                                  { $$ = new pt::Node(pty::ClassOrInterfaceModifierList, $1); }
-    | ClassOrInterfaceModifierList ClassOrInterfaceModifier                     { $$ = new pt::Node(pty::ClassOrInterfaceModifierList, $1, $2); }
+    : ClassOrInterfaceModifier                                                  { $$ = new pt::Node(pty::ModifierList, $1); }
+    | ClassOrInterfaceModifierList ClassOrInterfaceModifier                     { $$ = new pt::Node(pty::ModifierList, $1, $2); }
     ;
 
 ClassOrInterfaceModifier
@@ -168,8 +168,8 @@ MemberModifiersOpt
     ;
 
 MemberModifierList
-    : MemberModifier                                                            { $$ = new pt::Node(pty::MemberModifierList, $1); }
-    | MemberModifierList MemberModifier                                         { $$ = new pt::Node(pty::MemberModifierList, $1, $2); }
+    : MemberModifier                                                            { $$ = new pt::Node(pty::ModifierList, $1); }
+    | MemberModifierList MemberModifier                                         { $$ = new pt::Node(pty::ModifierList, $1, $2); }
     ;
 
 MemberModifier
@@ -226,7 +226,7 @@ ConstructorBody
 /* ========================================================================== */
 
 InterfaceDeclaration
-    : ClassOrInterfaceModifierList INTERFACE IDENTIFIER 
+    : ClassOrInterfaceModifierOpt INTERFACE IDENTIFIER 
         ExtendsInterfacesOpt InterfaceBody                                      { $$ = new pt::Node(pty::InterfaceDeclaration, $1, $3, $4, $5); }
     ;
 
@@ -258,8 +258,23 @@ InterfaceMemberDeclarationList
 //       public or protected
 
 AbstractMethodDeclaration
-    : MemberModifiersOpt Type IDENTIFIER '(' FormalParameterListOpt ')' ';'     { $$ = new pt::Node(pty::AbstractMethodDeclaration, $1, $2, $3, $5); }
-    | MemberModifiersOpt VOID IDENTIFIER '(' FormalParameterListOpt ')' ';'     { $$ = new pt::Node(pty::AbstractMethodDeclaration, $1, $3, $5); }
+    : AbstractMethodDeclarationOpt Type IDENTIFIER '(' FormalParameterListOpt ')' ';'     { $$ = new pt::Node(pty::AbstractMethodDeclaration, $1, $2, $3, $5); }
+    | AbstractMethodDeclarationOpt VOID IDENTIFIER '(' FormalParameterListOpt ')' ';'     { $$ = new pt::Node(pty::AbstractMethodDeclaration, $1, $3, $5); }
+    ;
+
+AbstractMethodDeclarationOpt
+    : %empty                                                                    { $$ = nullptr; }
+    | AbstractMethodModifierList
+    ;
+
+AbstractMethodModifierList
+    : AbstractMethodModifier                                                    { $$ = new pt::Node(pty::ModifierList, $1); }
+    | AbstractMethodModifierList AbstractMethodModifier                        { $$ = new pt::Node(pty::ModifierList, $1, $2); }
+    ;
+
+AbstractMethodModifier
+    : PUBLIC
+    | ABSTRACT
     ;
 
 /* ========================================================================== */
