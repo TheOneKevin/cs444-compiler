@@ -23,7 +23,7 @@ public:
 class FieldDecl : public VarDecl {
     Modifiers modifiers;
 public:
-    FieldDeclaration(
+    FieldDecl(
         Modifiers modifiers,
         Type* type,
         std::string name

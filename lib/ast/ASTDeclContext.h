@@ -4,61 +4,55 @@
 
 namespace ast {
 
-class Modifiers {
-    bool isPublic;
-    bool isProtected;
-    bool isStatic;
-    bool isFinal;
-    bool isAbstract;
-    bool isNative;
-public:
-};
+class VarDecl;
+class FieldDecl;
+class MethodDecl;
 
-class ClassDeclaration : public DeclContext, public Decl {
+class ClassDecl : public DeclContext, public Decl {
     Modifiers modifiers;
     QualifiedIdentifier* superClass; // Extends super class , null if no extends
     std::vector<QualifiedIdentifier*> interfaces; // Implements interfaces, empty if no implements
-    std::vector<FieldDeclaration*> fields;
-    std::vector<MethodDeclaration*> methods;
-    std::vector<MethodDeclaration*> constructors;
+    std::vector<FieldDecl*> fields;
+    std::vector<MethodDecl*> methods;
+    std::vector<MethodDecl*> constructors;
 public:
-    ClassDeclaration(
+    ClassDecl(
         Modifiers modifiers,
         std::string name,
         QualifiedIdentifier* superClass,
         std::vector<QualifiedIdentifier*> interfaces,
-        std::vector<Decl*> classBodyDeclarations
-    ): Decl{name}, modifiers{modifiers}, identifier{identifier}, superClass{superClass}, interfaces{interfaces} {
-        // Check classBodyDeclarations and sort into fields, methods, and constructors
+        std::vector<Decl*> classBodyDecls
+    ): Decl{name}, modifiers{modifiers}, superClass{superClass}, interfaces{interfaces} {
+        // Check classBodyDecls and sort into fields, methods, and constructors
         
     };
 };
 
-class InterfaceDeclaration : public DeclContext, public Decl {
+class InterfaceDecl : public DeclContext, public Decl {
     Modifiers modifiers;
-    std::vector<MethodDeclaration*> methods;
+    std::vector<MethodDecl*> methods;
 public:
-    InterfaceDeclaration(
+    InterfaceDecl(
         Modifiers modifiers,
         std::string name,
-        std::vector<Decl*> interfaceBodyDeclarations
+        std::vector<Decl*> interfaceBodyDecls
     ): Decl{name}, modifiers{modifiers} {
-        // Check interfaceBodyDeclarations and sort into methods
+        // Check interfaceBodyDecls and sort into methods
     };
 };
 
-class MethodDeclaration : public DeclContext, public Decl {
+class MethodDecl : public DeclContext, public Decl {
     Modifiers modifiers;
     Type* returnType;
-    std::vector<VariableDeclaration*> parameters;
+    std::vector<VarDecl*> parameters;
     bool isConstructor;
     Stmt *body;
 public:
-    MethodDeclaration(
+    MethodDecl(
         Modifiers modifiers,
         std::string name,
         Type* returnType,
-        std::vector<VariableDeclaration*> parameters,
+        std::vector<VarDecl*> parameters,
         bool isConstructor,
         Stmt *body
     ) : Decl{name}, modifiers{modifiers}, returnType{returnType}, parameters{parameters}, isConstructor{isConstructor}, body{body} {}

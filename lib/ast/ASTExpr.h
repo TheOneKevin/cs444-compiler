@@ -4,7 +4,7 @@
 
 namespace ast {
 
-class Expr : public AST {
+class Expr : public AstNode {
 
 };
 
