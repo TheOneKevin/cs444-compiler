@@ -12,16 +12,6 @@ class Decl;
 class DeclContext;
 class Stmt;
 
-class Modifiers {
-    bool isPublic;
-    bool isProtected;
-    bool isStatic;
-    bool isFinal;
-    bool isAbstract;
-    bool isNative;
-public:
-};
-
 class AstNode {
 public:
     virtual std::ostream& print(std::ostream& os) const;
@@ -53,26 +43,14 @@ struct QualifiedIdentifier {
 
 class CompilationUnit final : public DeclContext {
     QualifiedIdentifier packageDeclaration;
-    std::vector<Import*> imports;
+    std::vector<QualifiedIdentifier*> imports;
     DeclContext* typeDeclaration;
 public:
     CompilationUnit(
         QualifiedIdentifier packageDeclaration,
-        std::vector<Import *> imports,
+        std::vector<QualifiedIdentifier*> imports,
         DeclContext* typeDeclaration
     ) : packageDeclaration{packageDeclaration}, imports{imports}, typeDeclaration{typeDeclaration} {}
-
-    std::ostream& print(std::ostream& os) const;
-};
-
-class Import : public AstNode {
-    bool isSingleType;
-    QualifiedIdentifier qualifiedIdentifier;
-public:
-    Import(
-        bool isSingleType,
-        QualifiedIdentifier qualifiedIdentifier
-    ): isSingleType{isSingleType}, qualifiedIdentifier{qualifiedIdentifier} {}
 
     std::ostream& print(std::ostream& os) const;
 };
