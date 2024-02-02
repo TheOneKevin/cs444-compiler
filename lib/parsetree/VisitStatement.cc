@@ -12,7 +12,7 @@ ast::Stmt* visitBlock(Node* node) {
     check_node_type(node, pty::Block);
     check_num_children(node, 1, 1);
     if(node->child(0) == nullptr)
-        return nullptr;
+        return new ast::CompoundStmt{};
     // FIXME(kevin): Implement this
     return new ast::CompoundStmt{};
 }

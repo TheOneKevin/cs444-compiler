@@ -219,7 +219,7 @@ ConstructorDeclaration
     ;
 
 ConstructorBody
-    : '{' BlockStatementsOpt '}'                                                { $$ = $2; }
+    : Block
     ;
 
 /* ========================================================================== */
@@ -426,12 +426,11 @@ MethodInvocation
     ;
 
 ArrayCreationExpression
-    : NEW BasicType '[' Expression ']'                                          { $$ = new pt::Node(pty::ArrayCreationExpression, $2, $4); }
-    | NEW QualifiedIdentifier '[' Expression ']'                                { $$ = new pt::Node(pty::ArrayCreationExpression, $2, $4); }
+    : NEW QualifiedIdentifier '[' Expression ']'                                { $$ = new pt::Node(pty::ArrayCreationExpression, $2, $4); }
     ;
 
 ClassInstanceCreationExpression
-    : NEW QualifiedIdentifier '(' ArgumentListOpt ')'                           { $$ = new pt::Node(pty::ClassInstanceCreationExpression, $2, $4); }
+    : NEW QualifiedIdentifier '(' ArgumentList ')'                              { $$ = new pt::Node(pty::ClassInstanceCreationExpression, $2, $4); }
     ;
 
 ArgumentListOpt

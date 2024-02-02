@@ -17,7 +17,6 @@ constexpr auto primary_expr_fragments = {
     "a > b || c < d",
     "a instanceof MyClass",
     "a || a instanceof b",
-    "a | a * instanceof b",
     "(Obj) object instanceof cast",
     "a || a instanceof b",
     "a | a * instanceof b",

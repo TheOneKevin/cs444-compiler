@@ -3,7 +3,7 @@ final public class valid_class extends another.class1 implements interface1, ano
     protected static int[] b;
     random.type[] c;
     protected static anothertype d = 0;
-    public static protected int[] method1(type1[] a, another.type[] b){
+    public static protected int[] method1(type1 a[], another.type[] b){
         return a + b;
     }
     protected native static returntype.first method2();

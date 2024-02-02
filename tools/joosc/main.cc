@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
 
     try {
         if(parse_tree->is_poisoned()) throw parse_error();
-        ast::CompilationUnit* ast = parsetree::visitCompilationUnit(parse_tree);
+        parsetree::visitCompilationUnit(parse_tree);
     } catch ( ... ) {
         // output some error
         return 42;

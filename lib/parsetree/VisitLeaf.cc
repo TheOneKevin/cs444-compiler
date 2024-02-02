@@ -28,6 +28,9 @@ std::string visitIdentifier(Node *node) {
 }
 
 ast::Modifiers visitModifierList(Node* node, ast::Modifiers modifiers) {
+    if(node == nullptr) {
+        return modifiers;
+    }
     check_node_type(node, pty::ModifierList);
     check_num_children(node, 1, 2);
     if(node->num_children() == 1) {
