@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ast/ASTNode.h"
+#include "ast/AstNode.h"
 
 namespace ast {
 

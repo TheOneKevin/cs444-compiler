@@ -5,6 +5,8 @@
 
 namespace parsetree {
 
+using pty = Node::Type;
+
 // Basic helper functions //////////////////////////////////////////////////////
 
 static inline void check_node_type(Node* node, Node::Type type) {
@@ -28,11 +30,6 @@ static inline void check_num_children(Node* node, int min, int max) {
     }
 }
 
-static inline void check_num_children(Node* node) {
-    throw std::runtime_error(
-        node->type_string() + " has an incorrect number of children!");
-}
-
 [[noreturn]] static inline void unreachable() {
     throw std::runtime_error("Unreachable code reached!");
 }
@@ -45,10 +42,6 @@ static inline void check_num_children(Node* node) {
 
 template<parsetree::Node::Type N, typename T>
 T visit(Node* node) {
-    throw std::runtime_error("No visitor for node type " + node->type_string());
-}
-
-[[noreturn]] void visit(Node* node) {
     throw std::runtime_error("No visitor for node type " + node->type_string());
 }
 
@@ -71,6 +64,7 @@ void visitListPattern(Node* node, std::vector<T>& list) {
 
 ast::CompilationUnit* visitCompilationUnit(Node* node);
 ast::QualifiedIdentifier* visitPackageDeclaration(Node* node);
+template<> ast::ImportDeclaration visit<pty::ImportDeclarationList>(Node* node);
 
 // Classes & interfaces visitors ///////////////////////////////////////////////
 
@@ -81,6 +75,10 @@ ast::FieldDecl* visitFieldDeclaration(Node* node);
 ast::MethodDecl* visitMethodDeclaration(Node* node);
 ast::MethodDecl* visitConstructorDeclaration(Node* node);
 
+template<> ast::Decl* visit<pty::ClassBodyDeclarationList>(Node* node);
+template<> ast::VarDecl* visit<pty::VariableDeclaratorList>(Node* node);
+template<> ast::VarDecl* visit<pty::FormalParameterList>(Node* node);
+
 // Statements visitors /////////////////////////////////////////////////////////
 
 ast::Stmt* visitBlock(Node* node);
@@ -90,7 +88,8 @@ ast::Stmt* visitBlock(Node* node);
 ast::QualifiedIdentifier* visitQualifiedIdentifier(
     Node *node, ast::QualifiedIdentifier* ast_node = nullptr);
 std::string visitIdentifier(Node *node);
-ast::Modifiers visitModifierList(Node* node, ast::Modifiers modifiers = ast::Modifiers{});
+ast::Modifiers visitModifierList(
+    Node* node, ast::Modifiers modifiers = ast::Modifiers{});
 Modifier visitModifier(Node* node);
 ast::Type* visitType(Node* node);
 

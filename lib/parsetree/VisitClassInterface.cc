@@ -12,11 +12,11 @@ ast::ClassDecl* visitClassDeclaration(Node* node) {
     check_node_type(node, pty::ClassDeclaration);
     check_num_children(node, 5, 5);
     // $1: Visit the modifiers
-    auto modifiers = visitModifierList(node->child(0));
+    ast::Modifiers modifiers = visitModifierList(node->child(0), ast::Modifiers{});
     // $3: Visit identifier
     auto name = visitIdentifier(node->child(1));
     // $4: Visit SuperOpt
-    auto super = visitSuperOpt(node->child(2));
+    ast::QualifiedIdentifier* super = visitSuperOpt(node->child(2));
     // $5: Visit InterfaceTypeList
     std::vector<ast::QualifiedIdentifier*> interfaces;
     visitListPattern<
@@ -29,9 +29,9 @@ ast::ClassDecl* visitClassDeclaration(Node* node) {
     >(node->child(4), classBodyDeclarations);
     // Return the constructed AST node
     return new ast::ClassDecl {
-        visitModifierList(node->child(0), ast::Modifiers{}),
+        modifiers,
         visitIdentifier(node->child(1)),
-        visitSuperOpt(node->child(2)),
+        super,
         interfaces,
         classBodyDeclarations
     };
@@ -61,7 +61,7 @@ ast::Decl* visit<pty::ClassBodyDeclarationList>(Node* node) {
         case pty::ConstructorDeclaration:
             return visitConstructorDeclaration(node);
         default:
-            visit(node);
+            unreachable();
     }
 }
 
@@ -101,7 +101,7 @@ ast::MethodDecl* visitMethodDeclaration(Node* node) {
     check_node_type(pt_header, pty::MethodHeader);
     check_num_children(pt_header, 3, 4);
     ast::Modifiers modifiers;
-    ast::Type* type;
+    ast::Type* type = nullptr;
     std::string name;
     std::vector<ast::VarDecl*> params;
     if(pt_header->num_children() == 3) {
@@ -110,7 +110,7 @@ ast::MethodDecl* visitMethodDeclaration(Node* node) {
         // The type is void
         type = nullptr;
         // $2: Visit the identifier
-        name = visitIdentifier(pt_header->child(2));
+        name = visitIdentifier(pt_header->child(1));
         // $3: Visit the formal parameters
         visitListPattern<
             pty::FormalParameterList, ast::VarDecl*, true

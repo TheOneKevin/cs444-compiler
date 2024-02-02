@@ -21,6 +21,14 @@
             "args": [],
             "cwd": "${workspaceRoot}",
             "preLaunchTask": "build"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "astprinter",
+            "program": "${workspaceFolder}/build/astprinter",
+            "args": [],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

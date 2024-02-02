@@ -12,11 +12,11 @@ ast::QualifiedIdentifier* visitQualifiedIdentifier(Node *node, ast::QualifiedIde
         ast_node = new ast::QualifiedIdentifier{};
     }
     if(node->num_children() == 1) {
-        ast_node->add_identifier(visitIdentifier(node->child(0)));
+        ast_node->addIdentifier(visitIdentifier(node->child(0)));
         return ast_node;
     } else if(node->num_children() == 2) {
         ast_node = visitQualifiedIdentifier(node->child(0), ast_node);
-        ast_node->add_identifier(visitIdentifier(node->child(1)));
+        ast_node->addIdentifier(visitIdentifier(node->child(1)));
         return ast_node;
     }
     unreachable();
@@ -47,8 +47,13 @@ Modifier visitModifier(Node* node) {
 }
 
 ast::Type* visitType(Node* node) {
-    check_node_type(node, pty::Type);
-    return new ast::Type{};
+    check_num_children(node, 1, 1);
+    if(node->get_type() == pty::ArrayType) {
+
+    } else if(node->get_type() == pty::Type) {
+
+    }
+    throw std::runtime_error("Expected a Type or ArrayType nod");
 }
 
 } // namespace parsetree
