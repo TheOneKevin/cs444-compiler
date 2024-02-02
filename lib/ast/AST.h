@@ -9,8 +9,6 @@
 
 namespace ast {
 
-static std::string indent(int indentation) {
-    return std::string(indentation * 2, ' ');
-}
+
 
 } // namespace ast

@@ -14,7 +14,7 @@ ast::Stmt* visitBlock(Node* node) {
     if(node->child(0) == nullptr)
         return nullptr;
     // FIXME(kevin): Implement this
-    return nullptr;
+    return new ast::CompoundStmt{};
 }
 
 } // namespace parsetree

@@ -47,15 +47,15 @@ public:
 
 class InterfaceDecl : public DeclContext, public Decl {
     Modifiers modifiers;
+    std::vector<QualifiedIdentifier*> extends;
     std::vector<MethodDecl*> methods;
 public:
     InterfaceDecl(
         Modifiers modifiers,
         std::string name,
+        std::vector<QualifiedIdentifier*> extends,
         std::vector<Decl*> interfaceBodyDecls
-    ): Decl{name}, modifiers{modifiers} {
-        // Check interfaceBodyDecls and sort into methods
-    };
+    );
     std::ostream& print(std::ostream& os, int indentation = 0) const override;
 };
 
@@ -63,7 +63,7 @@ class MethodDecl : public DeclContext, public Decl {
     Modifiers modifiers;
     Type* returnType;
     std::vector<VarDecl*> parameters;
-    bool isConstructor;
+    bool isConstructor_;
     Stmt *body;
 public:
     MethodDecl(
@@ -73,8 +73,9 @@ public:
         std::vector<VarDecl*> parameters,
         bool isConstructor,
         Stmt *body
-    ) : Decl{name}, modifiers{modifiers}, returnType{returnType}, parameters{parameters}, isConstructor{isConstructor}, body{body} {}
+    );
     std::ostream& print(std::ostream& os, int indentation = 0) const override;
+    bool isConstructor() const { return isConstructor_; }
 };
 
 } // namespace ast

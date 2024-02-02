@@ -11,7 +11,7 @@
 
 #include "utils/CommandLine.h"
 
-int main(int argc, char **argv) {
+int main() {
 
     // Read entire input until enter
     std::istreambuf_iterator<char> eos;
@@ -29,6 +29,11 @@ int main(int argc, char **argv) {
     std::cout << "Result: " << result << std::endl;
     // Clean up Bison stuff
     yy_delete_buffer(state);
+
+    if(result != 0 || parse_tree == nullptr) {
+        std::cout << "Parsing failed" << std::endl;
+        return 1;
+    }
     
     ast::CompilationUnit* ast = parsetree::visitCompilationUnit(parse_tree);
     ast->print(std::cout);

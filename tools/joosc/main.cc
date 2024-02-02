@@ -5,8 +5,10 @@
 #include <fstream>
 #include <sstream>
 
+#include "ast/AST.h"
 #include "lexer.h"
 #include "parser.h"
+#include "parsetree/ParseTreeVisitor.h"
 
 int main(int argc, char **argv) {
     std::string str;
@@ -51,6 +53,7 @@ int main(int argc, char **argv) {
 
     try {
         if(parse_tree->is_poisoned()) throw parse_error();
+        ast::CompilationUnit* ast = parsetree::visitCompilationUnit(parse_tree);
     } catch ( ... ) {
         // output some error
         return 42;

@@ -19,9 +19,9 @@ ast::CompilationUnit* visitCompilationUnit(Node* node) {
     // $3: Visit the body, if it is not null
     ast::DeclContext* body_ast_node = nullptr;
     if (auto body = node->child(2)) {
-        if (body->get_type() == pty::ClassDeclaration) {
+        if (body->get_node_type() == pty::ClassDeclaration) {
             body_ast_node = visitClassDeclaration(body);
-        } else if (body->get_type() == pty::InterfaceDeclaration) {
+        } else if (body->get_node_type() == pty::InterfaceDeclaration) {
             body_ast_node = visitInterfaceDeclaration(body);
         }
     }
@@ -40,9 +40,9 @@ template<>
 ast::ImportDeclaration visit<pty::ImportDeclarationList>(Node* node) {
     check_num_children(node, 1, 1);
     auto id = visitQualifiedIdentifier(node->child(0));
-    if (node->get_type() == pty::SingleTypeImportDeclaration) {
+    if (node->get_node_type() == pty::SingleTypeImportDeclaration) {
         return ast::ImportDeclaration{id, false};
-    } else if (node->get_type() == pty::TypeImportOnDemandDeclaration) {
+    } else if (node->get_node_type() == pty::TypeImportOnDemandDeclaration) {
         return ast::ImportDeclaration{id, true};
     }
     throw std::runtime_error("Import called on a node that is not a Import");

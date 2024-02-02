@@ -16,6 +16,9 @@ constexpr auto primary_expr_fragments = {
     "a == func() && (int) a.b.c != a.b[1].c.d[1].e.d.f(a, b, c, d).g()",
     "a > b || c < d",
     "a instanceof MyClass",
+    "a || a instanceof b",
+    "a | a * instanceof b",
+    "(Obj) object instanceof cast",
     "!flag",
     "a.b()",
     "a.b().c()",
@@ -25,6 +28,8 @@ constexpr auto primary_expr_fragments = {
     "(h)-g.f()",
     "new a.b.c.d.e(a, b, c, d)",
     "new a.b[5]",
+    "(new int[1])[0]"
+    "(new int[5])[2] = 531"
     "array[1+3*2-3/5%6]",
     "~a | b ^ a & c & !d",
     "(f).h()",
@@ -33,7 +38,8 @@ constexpr auto primary_expr_fragments = {
     "(f)g.h",
     "((int) f.g)h.i",
     "(int) (a)",
-    "(int) new a.b.d.e[a]"
+    "(int) new a.b.d.e[a]",
+    "(int)(short)(char)(Object)(byte) castMe"
 };
 
 constexpr auto statement_expression_fragments = {

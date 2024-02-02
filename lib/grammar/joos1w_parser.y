@@ -237,8 +237,8 @@ ExtendsInterfacesOpt
     ;
 
 ExtendsInterfaces
-    : EXTENDS InterfaceType                                                     { $$ = $2; }
-    | ExtendsInterfaces ',' InterfaceType                                       { $$ = new pt::Node(pty::ExtendsInterfaces, $1, $3); }
+    : EXTENDS InterfaceType                                                     { $$ = new pt::Node(pty::InterfaceTypeList, $2); }
+    | ExtendsInterfaces ',' InterfaceType                                       { $$ = new pt::Node(pty::InterfaceTypeList, $1, $3); }
     ;
 
 InterfaceBody
