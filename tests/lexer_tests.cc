@@ -67,7 +67,7 @@ TEST(LexerTests, SubcaseImports) {
 }
 
 TEST(LexerTests, IntegerLiteral) {
-    EXPECT_TRUE(lex_string("-10 43532 0", {LITERAL, LITERAL, LITERAL, YYEOF}));
+    EXPECT_TRUE(lex_string("-10 43532 0", {OP_MINUS, LITERAL, LITERAL, LITERAL, YYEOF}));
 }
 
 TEST(LexerTests, CharacterLiteral) {

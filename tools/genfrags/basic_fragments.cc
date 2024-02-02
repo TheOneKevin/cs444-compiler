@@ -52,7 +52,6 @@ constexpr auto primary_expr_fragments = {
     "(f)g.h",
     "((int) f.g)h.i",
     "(int) (a)",
-    "new a.b.d.e[](a, b)",
     "(int) new a.b.d.e[a]"
 };
 
