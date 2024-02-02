@@ -58,7 +58,7 @@ ClassDecl::ClassDecl(
         }
     }
 
-    if (constructors.size() == 1) {
+    if (constructors.size() == 0) {
         throw std::runtime_error("A class must have at least one constructor");
     }
 }

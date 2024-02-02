@@ -55,11 +55,14 @@ template = """
 """
 
 for file in a1_files:
+    rule = file.split('_')[0]
     if not file.endswith('.java'):
         continue
     EXPECT_WHAT = 'EXPECT_TRUE'
     if file.split('_')[1] == 'invalid':
         EXPECT_WHAT = 'EXPECT_FALSE'
+    if rule == 'r1' or rule == 'r8':
+        EXPECT_WHAT = 'EXPECT_TRUE'
     with open(os.path.join(dir_path, "data", "a1", file), 'r') as f:
         content = f.read()
     test_name = file.split('.')[0]

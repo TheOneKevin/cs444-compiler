@@ -11,6 +11,7 @@ TEST(ParserTests, SimpleGrammar) {
         if(!testing::parse_grammar(x)) {
             std::cout << "Failed to parse: " << x << std::endl;
             EXPECT_TRUE(false);
+            return;
         }
         EXPECT_TRUE(true);
     }
