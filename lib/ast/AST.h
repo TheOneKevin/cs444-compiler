@@ -12,6 +12,16 @@ class Decl;
 class DeclContext;
 class Stmt;
 
+class Modifiers {
+    bool isPublic;
+    bool isProtected;
+    bool isStatic;
+    bool isFinal;
+    bool isAbstract;
+    bool isNative;
+public:
+};
+
 class AstNode {
 public:
     virtual std::ostream& print(std::ostream& os) const;
@@ -37,18 +47,19 @@ struct QualifiedIdentifier {
     std::vector<std::string> identifiers;
 };
 
-/* ========================================================================== */
-/*                               Literals                                     */
-/* ========================================================================== */
+struct ImportDeclaration {
+    QualifiedIdentifier qualifiedIdentifier;
+    bool isOnDemand;
+};
 
 class CompilationUnit final : public DeclContext {
     QualifiedIdentifier packageDeclaration;
-    std::vector<QualifiedIdentifier*> imports;
+    std::vector<ImportDeclaration> imports;
     DeclContext* typeDeclaration;
 public:
     CompilationUnit(
         QualifiedIdentifier packageDeclaration,
-        std::vector<QualifiedIdentifier*> imports,
+        std::vector<ImportDeclaration> imports,
         DeclContext* typeDeclaration
     ) : packageDeclaration{packageDeclaration}, imports{imports}, typeDeclaration{typeDeclaration} {}
 

@@ -6,10 +6,10 @@
 namespace parsetree {
 
 ast::CompilationUnit* visitCompilationUnit(Node* node);
-ast::QualifiedIdentifier* visitPackageDeclaration(Node* node);
-void visitImportDeclarations(Node* node, std::vector<ast::Import *>& imports);
-ast::Import* visitImport(Node *node);
-ast::TypeDeclaration* visitTypeDeclaration(Node* node);
+void visitPackageDeclaration(Node* node, ast::QualifiedIdentifier& ast_node);
+void visitImportDeclarations(Node* node, std::vector<ast::ImportDeclaration>& imports);
+ast::ImportDeclaration visitImport(Node *node);
+ast::DeclContext* visitTypeDeclaration(Node* node);
 
 // Classes & interfaces
 ast::ClassDeclaration* visitClassDeclaration(Node* node);
@@ -21,9 +21,9 @@ ast::QualifiedIdentifier* visitSuperOpt(Node* node);
 ast::ClassOrInterfaceModifier* visitClassOrInterfaceModifier(Node* node);
 void visitInterfaceTypeList(Node* node, std::vector<ast::QualifiedIdentifier*>& interfaces);
 
-ast::QualifiedIdentifier* visitQualifiedIdentifier(Node *node, std::vector<ast::Identifier*>& identifiers);
+void visitQualifiedIdentifier(Node *node, ast::QualifiedIdentifier& ast_node);
 
-ast::Identifier* visitIdentifier(Node *node);
+std::string visitIdentifier(Node *node);
 
 } // namespace parsetree
 
