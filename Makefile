@@ -1,5 +1,5 @@
 CC = g++
-CXXFLAGS = -std=c++2a -g -Og -DYYDEBUG=1
+CXXFLAGS = -std=c++20 -g -Og -DYYDEBUG=1
 FLEX = flex
 BISON = bison
 BISONFLAGS = --locations -k
@@ -20,6 +20,7 @@ JOOSC_SRCS = tools/joosc/main.cc \
              lib/parsetree/ParseTreeDotPrinter.cc \
              lib/parsetree/ParseTreePrinter.cc \
              lib/parsetree/ParseTreeVisitor.cc \
+             lib/parsetree/ParseTreeTypes.cc \
              lib/parsetree/VisitClassInterface.cc \
              lib/parsetree/VisitDeclaration.cc \
              lib/parsetree/VisitExpression.cc \

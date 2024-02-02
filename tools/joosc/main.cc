@@ -61,9 +61,12 @@ int main(int argc, char **argv) {
     try {
         if(parse_tree->is_poisoned()) throw parse_error();
         parsetree::visitCompilationUnit(parse_tree);
-    } catch ( ... ) {
-        // output some error
+    } catch(const std::runtime_error& re) {
+        std::cerr << "Runtime error: " << re.what() << std::endl;
         return 42;
+    } catch(...) {
+        std::cerr << "Unknown failure occurred." << std::endl;
+        return 1;
     }
 
     delete parse_tree;

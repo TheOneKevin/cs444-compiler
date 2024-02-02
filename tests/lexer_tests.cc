@@ -93,8 +93,8 @@ TEST(LexerTests, CharacterLiteral) {
 TEST(LexerTests, StringLiteral) {
    lex_string("\"\"", {LITERAL, YYEOF});
    lex_string("\"foo\"", {LITERAL, YYEOF});
-   lex_string("\" \\ b \\ t \\ n \\ f \\ r \\ \" \\ '064 \" ", {LITERAL, YYEOF});
-   lex_string("\"\030\\\"", {LITERAL, YYEOF});
+   lex_string("\" \\b \\t \\n \\f \\r \\\" \\\\ \\064 \" ", {LITERAL, YYEOF});
+   lex_string("\" \\030 \"", {LITERAL, YYEOF});
 }
 
 TEST(LexerTests, SubcaseWhitespace) {
