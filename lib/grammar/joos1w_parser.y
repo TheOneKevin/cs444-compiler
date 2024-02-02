@@ -96,7 +96,8 @@ TypeDeclaration
 /* ========================================================================== */
 
 ClassDeclaration
-    : ClassOrInterfaceModifierOpt CLASS IDENTIFIER SuperOpt InterfaceOpt ClassBody        { $$ = new pt::Node(pty::ClassDeclaration, $1, $3, $4, $5, $6 ); }
+    : ClassOrInterfaceModifierOpt
+      CLASS IDENTIFIER SuperOpt InterfaceOpt ClassBody                          { $$ = new pt::Node(pty::ClassDeclaration, $1, $3, $4, $5, $6 ); }
     ;
 
 ClassOrInterfaceModifierOpt
@@ -213,8 +214,8 @@ MethodBody
 //       public or protected
 
 ConstructorDeclaration
-    : MemberModifiersOpt IDENTIFIER '(' FormalParameterListOpt ')' 
-        ConstructorBody                                                         { $$ = new pt::Node(pty::ConstructorDeclaration, $1, $2, $4, $6); }
+    : MemberModifiersOpt
+      IDENTIFIER '(' FormalParameterListOpt ')' ConstructorBody                 { $$ = new pt::Node(pty::ConstructorDeclaration, $1, $2, $4, $6); }
     ;
 
 ConstructorBody
@@ -258,8 +259,10 @@ InterfaceMemberDeclarationList
 //       public or protected
 
 AbstractMethodDeclaration
-    : AbstractMethodDeclarationOpt Type IDENTIFIER '(' FormalParameterListOpt ')' ';'     { $$ = new pt::Node(pty::AbstractMethodDeclaration, $1, $2, $3, $5); }
-    | AbstractMethodDeclarationOpt VOID IDENTIFIER '(' FormalParameterListOpt ')' ';'     { $$ = new pt::Node(pty::AbstractMethodDeclaration, $1, $3, $5); }
+    : AbstractMethodDeclarationOpt
+      Type IDENTIFIER '(' FormalParameterListOpt ')' ';'                        { $$ = new pt::Node(pty::AbstractMethodDeclaration, $1, $2, $3, $5); }
+    | AbstractMethodDeclarationOpt
+      VOID IDENTIFIER '(' FormalParameterListOpt ')' ';'                        { $$ = new pt::Node(pty::AbstractMethodDeclaration, $1, $3, $5); }
     ;
 
 AbstractMethodDeclarationOpt
@@ -269,7 +272,7 @@ AbstractMethodDeclarationOpt
 
 AbstractMethodModifierList
     : AbstractMethodModifier                                                    { $$ = new pt::Node(pty::ModifierList, $1); }
-    | AbstractMethodModifierList AbstractMethodModifier                        { $$ = new pt::Node(pty::ModifierList, $1, $2); }
+    | AbstractMethodModifierList AbstractMethodModifier                         { $$ = new pt::Node(pty::ModifierList, $1, $2); }
     ;
 
 AbstractMethodModifier
@@ -418,8 +421,8 @@ ArrayAccess
     ;
 
 MethodInvocation
-    : QualifiedIdentifier '(' ArgumentListOpt ')'                                  { $$ = new pt::Node(pty::MethodInvocation, $1, $3); }
-    | Primary '.' IDENTIFIER '(' ArgumentListOpt ')'                               { $$ = new pt::Node(pty::MethodInvocation, $1, $3, $5); }
+    : QualifiedIdentifier '(' ArgumentListOpt ')'                               { $$ = new pt::Node(pty::MethodInvocation, $1, $3); }
+    | Primary '.' IDENTIFIER '(' ArgumentListOpt ')'                            { $$ = new pt::Node(pty::MethodInvocation, $1, $3, $5); }
     ;
 
 ArrayCreationExpression
