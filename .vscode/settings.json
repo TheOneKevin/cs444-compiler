@@ -64,7 +64,10 @@
         "variant": "cpp",
         "iomanip": "cpp",
         "thread": "cpp",
-        "chrono": "cpp"
+        "chrono": "cpp",
+        "fstream": "cpp",
+        "regex": "cpp",
+        "stop_token": "cpp"
     },
     "cmake.sourceDirectory": "${workspaceFolder}"
 }

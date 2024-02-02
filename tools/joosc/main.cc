@@ -2,29 +2,32 @@
 #include <iostream>
 #include <fstream>
 #include <iterator>
-#include <string>
+#include <fstream>
+#include <sstream>
 
 #include "lexer.h"
 #include "parser.h"
 
-#include "utils/CommandLine.h"
-
 int main(int argc, char **argv) {
-    utils::InputParser input(argc, argv);
-    std::istream *infile = &cin;
+    std::string str;
     struct cmd_error {};
 
-    if (arc == 2) {
-        infile = new ifstream( argv[3] );
+    // Read file from command-line
+    if (argc == 2) {
+        try {
+            // Read entire input
+            std::ifstream inputFile(argv[1]);
+            std::stringstream buffer;
+            buffer << inputFile.rdbuf();
+            str = buffer.str();
+        } catch ( ... ) {
+            std::cerr << "Error! Could not open input file \"" << argv[1] << "\"" << std::endl;
+            exit( EXIT_FAILURE );
+        }
     } else {
-        cerr << "Usage: " << argv[0] << " input-file " << endl;
+        std::cerr << "Usage: " << argv[0] << " input-file " << std::endl;
         exit( EXIT_FAILURE );
     }
-
-    // Read entire input until enter
-    std::string str;
-
-    *infile << str;
     
     // Now that we have the string, lex it
     YY_BUFFER_STATE state;
@@ -40,15 +43,14 @@ int main(int argc, char **argv) {
     // Clean up Bison stuff
     yy_delete_buffer(state);
 
-    // Now print the parse tree
-    if (parse_tree) {
-        if(print_dot) {
-            parsetree::print_dot(std::cout, *parse_tree);
-        } else {
-            std::cout << *parse_tree << std::endl;
-        }
-        delete parse_tree;
+    if (!parse_tree) {
+        return 42;
     }
-      
+
+    if (result) {
+        return 42;
+    }
+
+    delete parse_tree;
     return 0;
 }
