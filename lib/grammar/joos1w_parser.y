@@ -379,13 +379,13 @@ UnaryExpressionNotPlusMinus
     ;
 
 CastExpression
-    : '(' BasicType Dims ')' UnaryExpression                                    { $$ = new pt::Node(pty::CastExpression, $2, $4); }
+    : '(' BasicType Dims ')' UnaryExpression                                    { $$ = new pt::Node(pty::CastExpression, $2, $3, $5); }
     | '(' Expression ')' UnaryExpressionNotPlusMinus                            { $$ = new pt::Node(pty::CastExpression, $2, $4); }
     ;
 
 Dims
     : %empty                                                                    { $$ = nullptr; }
-    | '[' ']'
+    | '[' ']'                                                                   { $$ = new pt::Node(pty::Dims); }
     ;
 
 /* ========================================================================== */
@@ -395,6 +395,7 @@ Dims
 Primary
     : PrimaryNoNewArray
     | ArrayCreationExpression
+    | ArrayAccess
     ;
 
 PrimaryNoNewArray
@@ -403,7 +404,6 @@ PrimaryNoNewArray
     | '(' Expression ')'                                                        { $$ = $2; }
     | ClassInstanceCreationExpression
     | FieldAccess
-    | ArrayAccess
     | MethodInvocation
     ;
 

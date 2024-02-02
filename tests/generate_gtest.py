@@ -21,7 +21,7 @@ a1_files = os.listdir(os.path.join(dir_path, "data", "a1"))
 ################################################################################
 
 # For each file, add a test case for the parser rules
-a1_parser_tests = ['r7', 'r9', 'r10', 'r11', 'r15']
+a1_parser_tests = ['r7', 'r9', 'r10', 'r11', 'r14', 'r15']
 for file in a1_files:
     if not file.endswith('.java'):
         continue

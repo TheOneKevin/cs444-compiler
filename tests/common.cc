@@ -19,10 +19,10 @@ bool testing::parse_grammar(const string& str) {
         return false;
     }
 
+    delete parse_tree;
+
     if(result) {
         return false;
     }
-
-    delete parse_tree;
     return true;
 }

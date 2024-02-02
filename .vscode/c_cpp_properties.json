@@ -3,9 +3,13 @@
         {
             "name": "Linux",
             "defines": [],
+            "includePath": [
+                "/usr/include/c++/10/"
+            ],
             "cppStandard": "c++20",
             "intelliSenseMode": "linux-clang-x64",
-            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+            "compilerPath": "/usr/bin/clang++"
         }
     ],
     "version": 4

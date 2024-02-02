@@ -66,7 +66,8 @@ struct Node {
         F(CastExpression) \
         F(MethodInvocation) \
         F(ArrayCreationExpression) \
-        F(ClassInstanceCreationExpression)
+        F(ClassInstanceCreationExpression) \
+        F(Dims)
 public:
     DECLARE_ENUM(Type, NODE_TYPE_LIST)
 private:
@@ -122,7 +123,12 @@ public:
 
 public:
     virtual ~Node() {
-        delete[] args;
+        if(args == nullptr) return;
+        for (size_t i = 0; i < num_args; i++) {
+            if (args[i] != nullptr)
+                delete args[i];
+        }
+        delete args;
     }
 };
 
