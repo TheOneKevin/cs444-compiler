@@ -1,6 +1,6 @@
 #pragma once
 
-#include "AST.h"
+#include "ast/ASTNode.h"
 
 namespace ast {
 
@@ -21,7 +21,7 @@ public:
         std::string name,
         QualifiedIdentifier* superClass,
         std::vector<QualifiedIdentifier*> interfaces,
-        std::vector<Decl*> classBodyDecls
+        std::vector<DeclContext*> classBodyDecls
     ): Decl{name}, modifiers{modifiers}, superClass{superClass}, interfaces{interfaces} {
         // Check classBodyDecls and sort into fields, methods, and constructors
         

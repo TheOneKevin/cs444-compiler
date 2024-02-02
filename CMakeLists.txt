@@ -68,26 +68,36 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
+# Create a library target for our compiler with sources under lib/
+add_library(OLKCompilerLib
+    # ast
+    "lib/ast/ASTPrinter.cc"
+    # parsetree
+    "lib/parsetree/ParseTreeDotPrinter.cc"
+    "lib/parsetree/ParseTreePrinter.cc"
+    "lib/parsetree/ParseTreeVisitor.cc"
+    "lib/parsetree/VisitClassInterface.cc"
+    "lib/parsetree/VisitDeclaration.cc"
+    "lib/parsetree/VisitExpression.cc"
+    "lib/parsetree/VisitLeaf.cc"
+    "lib/parsetree/VisitStatement.cc"
+    # utils
+    "lib/utils/FragmentGenerator.cc"
+)
+target_include_directories(
+    OLKCompilerLib
+    PUBLIC
+    "lib"
+)
+
 # Macro to add an executable with lexer and parser sources
 macro(add_tool TARGET_NAME)
     add_executable(${TARGET_NAME}
         "${LEXER_OUT}"
         "${PARSER_OUT}"
         ${ARGN}
-        # ast
-        "lib/ast/ASTPrinter.cc"
-        # parsetree
-        "lib/parsetree/ParseTreeDotPrinter.cc"
-        "lib/parsetree/ParseTreePrinter.cc"
-        "lib/parsetree/ParseTreeVisitor.cc"
-        "lib/parsetree/VisitClassInterface.cc"
-        "lib/parsetree/VisitDeclaration.cc"
-        "lib/parsetree/VisitExpression.cc"
-        "lib/parsetree/VisitLeaf.cc"
-        "lib/parsetree/VisitStatement.cc"
-        # utils
-        "lib/utils/FragmentGenerator.cc"
     )
+    target_link_libraries(${TARGET_NAME} OLKCompilerLib)
     target_include_directories(${TARGET_NAME} PRIVATE
         "${PARSER_DIR}"
         lib
@@ -149,7 +159,8 @@ add_tool(
     "tools/joosc/main.cc"
 )
 
-add_tool(
-    astprinter
-    "tools/astprinter/main.cc"
-)
+# FIXME(kevin): Add the following tools when they are implemented
+# add_tool(
+#     astprinter
+#     "tools/astprinter/main.cc"
+# )

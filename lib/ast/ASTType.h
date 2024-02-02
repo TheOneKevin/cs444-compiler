@@ -1,4 +1,4 @@
-#include "AST.h"
+#include "ast/ASTNode.h"
 
 namespace ast {
 
@@ -11,6 +11,7 @@ class BuiltInType : public Type {
         SHORT,
         INT,
     };
+    Kind kind;
 public:
     BuiltInType(Kind kind): kind{kind} {}
 };
