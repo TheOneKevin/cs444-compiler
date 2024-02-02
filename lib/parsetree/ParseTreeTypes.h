@@ -32,8 +32,7 @@ struct Node {
         F(SingleTypeImportDeclaration) \
         F(TypeImportOnDemandDeclaration) \
         /* Modifiers */ \
-        F(ClassOrInterfaceModifierList) \
-        F(MemberModifierList) \
+        F(ModifierList) \
         F(SuperOpt) \
         F(InterfaceTypeList) \
         /* Classes */ \

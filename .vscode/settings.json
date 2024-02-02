@@ -66,5 +66,5 @@
         "thread": "cpp",
         "chrono": "cpp"
     },
-    "cmake.sourceDirectory": "/u1/k22dai/cs444/cs444-compiler"
+    "cmake.sourceDirectory": "${workspaceFolder}"
 }

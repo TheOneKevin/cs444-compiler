@@ -49,7 +49,7 @@ bison_target(
     DEFINES_FILE
     "${PARSER_DIR}/parser.h"
     COMPILE_FLAGS
-    "-Wcounterexamples --report=state -v --locations --html --graph -k --color=always"
+    "--report=state -v --locations --html --graph -k --color=always"
 )
 
 add_flex_bison_dependency(LEXER PARSER)
@@ -95,20 +95,35 @@ macro(add_my_test TARGET_NAME)
 endmacro()
 
 ################################################################################
-#            For every tool, create a new add_*() call below                   #
+#            Run python program right now to generate the tests                #
+################################################################################
+
+execute_process(
+    COMMAND python3 "tests/generate_gtest.py"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+file(GLOB GENERATED_TEST_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/tests/generated/*.cc)
+
+################################################################################
+#              For every tool, create a new add_*() call below                 #
 ################################################################################
 
 add_my_test(
     all_tests
+    "tests/common.cc"
     "tests/lexer_tests.cc"
     "tests/parser_tests.cc"
     "tools/genfrags/basic_fragments.cc"
+    "tools/genfrags/class_fragments.cc"
+    ${GENERATED_TEST_SRCS}
 )
 
 add_tool(
     genfrags
     "tools/genfrags/main.cc"
     "tools/genfrags/basic_fragments.cc"
+    "tools/genfrags/class_fragments.cc"
 )
 
 add_tool(

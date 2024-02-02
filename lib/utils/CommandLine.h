@@ -3,6 +3,8 @@
 #include <vector>
 #include <algorithm>
 
+namespace utils {
+
 class InputParser {
     public:
         InputParser (int &argc, char **argv){
@@ -27,3 +29,5 @@ class InputParser {
     private:
         std::vector <std::string> tokens;
 };
+
+} // namespace utils

@@ -15,7 +15,7 @@ Rules from A1:
 11. **(PARSER)** An interface method cannot have a body.
 12. **(AST)** Every class must contain at least one explicit constructor.
 13. **(AST)** No field can be final.
-14. **(PARSER)** No multidimensional array types or multidimensional array creation expressions are allowed.
+14. **(AST)** No multidimensional array types or multidimensional array creation expressions are allowed.
 15. **(AST)** A method or constructor must not contain explicit this() or super() calls.
 
 Each rule is labelled as DRIVER/PARSER/AST depending on which stage of the compiler is capable of rejecting such rules. They are explained below:

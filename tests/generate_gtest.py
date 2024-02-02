@@ -18,11 +18,14 @@ os.makedirs(gen_path)
 # List all the files in the directory
 a1_files = os.listdir(os.path.join(dir_path, "data", "a1"))
 
-# For each file, add a test case for r7, r9, r10, r11, r13, r14
+################################################################################
+
+# For each file, add a test case for r7, r9, r10, r11
+a1_parser_tests = ['r7', 'r9', 'r10', 'r11']
 for file in a1_files:
     if not file.endswith('.java'):
         continue
-    if file.split('_')[0] not in ['r7', 'r9', 'r10', 'r11', 'r13', 'r14']:
+    if file.split('_')[0] not in a1_parser_tests:
         continue
     EXPECT_WHAT = 'EXPECT_TRUE'
     if file.split('_')[1] == 'invalid':
@@ -42,3 +45,5 @@ for file in a1_files:
 # Output the template to parser_a1_tests.cpp
 with open(os.path.join(gen_path, "parser_a1_tests.cc"), 'w') as f:
     f.write(template)
+
+################################################################################

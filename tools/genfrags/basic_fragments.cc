@@ -1,5 +1,5 @@
 #include "utils/FragmentGenerator.h"
-#include "tools/genfrags/basic_fragments.h"
+#include "basic_fragments.h"
 
 using namespace testing;
 using std::string;
