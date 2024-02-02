@@ -134,6 +134,7 @@ add_my_test(
     "tests/parser_tests.cc"
     "tools/genfrags/basic_fragments.cc"
     "tools/genfrags/class_fragments.cc"
+    "tools/genfrags/method_fragments.cc"
     ${GENERATED_TEST_SRCS}
 )
 
@@ -142,6 +143,7 @@ add_tool(
     "tools/genfrags/main.cc"
     "tools/genfrags/basic_fragments.cc"
     "tools/genfrags/class_fragments.cc"
+    "tools/genfrags/method_fragments.cc"
 )
 
 add_tool(

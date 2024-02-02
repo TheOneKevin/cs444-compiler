@@ -31,7 +31,7 @@
 
 JavaCharacter           (\\b|\\t|\\n|\\f|\\r|\\\"|\\\'|\\\\|\\0|.)
 
-DecimalIntegerLiteral   (-?)(0|[1-9][0-9]*)
+DecimalIntegerLiteral   (0|[1-9][0-9]*)
 BooleanLiteral          (true|false)
 CharacterLiteral        \'{JavaCharacter}\'
 StringLiteral           \"{JavaCharacter}*\"
