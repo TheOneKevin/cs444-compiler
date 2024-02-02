@@ -72,6 +72,7 @@ Keyword: one of
 "return"        { return RETURN; }
 "void"          { return VOID; }
 "while"         { return WHILE; }
+"super"         { return SUPER; }
 
 "abstract"  { *yylval = new pt::Modifier(pmt::Abstract);    return ABSTRACT; }
 "final"     { *yylval = new pt::Modifier(pmt::Final);       return FINAL; }

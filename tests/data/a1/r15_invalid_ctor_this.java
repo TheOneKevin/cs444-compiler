@@ -1,4 +1,4 @@
-public interface r15_invalid_ctor_this {
+public class r15_invalid_ctor_this {
   r15_invalid_ctor_this() {
     this();
   }
