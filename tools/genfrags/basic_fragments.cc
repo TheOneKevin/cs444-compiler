@@ -19,7 +19,6 @@ constexpr auto primary_expr_fragments = {
     "a || a instanceof b",
     "(Obj) object instanceof cast",
     "a || a instanceof b",
-    "a | a * instanceof b",
     "(Obj) object instanceof cast",
     "!flag",
     "a.b()",
@@ -57,13 +56,13 @@ constexpr auto statement_expression_fragments = {
     "a.b()",
     "a.b().c()",
     "a.b[1].c.d[1].e.d.f(a, b, c, d).g()",
-    "(f).h()",
-    "int a = $<pexpr>$",
-    "int a = new int[$<pexpr>$]"
+    "(f).h()"
 };
 
 constexpr auto statement_fragments = {
     ";",
+    "int a = $<pexpr>$;",
+    "int a = new int[$<pexpr>$];",
     "{$<sexpr>$;}",
     "{$<sexpr>$;$<sexpr>$;}",
     "{;}",
@@ -75,17 +74,17 @@ constexpr auto statement_fragments = {
     "a.b.c.d. x = $<pexpr>$;",
     "int x = $<pexpr>$;",
     "return x;",
-    "return $<sexpr>$;",
+    "return $<pexpr>$;",
     "func();",
     "$<sexpr>$;",
-    "if($<pexpr>$) if($<pexpr>$) {} else {$<sexpr>$;}",
-    "if($<pexpr>$) {} else if ($<pexpr>$) {$<sexpr>$;} else {}",
+    "if($<pexpr>$) if($<pexpr>$) {} else {e = new Obj();}",
+    "if($<pexpr>$) {} else if ($<pexpr>$) {a=1+2-3;} else {g=a instanceof int;}",
     "while($<pexpr>$) {$<sexpr>$;}",
     "for(;;) {$<sexpr>$;}",
-    "for(int i = 0; i < func(); i = i + 1) {$<sexpr>$;}",
-    "for(; $<pexpr>$; ) {$<sexpr>$;}",
-    "for($<sexpr>$; ; ) {$<sexpr>$;}",
-    "for(; ; $<sexpr>$) {$<sexpr>$;}",
+    "for(int i = $<pexpr>$; i < func(); i = i + 1) {$<sexpr>$;}",
+    "for(; $<pexpr>$; ) {}",
+    "for($<sexpr>$; ; ) {}",
+    "for(; ; $<sexpr>$) {}",
 };
 
 Generator<string> BasicGrammarGenerator::get_next_fragment(string type) {

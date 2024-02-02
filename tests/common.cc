@@ -23,8 +23,10 @@ parsetree::Node* testing::get_parsetree(const string& str) {
 
     // Check if the tree is poisoned
     EXPECT_FALSE(parse_tree->is_poisoned());
+    parsetree::clear_poison_pool();
 
     if(result) {
+        delete parse_tree;
         return nullptr;
     }
 
@@ -32,9 +34,11 @@ parsetree::Node* testing::get_parsetree(const string& str) {
 }
 
 bool testing::parse_grammar(const string& str) {
-    if (!get_parsetree(str)) {
+    auto parsetree = get_parsetree(str);
+    if (!parsetree) {
         return false;
     }
+    delete parsetree;
     return true;
 }
 
