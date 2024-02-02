@@ -12,14 +12,16 @@ ast::CompilationUnit* parsetree::visitCompilationUnit(Node* node) {
     if (node->num_children() != 3) {
         throw std::runtime_error("CompilationUnit node must have 3 children");
     }
+    std::vector<ast::Import *> imports;
+    visitImportDeclarations(node->child(1), imports);
     return new ast::CompilationUnit {
         visitPackageDeclaration(node->child(0)),
-        visitImportDeclarations(node->child(1), *(new std::vector<ast::Import*>())),
+        imports,
         visitTypeDeclaration(node->child(2))
     };
 }
 
-ast::PackageDeclaration* parsetree::visitPackageDeclaration(Node* node) {
+ast::QualifiedIdentifier* parsetree::visitPackageDeclaration(Node* node) {
     if (node == nullptr) return nullptr; // nullable
     if (node->get_type() != Node::Type::PackageDeclaration) {
         throw std::runtime_error("PackageDeclaration called on a node that is not a PackageDeclaration");
@@ -28,13 +30,11 @@ ast::PackageDeclaration* parsetree::visitPackageDeclaration(Node* node) {
     if (node->num_children() != 1) {
         throw std::runtime_error("PackageDeclaration node must have 1 children");
     }
-    return new ast::PackageDeclaration {
-        visitQualifiedIdentifier(node->child(0), *(new std::vector<ast::Identifier*>()))
-    };
+    return visitQualifiedIdentifier(node->child(0), *(new std::vector<ast::Identifier*>()));
 }
 
-ast::ImportDeclarations* parsetree::visitImportDeclarations(Node* node, std::vector<ast::Import *> &imports) {
-    if (node == nullptr) return nullptr; // nullable
+void parsetree::visitImportDeclarations(Node* node, std::vector<ast::Import *>& imports) {
+    if (node == nullptr) return; // nullable
     if (node->get_type() != Node::Type::ImportDeclarationList) {
         throw std::runtime_error("ImportDeclarationList called on a node that is not a ImportDeclarationList");
     }
@@ -44,7 +44,6 @@ ast::ImportDeclarations* parsetree::visitImportDeclarations(Node* node, std::vec
     } else {
         imports.push_back(visitImport(node->child(0)));
     }
-    return new ast::ImportDeclarations(imports);
 }
 
 ast::Import* parsetree::visitImport(Node *node) {
@@ -70,17 +69,13 @@ ast::Import* parsetree::visitImport(Node *node) {
 
 ast::TypeDeclaration* parsetree::visitTypeDeclaration(Node* node) {
     if (node == nullptr) return nullptr; // nullable
-    // Type check the children nodes
-    if (node->num_children() != 1) {
-        throw std::runtime_error("typeDeclaration node must have 1 children");
-    }
 
     if (node->get_type() == Node::Type::ClassDeclaration) {
-
+        return visitClassDeclaration(node);
     } else if (node->get_type() == Node::Type::InterfaceDeclaration) {
-
+        return visitInterfaceDeclaration(node);
     } else {
-        
+        throw std::runtime_error("TypeDeclaration must be class declaration or interface declaration");
     }
 }
 

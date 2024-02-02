@@ -9,16 +9,16 @@ namespace ast {
 // Forward delcarations of AST nodes
 
 class CompilationUnit;
-class PackageDeclaration;
-class ImportDeclarations;
 class Import;
 class TypeDeclaration;
 
+// class & interface
 class ClassDeclaration;
 class InterfaceDeclaration;
+class ClassOrInterfaceModifier;
+class ClassBodyDeclaration;
 
 class QualifiedIdentifier;
-
 class Identifier;
 
 class AstNode {
@@ -27,35 +27,15 @@ public:
 };
 
 class CompilationUnit : public AstNode {
-    PackageDeclaration* packageDeclaration;
-    ImportDeclarations* importDeclarations;
+    QualifiedIdentifier* packageDeclaration;
+    std::vector<Import*> imports;
     TypeDeclaration* typeDeclaration;
 public:
     CompilationUnit(
-        PackageDeclaration* packageDeclaration,
-        ImportDeclarations* importDeclarations,
+        QualifiedIdentifier* packageDeclaration,
+        std::vector<Import *> imports,
         TypeDeclaration* typeDeclaration
-    ) : packageDeclaration{packageDeclaration}, importDeclarations{importDeclarations}, typeDeclaration{typeDeclaration} {}
-
-    std::ostream& print(std::ostream& os) const;
-};
-
-class PackageDeclaration : public AstNode {
-    QualifiedIdentifier* qualifiedIdentifier;
-public:
-    PackageDeclaration(
-        QualifiedIdentifier* qualifiedIdentifier
-    ) : qualifiedIdentifier{qualifiedIdentifier} {}
-
-    std::ostream& print(std::ostream& os) const;
-};
-
-class ImportDeclarations : public AstNode {
-    std::vector<Import *> imports;
-public:
-    ImportDeclarations(
-        std::vector<Import *> imports
-    ): imports{imports} {}
+    ) : packageDeclaration{packageDeclaration}, imports{imports}, typeDeclaration{typeDeclaration} {}
 
     std::ostream& print(std::ostream& os) const;
 };
@@ -75,11 +55,42 @@ public:
 class TypeDeclaration : public AstNode{};
 
 class ClassDeclaration : public TypeDeclaration{
+    std::vector<ClassOrInterfaceModifier*> modifiers;
+    Identifier* identifier;
+    QualifiedIdentifier* superClass; // Extends super class , null if no extends
+    std::vector<QualifiedIdentifier*> interfaces; // Implements interfaces, empty if no implements
+    std::vector<ClassBodyDeclaration*> classBodyDeclarations; // class members + constructors
 public:
+    ClassDeclaration(
+        std::vector<ClassOrInterfaceModifier*> modifiers,
+        Identifier* identifier,
+        QualifiedIdentifier* superClass,
+        std::vector<QualifiedIdentifier*> interfaces,
+        std::vector<ClassBodyDeclaration*> classBodyDeclarations
+    ): modifiers{modifiers}, identifier{identifier}, superClass{superClass}, interfaces{interfaces}, classBodyDeclarations{classBodyDeclarations} {};
+};
+
+class ClassBodyDeclaration : public AstNode {
+
 };
 
 class InterfaceDeclaration : public TypeDeclaration{
-    
+
+};
+
+class ClassOrInterfaceModifier : public AstNode {
+public:
+    enum class ModifierType {
+        PUBLIC,
+        ABSTRACT,
+        FINAL
+    };
+private:
+    ModifierType type;
+public:
+    ClassOrInterfaceModifier(
+        ModifierType type
+    ): type{type} {};
 };
 
 class QualifiedIdentifier : public AstNode {

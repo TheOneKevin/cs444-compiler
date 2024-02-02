@@ -14,26 +14,12 @@ std::ostream& AstNode::print(std::ostream& os) const {
 std::ostream& CompilationUnit::print(std::ostream& os) const {
     os << "(CompilationUnit: ";
     if (packageDeclaration != nullptr) os << (*packageDeclaration);
-    if (importDeclarations != nullptr) os << (*importDeclarations);
-    if (typeDeclaration != nullptr) os << (*typeDeclaration);
-    os << ")";
-    return os;
-}
-
-std::ostream& PackageDeclaration::print(std::ostream& os) const {
-    os << "(PackageDeclaration: ";
-    os << (*qualifiedIdentifier);
-    os << ")";
-    return os;
-}
-
-std::ostream& ImportDeclarations::print(std::ostream& os) const {
-    os << "(ImportDeclarations: ";
     for (auto ptr = imports.begin(); ptr != imports.end();) {
         os << (**ptr);
         if (++ptr == imports.end()) break;
         os << ",";
     }
+    if (typeDeclaration != nullptr) os << (*typeDeclaration);
     os << ")";
     return os;
 }

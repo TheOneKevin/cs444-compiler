@@ -117,5 +117,7 @@ add_tool(
     AST
     "lib/ast/main.cc"
     "lib/parsetree/ParseTreeVisitor.cc"
+    "lib/parsetree/VisitClassInterface.cc"
     "lib/ast/ast_printer.cc"
+
 )

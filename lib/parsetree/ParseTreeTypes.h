@@ -235,6 +235,10 @@ public:
         : Node{Node::Type::Modifier}, type{type}
     { }
 
+    Type get_type() const {
+        return type;
+    }
+
     std::ostream& print(std::ostream& os) const;
 };
 
