@@ -33,12 +33,12 @@ OctalEscape             (\\{ZeroToThree}{OctalDigit}{OctalDigit})|(\\{OctalDigit
 OctalDigit              [0-7]
 ZeroToThree             [0-3]
 EscapeSequence          (\\b|\\t|\\n|\\f|\\r|\\\"|\\\'|\\\\|{OctalEscape})
-SingleCharacter         [^'\\]
+SingleCharacter         [^\'\\]
 StringCharacter         [^"\\]|{EscapeSequence}
 
 DecimalIntegerLiteral   (0|[1-9][0-9]*)
 BooleanLiteral          (true|false)
-CharacterLiteral        \'{SingleCharacter}|{EscapeSequence}\'
+CharacterLiteral        \'({SingleCharacter}|{EscapeSequence})\'
 StringLiteral           \"{StringCharacter}*\"
 
 Whitespace              [ \t\r\f]+

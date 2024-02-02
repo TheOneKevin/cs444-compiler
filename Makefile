@@ -1,5 +1,5 @@
 CC = g++
-CXXFLAGS = -std=c++20 -g -Og -DYYDEBUG=1
+CXXFLAGS = -std=c++2a -g -Og -DYYDEBUG=1
 FLEX = flex
 BISON = bison
 BISONFLAGS = --locations -k

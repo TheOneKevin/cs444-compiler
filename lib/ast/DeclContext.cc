@@ -101,6 +101,9 @@ InterfaceDecl::InterfaceDecl(
     }
     for(auto bodyDecl : interfaceBodyDecls) {
         if (auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {
+            if(!methodDecl->getModifiers().isAbstract()) {
+                throw std::runtime_error("An interface can only contain abstract methods");
+            }
             methods.push_back(methodDecl);
         } else {
             throw std::runtime_error("Invalid interface body declaration");

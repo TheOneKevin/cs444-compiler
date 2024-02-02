@@ -75,6 +75,7 @@ public:
         Stmt *body
     );
     std::ostream& print(std::ostream& os, int indentation = 0) const override;
+    Modifiers& getModifiers() { return modifiers; }
     bool isConstructor() const { return isConstructor_; }
 };
 

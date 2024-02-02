@@ -1,11 +1,5 @@
 import os, shutil
 
-template = """
-#include <iostream>
-#include <gtest/gtest.h>
-#include "../common.h"
-"""
-
 # Get the directory of this file
 dir_path = os.path.dirname(os.path.realpath(__file__))
 gen_path = os.path.join(dir_path, "generated")
@@ -19,6 +13,12 @@ os.makedirs(gen_path)
 a1_files = os.listdir(os.path.join(dir_path, "data", "a1"))
 
 ################################################################################
+
+template = """
+#include <iostream>
+#include <gtest/gtest.h>
+#include "../common.h"
+"""
 
 # For each file, add a test case for the parser rules
 a1_parser_tests = ['r7', 'r9', 'r10', 'r11', 'r14', 'r15']
@@ -47,3 +47,29 @@ with open(os.path.join(gen_path, "parser_a1_tests.cc"), 'w') as f:
     f.write(template)
 
 ################################################################################
+
+template = """
+#include <iostream>
+#include <gtest/gtest.h>
+#include "../common.h"
+"""
+
+for file in a1_files:
+    if not file.endswith('.java'):
+        continue
+    EXPECT_WHAT = 'EXPECT_TRUE'
+    if file.split('_')[1] == 'invalid':
+        EXPECT_WHAT = 'EXPECT_FALSE'
+    with open(os.path.join(dir_path, "data", "a1", file), 'r') as f:
+        content = f.read()
+    test_name = file.split('.')[0]
+    # Replace \ with \\ and \n with \\n and " with \"
+    content = content.replace('\\', '\\\\').replace('\n', '\\n').replace('"', '\\"')
+    template += f"""
+        TEST(AstTests, {test_name}) {{
+            std::string input = "{content}";
+            {EXPECT_WHAT}(testing::build_ast(input));
+        }}
+    """
+with open(os.path.join(gen_path, "ast_a1_tests.cc"), 'w') as f:
+    f.write(template)

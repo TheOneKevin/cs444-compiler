@@ -30,6 +30,13 @@ int main(int argc, char **argv) {
         std::cerr << "Usage: " << argv[0] << " input-file " << std::endl;
         exit( EXIT_FAILURE );
     }
+
+    for(int i = 0; i < str.length(); i++) {
+        if (static_cast<unsigned char>(str[i]) > 127) {
+            std::cerr << "Parse error: non-ASCII character in input" << std::endl;
+            return 42;
+        }
+    }
     
     // Now that we have the string, lex it
     YY_BUFFER_STATE state;

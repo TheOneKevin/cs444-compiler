@@ -2,7 +2,9 @@ package com.example;
 
 public class HelloWorld {
   public static void main(String[] args) {
-    System.out.println("Hello, World!");
-    x.y.z = 10;
+    String string = "
+      This is a multi-line comment
+      that should be ignored
+    ";
   }
 }

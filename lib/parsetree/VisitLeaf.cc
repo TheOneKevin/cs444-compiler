@@ -52,9 +52,7 @@ Modifier visitModifier(Node* node) {
 ast::Type* visitType(Node* node) {
     check_num_children(node, 1, 1);
     auto innerTy = node;
-    if(node->get_node_type() == pty::ArrayType) {
-        innerTy = node->child(0);
-    }
+    innerTy = node->child(0);
     ast::Type* elemTy = nullptr;
     if(innerTy->get_node_type() == pty::BasicType) {
         elemTy = new ast::BuiltInType {
@@ -69,7 +67,7 @@ ast::Type* visitType(Node* node) {
         throw std::runtime_error("Expected a BasicType or QualifiedIdentifier node but got " + innerTy->type_string());
     if(node->get_node_type() == pty::ArrayType)
         return new ast::ArrayType { elemTy };
-    else if(node->get_node_type() == pty::QualifiedIdentifier)
+    else if(node->get_node_type() == pty::Type)
         return elemTy;
     throw std::runtime_error("Expected a Type or ArrayType node");
 }

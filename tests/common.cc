@@ -1,11 +1,12 @@
 #include "common.h"
+#include "parsetree/ParseTreeVisitor.h"
 #include <gtest/gtest.h>
 
-bool testing::parse_grammar(const string& str) {
+parsetree::Node* testing::get_parsetree(const string& str) {
     // Now that we have the string, lex it
     YY_BUFFER_STATE state;
     if (!(state = yy_scan_bytes(str.c_str(), str.size()))) {
-        return false;
+        return nullptr;
     }
 
     // Parse the tokens using Bison generated parser
@@ -17,16 +18,35 @@ bool testing::parse_grammar(const string& str) {
     yy_delete_buffer(state);
 
     if (!parse_tree) {
-        return false;
+        return nullptr;
     }
 
     // Check if the tree is poisoned
     EXPECT_FALSE(parse_tree->is_poisoned());
-    delete parse_tree;
 
     if(result) {
-        return false;
+        return nullptr;
     }
 
+    return parse_tree;
+}
+
+bool testing::parse_grammar(const string& str) {
+    if (!get_parsetree(str)) {
+        return false;
+    }
     return true;
+}
+
+bool testing::build_ast(const string& str) {
+    auto parse_tree = get_parsetree(str);
+    if (!parse_tree) {
+        return false;
+    }
+    try {
+        auto ast = parsetree::visitCompilationUnit(parse_tree);
+        return true;
+    } catch (const std::exception& e) {
+        return false;
+    }
 }

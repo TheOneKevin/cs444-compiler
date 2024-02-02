@@ -238,6 +238,10 @@ ast::MethodDecl* visitAbstractMethodDeclaration(Node* node) {
             pty::FormalParameterList, ast::VarDecl*, true
         >(node->child(3), params);
     }
+    // Set as abstract
+    if(!modifiers.isAbstract()) {
+        modifiers.setAbstract();
+    }
     // Return the constructed AST node
     return new ast::MethodDecl{modifiers, name, type, params, false, nullptr};
 }

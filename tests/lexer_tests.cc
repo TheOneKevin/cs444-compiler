@@ -74,7 +74,10 @@ TEST(LexerTests, SubcaseHelloWorld) {
 }
 
 TEST(LexerTests, SubcaseImports) {
-    lex_string("import java.util.*;", { IMPORT, IDENTIFIER, '.', IDENTIFIER, '.', OP_MUL, ';', YYEOF });
+    lex_string(
+        "import java.util.*;", 
+        { IMPORT, IDENTIFIER, '.', IDENTIFIER, '.', OP_MUL, ';', YYEOF }
+    );
 }
 
 TEST(LexerTests, IntegerLiteral) {
@@ -90,7 +93,7 @@ TEST(LexerTests, CharacterLiteral) {
 TEST(LexerTests, StringLiteral) {
    lex_string("\"\"", {LITERAL, YYEOF});
    lex_string("\"foo\"", {LITERAL, YYEOF});
-   lex_string("\"\\b\\t\\n\\f\\r\\\"\\'064\"", {LITERAL, YYEOF});
+   lex_string("\" \\ b \\ t \\ n \\ f \\ r \\ \" \\ '064 \" ", {LITERAL, YYEOF});
    lex_string("\"\030\\\"", {LITERAL, YYEOF});
 }
 
