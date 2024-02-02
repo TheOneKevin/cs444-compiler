@@ -64,20 +64,20 @@ Keyword: one of
 */
 %}
 
-"class"         { *yylval = new pt::Poison(); return CLASS; }
-"else"          { *yylval = new pt::Poison(); return ELSE; }
-"extends"       { *yylval = new pt::Poison(); return EXTENDS; }
-"for"           { *yylval = new pt::Poison(); return FOR; }
-"if"            { *yylval = new pt::Poison(); return IF; }
-"implements"    { *yylval = new pt::Poison(); return IMPLEMENTS; }
-"import"        { *yylval = new pt::Poison(); return IMPORT; }
-"interface"     { *yylval = new pt::Poison(); return INTERFACE; }
-"new"           { *yylval = new pt::Poison(); return NEW; }
-"package"       { *yylval = new pt::Poison(); return PACKAGE; }
-"return"        { *yylval = new pt::Poison(); return RETURN; }
-"void"          { *yylval = new pt::Poison(); return VOID; }
-"while"         { *yylval = new pt::Poison(); return WHILE; }
-"super"         { *yylval = new pt::Poison(); return SUPER; }
+"class"         { *yylval = pt::make_poison(); return CLASS; }
+"else"          { *yylval = pt::make_poison(); return ELSE; }
+"extends"       { *yylval = pt::make_poison(); return EXTENDS; }
+"for"           { *yylval = pt::make_poison(); return FOR; }
+"if"            { *yylval = pt::make_poison(); return IF; }
+"implements"    { *yylval = pt::make_poison(); return IMPLEMENTS; }
+"import"        { *yylval = pt::make_poison(); return IMPORT; }
+"interface"     { *yylval = pt::make_poison(); return INTERFACE; }
+"new"           { *yylval = pt::make_poison(); return NEW; }
+"package"       { *yylval = pt::make_poison(); return PACKAGE; }
+"return"        { *yylval = pt::make_poison(); return RETURN; }
+"void"          { *yylval = pt::make_poison(); return VOID; }
+"while"         { *yylval = pt::make_poison(); return WHILE; }
+"super"         { *yylval = pt::make_poison(); return SUPER; }
 
 "abstract"  { *yylval = new pt::Modifier(pmt::Abstract);    return ABSTRACT; }
 "final"     { *yylval = new pt::Modifier(pmt::Final);       return FINAL; }
@@ -171,15 +171,15 @@ Separator: one of
 */
 %}
 
-"(" { *yylval = new pt::Poison(); return '('; }
-")" { *yylval = new pt::Poison(); return ')'; }
-"{" { *yylval = new pt::Poison(); return '{'; }
-"}" { *yylval = new pt::Poison(); return '}'; }
-"[" { *yylval = new pt::Poison(); return '['; }
-"]" { *yylval = new pt::Poison(); return ']'; }
-";" { *yylval = new pt::Poison(); return ';'; }
-"," { *yylval = new pt::Poison(); return ','; }
-"." { *yylval = new pt::Poison(); return '.'; }
+"(" { *yylval = pt::make_poison(); return '('; }
+")" { *yylval = pt::make_poison(); return ')'; }
+"{" { *yylval = pt::make_poison(); return '{'; }
+"}" { *yylval = pt::make_poison(); return '}'; }
+"[" { *yylval = pt::make_poison(); return '['; }
+"]" { *yylval = pt::make_poison(); return ']'; }
+";" { *yylval = pt::make_poison(); return ';'; }
+"," { *yylval = pt::make_poison(); return ','; }
+"." { *yylval = pt::make_poison(); return '.'; }
 
 %{
 /* ========================================================================== */

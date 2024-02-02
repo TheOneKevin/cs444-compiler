@@ -143,7 +143,7 @@ public:
             if (args[i] != nullptr)
                 delete args[i];
         }
-        delete args;
+        delete[] args;
     }
 };
 
@@ -296,11 +296,7 @@ public:
     std::ostream& print(std::ostream& os) const override;
 };
 
-class Poison : public Node {
-public:
-    Poison()
-        : Node{Node::Type::Poison}
-    { }
-};
+Node* make_poison();
+void clear_poison_pool();
 
 } // namespace parsetree

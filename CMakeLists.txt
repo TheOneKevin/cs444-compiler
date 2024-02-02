@@ -85,6 +85,7 @@ add_library(OLKCompilerLib
     "lib/parsetree/VisitExpression.cc"
     "lib/parsetree/VisitLeaf.cc"
     "lib/parsetree/VisitStatement.cc"
+    "lib/parsetree/ParseTreeTypes.cc"
     # utils
     "lib/utils/FragmentGenerator.cc"
 )
