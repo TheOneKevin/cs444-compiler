@@ -3,7 +3,6 @@ CXXFLAGS = -std=c++2a -g -Og -DYYDEBUG=1
 FLEX = flex
 BISON = bison
 BISONFLAGS = --locations -k
-FLEXFLAGS =
 INCLUDES = -Ilib -I$(PARSER_DIR)
 PARSER_DIR = ./joosc_build
 LEXER_OUT = $(PARSER_DIR)/joos1w_lexer.cpp
@@ -17,6 +16,7 @@ JOOSC_SRCS = tools/joosc/main.cc \
              lib/ast/DeclContext.cc \
              lib/ast/Expr.cc \
              lib/ast/Stmt.cc \
+             lib/ast/Modifiers.cc \
              lib/parsetree/ParseTreeDotPrinter.cc \
              lib/parsetree/ParseTreePrinter.cc \
              lib/parsetree/ParseTreeVisitor.cc \
