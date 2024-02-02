@@ -85,12 +85,15 @@ TEST(LexerTests, CharacterLiteral) {
    lex_string("'a'", {LITERAL, YYEOF});
    lex_string("'%'", {LITERAL, YYEOF});
    lex_string("'\\b'", {LITERAL, YYEOF});
+   lex_string("'\051'", {LITERAL, YYEOF});
 }
 
 TEST(LexerTests, StringLiteral) {
-   lex_string("\"\"", {LITERAL, YYEOF});
-   lex_string("\"foo\"", {LITERAL, YYEOF});
-   lex_string("\"\\b\\t\\n\\f\\r\\\"\\'064\"", {LITERAL, YYEOF});
+    lex_string("\"\"", {LITERAL, YYEOF});
+    lex_string("\"foo\"", {LITERAL, YYEOF});
+    lex_string("\"\\b\\t\\n\\f\\r\\\"\\'064\"", {LITERAL, YYEOF});
+    lex_string("\"\\b\", \"b\")", {LITERAL, YYEOF});
+    lex_string("\"\1\2\3(\"", {LITERAL, YYEOF});
 }
 
 TEST(LexerTests, SubcaseWhitespace) {

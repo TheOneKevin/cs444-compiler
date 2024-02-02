@@ -426,11 +426,12 @@ MethodInvocation
     ;
 
 ArrayCreationExpression
-    : NEW QualifiedIdentifier '[' Expression ']'                                { $$ = new pt::Node(pty::ArrayCreationExpression, $2, $4); }
+    : NEW BasicType '[' Expression ']'                                          { $$ = new pt::Node(pty::ArrayCreationExpression, $2, $4); }
+    | NEW QualifiedIdentifier '[' Expression ']'                                { $$ = new pt::Node(pty::ArrayCreationExpression, $2, $4); }
     ;
 
 ClassInstanceCreationExpression
-    : NEW QualifiedIdentifier '(' ArgumentList ')'                              { $$ = new pt::Node(pty::ClassInstanceCreationExpression, $2, $4); }
+    : NEW QualifiedIdentifier '(' ArgumentListOpt ')'                           { $$ = new pt::Node(pty::ClassInstanceCreationExpression, $2, $4); }
     ;
 
 ArgumentListOpt

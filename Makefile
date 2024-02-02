@@ -1,5 +1,5 @@
 CC = g++
-CXXFLAGS = -std=c++20 -Wall -Wextra -Wpedantic -g -Og -DYYDEBUG=1
+CXXFLAGS = -std=c++20 -g -Og -DYYDEBUG=1
 FLEX = flex
 BISON = bison
 BISONFLAGS = --locations -k
@@ -13,6 +13,12 @@ PARSER_HEADER = $(PARSER_DIR)/parser.h
 
 # Joosc specific sources and their dependencies
 JOOSC_SRCS = tools/joosc/main.cc \
+             lib/ast/Decl.cc \
+             lib/ast/DeclContext.cc \
+             lib/ast/Expr.cc \
+             lib/ast/Stmt.cc \
+             lib/parsetree/ParseTreeDotPrinter.cc \
+             lib/parsetree/ParseTreePrinter.cc \
              lib/parsetree/ParseTreeVisitor.cc \
              lib/parsetree/VisitClassInterface.cc \
              lib/parsetree/VisitDeclaration.cc \
@@ -25,6 +31,8 @@ JOOSC_SRCS = tools/joosc/main.cc \
 JOOSC_OBJS = $(JOOSC_SRCS:%.cc=$(PARSER_DIR)/%.o)
 
 all: joosc
+
+$(JOOSC_OBJS): $(LEXER_OUT) $(PARSER_OUT)
 
 $(PARSER_DIR)/%.o: %.cc
 	mkdir -p $(dir $@)
@@ -39,7 +47,7 @@ $(PARSER_OUT): lib/grammar/joos1w_parser.y
 	$(BISON) $(BISONFLAGS) --output=$(PARSER_OUT) --defines=$(PARSER_HEADER) $<
 
 joosc: $(JOOSC_OBJS)
-	$(CC) $(CXXFLAGS) $(INCLUDES) -o $(PARSER_DIR)/$@ $^
+	$(CC) $(CXXFLAGS) $(INCLUDES) -o ./$@ $^
 
 clean:
 	rm -rf $(PARSER_DIR)
