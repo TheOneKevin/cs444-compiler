@@ -71,7 +71,11 @@ include(GoogleTest)
 # Create a library target for our compiler with sources under lib/
 add_library(OLKCompilerLib
     # ast
-    "lib/ast/ASTPrinter.cc"
+    "lib/ast/Decl.cc"
+    "lib/ast/DeclContext.cc"
+    "lib/ast/Expr.cc"
+    "lib/ast/Stmt.cc"
+    "lib/ast/Modifiers.cc"
     # parsetree
     "lib/parsetree/ParseTreeDotPrinter.cc"
     "lib/parsetree/ParseTreePrinter.cc"
@@ -161,8 +165,7 @@ add_tool(
     "tools/joosc/main.cc"
 )
 
-# FIXME(kevin): Add the following tools when they are implemented
-# add_tool(
-#     astprinter
-#     "tools/astprinter/main.cc"
-# )
+add_tool(
+    astprinter
+    "tools/astprinter/main.cc"
+)

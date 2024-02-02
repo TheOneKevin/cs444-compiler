@@ -21,6 +21,7 @@ struct Node {
         F(Modifier) \
         F(ArrayType) \
         F(Type) \
+        F(Poison) \
         /* Compilation Unit */ \
         F(CompilationUnit) \
         F(PackageDeclaration) \
@@ -119,6 +120,21 @@ public:
     // Operator to turn Type into a string
     static std::string type_string(Type type) {
         return type_strings[static_cast<int>(type)];
+    }
+
+    // Check if the tree has been poisoned
+    bool is_poisoned() const {
+        if(type == Type::Poison)
+            return true;
+        else {
+            for (size_t i = 0; i < num_args; i++) {
+                if(args[i] == nullptr)
+                    continue;
+                if (args[i]->is_poisoned())
+                    return true;
+            }
+            return false;
+        }
     }
 
 public:
@@ -252,7 +268,7 @@ public:
         return type;
     }
 
-    std::ostream& print(std::ostream& os) const;
+    std::ostream& print(std::ostream& os) const override;
 };
 
 class BasicType : public Node {
@@ -274,7 +290,14 @@ public:
         : Node{Node::Type::BasicType}, type{type}
     { }
 
-    std::ostream& print(std::ostream& os) const;
+    std::ostream& print(std::ostream& os) const override;
+};
+
+class Poison : public Node {
+public:
+    Poison()
+        : Node{Node::Type::Poison}
+    { }
 };
 
 } // namespace parsetree

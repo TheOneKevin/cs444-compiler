@@ -31,8 +31,7 @@ int main(int argc, char **argv) {
     yy_delete_buffer(state);
     
     ast::CompilationUnit* ast = parsetree::visitCompilationUnit(parse_tree);
-
-    std::cout << (*ast) << std::endl;
-    delete ast;
+    ast->print(std::cout);
+    
     return 0;
 }

@@ -35,7 +35,7 @@
 /* Operator tokens */
 %token OP_ASSIGN OP_GT OP_LT OP_NOT OP_EQ OP_LTE OP_GTE OP_NEQ OP_AND
 %token OP_OR OP_BIT_AND OP_BIT_OR OP_PLUS OP_MINUS OP_MUL
-%token OP_DIV OP_MOD OP_XOR OP_BIT_NOT INSTANCEOF
+%token OP_DIV OP_MOD OP_BIT_XOR OP_BIT_NOT INSTANCEOF
 
 %start CompilationUnit
 
@@ -330,7 +330,7 @@ InclusiveOrExpression
 
 ExclusiveOrExpression
     : AndExpression
-    | ExclusiveOrExpression OP_XOR AndExpression                                { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
+    | ExclusiveOrExpression OP_BIT_XOR AndExpression                            { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
     ;
 
 AndExpression

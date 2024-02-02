@@ -1,4 +1,5 @@
 #include "common.h"
+#include <gtest/gtest.h>
 
 bool testing::parse_grammar(const string& str) {
     // Now that we have the string, lex it
@@ -14,6 +15,9 @@ bool testing::parse_grammar(const string& str) {
 
     // Clean up Bison stuff
     yy_delete_buffer(state);
+
+    // Check if the tree is poisoned
+    EXPECT_FALSE(parse_tree->is_poisoned());
 
     if (!parse_tree) {
         return false;

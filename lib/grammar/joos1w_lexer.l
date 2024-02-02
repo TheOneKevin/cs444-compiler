@@ -59,20 +59,20 @@ Keyword: one of
 */
 %}
 
-"class"         { return CLASS; }
-"else"          { return ELSE; }
-"extends"       { return EXTENDS; }
-"for"           { return FOR; }
-"if"            { return IF; }
-"implements"    { return IMPLEMENTS; }
-"import"        { return IMPORT; }
-"interface"     { return INTERFACE; }
-"new"           { return NEW; }
-"package"       { return PACKAGE; }
-"return"        { return RETURN; }
-"void"          { return VOID; }
-"while"         { return WHILE; }
-"super"         { return SUPER; }
+"class"         { *yylval = new pt::Poison(); return CLASS; }
+"else"          { *yylval = new pt::Poison(); return ELSE; }
+"extends"       { *yylval = new pt::Poison(); return EXTENDS; }
+"for"           { *yylval = new pt::Poison(); return FOR; }
+"if"            { *yylval = new pt::Poison(); return IF; }
+"implements"    { *yylval = new pt::Poison(); return IMPLEMENTS; }
+"import"        { *yylval = new pt::Poison(); return IMPORT; }
+"interface"     { *yylval = new pt::Poison(); return INTERFACE; }
+"new"           { *yylval = new pt::Poison(); return NEW; }
+"package"       { *yylval = new pt::Poison(); return PACKAGE; }
+"return"        { *yylval = new pt::Poison(); return RETURN; }
+"void"          { *yylval = new pt::Poison(); return VOID; }
+"while"         { *yylval = new pt::Poison(); return WHILE; }
+"super"         { *yylval = new pt::Poison(); return SUPER; }
 
 "abstract"  { *yylval = new pt::Modifier(pmt::Abstract);    return ABSTRACT; }
 "final"     { *yylval = new pt::Modifier(pmt::Final);       return FINAL; }
@@ -166,15 +166,15 @@ Separator: one of
 */
 %}
 
-"(" { return '('; }
-")" { return ')'; }
-"{" { return '{'; }
-"}" { return '}'; }
-"[" { return '['; }
-"]" { return ']'; }
-";" { return ';'; }
-"," { return ','; }
-"." { return '.'; }
+"(" { *yylval = new pt::Poison(); return '('; }
+")" { *yylval = new pt::Poison(); return ')'; }
+"{" { *yylval = new pt::Poison(); return '{'; }
+"}" { *yylval = new pt::Poison(); return '}'; }
+"[" { *yylval = new pt::Poison(); return '['; }
+"]" { *yylval = new pt::Poison(); return ']'; }
+";" { *yylval = new pt::Poison(); return ';'; }
+"," { *yylval = new pt::Poison(); return ','; }
+"." { *yylval = new pt::Poison(); return '.'; }
 
 %{
 /* ========================================================================== */
@@ -209,7 +209,7 @@ Operator: one of
 "*"  { *yylval = new pt::Operator(pot::Multiply);           return OP_MUL; }
 "/"  { *yylval = new pt::Operator(pot::Divide);             return OP_DIV; }
 "%"  { *yylval = new pt::Operator(pot::Modulo);             return OP_MOD; }
-"^"  { *yylval = new pt::Operator(pot::BitwiseXor);         return OP_XOR; }
+"^"  { *yylval = new pt::Operator(pot::BitwiseXor);         return OP_BIT_XOR; }
 "~"  { *yylval = new pt::Operator(pot::BitwiseNot);         return OP_BIT_NOT; }
 
 {Identifier} {

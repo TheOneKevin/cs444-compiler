@@ -43,11 +43,16 @@ int main(int argc, char **argv) {
     // Clean up Bison stuff
     yy_delete_buffer(state);
 
-    if (!parse_tree) {
+    if (!parse_tree || result) {
         return 42;
     }
 
-    if (result) {
+    struct parse_error {};
+
+    try {
+        if(parse_tree->is_poisoned()) throw parse_error();
+    } catch ( ... ) {
+        // output some error
         return 42;
     }
 

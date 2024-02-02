@@ -159,18 +159,18 @@ TEST(LexerTests, SubcaseOperators) {
     lex_string("-", {OP_MINUS, YYEOF});
     lex_string("*", {OP_MUL, YYEOF});
     lex_string("/", {OP_DIV, YYEOF});
-    lex_string("&", {OP_AND, YYEOF});
-    lex_string("|", {OP_OR, YYEOF});
-    lex_string("^", {OP_XOR, YYEOF});
+    lex_string("&", {OP_BIT_AND, YYEOF});
+    lex_string("|", {OP_BIT_OR, YYEOF});
+    lex_string("^", {OP_BIT_XOR, YYEOF});
     lex_string("%", {OP_MOD, YYEOF});
 }
 
 TEST(LexerTests, SubcaseComplexOperators) {
     lex_string("===", {OP_EQ, OP_ASSIGN, YYEOF});
     lex_string("====", {OP_EQ, OP_EQ, YYEOF});
-    lex_string("==>", {OP_ASSIGN, OP_GTE, OP_ASSIGN, YYEOF});
+    lex_string("==>", {OP_EQ, OP_GT, YYEOF});
     lex_string(">==", {OP_GTE, OP_ASSIGN, YYEOF});
-    lex_string("=>=", {OP_ASSIGN, OP_GTE, OP_ASSIGN, YYEOF});
-    lex_string("==>", {OP_ASSIGN, OP_GTE, OP_ASSIGN, YYEOF});
+    lex_string("=>=", {OP_ASSIGN, OP_GTE, YYEOF});
+    lex_string("==>", {OP_EQ, OP_GT, YYEOF});
     lex_string("!==", {OP_NEQ, OP_ASSIGN, YYEOF});
 }
