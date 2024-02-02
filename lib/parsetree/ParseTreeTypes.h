@@ -38,7 +38,6 @@ struct Node {
         F(SuperOpt) \
         /* Interfaces */ \
         F(InterfaceDeclaration) \
-        F(ExtendsInterfaces) \
         F(InterfaceMemberDeclarationList) \
         F(InterfaceTypeList) \
         /* Methods */ \
@@ -102,7 +101,7 @@ public:
         return args[i];
     }
 
-    Type get_type() const {
+    Type get_node_type() const {
         return type;
     }
 
@@ -289,6 +288,10 @@ public:
     BasicType(Type type)
         : Node{Node::Type::BasicType}, type{type}
     { }
+
+    Type get_type() const {
+        return type;
+    }
 
     std::ostream& print(std::ostream& os) const override;
 };

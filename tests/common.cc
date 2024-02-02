@@ -16,17 +16,17 @@ bool testing::parse_grammar(const string& str) {
     // Clean up Bison stuff
     yy_delete_buffer(state);
 
-    // Check if the tree is poisoned
-    EXPECT_FALSE(parse_tree->is_poisoned());
-
     if (!parse_tree) {
         return false;
     }
 
+    // Check if the tree is poisoned
+    EXPECT_FALSE(parse_tree->is_poisoned());
     delete parse_tree;
 
     if(result) {
         return false;
     }
+
     return true;
 }

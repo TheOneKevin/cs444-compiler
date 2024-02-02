@@ -19,6 +19,9 @@ constexpr auto primary_expr_fragments = {
     "a || a instanceof b",
     "a | a * instanceof b",
     "(Obj) object instanceof cast",
+    "a || a instanceof b",
+    "a | a * instanceof b",
+    "(Obj) object instanceof cast",
     "!flag",
     "a.b()",
     "a.b().c()",
@@ -28,6 +31,8 @@ constexpr auto primary_expr_fragments = {
     "(h)-g.f()",
     "new a.b.c.d.e(a, b, c, d)",
     "new a.b[5]",
+    "(new int[1])[0]"
+    "(new int[5])[2] = 531"
     "(new int[1])[0]"
     "(new int[5])[2] = 531"
     "array[1+3*2-3/5%6]",

@@ -5,22 +5,22 @@ namespace ast {
 void Modifiers::set(parsetree::Modifier modifier) {
     switch(modifier.get_type()) {
         case parsetree::Modifier::Type::Public:
-            isPublic_ = true;
+            setPublic();
             break;
         case parsetree::Modifier::Type::Protected:
-            isProtected_ = true;
+            setProtected();
             break;
         case parsetree::Modifier::Type::Static:
-            isStatic_ = true;
+            setStatic();
             break;
         case parsetree::Modifier::Type::Final:
-            isFinal_ = true;
+            setFinal();
             break;
         case parsetree::Modifier::Type::Abstract:
-            isAbstract_ = true;
+            setAbstract();
             break;
         case parsetree::Modifier::Type::Native:
-            isNative_ = true;
+            setNative();
             break;
         default:
             break;
@@ -28,13 +28,50 @@ void Modifiers::set(parsetree::Modifier modifier) {
 }
 
 void Modifiers::set(ast::Modifiers modifier) {
-    isPublic_ |= modifier.isPublic_;
-    isProtected_ |= modifier.isProtected_;
-    isStatic_ |= modifier.isStatic_;
-    isFinal_ |= modifier.isFinal_;
-    isAbstract_ |= modifier.isAbstract_;
-    isNative_ |= modifier.isNative_;
+    if (modifier.isPublic_) setPublic();
+    if (modifier.isProtected_) setProtected();
+    if (modifier.isStatic_) setStatic();
+    if (modifier.isFinal_) setFinal();
+    if (modifier.isAbstract_) setAbstract();
+    if (modifier.isNative_) setNative();
 }
+
+void Modifiers::setPublic() {
+    if (isPublic_)
+        throw std::runtime_error("Cannot have the same modifier twice");
+    isPublic_ = true;
+}
+
+void Modifiers::setProtected() {
+    if (isProtected_)
+        throw std::runtime_error("Cannot have the same modifier twice");
+    isProtected_ = true;
+}
+
+void Modifiers::setStatic() {
+    if (isStatic_)
+        throw std::runtime_error("Cannot have the same modifier twice");
+    isStatic_ = true;
+}
+
+void Modifiers::setFinal() {
+    if (isFinal_)
+        throw std::runtime_error("Cannot have the same modifier twice");
+    isFinal_ = true;
+}
+
+void Modifiers::setAbstract() {
+    if (isAbstract_)
+        throw std::runtime_error("Cannot have the same modifier twice");
+    isAbstract_ = true;
+}
+
+void Modifiers::setNative() {
+    if (isNative_)
+        throw std::runtime_error("Cannot have the same modifier twice");
+    isNative_ = true;
+}
+
 
 std::string Modifiers::toString() const {
     std::string result;
@@ -45,10 +82,6 @@ std::string Modifiers::toString() const {
     if(isAbstract_) result += "abstract ";
     if(isNative_) result += "native ";
     return result;
-}
-
-bool Modifiers::isValidClass() const {
-    return !isAbstract_ || !isFinal_;
 }
 
 } // namespace ast

@@ -48,12 +48,27 @@ Modifier visitModifier(Node* node) {
 
 ast::Type* visitType(Node* node) {
     check_num_children(node, 1, 1);
-    if(node->get_type() == pty::ArrayType) {
-
-    } else if(node->get_type() == pty::Type) {
-
+    auto innerTy = node;
+    if(node->get_node_type() == pty::ArrayType) {
+        innerTy = node->child(0);
     }
-    throw std::runtime_error("Expected a Type or ArrayType nod");
+    ast::Type* elemTy = nullptr;
+    if(innerTy->get_node_type() == pty::BasicType) {
+        elemTy = new ast::BuiltInType {
+            dynamic_cast<BasicType*>(innerTy)->get_type()
+        };
+    } else if(innerTy->get_node_type() == pty::QualifiedIdentifier) {
+        elemTy = new ast::ReferenceType {
+            visitQualifiedIdentifier(innerTy)
+        };
+    }
+    if(elemTy == nullptr)
+        throw std::runtime_error("Expected a BasicType or QualifiedIdentifier node but got " + innerTy->type_string());
+    if(node->get_node_type() == pty::ArrayType)
+        return new ast::ArrayType { elemTy };
+    else if(node->get_node_type() == pty::QualifiedIdentifier)
+        return elemTy;
+    throw std::runtime_error("Expected a Type or ArrayType node");
 }
 
 } // namespace parsetree

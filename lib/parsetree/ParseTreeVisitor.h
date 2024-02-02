@@ -10,7 +10,7 @@ using pty = Node::Type;
 // Basic helper functions //////////////////////////////////////////////////////
 
 static inline void check_node_type(Node* node, Node::Type type) {
-    if (node->get_type() != type) {
+    if (node->get_node_type() != type) {
         throw std::runtime_error(
             "Called on a node that is not the correct type!"
             " Expected: " + Node::type_string(type) +
@@ -19,7 +19,7 @@ static inline void check_node_type(Node* node, Node::Type type) {
     }
 }
 
-static inline void check_num_children(Node* node, int min, int max) {
+static inline void check_num_children(Node* node, size_t min, size_t max) {
     if (node->num_children() < min || node->num_children() > max) {
         throw std::runtime_error(
             "Node has incorrect number of children!"
@@ -74,10 +74,12 @@ ast::QualifiedIdentifier* visitSuperOpt(Node* node);
 ast::FieldDecl* visitFieldDeclaration(Node* node);
 ast::MethodDecl* visitMethodDeclaration(Node* node);
 ast::MethodDecl* visitConstructorDeclaration(Node* node);
+ast::MethodDecl* visitAbstractMethodDeclaration(Node* node);
 
 template<> ast::Decl* visit<pty::ClassBodyDeclarationList>(Node* node);
 template<> ast::VarDecl* visit<pty::VariableDeclaratorList>(Node* node);
 template<> ast::VarDecl* visit<pty::FormalParameterList>(Node* node);
+template<> ast::Decl* visit<pty::InterfaceMemberDeclarationList>(Node* node);
 
 // Statements visitors /////////////////////////////////////////////////////////
 
