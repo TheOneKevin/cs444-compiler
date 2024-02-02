@@ -51,14 +51,17 @@ void parsetree::visitImportDeclarations(Node* node, std::vector<ast::ImportDecla
 ast::ImportDeclaration parsetree::visitImport(Node *node) {
     // Type check the children nodes
     if (node->num_children() != 1) {
-        throw std::runtime_error("Import node must have 3 children");
+        throw std::runtime_error("Import node must have 1 children");
     }
+    if(node->get_type() != Node::Type::SingleTypeImportDeclaration && node->get_type() != Node::Type::TypeImportOnDemandDeclaration) {
+        throw std::runtime_error("Import called on a node that is not a Import");
+    }
+    ast::QualifiedIdentifier id;
+    visitQualifiedIdentifier(node->child(0), id);
     if (node->get_type() == Node::Type::SingleTypeImportDeclaration) {
-        return ast::ImportDeclaration{visitQualifiedIdentifier(node->child(0)), false};
+        return ast::ImportDeclaration{id, false};
     } else if (node->get_type() == Node::Type::TypeImportOnDemandDeclaration) {
-        return ast::ImportDeclaration{visitQualifiedIdentifier(node->child(0)), true};
-    } else {
-        throw std::runtime_error("VisitImport called on a node that is not a Import");
+        return ast::ImportDeclaration{id, true};
     }
 }
 
