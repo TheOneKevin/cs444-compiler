@@ -1,4 +1,4 @@
-#include "ParseTreeTypes.h"
+#include "ParseTree.h"
 #include "ParseTreeVisitor.h"
 
 namespace parsetree {

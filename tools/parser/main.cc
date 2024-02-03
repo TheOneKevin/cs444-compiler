@@ -58,9 +58,8 @@ int main(int argc, char **argv) {
         }
 
         // Parse the tokens using Bison generated parser
-        int what;
         parsetree::Node* parse_tree = nullptr;
-        int result = yyparse(&what, &parse_tree);
+        int result = yyparse(&parse_tree);
         if(!is_piped) {
             std::cout << "Result: " << result << std::endl;
         }
@@ -71,9 +70,9 @@ int main(int argc, char **argv) {
         // Now print the parse tree
         if (parse_tree) {
             if(print_dot) {
-                parsetree::print_dot(std::cout, *parse_tree);
+                parse_tree->printDot(std::cout);
             } else {
-                std::cout << *parse_tree << std::endl;
+                std::cout << parse_tree << std::endl;
             }
             delete parse_tree;
         }

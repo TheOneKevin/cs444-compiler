@@ -23,9 +23,8 @@ int main() {
         return 1;
     }
     // Parse the tokens using Bison generated parser
-    int what;
     parsetree::Node* parse_tree = nullptr;
-    int result = yyparse(&what, &parse_tree);
+    int result = yyparse(&parse_tree);
     std::cout << "Result: " << result << std::endl;
     // Clean up Bison stuff
     yy_delete_buffer(state);

@@ -8,7 +8,7 @@
 #include "ast/AST.h"
 #include "lexer.h"
 #include "parser.h"
-#include "parsetree/ParseTreeTypes.h"
+#include "parsetree/ParseTree.h"
 #include "parsetree/ParseTreeVisitor.h"
 
 // FIXME(kevin): Remove when we have proper AST handling
@@ -68,9 +68,8 @@ int main(int argc, char **argv) {
     }
 
     // Parse the tokens using Bison generated parser
-    int what;
     parsetree::Node* parse_tree = nullptr;
-    int result = yyparse(&what, &parse_tree);
+    int result = yyparse(&parse_tree);
 
     // Clean up Bison stuff
     yy_delete_buffer(state);

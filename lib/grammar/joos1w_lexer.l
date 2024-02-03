@@ -4,7 +4,7 @@
 
 %top {
     #include "parser.h"
-    #include "parsetree/ParseTreeTypes.h"
+    #include "parsetree/ParseTree.h"
     #include <cerrno>
     #include <cstdlib>
     #include <iostream>

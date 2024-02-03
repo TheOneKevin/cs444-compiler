@@ -1,6 +1,6 @@
 #pragma once
 
-#include "parsetree/ParseTreeTypes.h"
+#include "parsetree/ParseTree.h"
 #include "ast/AST.h"
 
 namespace parsetree {

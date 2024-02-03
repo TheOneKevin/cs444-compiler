@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
-#include "parsetree/ParseTreeTypes.h"
+#include "parsetree/ParseTree.h"
 
 namespace ast {
     

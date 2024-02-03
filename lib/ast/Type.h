@@ -1,6 +1,6 @@
 #include "ast/AstNode.h"
 #include "utils/EnumMacros.h"
-#include "parsetree/ParseTreeTypes.h"
+#include "parsetree/ParseTree.h"
 
 namespace ast {
 

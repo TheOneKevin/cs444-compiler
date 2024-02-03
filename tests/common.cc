@@ -10,9 +10,8 @@ parsetree::Node* testing::get_parsetree(const string& str) {
     }
 
     // Parse the tokens using Bison generated parser
-    int what;
     parsetree::Node* parse_tree = nullptr;
-    int result = yyparse(&what, &parse_tree);
+    int result = yyparse(&parse_tree);
 
     // Clean up Bison stuff
     yy_delete_buffer(state);

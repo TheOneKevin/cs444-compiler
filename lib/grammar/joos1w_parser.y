@@ -1,23 +1,19 @@
-%parse-param {int *ret}
-
 %code top {
     #include <iostream>
-    #include "parsetree/ParseTreeTypes.h"
+    #include "parsetree/ParseTree.h"
 
     extern int yylex(void);
-    static void yyerror(int *ret, parsetree::Node** _, const char* s);
+    static void yyerror(parsetree::Node** ret, const char* s);
 }
 
-// Tokens and whatnot
-
 %code requires {
-    #include "parsetree/ParseTreeTypes.h"
+    #include "parsetree/ParseTree.h"
     namespace pt = parsetree;
     using pty = parsetree::Node::Type;
 }
 
 %define api.value.type { struct parsetree::Node* }
-%parse-param { struct parsetree::Node** parse_tree_out }
+%parse-param { struct parsetree::Node** ret }
 
 %define parse.error verbose
 %locations
@@ -50,7 +46,7 @@
 /* ========================================================================== */
 
 CompilationUnit
-    : PackageDeclarationOpt ImportDeclarationsOpt TypeDeclarationsOpt           { *parse_tree_out = new pt::Node(pty::CompilationUnit, $1, $2, $3); }
+    : PackageDeclarationOpt ImportDeclarationsOpt TypeDeclarationsOpt           { *ret = new pt::Node(pty::CompilationUnit, $1, $2, $3); }
     ;
 
 PackageDeclarationOpt
@@ -644,9 +640,8 @@ std::string joos1w_parser_resolve_token (int yysymbol) {
     }
 }
 
-static void yyerror(int *ret, parsetree::Node** parse_tree, const char* s) {
+static void yyerror(parsetree::Node** ret, const char* s) {
     (void) ret;
-    (void) parse_tree;
     // TODO: Grab the location somehow
     std::cerr << "Parse error: " << s << std::endl;
     std::cerr

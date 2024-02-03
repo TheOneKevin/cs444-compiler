@@ -77,7 +77,7 @@ add_library(OLKCompilerLib
     "lib/ast/Stmt.cc"
     "lib/ast/Modifiers.cc"
     # parsetree
-    "lib/parsetree/ParseTreeDotPrinter.cc"
+    "lib/parsetree/ParseTree.cc"
     "lib/parsetree/ParseTreePrinter.cc"
     "lib/parsetree/ParseTreeVisitor.cc"
     "lib/parsetree/VisitClassInterface.cc"
@@ -85,7 +85,6 @@ add_library(OLKCompilerLib
     "lib/parsetree/VisitExpression.cc"
     "lib/parsetree/VisitLeaf.cc"
     "lib/parsetree/VisitStatement.cc"
-    "lib/parsetree/ParseTreeTypes.cc"
     # utils
     "lib/utils/FragmentGenerator.cc"
 )
