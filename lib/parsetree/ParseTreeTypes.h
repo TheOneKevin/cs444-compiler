@@ -175,14 +175,21 @@ private:
 
 private:
     Type type;
+    bool isNegative;
     std::string value;
 
 public:
     Literal(Type type, char const* value)
-        : Node{Node::Type::Literal}, type{type}, value{value}
+        : Node{Node::Type::Literal}, type{type}, isNegative{false}, value{value}
     { }
 
     std::ostream& print(std::ostream& os) const override;
+
+    void setNegative() {
+        isNegative = true;
+    }
+
+    bool isValid() const;
 };
 
 /**

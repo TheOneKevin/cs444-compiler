@@ -8,7 +8,20 @@
 #include "ast/AST.h"
 #include "lexer.h"
 #include "parser.h"
+#include "parsetree/ParseTreeTypes.h"
 #include "parsetree/ParseTreeVisitor.h"
+
+// FIXME(kevin): Remove when we have proper AST handling
+bool isLiteralTypeValid(parsetree::Node* node) {
+    if(node == nullptr) return true;
+    if(node->get_node_type() == parsetree::Node::Type::Literal)
+        return static_cast<parsetree::Literal*>(node)->isValid();
+    for(size_t i = 0; i < node->num_children(); i++) {
+        if(!isLiteralTypeValid(node->child(i)))
+            return false;
+    }
+    return true;
+}
 
 int main(int argc, char **argv) {
     std::string str;
@@ -63,6 +76,18 @@ int main(int argc, char **argv) {
     yy_delete_buffer(state);
 
     if (!parse_tree || result) {
+        return 42;
+    }
+
+    // Check if the parse tree is poisoned
+    if(parse_tree->is_poisoned()) {
+        std::cerr << "Parse error: parse tree is poisoned" << std::endl;
+        return 42;
+    }
+
+    // Check if the parse tree has valid literal types
+    if(!isLiteralTypeValid(parse_tree)) {
+        std::cerr << "Parse error: invalid literal type" << std::endl;
         return 42;
     }
 

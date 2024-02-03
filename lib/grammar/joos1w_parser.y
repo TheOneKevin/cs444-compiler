@@ -365,7 +365,15 @@ MultiplicativeExpression
     ;
 
 UnaryExpression
-    : OP_MINUS UnaryExpression                                                  { $$ = new pt::Node(pty::Expression, $1, $2); }
+    : OP_MINUS UnaryExpression {
+        // FIXME(kevin): Remove this hack and fix the AST later
+        // If $2 is a Literal, then we mark that literal as negative :)
+        if($2->get_node_type() == pty::Literal) {
+            auto* literal = static_cast<pt::Literal*>($2);
+            literal->setNegative();
+        }
+        $$ = new pt::Node(pty::Expression, $1, $2);
+    }
     | UnaryExpressionNotPlusMinus
     ;
 
@@ -377,7 +385,21 @@ UnaryExpressionNotPlusMinus
 
 CastExpression
     : '(' BasicType Dims ')' UnaryExpression                                    { $$ = new pt::Node(pty::CastExpression, $2, $3, $5); }
-    | '(' Expression ')' UnaryExpressionNotPlusMinus                            { $$ = new pt::Node(pty::CastExpression, $2, $4); }
+    | '(' Expression ')' UnaryExpressionNotPlusMinus {
+        // FIXME(kevin): Remove this hack and fix the AST later
+        // Cast is valid iff:
+        // 1. $2 is a qualified identifier
+        // 2. $2 is an array type and has only one child
+        bool isType = $2->get_node_type() == pty::QualifiedIdentifier;
+        bool isArrType = $2->get_node_type() == pty::ArrayAccess;
+        bool hasOneChild = $2->num_children() == 1;
+        if(isType || (isArrType && hasOneChild)) {
+            $$ = new pt::Node(pty::CastExpression, $2, $4);
+        } else {
+            std::cerr << "Invalid cast expression" << std::endl;
+            $$ = pt::make_poison();
+        }
+    }
     ;
 
 Dims
@@ -398,7 +420,7 @@ Primary
 PrimaryNoNewArray
     : LITERAL
     | THIS
-    | '(' Expression ')'                                                        { $$ = $2; }
+    | '(' Expression ')'                                                        { $$ = new pt::Node(pty::Expression, $2); } /* Needed for literal validation */
     | ClassInstanceCreationExpression
     | FieldAccess
     | MethodInvocation

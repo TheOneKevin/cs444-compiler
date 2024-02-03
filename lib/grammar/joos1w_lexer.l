@@ -164,17 +164,6 @@ Literal: one of
 %}
 
 {DecimalIntegerLiteral} {
-    // Check to see if yytext is in range
-    errno = 0;
-    char* endptr{};
-    const long long int value = std::strtol(yytext, &endptr, 10);
-    const long long int INT_MAX = 2147483647ULL;
-    if (errno == ERANGE || value > INT_MAX || *endptr != '\0') {
-        *yylval = pt::make_poison();
-        std::cerr << "Lexing error: integer literal out of range" << std::endl;
-        return YYUNDEF;
-    }
-    // If it is, then we can use it as a literal
     *yylval = new pt::Literal(plt::Integer, yytext);
     return LITERAL;
 }

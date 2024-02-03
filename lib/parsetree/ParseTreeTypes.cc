@@ -1,5 +1,6 @@
 #include "ParseTreeTypes.h"
 #include <vector>
+#include <string>
 
 namespace parsetree {
 
@@ -15,6 +16,21 @@ void clear_poison_pool() {
         delete node;
     }
     poison_pool_.clear();
+}
+
+bool Literal::isValid() const {
+    if(type != Type::Integer) return true;
+    errno = 0;
+    char* endptr{};
+    const long long int x = std::strtol(value.c_str(), &endptr, 10);
+    const long long int INT_MAX = 2147483647ULL;
+    if (errno == ERANGE || *endptr != '\0')
+        return false;
+    if(x > INT_MAX && !isNegative)
+        return false;
+    if(x > INT_MAX + 1 && isNegative)
+        return false;
+    return true;
 }
 
 } // namespace parsetree
