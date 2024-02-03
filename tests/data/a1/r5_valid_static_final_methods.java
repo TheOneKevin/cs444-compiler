@@ -1,5 +1,5 @@
-class r5_valid_static_final_methods {
-    r5_valid_static_final_methods(){}
-    static int main() {}
-    final int main() {}
+publclass r5_valid_static_final_methods {
+    public r5_valid_static_final_methods(){}
+    public static int main() {}
+    public final int main() {}
 }

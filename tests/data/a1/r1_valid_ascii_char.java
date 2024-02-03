@@ -1,8 +1,8 @@
    
 
-class r1_valid_ascii_char {
-  r1_valid_ascii_char(){}
-  static int main() {
+public class r1_valid_ascii_char {
+  public r1_valid_ascii_char(){}
+  public static int main() {
     // abcdefghijklmnopqrstuvwxyz
     // ABCDEFGHIJKLMNOPQRSTUVWXYZ
     // ! @ # $ % ^ & * ( ) _ + { } [ ] ; : ' " , . / ? ~ | \\

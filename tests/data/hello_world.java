@@ -6,5 +6,6 @@ public class HelloWorld {
       This is a multi-line comment
       that should be ignored
     ";
+    System.out.println("Hello, World");
   }
 }

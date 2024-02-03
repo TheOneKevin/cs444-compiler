@@ -1,6 +1,6 @@
 class r8_some_class_intf_name {
-    r8_some_class_intf_name(){}
-    static void main() {
+    public r8_some_class_intf_name(){}
+    public static void main() {
         int a = 10;
     }
 }

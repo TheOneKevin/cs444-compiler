@@ -1,4 +1,4 @@
 class r6_invalid_native_method {
-    r6_invalid_native_method(){}
-    native int main();
+    public r6_invalid_native_method(){}
+    public native int main();
 }

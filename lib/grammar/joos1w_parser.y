@@ -34,7 +34,7 @@
 
 /* Unused tokens */
 %token SUPER DOUBLE FLOAT LONG DO TRY CATCH FINALLY THROW THROWS TRANSIENT CASE
-%token SYNCHRONIZED VOLATILE CONST GOTO CONTINUE BREAK DEFAULT SWITCH
+%token SYNCHRONIZED VOLATILE CONST GOTO CONTINUE BREAK DEFAULT SWITCH PRIVATE
 
 /* Operator tokens */
 %token OP_ASSIGN OP_GT OP_LT OP_NOT OP_EQ OP_LTE OP_GTE OP_NEQ OP_AND
@@ -214,9 +214,6 @@ MethodBody
     | ';'                                                                       { $$ = nullptr; }
     ;
 
-// Note: Constructors modifiers needs to be checked in the weeder, can only be
-//       public or protected
-
 ConstructorDeclaration
     : MemberModifiersOpt
       IDENTIFIER '(' FormalParameterListOpt ')' ConstructorBody                 { $$ = new pt::Node(pty::ConstructorDeclaration, $1, $2, $4, $6); }
@@ -258,9 +255,6 @@ InterfaceMemberDeclarationList
     : AbstractMethodDeclaration                                                 { $$ = new pt::Node(pty::InterfaceMemberDeclarationList, $1); }
     | InterfaceMemberDeclarationList AbstractMethodDeclaration                  { $$ = new pt::Node(pty::InterfaceMemberDeclarationList, $1, $2); }
     ;
-
-// Note: Constructors modifiers needs to be checked in the weeder, can only be
-//       public or protected
 
 AbstractMethodDeclaration
     : AbstractMethodDeclarationOpt
@@ -547,9 +541,6 @@ EmptyStatement
 /*                              Control flows                                 */
 /* ========================================================================== */
 
-// Note: Expressions for these control flows MUST be of type boolean
-//       Though we don't check for that here, need to check in the weeder
-
 IfThenStatement
     : IF '(' Expression ')' Statement                                           { $$ = new pt::Node(pty::IfThenStatement, $3, $5); }
     ;
@@ -602,9 +593,9 @@ LocalVariableDeclaration
     : Type VariableDeclarator                                                   { $$ = new pt::Node(pty::LocalVariableDeclaration, $1, $2); }
     ;
 
+// FIXME(kevin): Remove this rule and fix the AST later :)
 VariableDeclaratorList
     : VariableDeclarator                                                        { $$ = new pt::Node(pty::VariableDeclaratorList, $1); }
-    | VariableDeclaratorList ',' VariableDeclarator                             { $$ = new pt::Node(pty::VariableDeclaratorList, $1, $3); }
     ;
 
 VariableDeclarator

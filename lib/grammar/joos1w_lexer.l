@@ -89,13 +89,13 @@ Keyword: one of
 "do"            { *yylval = pt::make_poison(); return DO; }
 "try"           { *yylval = pt::make_poison(); return TRY; }
 "catch"         { *yylval = pt::make_poison(); return CATCH; }
-"switch"          { *yylval = pt::make_poison(); return SWITCH; }
+"switch"        { *yylval = pt::make_poison(); return SWITCH; }
 "case"          { *yylval = pt::make_poison(); return CASE; }
 "default"       { *yylval = pt::make_poison(); return DEFAULT; }
 
 "finally"       { *yylval = pt::make_poison(); return FINALLY; }
 "throw"         { *yylval = pt::make_poison(); return THROW; }
-"throws"          { *yylval = pt::make_poison(); return THROWS; }
+"throws"        { *yylval = pt::make_poison(); return THROWS; }
 "transient"     { *yylval = pt::make_poison(); return TRANSIENT; }
 "synchronized"  { *yylval = pt::make_poison(); return SYNCHRONIZED; }
 "volatile"      { *yylval = pt::make_poison(); return VOLATILE; }
@@ -106,7 +106,7 @@ Keyword: one of
 "double"        { *yylval = pt::make_poison(); return DOUBLE; }
 "float"         { *yylval = pt::make_poison(); return FLOAT; }
 "long"          { *yylval = pt::make_poison(); return LONG; }
-
+"private"       { *yylval = pt::make_poison(); return PRIVATE; }
 
 "abstract"  { *yylval = new pt::Modifier(pmt::Abstract);    return ABSTRACT; }
 "final"     { *yylval = new pt::Modifier(pmt::Final);       return FINAL; }

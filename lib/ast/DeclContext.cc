@@ -43,6 +43,9 @@ ClassDecl::ClassDecl(
     if (modifiers.isAbstract() && modifiers.isFinal()) {
         throw std::runtime_error("Class cannot be both abstract and final");
     }
+    if (!modifiers.isPublic()) {
+        throw std::runtime_error("Class must have a visibility modifier");
+    }
     // Sort the classBodyDecls into fields, methods, and constructors
     for(auto bodyDecl : classBodyDecls) {
         if (auto fieldDecl = dynamic_cast<FieldDecl*>(bodyDecl)) {
@@ -99,6 +102,9 @@ InterfaceDecl::InterfaceDecl(
     if (modifiers.isFinal()) {
         throw std::runtime_error("An interface cannot be final");
     }
+    if (!modifiers.isPublic()) {
+        throw std::runtime_error("Interface must have a visibility modifier");
+    }
     for(auto bodyDecl : interfaceBodyDecls) {
         if (auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {
             if(!methodDecl->getModifiers().isAbstract()) {
@@ -153,6 +159,9 @@ MethodDecl::MethodDecl(
     }
     if (modifiers.isPublic() && modifiers.isProtected()) {
         throw std::runtime_error("A method cannot be both public and protected. " + name);
+    }
+    if (!modifiers.isPublic() && !modifiers.isProtected()) {
+        throw std::runtime_error("Method must have a visibility modifier");
     }
 }
     

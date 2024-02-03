@@ -42,6 +42,9 @@ public:
         if (modifiers.isPublic() && modifiers.isProtected()) {
             throw std::runtime_error("A method cannot be both public and protected. " + name);
         }
+        if (!modifiers.isPublic() && !modifiers.isProtected()) {
+        throw std::runtime_error("Field must have a visibility modifier");
+    }
     };
     std::ostream& print(std::ostream& os, int indentation = 0) const override;
 };
