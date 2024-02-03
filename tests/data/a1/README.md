@@ -17,6 +17,7 @@ Rules from A1:
 13. **(AST)** No field can be final. (done)
 14. **(PARSER)** No multidimensional array types or multidimensional array creation expressions are allowed.
 15. **(PARSER)** A method or constructor must not contain explicit this() or super() calls.
+16. Any other tests we want to add is added here...
 
 Each rule is labelled as DRIVER/PARSER/AST depending on which stage of the compiler is capable of rejecting such rules. They are explained below:
 - DRIVER: the program run to load the file and call the frontend stages (i.e., lexing, parsing and such).

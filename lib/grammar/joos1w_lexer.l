@@ -5,6 +5,9 @@
 %top {
     #include "parser.h"
     #include "parsetree/ParseTreeTypes.h"
+    #include <cerrno>
+    #include <cstdlib>
+    #include <iostream>
     namespace pt = parsetree;
     using plt = parsetree::Literal::Type;
     using pot = parsetree::Operator::Type;
@@ -56,11 +59,16 @@ Identifier              [a-zA-Z_][a-zA-Z0-9_]*
 
 /*
 Keyword: one of
-    abstract    boolean       byte      char        class
-    else        extends       final     for         if        implements 
-    import      instanceof    int       interface   native    new       
-    package     protected     public    return      short     static    
-    this        void          while
+    abstract    default    if            private      this
+	boolean     do         implements    protected    throw
+	break       double     import        public       throws
+	byte        else       instanceof    return       transient
+	case        extends    int           short        try
+	catch       final      interface     static       void
+	char        finally    long          strictfp     volatile
+	class       float      native        super        while
+	const       for        new           switch
+	continue    goto       package       synchronized
 */
 %}
 
@@ -78,6 +86,27 @@ Keyword: one of
 "void"          { *yylval = pt::make_poison(); return VOID; }
 "while"         { *yylval = pt::make_poison(); return WHILE; }
 "super"         { *yylval = pt::make_poison(); return SUPER; }
+"do"            { *yylval = pt::make_poison(); return DO; }
+"try"           { *yylval = pt::make_poison(); return TRY; }
+"catch"         { *yylval = pt::make_poison(); return CATCH; }
+"switch"          { *yylval = pt::make_poison(); return SWITCH; }
+"case"          { *yylval = pt::make_poison(); return CASE; }
+"default"       { *yylval = pt::make_poison(); return DEFAULT; }
+
+"finally"       { *yylval = pt::make_poison(); return FINALLY; }
+"throw"         { *yylval = pt::make_poison(); return THROW; }
+"throws"          { *yylval = pt::make_poison(); return THROWS; }
+"transient"     { *yylval = pt::make_poison(); return TRANSIENT; }
+"synchronized"  { *yylval = pt::make_poison(); return SYNCHRONIZED; }
+"volatile"      { *yylval = pt::make_poison(); return VOLATILE; }
+"const"         { *yylval = pt::make_poison(); return CONST; }
+"goto"          { *yylval = pt::make_poison(); return GOTO; }
+"continue"      { *yylval = pt::make_poison(); return CONTINUE; }
+"break"         { *yylval = pt::make_poison(); return BREAK; }
+"double"        { *yylval = pt::make_poison(); return DOUBLE; }
+"float"         { *yylval = pt::make_poison(); return FLOAT; }
+"long"          { *yylval = pt::make_poison(); return LONG; }
+
 
 "abstract"  { *yylval = new pt::Modifier(pmt::Abstract);    return ABSTRACT; }
 "final"     { *yylval = new pt::Modifier(pmt::Final);       return FINAL; }
@@ -91,7 +120,6 @@ Keyword: one of
 "char"      { *yylval = new pt::BasicType(pbtt::Char);      return CHAR; }
 "short"     { *yylval = new pt::BasicType(pbtt::Short);     return SHORT; }
 "int"       { *yylval = new pt::BasicType(pbtt::Int);       return INT; }
-
 "instanceof" {
     *yylval = new pt::Operator(pot::InstanceOf);
     return INSTANCEOF;
@@ -136,6 +164,17 @@ Literal: one of
 %}
 
 {DecimalIntegerLiteral} {
+    // Check to see if yytext is in range
+    errno = 0;
+    char* endptr{};
+    const long long int value = std::strtol(yytext, &endptr, 10);
+    const long long int INT_MAX = 2147483647ULL;
+    if (errno == ERANGE || value > INT_MAX || *endptr != '\0') {
+        *yylval = pt::make_poison();
+        std::cerr << "Lexing error: integer literal out of range" << std::endl;
+        return YYUNDEF;
+    }
+    // If it is, then we can use it as a literal
     *yylval = new pt::Literal(plt::Integer, yytext);
     return LITERAL;
 }
@@ -215,7 +254,6 @@ Operator: one of
 "/"  { *yylval = new pt::Operator(pot::Divide);             return OP_DIV; }
 "%"  { *yylval = new pt::Operator(pot::Modulo);             return OP_MOD; }
 "^"  { *yylval = new pt::Operator(pot::BitwiseXor);         return OP_BIT_XOR; }
-"~"  { *yylval = new pt::Operator(pot::BitwiseNot);         return OP_BIT_NOT; }
 
 {Identifier} {
     *yylval = new pt::Identifier(yytext);

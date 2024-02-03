@@ -21,7 +21,7 @@ template = """
 """
 
 # For each file, add a test case for the parser rules
-a1_parser_tests = ['r7', 'r9', 'r10', 'r11', 'r14', 'r15']
+a1_parser_tests = ['r7', 'r9', 'r10', 'r11', 'r14', 'r15', 'r16']
 for file in a1_files:
     if not file.endswith('.java'):
         continue

@@ -30,12 +30,16 @@
 /* Keyword tokens */
 %token ABSTRACT BOOLEAN BYTE CHAR CLASS ELSE EXTENDS FINAL FOR IF IMPLEMENTS
 %token IMPORT INT INTERFACE NATIVE NEW PACKAGE PROTECTED
-%token PUBLIC RETURN SHORT STATIC VOID WHILE SUPER
+%token PUBLIC RETURN SHORT STATIC VOID WHILE
+
+/* Unused tokens */
+%token SUPER DOUBLE FLOAT LONG DO TRY CATCH FINALLY THROW THROWS TRANSIENT CASE
+%token SYNCHRONIZED VOLATILE CONST GOTO CONTINUE BREAK DEFAULT SWITCH
 
 /* Operator tokens */
 %token OP_ASSIGN OP_GT OP_LT OP_NOT OP_EQ OP_LTE OP_GTE OP_NEQ OP_AND
 %token OP_OR OP_BIT_AND OP_BIT_OR OP_PLUS OP_MINUS OP_MUL
-%token OP_DIV OP_MOD OP_BIT_XOR OP_BIT_NOT INSTANCEOF
+%token OP_DIV OP_MOD OP_BIT_XOR INSTANCEOF
 
 %start CompilationUnit
 
@@ -350,7 +354,7 @@ RelationalExpression
     | RelationalExpression OP_GT AdditiveExpression                             { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
     | RelationalExpression OP_LTE AdditiveExpression                            { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
     | RelationalExpression OP_GTE AdditiveExpression                            { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
-    | RelationalExpression INSTANCEOF Type                                      { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
+    | RelationalExpression INSTANCEOF TypeNotBasic                              { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
     ;
 
 AdditiveExpression
@@ -374,7 +378,6 @@ UnaryExpression
 UnaryExpressionNotPlusMinus
     : PostfixExpression
     | OP_NOT UnaryExpression                                                    { $$ = new pt::Node(pty::Expression, $1, $2); }
-    | OP_BIT_NOT UnaryExpression                                                { $$ = new pt::Node(pty::Expression, $1, $2); }
     | CastExpression
     ;
 
@@ -451,6 +454,12 @@ Type
     : QualifiedIdentifier                                                       { $$ = new pt::Node(pty::Type, $1); }
     | QualifiedIdentifier '[' ']'                                               { $$ = new pt::Node(pty::ArrayType, $1); }
     | BasicType                                                                 { $$ = new pt::Node(pty::Type, $1); }
+    | BasicType '[' ']'                                                         { $$ = new pt::Node(pty::ArrayType, $1); }
+    ;
+
+TypeNotBasic
+    : QualifiedIdentifier                                                       { $$ = new pt::Node(pty::Type, $1); }
+    | QualifiedIdentifier '[' ']'                                               { $$ = new pt::Node(pty::ArrayType, $1); }
     | BasicType '[' ']'                                                         { $$ = new pt::Node(pty::ArrayType, $1); }
     ;
 

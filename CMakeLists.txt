@@ -137,6 +137,7 @@ add_my_test(
     "tests/common.cc"
     "tests/lexer_tests.cc"
     "tests/parser_tests.cc"
+    "tests/parser_more_tests.cc"
     "tools/genfrags/basic_fragments.cc"
     "tools/genfrags/class_fragments.cc"
     "tools/genfrags/method_fragments.cc"
