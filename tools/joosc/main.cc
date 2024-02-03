@@ -14,24 +14,34 @@ int main(int argc, char **argv) {
     std::string str;
     struct cmd_error {};
 
-    // Read file from command-line
-    if (argc == 2) {
-        try {
-            // Read entire input
-            std::ifstream inputFile(argv[1]);
-            std::stringstream buffer;
-            buffer << inputFile.rdbuf();
-            str = buffer.str();
-        } catch ( ... ) {
-            std::cerr << "Error! Could not open input file \"" << argv[1] << "\"" << std::endl;
-            exit( EXIT_FAILURE );
-        }
-    } else {
+    // Check for correct number of arguments
+    if (argc != 2) {
         std::cerr << "Usage: " << argv[0] << " input-file " << std::endl;
         exit( EXIT_FAILURE );
     }
+    
+    // Check if the file is a .java file
+    std::string filePath = argv[1];
+    std::string fileName = filePath.substr(filePath.find_last_of("/\\") + 1);
+    if(filePath.substr(filePath.length() - 5, 5) != ".java") {
+        std::cerr << "Error: not a valid .java file" << std::endl;
+        return 42;
+    }
 
-    for(int i = 0; i < str.length(); i++) {
+    // Read file from command-line argument
+    try {
+        // Read entire input
+        std::ifstream inputFile(filePath);
+        std::stringstream buffer;
+        buffer << inputFile.rdbuf();
+        str = buffer.str();
+    } catch ( ... ) {
+        std::cerr << "Error! Could not open input file \"" << filePath << "\"" << std::endl;
+        exit( EXIT_FAILURE );
+    }
+
+    // Check for non-ASCII characters
+    for(unsigned i = 0; i < str.length(); i++) {
         if (static_cast<unsigned char>(str[i]) > 127) {
             std::cerr << "Parse error: non-ASCII character in input" << std::endl;
             return 42;
@@ -56,11 +66,12 @@ int main(int argc, char **argv) {
         return 42;
     }
 
+    // Build the AST from the parse tree
     struct parse_error {};
-
+    ast::CompilationUnit* ast = nullptr;
     try {
         if(parse_tree->is_poisoned()) throw parse_error();
-        parsetree::visitCompilationUnit(parse_tree);
+        ast = parsetree::visitCompilationUnit(parse_tree);
     } catch(const std::runtime_error& re) {
         std::cerr << "Runtime error: " << re.what() << std::endl;
         return 42;
@@ -68,7 +79,19 @@ int main(int argc, char **argv) {
         std::cerr << "Unknown failure occurred." << std::endl;
         return 1;
     }
+    if (!ast) return 42;
 
+    // Check the AST to make sure the class/intf has the same name as file
+    auto cuBody = dynamic_cast<ast::Decl*>(ast->getBody());
+    fileName = fileName.substr(0, fileName.length() - 5);
+    if (cuBody->getName() != fileName) {
+        std::cerr << "Parse error: class/interface name does not match file name" << std::endl;
+        std::cerr << "Class/interface name: " << cuBody->getName() << std::endl;
+        std::cerr << "File name: " << fileName << std::endl;
+        return 42;
+    }
+
+    // Clean up the parse tree
     delete parse_tree;
     return 0;
 }

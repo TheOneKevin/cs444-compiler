@@ -24,6 +24,7 @@ public:
         DeclContext* body
     ) : package{package}, imports{imports}, body{body} {}
     std::ostream& print(std::ostream& os, int indentation = 0) const override;
+    DeclContext* getBody() { return body; }
 };
 
 class ClassDecl : public DeclContext, public Decl {
