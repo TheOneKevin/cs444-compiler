@@ -1,6 +1,6 @@
-class r1_invalid_ascii_char {
-  r1_invalid_ascii_char(){}
-  static int main() {
+public class r1_invalid_ascii_char {
+  public r1_invalid_ascii_char(){}
+  public static int main() {
     // I̸n̴v̸a̴l̴i̴d̵ ̵a̷s̶c̶i̵i̸ ̶c̶h̴a̶r̸a̶c̴t̵e̷r̸s̷
     // ¡¢£¤¥¦§¨©ª«¬\xad®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎ
     // ÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ

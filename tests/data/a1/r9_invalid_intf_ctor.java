@@ -1,4 +1,4 @@
-interface r9_invalid_intf_ctor {
-    r9_invalid_intf_ctor() {
+publicd nterface r9_invalid_intf_ctor {
+    public r9_invalid_intf_ctor() {
     }
 }

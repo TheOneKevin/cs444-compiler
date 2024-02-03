@@ -49,8 +49,9 @@ bool testing::build_ast(const string& str) {
     }
     try {
         auto ast = parsetree::visitCompilationUnit(parse_tree);
+        (void) ast;
         return true;
-    } catch (const std::exception& e) {
+    } catch (...) {
         return false;
     }
 }

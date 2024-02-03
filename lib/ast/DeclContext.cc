@@ -154,9 +154,24 @@ MethodDecl::MethodDecl(
     if (modifiers.isStatic() && modifiers.isFinal()) {
         throw std::runtime_error("A static method cannot be final. " + name);
     }
-    if (modifiers.isNative() && !modifiers.isStatic()) {
-        throw std::runtime_error("A native method must be static. " + name);
-    }
+    if (modifiers.isNative()) {
+        if (!modifiers.isStatic()) {
+            throw std::runtime_error("A native method must be static. " + name);
+        }
+        if (auto ty = dynamic_cast<BuiltInType*>(returnType)) {
+            if (ty->getKind() != BuiltInType::Kind::Int) {
+                throw std::runtime_error("A native method must return type int. " + name);
+            }
+        }
+        if (parameters.size() != 1) {
+            throw std::runtime_error("A native method must have exactly one parameter. " + name);
+        }
+        if (auto ty = dynamic_cast<BuiltInType*>(parameters[0]->getType())) {
+            if (ty->getKind() != BuiltInType::Kind::Int) {
+                throw std::runtime_error("A native method must have paramter type int. " + name);
+            }
+        }
+    } 
     if (modifiers.isPublic() && modifiers.isProtected()) {
         throw std::runtime_error("A method cannot be both public and protected. " + name);
     }
