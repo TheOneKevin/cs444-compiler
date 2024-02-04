@@ -46,7 +46,7 @@ ast::Modifiers visitModifierList(Node* node, ast::Modifiers modifiers) {
 
 Modifier visitModifier(Node* node) {
     check_node_type(node, pty::Modifier);
-    return dynamic_cast<Modifier*>(node)->get_type();
+    return *dynamic_cast<Modifier*>(node);
 }
 
 ast::Type* visitType(Node* node) {

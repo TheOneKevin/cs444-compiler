@@ -4,8 +4,7 @@
 #include <iostream>
 #include <gtest/gtest.h>
 
-#include "lexer.h"
-#include "parser.h"
+#include "grammar/Joos1WGrammar.h"
 
 int extract_token(std::variant<yytokentype, char> token) {
     if (std::holds_alternative<yytokentype>(token)) {
@@ -23,16 +22,10 @@ bool lex_string_internal(
     const std::string& str, 
     std::initializer_list<std::variant<yytokentype, char>> expected_tokens
 ) {
-    YY_BUFFER_STATE state;
-    if (!(state = yy_scan_bytes(str.c_str(), str.size()))) {
-        return false;
-    }
-
     int i = 0;
     auto ptr = expected_tokens.begin();
-    YYSTYPE lexval;
-    YYLTYPE location;
-    while(int lextok = yylex(&lexval, &location)) {
+    Joos1WParser parser{str};
+    while(int lextok = parser.yylex()) {
         auto exptok = extract_token(*ptr);
         if (lextok != exptok) {
             std::cout << "Expected token[" << i << "] to be "
@@ -50,7 +43,6 @@ bool lex_string_internal(
         std::cout << "Expected end of initializer list\n";
         return false;
     }
-    yy_delete_buffer(state);
     return true;
 }
 

@@ -1,8 +1,8 @@
 #include <unistd.h>
 #include <iostream>
+#include <sstream>
 
-#include "lexer.h"
-#include "parser.h"
+#include "grammar/Joos1WGrammar.h"
 
 extern std::string joos1w_parser_resolve_token (int yysymbol);
 
@@ -31,27 +31,17 @@ int main(void) {
             std::getline(std::cin, str);
         } else {
             std::istreambuf_iterator<char> eos;
-            str = std::string(std::istreambuf_iterator<char>(std::cin), eos);
+            str = std::string{std::istreambuf_iterator<char>(std::cin), eos};
         }
         
-        // Now that we have the string, lex it
-        YY_BUFFER_STATE state;
-        if (!(state = yy_scan_bytes(str.c_str(), str.size()))) {
-            return 1;
-        }
-
         // Lex the tokens using Flex generated lexer
-        YYSTYPE lexval;
-        YYLTYPE location;
-        while(int lextok = yylex(&lexval, &location)) {
+        Joos1WParser parser{str};
+        while(int lextok = parser.yylex()) {
             std::cout
                 << lextok << ": "
                 << joos1w_parser_resolve_token(lextok)
                 << std::endl;
         }
-
-        // Clean up Bison stuff
-        yy_delete_buffer(state);
     } while(!is_piped);
     return 0;
 }

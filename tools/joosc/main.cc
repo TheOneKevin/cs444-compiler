@@ -6,8 +6,7 @@
 #include <sstream>
 
 #include "ast/AST.h"
-#include "lexer.h"
-#include "parser.h"
+#include "grammar/Joos1WGrammar.h"
 #include "parsetree/ParseTree.h"
 #include "parsetree/ParseTreeVisitor.h"
 
@@ -61,19 +60,12 @@ int main(int argc, char **argv) {
         }
     }
     
-    // Now that we have the string, lex it
-    YY_BUFFER_STATE state;
-    if (!(state = yy_scan_bytes(str.c_str(), str.size()))) {
-        return 1;
-    }
-
-    // Parse the tokens using Bison generated parser
-    parsetree::Node* parse_tree = nullptr;
-    int result = yyparse(&parse_tree);
-
-    // Clean up Bison stuff
-    yy_delete_buffer(state);
-
+    // Parse the input
+    parsetree::Node *parse_tree = nullptr;
+    Joos1WParser parser{str};
+    int result = parser.parse(parse_tree);
+    
+    // Check to see if the parse is success
     if (!parse_tree || result) {
         return 42;
     }

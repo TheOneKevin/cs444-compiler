@@ -70,15 +70,19 @@ include(GoogleTest)
 
 # Create a library target for our compiler with sources under lib/
 add_library(OLKCompilerLib
+    # flex bison
+    "${LEXER_OUT}"
+    "${PARSER_OUT}"
     # ast
     "lib/ast/Decl.cc"
     "lib/ast/DeclContext.cc"
     "lib/ast/Expr.cc"
     "lib/ast/Stmt.cc"
     "lib/ast/Modifiers.cc"
+    # grammar
+    "lib/grammar/Joos1W.cc"
     # parsetree
     "lib/parsetree/ParseTree.cc"
-    "lib/parsetree/ParseTreePrinter.cc"
     "lib/parsetree/ParseTreeVisitor.cc"
     "lib/parsetree/VisitClassInterface.cc"
     "lib/parsetree/VisitDeclaration.cc"
@@ -92,13 +96,12 @@ target_include_directories(
     OLKCompilerLib
     PUBLIC
     "lib"
+    "${PARSER_DIR}"
 )
 
 # Macro to add an executable with lexer and parser sources
 macro(add_tool TARGET_NAME)
     add_executable(${TARGET_NAME}
-        "${LEXER_OUT}"
-        "${PARSER_OUT}"
         ${ARGN}
     )
     target_link_libraries(${TARGET_NAME} OLKCompilerLib)

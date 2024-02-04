@@ -2,9 +2,9 @@
 #include <iostream>
 #include <iterator>
 #include <string>
+#include <sstream>
 
-#include "lexer.h"
-#include "parser.h"
+#include "grammar/Joos1WGrammar.h"
 
 #include "utils/CommandLine.h"
 
@@ -52,27 +52,27 @@ int main(int argc, char **argv) {
         }
         
         // Now that we have the string, lex it
-        YY_BUFFER_STATE state;
-        if (!(state = yy_scan_bytes(str.c_str(), str.size()))) {
-            return 1;
-        }
+        std::istringstream iss{str};
+        Joos1WLexer lexer{};
+        auto state = lexer.yy_create_buffer(iss, str.size());
+        lexer.yy_switch_to_buffer(state);
 
         // Parse the tokens using Bison generated parser
         parsetree::Node* parse_tree = nullptr;
-        int result = yyparse(&parse_tree);
+        int result = yyparse(&parse_tree, lexer);
         if(!is_piped) {
             std::cout << "Result: " << result << std::endl;
         }
 
-        // Clean up Bison stuff
-        yy_delete_buffer(state);
+        // Clean up lexer state
+        lexer.yy_delete_buffer(state);
 
         // Now print the parse tree
         if (parse_tree) {
             if(print_dot) {
                 parse_tree->printDot(std::cout);
             } else {
-                std::cout << parse_tree << std::endl;
+                std::cout << *parse_tree << std::endl;
             }
             delete parse_tree;
         }

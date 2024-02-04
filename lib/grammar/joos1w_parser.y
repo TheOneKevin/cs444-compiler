@@ -1,19 +1,24 @@
 %code top {
     #include <iostream>
+    #include "parser.h"
     #include "parsetree/ParseTree.h"
+    #include "grammar/Joos1WGrammar.h"
 
-    extern int yylex(void);
-    static void yyerror(parsetree::Node** ret, const char* s);
+    extern int yylex(YYSTYPE*, YYLTYPE*, Joos1WLexer&);
+    static void yyerror(YYLTYPE*, YYSTYPE*, Joos1WLexer&, const char*);
 }
 
 %code requires {
     #include "parsetree/ParseTree.h"
     namespace pt = parsetree;
     using pty = parsetree::Node::Type;
+    class Joos1WLexer;
 }
 
-%define api.value.type { struct parsetree::Node* }
-%parse-param { struct parsetree::Node** ret }
+%define api.pure full
+%define api.value.type { pt::Node* }
+%parse-param { pt::Node** ret }
+%param { Joos1WLexer& jl }
 
 %define parse.error verbose
 %locations
@@ -46,7 +51,10 @@
 /* ========================================================================== */
 
 CompilationUnit
-    : PackageDeclarationOpt ImportDeclarationsOpt TypeDeclarationsOpt           { *ret = new pt::Node(pty::CompilationUnit, $1, $2, $3); }
+    : PackageDeclarationOpt ImportDeclarationsOpt TypeDeclarationsOpt {
+        (void) yynerrs;
+        *ret = jl.make_node(pty::CompilationUnit, $1, $2, $3);
+    }
     ;
 
 PackageDeclarationOpt
@@ -55,7 +63,7 @@ PackageDeclarationOpt
     ;
 
 PackageDeclaration
-    : PACKAGE QualifiedIdentifier ';'                                           { $$ = new pt::Node(pty::PackageDeclaration, $2); }
+    : PACKAGE QualifiedIdentifier ';'                                           { $$ = jl.make_node(pty::PackageDeclaration, $2); }
     ;
 
 ImportDeclarationsOpt
@@ -64,8 +72,8 @@ ImportDeclarationsOpt
     ;
 
 ImportDeclarationList
-    : ImportDeclaration                                                         { $$ = new pt::Node(pty::ImportDeclarationList, $1); }
-    | ImportDeclarationList ImportDeclaration                                   { $$ = new pt::Node(pty::ImportDeclarationList, $1, $2); }
+    : ImportDeclaration                                                         { $$ = jl.make_node(pty::ImportDeclarationList, $1); }
+    | ImportDeclarationList ImportDeclaration                                   { $$ = jl.make_node(pty::ImportDeclarationList, $1, $2); }
     ;
 
 ImportDeclaration
@@ -74,11 +82,11 @@ ImportDeclaration
     ;
 
 SingleTypeImportDeclaration
-    : IMPORT QualifiedIdentifier ';'                                            { $$ = new pt::Node(pty::SingleTypeImportDeclaration, $2); }
+    : IMPORT QualifiedIdentifier ';'                                            { $$ = jl.make_node(pty::SingleTypeImportDeclaration, $2); }
     ;
 
 TypeImportOnDemandDeclaration
-    : IMPORT QualifiedIdentifier '.' OP_MUL ';'                                 { $$ = new pt::Node(pty::TypeImportOnDemandDeclaration, $2); }
+    : IMPORT QualifiedIdentifier '.' OP_MUL ';'                                 { $$ = jl.make_node(pty::TypeImportOnDemandDeclaration, $2); }
     ;
 
 TypeDeclarationsOpt
@@ -97,7 +105,7 @@ TypeDeclaration
 
 ClassDeclaration
     : ClassOrInterfaceModifierOpt
-      CLASS IDENTIFIER SuperOpt InterfaceOpt ClassBody                          { $$ = new pt::Node(pty::ClassDeclaration, $1, $3, $4, $5, $6 ); }
+      CLASS IDENTIFIER SuperOpt InterfaceOpt ClassBody                          { $$ = jl.make_node(pty::ClassDeclaration, $1, $3, $4, $5, $6 ); }
     ;
 
 ClassOrInterfaceModifierOpt
@@ -106,8 +114,8 @@ ClassOrInterfaceModifierOpt
     ;
 
 ClassOrInterfaceModifierList
-    : ClassOrInterfaceModifier                                                  { $$ = new pt::Node(pty::ModifierList, $1); }
-    | ClassOrInterfaceModifierList ClassOrInterfaceModifier                     { $$ = new pt::Node(pty::ModifierList, $1, $2); }
+    : ClassOrInterfaceModifier                                                  { $$ = jl.make_node(pty::ModifierList, $1); }
+    | ClassOrInterfaceModifierList ClassOrInterfaceModifier                     { $$ = jl.make_node(pty::ModifierList, $1, $2); }
     ;
 
 ClassOrInterfaceModifier
@@ -118,7 +126,7 @@ ClassOrInterfaceModifier
 
 SuperOpt
     : %empty                                                                    { $$ = nullptr; }
-    | EXTENDS QualifiedIdentifier                                               { $$ = new pt::Node(pty::SuperOpt, $2); }
+    | EXTENDS QualifiedIdentifier                                               { $$ = jl.make_node(pty::SuperOpt, $2); }
     ;
 
 InterfaceOpt
@@ -127,8 +135,8 @@ InterfaceOpt
     ;
 
 InterfaceTypeList
-    : InterfaceType                                                             { $$ = new pt::Node(pty::InterfaceTypeList, $1); }
-    | InterfaceTypeList ',' InterfaceType                                       { $$ = new pt::Node(pty::InterfaceTypeList, $1, $3); }
+    : InterfaceType                                                             { $$ = jl.make_node(pty::InterfaceTypeList, $1); }
+    | InterfaceTypeList ',' InterfaceType                                       { $$ = jl.make_node(pty::InterfaceTypeList, $1, $3); }
     ;
 
 InterfaceType
@@ -145,8 +153,8 @@ ClassBodyDeclarationsOpt
     ;
 
 ClassBodyDeclarationList
-    : ClassBodyDeclaration                                                      { $$ = new pt::Node(pty::ClassBodyDeclarationList, $1); }
-    | ClassBodyDeclarationList ClassBodyDeclaration                             { $$ = new pt::Node(pty::ClassBodyDeclarationList, $1, $2); }
+    : ClassBodyDeclaration                                                      { $$ = jl.make_node(pty::ClassBodyDeclarationList, $1); }
+    | ClassBodyDeclarationList ClassBodyDeclaration                             { $$ = jl.make_node(pty::ClassBodyDeclarationList, $1, $2); }
     ;
 
 ClassBodyDeclaration    
@@ -160,7 +168,7 @@ ClassMemberDeclaration
     ;
 
 FieldDeclaration
-    : MemberModifiersOpt Type VariableDeclaratorList ';'                        { $$ = new pt::Node(pty::FieldDeclaration, $1, $2, $3); }
+    : MemberModifiersOpt Type VariableDeclaratorList ';'                        { $$ = jl.make_node(pty::FieldDeclaration, $1, $2, $3); }
     ;
 
 MemberModifiersOpt
@@ -169,8 +177,8 @@ MemberModifiersOpt
     ;
 
 MemberModifierList
-    : MemberModifier                                                            { $$ = new pt::Node(pty::ModifierList, $1); }
-    | MemberModifierList MemberModifier                                         { $$ = new pt::Node(pty::ModifierList, $1, $2); }
+    : MemberModifier                                                            { $$ = jl.make_node(pty::ModifierList, $1); }
+    | MemberModifierList MemberModifier                                         { $$ = jl.make_node(pty::ModifierList, $1, $2); }
     ;
 
 MemberModifier
@@ -183,12 +191,12 @@ MemberModifier
     ;
 
 MethodDeclaration
-    : MethodHeader MethodBody                                                   { $$ = new pt::Node(pty::MethodDeclaration, $1, $2); }
+    : MethodHeader MethodBody                                                   { $$ = jl.make_node(pty::MethodDeclaration, $1, $2); }
     ;
 
 MethodHeader
-    : MemberModifiersOpt VOID IDENTIFIER '(' FormalParameterListOpt ')'         { $$ = new pt::Node(pty::MethodHeader, $1, $3, $5); }
-    | MemberModifiersOpt Type IDENTIFIER '(' FormalParameterListOpt ')'         { $$ = new pt::Node(pty::MethodHeader, $1, $2, $3, $5); }
+    : MemberModifiersOpt VOID IDENTIFIER '(' FormalParameterListOpt ')'         { $$ = jl.make_node(pty::MethodHeader, $1, $3, $5); }
+    | MemberModifiersOpt Type IDENTIFIER '(' FormalParameterListOpt ')'         { $$ = jl.make_node(pty::MethodHeader, $1, $2, $3, $5); }
     ;
 
 FormalParameterListOpt
@@ -197,12 +205,12 @@ FormalParameterListOpt
     ;
 
 FormalParameterList
-    : FormalParameter                                                           { $$ = new pt::Node(pty::FormalParameterList, $1); }
-    | FormalParameterList ',' FormalParameter                                   { $$ = new pt::Node(pty::FormalParameterList, $1, $3); }
+    : FormalParameter                                                           { $$ = jl.make_node(pty::FormalParameterList, $1); }
+    | FormalParameterList ',' FormalParameter                                   { $$ = jl.make_node(pty::FormalParameterList, $1, $3); }
     ;
 
 FormalParameter
-    : Type IDENTIFIER                                                           { $$ = new pt::Node(pty::FormalParameter, $1, $2); }
+    : Type IDENTIFIER                                                           { $$ = jl.make_node(pty::FormalParameter, $1, $2); }
     ;
 
 MethodBody
@@ -212,7 +220,7 @@ MethodBody
 
 ConstructorDeclaration
     : MemberModifiersOpt
-      IDENTIFIER '(' FormalParameterListOpt ')' ConstructorBody                 { $$ = new pt::Node(pty::ConstructorDeclaration, $1, $2, $4, $6); }
+      IDENTIFIER '(' FormalParameterListOpt ')' ConstructorBody                 { $$ = jl.make_node(pty::ConstructorDeclaration, $1, $2, $4, $6); }
     ;
 
 ConstructorBody
@@ -225,7 +233,7 @@ ConstructorBody
 
 InterfaceDeclaration
     : ClassOrInterfaceModifierOpt INTERFACE IDENTIFIER 
-        ExtendsInterfacesOpt InterfaceBody                                      { $$ = new pt::Node(pty::InterfaceDeclaration, $1, $3, $4, $5); }
+        ExtendsInterfacesOpt InterfaceBody                                      { $$ = jl.make_node(pty::InterfaceDeclaration, $1, $3, $4, $5); }
     ;
 
 ExtendsInterfacesOpt
@@ -234,8 +242,8 @@ ExtendsInterfacesOpt
     ;
 
 ExtendsInterfaces
-    : EXTENDS InterfaceType                                                     { $$ = new pt::Node(pty::InterfaceTypeList, $2); }
-    | ExtendsInterfaces ',' InterfaceType                                       { $$ = new pt::Node(pty::InterfaceTypeList, $1, $3); }
+    : EXTENDS InterfaceType                                                     { $$ = jl.make_node(pty::InterfaceTypeList, $2); }
+    | ExtendsInterfaces ',' InterfaceType                                       { $$ = jl.make_node(pty::InterfaceTypeList, $1, $3); }
     ;
 
 InterfaceBody
@@ -248,15 +256,15 @@ InterfaceMemberDeclarationsOpt
     ;
 
 InterfaceMemberDeclarationList
-    : AbstractMethodDeclaration                                                 { $$ = new pt::Node(pty::InterfaceMemberDeclarationList, $1); }
-    | InterfaceMemberDeclarationList AbstractMethodDeclaration                  { $$ = new pt::Node(pty::InterfaceMemberDeclarationList, $1, $2); }
+    : AbstractMethodDeclaration                                                 { $$ = jl.make_node(pty::InterfaceMemberDeclarationList, $1); }
+    | InterfaceMemberDeclarationList AbstractMethodDeclaration                  { $$ = jl.make_node(pty::InterfaceMemberDeclarationList, $1, $2); }
     ;
 
 AbstractMethodDeclaration
     : AbstractMethodDeclarationOpt
-      Type IDENTIFIER '(' FormalParameterListOpt ')' ';'                        { $$ = new pt::Node(pty::AbstractMethodDeclaration, $1, $2, $3, $5); }
+      Type IDENTIFIER '(' FormalParameterListOpt ')' ';'                        { $$ = jl.make_node(pty::AbstractMethodDeclaration, $1, $2, $3, $5); }
     | AbstractMethodDeclarationOpt
-      VOID IDENTIFIER '(' FormalParameterListOpt ')' ';'                        { $$ = new pt::Node(pty::AbstractMethodDeclaration, $1, $3, $5); }
+      VOID IDENTIFIER '(' FormalParameterListOpt ')' ';'                        { $$ = jl.make_node(pty::AbstractMethodDeclaration, $1, $3, $5); }
     ;
 
 AbstractMethodDeclarationOpt
@@ -265,8 +273,8 @@ AbstractMethodDeclarationOpt
     ;
 
 AbstractMethodModifierList
-    : AbstractMethodModifier                                                    { $$ = new pt::Node(pty::ModifierList, $1); }
-    | AbstractMethodModifierList AbstractMethodModifier                         { $$ = new pt::Node(pty::ModifierList, $1, $2); }
+    : AbstractMethodModifier                                                    { $$ = jl.make_node(pty::ModifierList, $1); }
+    | AbstractMethodModifierList AbstractMethodModifier                         { $$ = jl.make_node(pty::ModifierList, $1, $2); }
     ;
 
 AbstractMethodModifier
@@ -293,7 +301,7 @@ AssignmentExpression
     ;
 
 Assignment
-    : AssignmentLhsExpression OP_ASSIGN AssignmentExpression                    { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
+    : AssignmentLhsExpression OP_ASSIGN AssignmentExpression                    { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
     ;
 
 AssignmentLhsExpression
@@ -309,55 +317,55 @@ PostfixExpression
 
 ConditionalOrExpression
     : ConditionalAndExpression
-    | ConditionalOrExpression OP_OR ConditionalAndExpression                    { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
+    | ConditionalOrExpression OP_OR ConditionalAndExpression                    { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
     ;
 
 ConditionalAndExpression
     : InclusiveOrExpression
-    | ConditionalAndExpression OP_AND InclusiveOrExpression                     { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
+    | ConditionalAndExpression OP_AND InclusiveOrExpression                     { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
     ;
 
 InclusiveOrExpression
     : ExclusiveOrExpression
-    | InclusiveOrExpression OP_BIT_OR ExclusiveOrExpression                     { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
+    | InclusiveOrExpression OP_BIT_OR ExclusiveOrExpression                     { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
     ;
 
 ExclusiveOrExpression
     : AndExpression
-    | ExclusiveOrExpression OP_BIT_XOR AndExpression                            { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
+    | ExclusiveOrExpression OP_BIT_XOR AndExpression                            { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
     ;
 
 AndExpression
     : EqualityExpression
-    | AndExpression OP_BIT_AND EqualityExpression                               { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
+    | AndExpression OP_BIT_AND EqualityExpression                               { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
     ;
 
 EqualityExpression
     : RelationalExpression
-    | EqualityExpression OP_EQ RelationalExpression                             { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
-    | EqualityExpression OP_NEQ RelationalExpression                            { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
+    | EqualityExpression OP_EQ RelationalExpression                             { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
+    | EqualityExpression OP_NEQ RelationalExpression                            { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
     ;
 
 RelationalExpression
     : AdditiveExpression
-    | RelationalExpression OP_LT AdditiveExpression                             { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
-    | RelationalExpression OP_GT AdditiveExpression                             { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
-    | RelationalExpression OP_LTE AdditiveExpression                            { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
-    | RelationalExpression OP_GTE AdditiveExpression                            { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
-    | RelationalExpression INSTANCEOF TypeNotBasic                              { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
+    | RelationalExpression OP_LT AdditiveExpression                             { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
+    | RelationalExpression OP_GT AdditiveExpression                             { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
+    | RelationalExpression OP_LTE AdditiveExpression                            { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
+    | RelationalExpression OP_GTE AdditiveExpression                            { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
+    | RelationalExpression INSTANCEOF TypeNotBasic                              { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
     ;
 
 AdditiveExpression
     : MultiplicativeExpression
-    | AdditiveExpression OP_PLUS MultiplicativeExpression                       { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
-    | AdditiveExpression OP_MINUS MultiplicativeExpression                      { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
+    | AdditiveExpression OP_PLUS MultiplicativeExpression                       { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
+    | AdditiveExpression OP_MINUS MultiplicativeExpression                      { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
     ;
 
 MultiplicativeExpression
     : UnaryExpression
-    | MultiplicativeExpression OP_MUL UnaryExpression                           { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
-    | MultiplicativeExpression OP_DIV UnaryExpression                           { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
-    | MultiplicativeExpression OP_MOD UnaryExpression                           { $$ = new pt::Node(pty::Expression, $1, $2, $3); }
+    | MultiplicativeExpression OP_MUL UnaryExpression                           { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
+    | MultiplicativeExpression OP_DIV UnaryExpression                           { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
+    | MultiplicativeExpression OP_MOD UnaryExpression                           { $$ = jl.make_node(pty::Expression, $1, $2, $3); }
     ;
 
 UnaryExpression
@@ -368,19 +376,19 @@ UnaryExpression
             auto* literal = static_cast<pt::Literal*>($2);
             literal->setNegative();
         }
-        $$ = new pt::Node(pty::Expression, $1, $2);
+        $$ = jl.make_node(pty::Expression, $1, $2);
     }
     | UnaryExpressionNotPlusMinus
     ;
 
 UnaryExpressionNotPlusMinus
     : PostfixExpression
-    | OP_NOT UnaryExpression                                                    { $$ = new pt::Node(pty::Expression, $1, $2); }
+    | OP_NOT UnaryExpression                                                    { $$ = jl.make_node(pty::Expression, $1, $2); }
     | CastExpression
     ;
 
 CastExpression
-    : '(' BasicType Dims ')' UnaryExpression                                    { $$ = new pt::Node(pty::CastExpression, $2, $3, $5); }
+    : '(' BasicType Dims ')' UnaryExpression                                    { $$ = jl.make_node(pty::CastExpression, $2, $3, $5); }
     | '(' Expression ')' UnaryExpressionNotPlusMinus {
         // FIXME(kevin): Remove this hack and fix the AST later
         // Cast is valid iff:
@@ -390,17 +398,17 @@ CastExpression
         bool isArrType = $2->get_node_type() == pty::ArrayAccess;
         bool hasOneChild = $2->num_children() == 1;
         if(isType || (isArrType && hasOneChild)) {
-            $$ = new pt::Node(pty::CastExpression, $2, $4);
+            $$ = jl.make_node(pty::CastExpression, $2, $4);
         } else {
             std::cerr << "Invalid cast expression" << std::endl;
-            $$ = pt::make_poison();
+            $$ = jl.make_poison();
         }
     }
     ;
 
 Dims
     : %empty                                                                    { $$ = nullptr; }
-    | '[' ']'                                                                   { $$ = new pt::Node(pty::Dims); }
+    | '[' ']'                                                                   { $$ = jl.make_node(pty::Dims); }
     ;
 
 /* ========================================================================== */
@@ -416,37 +424,37 @@ Primary
 PrimaryNoNewArray
     : LITERAL
     | THIS
-    | '(' Expression ')'                                                        { $$ = new pt::Node(pty::Expression, $2); } /* Needed for literal validation */
+    | '(' Expression ')'                                                        { $$ = jl.make_node(pty::Expression, $2); } /* Needed for literal validation */
     | ClassInstanceCreationExpression
     | FieldAccess
     | MethodInvocation
     ;
 
 FieldAccess
-    : Primary '.' IDENTIFIER                                                    { $$ = new pt::Node(pty::FieldAccess, $1, $3); }
+    : Primary '.' IDENTIFIER                                                    { $$ = jl.make_node(pty::FieldAccess, $1, $3); }
     ;
 
 ArrayAccess
-    : PrimaryNoNewArray '[' Expression ']'                                      { $$ = new pt::Node(pty::ArrayAccess, $1, $3); }
-    | QualifiedIdentifier '[' Expression ']'                                    { $$ = new pt::Node(pty::ArrayAccess, $1, $3); }
+    : PrimaryNoNewArray '[' Expression ']'                                      { $$ = jl.make_node(pty::ArrayAccess, $1, $3); }
+    | QualifiedIdentifier '[' Expression ']'                                    { $$ = jl.make_node(pty::ArrayAccess, $1, $3); }
     // FIXME(kevin): This rule is a hack because cast type is actually an expression
     // and needs to be handled in the semantic analysis phase. This rule is to
     // support (x[]) y !!ONLY!! and should be invalid in all other expressions.
-    | QualifiedIdentifier '[' ']'                                               { $$ = new pt::Node(pty::ArrayAccess, $1); }
+    | QualifiedIdentifier '[' ']'                                               { $$ = jl.make_node(pty::ArrayAccess, $1); }
     ;
 
 MethodInvocation
-    : QualifiedIdentifier '(' ArgumentListOpt ')'                               { $$ = new pt::Node(pty::MethodInvocation, $1, $3); }
-    | Primary '.' IDENTIFIER '(' ArgumentListOpt ')'                            { $$ = new pt::Node(pty::MethodInvocation, $1, $3, $5); }
+    : QualifiedIdentifier '(' ArgumentListOpt ')'                               { $$ = jl.make_node(pty::MethodInvocation, $1, $3); }
+    | Primary '.' IDENTIFIER '(' ArgumentListOpt ')'                            { $$ = jl.make_node(pty::MethodInvocation, $1, $3, $5); }
     ;
 
 ArrayCreationExpression
-    : NEW BasicType '[' Expression ']'                                          { $$ = new pt::Node(pty::ArrayCreationExpression, $2, $4); }
-    | NEW QualifiedIdentifier '[' Expression ']'                                { $$ = new pt::Node(pty::ArrayCreationExpression, $2, $4); }
+    : NEW BasicType '[' Expression ']'                                          { $$ = jl.make_node(pty::ArrayCreationExpression, $2, $4); }
+    | NEW QualifiedIdentifier '[' Expression ']'                                { $$ = jl.make_node(pty::ArrayCreationExpression, $2, $4); }
     ;
 
 ClassInstanceCreationExpression
-    : NEW QualifiedIdentifier '(' ArgumentListOpt ')'                           { $$ = new pt::Node(pty::ClassInstanceCreationExpression, $2, $4); }
+    : NEW QualifiedIdentifier '(' ArgumentListOpt ')'                           { $$ = jl.make_node(pty::ClassInstanceCreationExpression, $2, $4); }
     ;
 
 ArgumentListOpt
@@ -454,8 +462,8 @@ ArgumentListOpt
     | ArgumentList
 
 ArgumentList
-    : Expression                                                                { $$ = new pt::Node(pty::ArgumentList, $1); }
-    | ArgumentList ',' Expression                                               { $$ = new pt::Node(pty::ArgumentList, $1, $3); }
+    : Expression                                                                { $$ = jl.make_node(pty::ArgumentList, $1); }
+    | ArgumentList ',' Expression                                               { $$ = jl.make_node(pty::ArgumentList, $1, $3); }
     ;
 
 /* ========================================================================== */
@@ -463,16 +471,16 @@ ArgumentList
 /* ========================================================================== */
 
 Type
-    : QualifiedIdentifier                                                       { $$ = new pt::Node(pty::Type, $1); }
-    | QualifiedIdentifier '[' ']'                                               { $$ = new pt::Node(pty::ArrayType, $1); }
-    | BasicType                                                                 { $$ = new pt::Node(pty::Type, $1); }
-    | BasicType '[' ']'                                                         { $$ = new pt::Node(pty::ArrayType, $1); }
+    : QualifiedIdentifier                                                       { $$ = jl.make_node(pty::Type, $1); }
+    | QualifiedIdentifier '[' ']'                                               { $$ = jl.make_node(pty::ArrayType, $1); }
+    | BasicType                                                                 { $$ = jl.make_node(pty::Type, $1); }
+    | BasicType '[' ']'                                                         { $$ = jl.make_node(pty::ArrayType, $1); }
     ;
 
 TypeNotBasic
-    : QualifiedIdentifier                                                       { $$ = new pt::Node(pty::Type, $1); }
-    | QualifiedIdentifier '[' ']'                                               { $$ = new pt::Node(pty::ArrayType, $1); }
-    | BasicType '[' ']'                                                         { $$ = new pt::Node(pty::ArrayType, $1); }
+    : QualifiedIdentifier                                                       { $$ = jl.make_node(pty::Type, $1); }
+    | QualifiedIdentifier '[' ']'                                               { $$ = jl.make_node(pty::ArrayType, $1); }
+    | BasicType '[' ']'                                                         { $$ = jl.make_node(pty::ArrayType, $1); }
     ;
 
 BasicType
@@ -484,8 +492,8 @@ BasicType
     ;
 
 QualifiedIdentifier
-    : IDENTIFIER                                                                { $$ = new pt::Node(pty::QualifiedIdentifier, $1); }
-    | QualifiedIdentifier '.' IDENTIFIER                                        { $$ = new pt::Node(pty::QualifiedIdentifier, $1, $3); }
+    : IDENTIFIER                                                                { $$ = jl.make_node(pty::QualifiedIdentifier, $1); }
+    | QualifiedIdentifier '.' IDENTIFIER                                        { $$ = jl.make_node(pty::QualifiedIdentifier, $1, $3); }
     ;
 
 /* ========================================================================== */
@@ -493,7 +501,7 @@ QualifiedIdentifier
 /* ========================================================================== */
 
 Block
-    : '{' BlockStatementsOpt '}'                                                { $$ = new pt::Node(pty::Block, $2); }
+    : '{' BlockStatementsOpt '}'                                                { $$ = jl.make_node(pty::Block, $2); }
     ;
 
 BlockStatementsOpt
@@ -503,7 +511,7 @@ BlockStatementsOpt
 
 BlockStatements
     : BlockStatement
-    | BlockStatements BlockStatement                                            { $$ = new pt::Node(pty::Block, $1, $2); }
+    | BlockStatements BlockStatement                                            { $$ = jl.make_node(pty::Block, $1, $2); }
     ;
 
 BlockStatement
@@ -524,7 +532,7 @@ Statement
     ;
 
 StatementWithoutTrailingSubstatement
-    : Block                                                                     { $$ = new pt::Node(pty::Statement, $1); }
+    : Block                                                                     { $$ = jl.make_node(pty::Statement, $1); }
 	| EmptyStatement                                                            /* No action as EmptyStatement returns Statement */
     | ExpressionStatement                                                       /* No action as ExpressionStatement returns Statement */
     | ReturnStatement                                                           /* No action as ReturnStatement returns Statement */
@@ -538,21 +546,21 @@ StatementNoShortIf
     ;
 
 ExpressionStatement
-    : StatementExpression ';'                                                   { $$ = new pt::Node(pty::Statement, $1); }
+    : StatementExpression ';'                                                   { $$ = jl.make_node(pty::Statement, $1); }
     ;
 
 ReturnStatement
-    : RETURN ExpressionOpt ';'                                                  { $$ = new pt::Node(pty::ReturnStatement, $2); }
+    : RETURN ExpressionOpt ';'                                                  { $$ = jl.make_node(pty::ReturnStatement, $2); }
     ;
 
 StatementExpression
-    : Assignment                                                                { $$ = new pt::Node(pty::StatementExpression, $1); }
-    | MethodInvocation                                                          { $$ = new pt::Node(pty::StatementExpression, $1); }
-    | ClassInstanceCreationExpression                                           { $$ = new pt::Node(pty::StatementExpression, $1); }
+    : Assignment                                                                { $$ = jl.make_node(pty::StatementExpression, $1); }
+    | MethodInvocation                                                          { $$ = jl.make_node(pty::StatementExpression, $1); }
+    | ClassInstanceCreationExpression                                           { $$ = jl.make_node(pty::StatementExpression, $1); }
     ;
 
 EmptyStatement
-    : ';'                                                                       { $$ = new pt::Node(pty::Statement); }
+    : ';'                                                                       { $$ = jl.make_node(pty::Statement); }
 	;
 
 /* ========================================================================== */
@@ -560,32 +568,32 @@ EmptyStatement
 /* ========================================================================== */
 
 IfThenStatement
-    : IF '(' Expression ')' Statement                                           { $$ = new pt::Node(pty::IfThenStatement, $3, $5); }
+    : IF '(' Expression ')' Statement                                           { $$ = jl.make_node(pty::IfThenStatement, $3, $5); }
     ;
 
 IfThenElseStatement
-    : IF '(' Expression ')' StatementNoShortIf ELSE Statement                   { $$ = new pt::Node(pty::IfThenStatement, $3, $5, $7); }
+    : IF '(' Expression ')' StatementNoShortIf ELSE Statement                   { $$ = jl.make_node(pty::IfThenStatement, $3, $5, $7); }
     ;
 
 IfThenElseStatementNoShortIf
-    : IF '(' Expression ')' StatementNoShortIf ELSE StatementNoShortIf          { $$ = new pt::Node(pty::IfThenStatement, $3, $5, $7); }
+    : IF '(' Expression ')' StatementNoShortIf ELSE StatementNoShortIf          { $$ = jl.make_node(pty::IfThenStatement, $3, $5, $7); }
     ;
 
 WhileStatement
-    : WHILE '(' Expression ')' Statement                                        { $$ = new pt::Node(pty::WhileStatement, $3, $5); }
+    : WHILE '(' Expression ')' Statement                                        { $$ = jl.make_node(pty::WhileStatement, $3, $5); }
     ;
 
 WhileStatementNoShortIf
-    : WHILE '(' Expression ')' StatementNoShortIf                               { $$ = new pt::Node(pty::WhileStatement, $3, $5); }    
+    : WHILE '(' Expression ')' StatementNoShortIf                               { $$ = jl.make_node(pty::WhileStatement, $3, $5); }    
     ;
 
 ForStatement
-    : FOR '(' ForInitOpt ';' ExpressionOpt ';' ForUpdateOpt ')' Statement       { $$ = new pt::Node(pty::ForStatement, $3, $5, $7, $9); }
+    : FOR '(' ForInitOpt ';' ExpressionOpt ';' ForUpdateOpt ')' Statement       { $$ = jl.make_node(pty::ForStatement, $3, $5, $7, $9); }
     ;
 
 ForStatementNoShortIf
     : FOR '(' ForInitOpt ';' ExpressionOpt ';' ForUpdateOpt ')' 
-        StatementNoShortIf                                                      { $$ = new pt::Node(pty::ForStatement, $3, $5, $7, $9); }
+        StatementNoShortIf                                                      { $$ = jl.make_node(pty::ForStatement, $3, $5, $7, $9); }
     ;
 
 ForInitOpt
@@ -604,21 +612,21 @@ ForUpdateOpt
 /* ========================================================================== */
 
 LocalVariableDeclarationStatement
-    : LocalVariableDeclaration ';'                                              { $$ = new pt::Node(pty::Statement, $1); }
+    : LocalVariableDeclaration ';'                                              { $$ = jl.make_node(pty::Statement, $1); }
     ;
 
 LocalVariableDeclaration                                                        
-    : Type VariableDeclarator                                                   { $$ = new pt::Node(pty::LocalVariableDeclaration, $1, $2); }
+    : Type VariableDeclarator                                                   { $$ = jl.make_node(pty::LocalVariableDeclaration, $1, $2); }
     ;
 
 // FIXME(kevin): Remove this rule and fix the AST later :)
 VariableDeclaratorList
-    : VariableDeclarator                                                        { $$ = new pt::Node(pty::VariableDeclaratorList, $1); }
+    : VariableDeclarator                                                        { $$ = jl.make_node(pty::VariableDeclaratorList, $1); }
     ;
 
 VariableDeclarator
-    : IDENTIFIER                                                                { $$ = new pt::Node(pty::VariableDeclarator, $1); }
-    | IDENTIFIER OP_ASSIGN Expression                                           { $$ = new pt::Node(pty::VariableDeclarator, $1, $3); }
+    : IDENTIFIER                                                                { $$ = jl.make_node(pty::VariableDeclarator, $1); }
+    | IDENTIFIER OP_ASSIGN Expression                                           { $$ = jl.make_node(pty::VariableDeclarator, $1, $3); }
     ;
 
 %%
@@ -640,14 +648,15 @@ std::string joos1w_parser_resolve_token (int yysymbol) {
     }
 }
 
-static void yyerror(parsetree::Node** ret, const char* s) {
+static void yyerror(YYLTYPE* yylloc, YYSTYPE* ret, Joos1WLexer& lexer, const char* s) {
     (void) ret;
+    (void) lexer;
     // TODO: Grab the location somehow
     std::cerr << "Parse error: " << s << std::endl;
     std::cerr
         << "At: "
-        << yylloc.first_line << ":" << yylloc.first_column
+        << yylloc->first_line << ":" << yylloc->first_column
         << "-"
-        << yylloc.last_line << ":" << yylloc.last_column
+        << yylloc->last_line << ":" << yylloc->last_column
         << std::endl;
 }

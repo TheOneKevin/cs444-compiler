@@ -4,7 +4,11 @@
 #include <iostream>
 #include <array>
 #include <vector>
+#include <type_traits>
 #include "utils/EnumMacros.h"
+
+class Joos1WLexer;
+class Joos1WParser;
 
 namespace parsetree {
 
@@ -15,19 +19,11 @@ class Operator;
 class Modifier;
 class BasicType;
 
-/// @brief The context for parsing, keeps track of errors and such.
-class ParseContext {
-    static std::vector<struct Node*> poison_pool_;
-public:
-    ParseContext() {}
-
-};
-
-Node* make_poison();
-void clear_poison_pool();
-
 /// @brief The basic type-tagged node in the parse tree.
 struct Node {
+    friend class ::Joos1WLexer;
+    friend class ::Joos1WParser;
+
     #define NODE_TYPE_LIST(F) \
         /* Leaf nodes */ \
         F(Literal) \
@@ -92,20 +88,28 @@ private:
     DECLARE_STRING_TABLE(Type, type_strings, NODE_TYPE_LIST)
     #undef NODE_TYPE_LIST
 
-public:
-    Node(Type type)
-        : type{type}
-        , args{nullptr}
-        , num_args{0}
-    { }
+protected:
+    /// @brief Protected constructor for leaf nodes
+    /// @param type The type of the leaf node
+    Node(Type type) : type{type}, args{nullptr}, num_args{0} { }
 
+    /// @brief Protected constructor for non-leaf nodes
+    /// @tparam ...Args The child node types (should be Node*)
+    /// @param type The type of the node
+    /// @param ...args The child nodes
     template<typename... Args>
     Node(Type type, Args&&... args)
         : type{type}
         , args{new Node*[sizeof...(Args)]{args...}}
         , num_args{sizeof...(Args)}
-    {}
+    {
+        static_assert(sizeof...(Args) > 0, "Must have at least one child");
+        static_assert(
+            std::conjunction_v<std::is_convertible<Args, Node*>...>,
+            "All arguments must be convertible to Node*");
+    }
 
+public:
     size_t num_children() const {
         return num_args;
     }
@@ -154,8 +158,6 @@ public:
     virtual std::ostream& print(std::ostream& os) const;
     // Print the node as a dot file
     std::ostream& printDot(std::ostream& os) const;
-    // Output stream operator for a parse tree node
-    std::ostream& operator<< (std::ostream& os) const { return print(os); }
 
 private:
     // Print the type of the node
@@ -172,8 +174,14 @@ private:
     size_t num_args;
 };
 
+// Output stream operator for a parse tree node
+std::ostream& operator<< (std::ostream& os, Node const& n);
+
 /// @brief A lex node in the parse tree representing a literal value.
 class Literal : public Node {
+    friend class ::Joos1WLexer;
+    friend class ::Joos1WParser;
+
     #define LITERAL_TYPE_LIST(F) \
         F(Integer) \
         F(Character) \
@@ -187,10 +195,12 @@ private:
     DECLARE_STRING_TABLE(Type, literal_strings, LITERAL_TYPE_LIST)
     #undef LITERAL_TYPE_LIST
 
-public:
+private:
     Literal(Type type, char const* value)
         : Node{Node::Type::Literal}, type{type},
           isNegative{false}, value{value} { }
+
+public:
     // Override printing for this leaf node
     std::ostream& print(std::ostream& os) const override;
     // Set the value of the literal to negative
@@ -208,8 +218,13 @@ private:
 
 /// @brief A lex node in the parse tree representing an identifier.
 class Identifier : public Node {
-public:
+    friend class ::Joos1WLexer;
+    friend class ::Joos1WParser;
+
+private:
     Identifier(char const* name) : Node{Node::Type::Identifier}, name{name} { }
+
+public:
     // Get the name of the identifier
     std::string get_name() const {
         return name;
@@ -223,6 +238,9 @@ private:
 
 /// @brief A lex node in the parse tree representing an operator.
 class Operator : public Node {
+    friend class ::Joos1WLexer;
+    friend class ::Joos1WParser;
+
 public:
     enum class Type {
         Assign,
@@ -248,8 +266,11 @@ public:
         Minus,
         InstanceOf
     };
-public:
+
+private:
     Operator(Type type) : Node{Node::Type::Operator}, type{type} { }
+
+public:
     // Get the type of the operator
     std::ostream& print(std::ostream& os) const override {
         return os << to_string();
@@ -263,6 +284,9 @@ private:
 
 /// @brief A lex node in the parse tree representing a modifier.
 class Modifier : public Node {
+    friend class ::Joos1WLexer;
+    friend class ::Joos1WParser;
+
     #define MODIFIER_TYPE_LIST(F) \
         F(Public) \
         F(Protected) \
@@ -276,9 +300,9 @@ public:
 private:
     DECLARE_STRING_TABLE(Type, modifier_strings, MODIFIER_TYPE_LIST)
     #undef MODIFIER_TYPE_LIST
-
-public:
+private:
     Modifier(Type type) : Node{Node::Type::Modifier}, modty{type} { }
+public:
     // Get the type of the modifier
     Type get_type() const {
         return modty;
@@ -292,6 +316,9 @@ private:
 
 /// @brief A lex node in the parse tree representing a basic type.
 class BasicType : public Node {
+    friend class ::Joos1WLexer;
+    friend class ::Joos1WParser;
+
     #define BASIC_TYPE_LIST(F) \
         F(Byte) \
         F(Short) \
@@ -304,8 +331,9 @@ public:
 private:
     DECLARE_STRING_TABLE(Type, basic_type_strings, BASIC_TYPE_LIST)
     #undef BASIC_TYPE_LIST
-public:
+private:
     BasicType(Type type) : Node{Node::Type::BasicType}, type{type} { }
+public:
     // Get the type of the basic type
     Type get_type() const {
         return type;

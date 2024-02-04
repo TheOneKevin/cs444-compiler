@@ -1,6 +1,7 @@
 %option noyywrap
-%option bison-locations bison-bridge
 %option yylineno
+%option never-interactive
+%option c++ yyclass="Joos1WLexer"
 
 %top {
     #include "parser.h"
@@ -8,7 +9,6 @@
     #include <cerrno>
     #include <cstdlib>
     #include <iostream>
-    namespace pt = parsetree;
     using plt = parsetree::Literal::Type;
     using pot = parsetree::Operator::Type;
     using pmt = parsetree::Modifier::Type;
@@ -16,11 +16,14 @@
 }
 
 %{
+    #define INCLUDED_FLEXLEXER_H
+    #include "grammar/joos1w_lexer_internal.h"
+    #undef INCLUDED_FLEXLEXER_H
     int yycolumn = 1;
     #define YY_USER_ACTION \
-        yylloc->first_line = yylloc->last_line = yylineno; \
-        yylloc->first_column = yycolumn; \
-        yylloc->last_column = yycolumn + yyleng - 1; \
+        yylloc.first_line = yylloc.last_line = yylineno; \
+        yylloc.first_column = yycolumn; \
+        yylloc.last_column = yycolumn + yyleng - 1; \
         yycolumn += yyleng;
 
     static void comment(void);
@@ -72,61 +75,61 @@ Keyword: one of
 */
 %}
 
-"class"         { *yylval = pt::make_poison(); return CLASS; }
-"else"          { *yylval = pt::make_poison(); return ELSE; }
-"extends"       { *yylval = pt::make_poison(); return EXTENDS; }
-"for"           { *yylval = pt::make_poison(); return FOR; }
-"if"            { *yylval = pt::make_poison(); return IF; }
-"implements"    { *yylval = pt::make_poison(); return IMPLEMENTS; }
-"import"        { *yylval = pt::make_poison(); return IMPORT; }
-"interface"     { *yylval = pt::make_poison(); return INTERFACE; }
-"new"           { *yylval = pt::make_poison(); return NEW; }
-"package"       { *yylval = pt::make_poison(); return PACKAGE; }
-"return"        { *yylval = pt::make_poison(); return RETURN; }
-"void"          { *yylval = pt::make_poison(); return VOID; }
-"while"         { *yylval = pt::make_poison(); return WHILE; }
-"super"         { *yylval = pt::make_poison(); return SUPER; }
-"do"            { *yylval = pt::make_poison(); return DO; }
-"try"           { *yylval = pt::make_poison(); return TRY; }
-"catch"         { *yylval = pt::make_poison(); return CATCH; }
-"switch"        { *yylval = pt::make_poison(); return SWITCH; }
-"case"          { *yylval = pt::make_poison(); return CASE; }
-"default"       { *yylval = pt::make_poison(); return DEFAULT; }
+"class"         { yylval = make_poison(); return CLASS; }
+"else"          { yylval = make_poison(); return ELSE; }
+"extends"       { yylval = make_poison(); return EXTENDS; }
+"for"           { yylval = make_poison(); return FOR; }
+"if"            { yylval = make_poison(); return IF; }
+"implements"    { yylval = make_poison(); return IMPLEMENTS; }
+"import"        { yylval = make_poison(); return IMPORT; }
+"interface"     { yylval = make_poison(); return INTERFACE; }
+"new"           { yylval = make_poison(); return NEW; }
+"package"       { yylval = make_poison(); return PACKAGE; }
+"return"        { yylval = make_poison(); return RETURN; }
+"void"          { yylval = make_poison(); return VOID; }
+"while"         { yylval = make_poison(); return WHILE; }
+"super"         { yylval = make_poison(); return SUPER; }
+"do"            { yylval = make_poison(); return DO; }
+"try"           { yylval = make_poison(); return TRY; }
+"catch"         { yylval = make_poison(); return CATCH; }
+"switch"        { yylval = make_poison(); return SWITCH; }
+"case"          { yylval = make_poison(); return CASE; }
+"default"       { yylval = make_poison(); return DEFAULT; }
 
-"finally"       { *yylval = pt::make_poison(); return FINALLY; }
-"throw"         { *yylval = pt::make_poison(); return THROW; }
-"throws"        { *yylval = pt::make_poison(); return THROWS; }
-"transient"     { *yylval = pt::make_poison(); return TRANSIENT; }
-"synchronized"  { *yylval = pt::make_poison(); return SYNCHRONIZED; }
-"volatile"      { *yylval = pt::make_poison(); return VOLATILE; }
-"const"         { *yylval = pt::make_poison(); return CONST; }
-"goto"          { *yylval = pt::make_poison(); return GOTO; }
-"continue"      { *yylval = pt::make_poison(); return CONTINUE; }
-"break"         { *yylval = pt::make_poison(); return BREAK; }
-"double"        { *yylval = pt::make_poison(); return DOUBLE; }
-"float"         { *yylval = pt::make_poison(); return FLOAT; }
-"long"          { *yylval = pt::make_poison(); return LONG; }
-"private"       { *yylval = pt::make_poison(); return PRIVATE; }
+"finally"       { yylval = make_poison(); return FINALLY; }
+"throw"         { yylval = make_poison(); return THROW; }
+"throws"        { yylval = make_poison(); return THROWS; }
+"transient"     { yylval = make_poison(); return TRANSIENT; }
+"synchronized"  { yylval = make_poison(); return SYNCHRONIZED; }
+"volatile"      { yylval = make_poison(); return VOLATILE; }
+"const"         { yylval = make_poison(); return CONST; }
+"goto"          { yylval = make_poison(); return GOTO; }
+"continue"      { yylval = make_poison(); return CONTINUE; }
+"break"         { yylval = make_poison(); return BREAK; }
+"double"        { yylval = make_poison(); return DOUBLE; }
+"float"         { yylval = make_poison(); return FLOAT; }
+"long"          { yylval = make_poison(); return LONG; }
+"private"       { yylval = make_poison(); return PRIVATE; }
 
-"abstract"  { *yylval = new pt::Modifier(pmt::Abstract);    return ABSTRACT; }
-"final"     { *yylval = new pt::Modifier(pmt::Final);       return FINAL; }
-"native"    { *yylval = new pt::Modifier(pmt::Native);      return NATIVE; }
-"protected" { *yylval = new pt::Modifier(pmt::Protected);   return PROTECTED; }
-"public"    { *yylval = new pt::Modifier(pmt::Public);      return PUBLIC; }
-"static"    { *yylval = new pt::Modifier(pmt::Static);      return STATIC; }
+"abstract"  { yylval = make_modifier(pmt::Abstract);    return ABSTRACT; }
+"final"     { yylval = make_modifier(pmt::Final);       return FINAL; }
+"native"    { yylval = make_modifier(pmt::Native);      return NATIVE; }
+"protected" { yylval = make_modifier(pmt::Protected);   return PROTECTED; }
+"public"    { yylval = make_modifier(pmt::Public);      return PUBLIC; }
+"static"    { yylval = make_modifier(pmt::Static);      return STATIC; }
 
-"boolean"   { *yylval = new pt::BasicType(pbtt::Boolean);   return BOOLEAN; }
-"byte"      { *yylval = new pt::BasicType(pbtt::Byte);      return BYTE; }
-"char"      { *yylval = new pt::BasicType(pbtt::Char);      return CHAR; }
-"short"     { *yylval = new pt::BasicType(pbtt::Short);     return SHORT; }
-"int"       { *yylval = new pt::BasicType(pbtt::Int);       return INT; }
+"boolean"   { yylval = make_basic_type(pbtt::Boolean);   return BOOLEAN; }
+"byte"      { yylval = make_basic_type(pbtt::Byte);      return BYTE; }
+"char"      { yylval = make_basic_type(pbtt::Char);      return CHAR; }
+"short"     { yylval = make_basic_type(pbtt::Short);     return SHORT; }
+"int"       { yylval = make_basic_type(pbtt::Int);       return INT; }
 "instanceof" {
-    *yylval = new pt::Operator(pot::InstanceOf);
+    yylval = make_operator(pot::InstanceOf);
     return INSTANCEOF;
 }
 
 "this" {
-    *yylval = new pt::Identifier(yytext);
+    yylval = make_identifier(yytext);
     return THIS;
 }
 
@@ -164,27 +167,27 @@ Literal: one of
 %}
 
 {DecimalIntegerLiteral} {
-    *yylval = new pt::Literal(plt::Integer, yytext);
+    yylval = make_literal(plt::Integer, yytext);
     return LITERAL;
 }
 
 {BooleanLiteral} {
-    *yylval = new pt::Literal(plt::Boolean, yytext); 
+    yylval = make_literal(plt::Boolean, yytext); 
     return LITERAL;
 }
 
 {CharacterLiteral} {
-    *yylval = new pt::Literal(plt::Character, yytext); 
+    yylval = make_literal(plt::Character, yytext); 
     return LITERAL;
 }
 
 {StringLiteral} {
-    *yylval = new pt::Literal(plt::String, yytext); 
+    yylval = make_literal(plt::String, yytext); 
     return LITERAL;
 }
 
 "null" {
-    *yylval = new pt::Literal(plt::Null, yytext); 
+    yylval = make_literal(plt::Null, yytext); 
     return LITERAL;
 }
 
@@ -199,15 +202,15 @@ Separator: one of
 */
 %}
 
-"(" { *yylval = pt::make_poison(); return '('; }
-")" { *yylval = pt::make_poison(); return ')'; }
-"{" { *yylval = pt::make_poison(); return '{'; }
-"}" { *yylval = pt::make_poison(); return '}'; }
-"[" { *yylval = pt::make_poison(); return '['; }
-"]" { *yylval = pt::make_poison(); return ']'; }
-";" { *yylval = pt::make_poison(); return ';'; }
-"," { *yylval = pt::make_poison(); return ','; }
-"." { *yylval = pt::make_poison(); return '.'; }
+"(" { yylval = make_poison(); return '('; }
+")" { yylval = make_poison(); return ')'; }
+"{" { yylval = make_poison(); return '{'; }
+"}" { yylval = make_poison(); return '}'; }
+"[" { yylval = make_poison(); return '['; }
+"]" { yylval = make_poison(); return ']'; }
+";" { yylval = make_poison(); return ';'; }
+"," { yylval = make_poison(); return ','; }
+"." { yylval = make_poison(); return '.'; }
 
 %{
 /* ========================================================================== */
@@ -225,27 +228,27 @@ Operator: one of
 */
 %}
 
-"="  { *yylval = new pt::Operator(pot::Assign);             return OP_ASSIGN; }
-">"  { *yylval = new pt::Operator(pot::GreaterThan);        return OP_GT; }
-"<"  { *yylval = new pt::Operator(pot::LessThan);           return OP_LT; }
-"!"  { *yylval = new pt::Operator(pot::Not);                return OP_NOT; }
-"==" { *yylval = new pt::Operator(pot::Equal);              return OP_EQ; }
-"<=" { *yylval = new pt::Operator(pot::LessThanOrEqual);    return OP_LTE; }
-">=" { *yylval = new pt::Operator(pot::GreaterThanOrEqual); return OP_GTE; }
-"!=" { *yylval = new pt::Operator(pot::NotEqual);           return OP_NEQ; }
-"&&" { *yylval = new pt::Operator(pot::And);                return OP_AND; }
-"||" { *yylval = new pt::Operator(pot::Or);                 return OP_OR; }
-"&"  { *yylval = new pt::Operator(pot::BitwiseAnd);         return OP_BIT_AND; }
-"|"  { *yylval = new pt::Operator(pot::BitwiseOr);          return OP_BIT_OR; }
-"+"  { *yylval = new pt::Operator(pot::Plus);               return OP_PLUS; }
-"-"  { *yylval = new pt::Operator(pot::Minus);              return OP_MINUS; }
-"*"  { *yylval = new pt::Operator(pot::Multiply);           return OP_MUL; }
-"/"  { *yylval = new pt::Operator(pot::Divide);             return OP_DIV; }
-"%"  { *yylval = new pt::Operator(pot::Modulo);             return OP_MOD; }
-"^"  { *yylval = new pt::Operator(pot::BitwiseXor);         return OP_BIT_XOR; }
+"="  { yylval = make_operator(pot::Assign);             return OP_ASSIGN; }
+">"  { yylval = make_operator(pot::GreaterThan);        return OP_GT; }
+"<"  { yylval = make_operator(pot::LessThan);           return OP_LT; }
+"!"  { yylval = make_operator(pot::Not);                return OP_NOT; }
+"==" { yylval = make_operator(pot::Equal);              return OP_EQ; }
+"<=" { yylval = make_operator(pot::LessThanOrEqual);    return OP_LTE; }
+">=" { yylval = make_operator(pot::GreaterThanOrEqual); return OP_GTE; }
+"!=" { yylval = make_operator(pot::NotEqual);           return OP_NEQ; }
+"&&" { yylval = make_operator(pot::And);                return OP_AND; }
+"||" { yylval = make_operator(pot::Or);                 return OP_OR; }
+"&"  { yylval = make_operator(pot::BitwiseAnd);         return OP_BIT_AND; }
+"|"  { yylval = make_operator(pot::BitwiseOr);          return OP_BIT_OR; }
+"+"  { yylval = make_operator(pot::Plus);               return OP_PLUS; }
+"-"  { yylval = make_operator(pot::Minus);              return OP_MINUS; }
+"*"  { yylval = make_operator(pot::Multiply);           return OP_MUL; }
+"/"  { yylval = make_operator(pot::Divide);             return OP_DIV; }
+"%"  { yylval = make_operator(pot::Modulo);             return OP_MOD; }
+"^"  { yylval = make_operator(pot::BitwiseXor);         return OP_BIT_XOR; }
 
 {Identifier} {
-    *yylval = new pt::Identifier(yytext);
+    yylval = make_identifier(yytext);
     return IDENTIFIER;
 }
 
@@ -259,20 +262,22 @@ Operator: one of
 
 %%
 
-int yylex(void) {
-    // FIXME(kevin): What the fuck is happening here??
-    YYSTYPE lexval;
-    YYLTYPE location;
-    (void) lexval;
-    (void) location;
-    return yylex(&yylval, &yylloc);
+int yylex(YYSTYPE* lvalp, YYLTYPE* llocp, Joos1WLexer& lexer) {
+    return lexer.bison_lex(lvalp, llocp);
+}
+
+int Joos1WLexer::bison_lex(YYSTYPE *lvalp, YYLTYPE *llocp) {
+    auto ret = yylex();
+    *lvalp = yylval;
+    *llocp = yylloc;
+    return ret;
 }
 
 static void yyerror(const char* s) {
     std::cerr << "Lexing error: " << s << std::endl;
 }
 
-static void comment(void) {
+void Joos1WLexer::comment(void) {
     // Iterate through the comment and count the number of newlines
     // so we can update the line number
     int c;
