@@ -4,8 +4,6 @@
 
 namespace ast {
 
-class Expr : public AstNode {
+class Expr : public AstNode {};
 
-};
-
-}
+} // namespace ast

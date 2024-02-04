@@ -7,8 +7,4 @@
 #include "ast/Stmt.h"
 #include "ast/Type.h"
 
-namespace ast {
-
-
-
-} // namespace ast
+namespace ast {} // namespace ast

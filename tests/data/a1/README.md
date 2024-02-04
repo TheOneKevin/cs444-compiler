@@ -20,17 +20,21 @@ Rules from A1:
 16. Any other tests we want to add is added here...
 
 Each rule is labelled as DRIVER/PARSER/AST depending on which stage of the compiler is capable of rejecting such rules. They are explained below:
+
 - DRIVER: the program run to load the file and call the frontend stages (i.e., lexing, parsing and such).
 - PARSER: the Bison-generated grammar
 - AST: the semantic analysis run on the AST
 
 The structure of the test data is as follows:
+
 ```
 rXX_invalid/valid_name.java
 ```
 
 Where `XX` is the rule number the test case is meant to test and `name` is some name describing the test case. For example, the test case named
+
 ```
 r10_invalid_intf_native_method.java
 ```
+
 is meant to test rule #10, and the test case is testing interfaces that have native methods. The `invalid` indicates this test is successful if the compiler rejects the program.

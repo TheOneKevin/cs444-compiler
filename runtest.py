@@ -1,4 +1,5 @@
-import os, subprocess
+import os
+import subprocess
 
 # Get the directory of this script
 script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -10,7 +11,7 @@ joosc = os.path.join(script_dir, "build", "joosc")
 test_names = os.listdir(test_dir)
 
 # Set of starting lines
-invalid_files = [x for x in test_names if x.startswith('Je_')]
+invalid_files = [x for x in test_names if x.startswith("Je_")]
 valid_files = [x for x in test_names if x not in invalid_files]
 
 for file in valid_files:
