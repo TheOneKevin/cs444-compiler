@@ -1,6 +1,6 @@
 %code top {
     #include <iostream>
-    #include "parser.h"
+    #include "joos1w.parser.tab.h"
     #include "parsetree/ParseTree.h"
     #include "grammar/Joos1WGrammar.h"
 
@@ -400,7 +400,7 @@ CastExpression
         if(isType || (isArrType && hasOneChild)) {
             $$ = jl.make_node(pty::CastExpression, $2, $4);
         } else {
-            std::cerr << "Invalid cast expression" << std::endl;
+            // std::cerr << "Invalid cast expression" << std::endl;
             $$ = jl.make_poison();
         }
     }
@@ -408,7 +408,7 @@ CastExpression
 
 Dims
     : %empty                                                                    { $$ = nullptr; }
-    | '[' ']'                                                                   { $$ = jl.make_node(pty::Dims); }
+    | '[' ']'                                                                   { $$ = jl.make_leaf(pty::Dims); }
     ;
 
 /* ========================================================================== */
@@ -560,7 +560,7 @@ StatementExpression
     ;
 
 EmptyStatement
-    : ';'                                                                       { $$ = jl.make_node(pty::Statement); }
+    : ';'                                                                       { $$ = jl.make_leaf(pty::Statement); }
 	;
 
 /* ========================================================================== */

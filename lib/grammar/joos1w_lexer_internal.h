@@ -1,9 +1,12 @@
 #pragma once
 
+#include <memory_resource>
 #include <vector>
 
-#include "parser.h"
+#include "joos1w.parser.tab.h"
 #include "parsetree/ParseTree.h"
+
+class Joos1WParser;
 
 class Joos1WLexer : public yyFlexLexer {
    using Node = parsetree::Node;
@@ -12,6 +15,10 @@ class Joos1WLexer : public yyFlexLexer {
    using Identifier = parsetree::Identifier;
    using Modifier = parsetree::Modifier;
    using BasicType = parsetree::BasicType;
+   friend class Joos1WParser;
+
+private:
+   Joos1WLexer(parsetree::BumpAllocator& alloc) : yycolumn{1}, alloc{alloc} {}
 
 public:
    // This is the generate Flex lexer function
@@ -23,10 +30,13 @@ public:
    /// @param ...args The arguments to the node constructor
    /// @return The newly created node
    template <typename... Args>
-   Node* make_node(Args&&... args) {
-      auto ret = new Node{std::forward<Args>(args)...};
-      nodes.push_back(ret);
-      return ret;
+   Node* make_node(Node::Type type, Args&&... args) {
+      void* bytes = alloc.allocate_bytes(sizeof(Node));
+      return new(bytes) Node(alloc, type, std::forward<Args>(args)...);
+   }
+   Node* make_leaf(Node::Type type) {
+      void* bytes = alloc.allocate_bytes(sizeof(Node));
+      return new(bytes) Node(type);
    }
    /// @brief See make_node
    Node* make_poison();
@@ -49,5 +59,6 @@ private:
 private:
    YYLTYPE yylloc;
    YYSTYPE yylval;
-   std::vector<Node*> nodes;
+   int yycolumn;
+   parsetree::BumpAllocator& alloc;
 };

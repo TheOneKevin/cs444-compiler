@@ -19,7 +19,6 @@ int main() {
    parsetree::Node* parse_tree = nullptr;
    int result = parser.parse(parse_tree);
    std::cout << "Result: " << result << std::endl;
-   ;
 
    if(result != 0 || parse_tree == nullptr) {
       std::cout << "Parsing failed" << std::endl;

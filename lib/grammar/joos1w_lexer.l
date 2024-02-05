@@ -4,7 +4,7 @@
 %option c++ yyclass="Joos1WLexer"
 
 %top {
-    #include "parser.h"
+    #include "joos1w.parser.tab.h"
     #include "parsetree/ParseTree.h"
     #include <cerrno>
     #include <cstdlib>
@@ -19,7 +19,6 @@
     #define INCLUDED_FLEXLEXER_H
     #include "grammar/joos1w_lexer_internal.h"
     #undef INCLUDED_FLEXLEXER_H
-    int yycolumn = 1;
     #define YY_USER_ACTION \
         yylloc.first_line = yylloc.last_line = yylineno; \
         yylloc.first_column = yycolumn; \
@@ -282,15 +281,10 @@ void Joos1WLexer::comment(void) {
     // so we can update the line number
     int c;
     while ((c = yyinput()) != 0) {
-        yycolumn++;
         if (c == '*') {
             while ((c = yyinput()) == '*');
             if (c == '/') return;
             if (c == 0) break;
-        }
-        if (c == '\n') {
-            yylineno++;
-            yycolumn = 1;
         }
     }
     yyerror("unterminated comment");

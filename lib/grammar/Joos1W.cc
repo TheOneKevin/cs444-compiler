@@ -9,37 +9,31 @@ using Modifier = parsetree::Modifier;
 using BasicType = parsetree::BasicType;
 
 Node* Joos1WLexer::make_poison() {
-   auto ret = new Node{Node::Type::Poison};
-   nodes.push_back(ret);
-   return ret;
+   void* bytes = alloc.allocate_bytes(sizeof(Node));
+   return new(bytes) Node(Node::Type::Poison);
 }
 
 Node* Joos1WLexer::make_operator(Operator::Type type) {
-   auto ret = new Operator{type};
-   nodes.push_back(ret);
-   return ret;
+   void* bytes = alloc.allocate_bytes(sizeof(Operator));
+   return new(bytes) Operator(type);
 }
 
 Node* Joos1WLexer::make_literal(Literal::Type type, char const* value) {
-   auto ret = new Literal{type, value};
-   nodes.push_back(ret);
-   return ret;
+   void* bytes = alloc.allocate_bytes(sizeof(Literal));
+   return new(bytes) Literal(alloc, type, value);
 }
 
 Node* Joos1WLexer::make_identifier(char const* name) {
-   auto ret = new Identifier{name};
-   nodes.push_back(ret);
-   return ret;
+   void* bytes = alloc.allocate_bytes(sizeof(Identifier));
+   return new(bytes) Identifier(alloc, name);
 }
 
 Node* Joos1WLexer::make_modifier(Modifier::Type type) {
-   auto ret = new Modifier{type};
-   nodes.push_back(ret);
-   return ret;
+   void* bytes = alloc.allocate_bytes(sizeof(Modifier));
+   return new(bytes) Modifier(type);
 }
 
 Node* Joos1WLexer::make_basic_type(BasicType::Type type) {
-   auto ret = new BasicType{type};
-   nodes.push_back(ret);
-   return ret;
+   void* bytes = alloc.allocate_bytes(sizeof(BasicType));
+   return new(bytes) BasicType(type);
 }

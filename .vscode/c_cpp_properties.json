@@ -3,7 +3,12 @@
     {
       "name": "Linux",
       "defines": [],
-      "includePath": ["/usr/include/c++/10/"],
+      "includePath": [
+        "/usr/include/c++/10/",
+        "${workspaceFolder}/lib",
+        "${workspaceFolder}/build",
+        "${workspaceFolder}"
+      ],
       "cppStandard": "c++20",
       "intelliSenseMode": "linux-clang-x64",
       "compileCommands": "${workspaceFolder}/build/compile_commands.json",

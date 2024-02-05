@@ -108,7 +108,5 @@ int main(int argc, char** argv) {
       return 42;
    }
 
-   // Clean up the parse tree
-   delete parse_tree;
    return 0;
 }

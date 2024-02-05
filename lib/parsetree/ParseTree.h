@@ -2,9 +2,9 @@
 
 #include <array>
 #include <iostream>
+#include <memory_resource>
 #include <string>
 #include <type_traits>
-#include <vector>
 
 #include "utils/EnumMacros.h"
 
@@ -19,6 +19,8 @@ class Identifier;
 class Operator;
 class Modifier;
 class BasicType;
+
+using BumpAllocator = std::pmr::polymorphic_allocator<std::byte>;
 
 /// @brief The basic type-tagged node in the parse tree.
 struct Node {
@@ -99,30 +101,36 @@ protected:
    /// @param type The type of the node
    /// @param ...args The child nodes
    template <typename... Args>
-   Node(Type type, Args&&... args)
+   Node(BumpAllocator& alloc, Type type, Args&&... args)
          : type{type},
-           args{new Node* [sizeof...(Args)] { args... }},
+           args{static_cast<Node**>(alloc.allocate_bytes(
+                 sizeof...(Args) * sizeof(Node*), alignof(Node*)))},
            num_args{sizeof...(Args)} {
       static_assert(sizeof...(Args) > 0, "Must have at least one child");
       static_assert(std::conjunction_v<std::is_convertible<Args, Node*>...>,
                     "All arguments must be convertible to Node*");
+      std::array<Node*, sizeof...(Args)> tmp{std::forward<Args>(args)...};
+      for(size_t i = 0; i < sizeof...(Args); i++) {
+         this->args[i] = tmp[i];
+      }
    }
 
 public:
+   /// @brief Gets the number of children
    size_t num_children() const { return num_args; }
-
+   /// @brief Gets the child at index i
    Node* child(size_t i) const { return args[i]; }
-
+   /// @brief Gets the type of the node
    Type get_node_type() const { return type; }
-   // Operator to turn Type into a string
+   /// @brief Operator to turn Type into a string
    std::string type_string() const {
       return type_strings[static_cast<int>(type)];
    }
-   // Operator to turn Type into a string
+   /// @brief Operator to turn Type into a string
    static std::string type_string(Type type) {
       return type_strings[static_cast<int>(type)];
    }
-   // Check if the tree has been poisoned
+   /// @brief Check if the tree has been poisoned
    bool is_poisoned() const {
       if(type == Type::Poison)
          return true;
@@ -134,27 +142,19 @@ public:
          return false;
       }
    }
-   // Virtual destructor to delete the tree
-   virtual ~Node() {
-      if(args == nullptr) return;
-      for(size_t i = 0; i < num_args; i++) {
-         if(args[i] != nullptr) delete args[i];
-      }
-      delete[] args;
-   }
 
 public:
-   // Virtual function to print the node
+   /// @brief Virtual function to print the node
    virtual std::ostream& print(std::ostream& os) const;
-   // Print the node as a dot file
+   /// @brief Print the node as a dot file
    std::ostream& printDot(std::ostream& os) const;
 
 private:
-   // Print the type of the node
+   /// @brief Print the type of the node
    void printType(std::ostream& os) const;
-   // Print the type and value of the node
+   /// @brief Print the type and value of the node
    void printTypeAndValue(std::ostream& os) const;
-   // Recursively print the DOT graph
+   /// @brief Recursively print the DOT graph
    int printDotRecursive(std::ostream& os,
                          const Node& node,
                          int& id_counter) const;
@@ -167,6 +167,8 @@ private:
 
 // Output stream operator for a parse tree node
 std::ostream& operator<<(std::ostream& os, Node const& n);
+
+////////////////////////////////////////////////////////////////////////////////
 
 /// @brief A lex node in the parse tree representing a literal value.
 class Literal : public Node {
@@ -187,11 +189,11 @@ private:
 #undef LITERAL_TYPE_LIST
 
 private:
-   Literal(Type type, char const* value)
+   Literal(BumpAllocator const& alloc, Type type, char const* value)
          : Node{Node::Type::Literal},
            type{type},
            isNegative{false},
-           value{value} {}
+           value{value, alloc} {}
 
 public:
    // Override printing for this leaf node
@@ -204,8 +206,10 @@ public:
 private:
    Type type;
    bool isNegative;
-   std::string value;
+   std::pmr::string value;
 };
+
+////////////////////////////////////////////////////////////////////////////////
 
 /// @brief A lex node in the parse tree representing an identifier.
 class Identifier : public Node {
@@ -213,17 +217,20 @@ class Identifier : public Node {
    friend class ::Joos1WParser;
 
 private:
-   Identifier(char const* name) : Node{Node::Type::Identifier}, name{name} {}
+   Identifier(BumpAllocator const& alloc, char const* name)
+         : Node{Node::Type::Identifier}, name{name, alloc} {}
 
 public:
    // Get the name of the identifier
-   std::string get_name() const { return name; }
+   const char* get_name() const { return name.c_str(); }
    // Override printing for this leaf node
    std::ostream& print(std::ostream& os) const override;
 
 private:
-   std::string name;
+   std::pmr::string name;
 };
+
+////////////////////////////////////////////////////////////////////////////////
 
 /// @brief A lex node in the parse tree representing an operator.
 class Operator : public Node {
@@ -271,6 +278,8 @@ private:
    Type type;
 };
 
+////////////////////////////////////////////////////////////////////////////////
+
 /// @brief A lex node in the parse tree representing a modifier.
 class Modifier : public Node {
    friend class ::Joos1WLexer;
@@ -289,6 +298,7 @@ public:
 private:
    DECLARE_STRING_TABLE(Type, modifier_strings, MODIFIER_TYPE_LIST)
 #undef MODIFIER_TYPE_LIST
+
 private:
    Modifier(Type type) : Node{Node::Type::Modifier}, modty{type} {}
 
@@ -301,6 +311,8 @@ public:
 private:
    Type modty;
 };
+
+////////////////////////////////////////////////////////////////////////////////
 
 /// @brief A lex node in the parse tree representing a basic type.
 class BasicType : public Node {
@@ -319,6 +331,7 @@ public:
 private:
    DECLARE_STRING_TABLE(Type, basic_type_strings, BASIC_TYPE_LIST)
 #undef BASIC_TYPE_LIST
+
 private:
    BasicType(Type type) : Node{Node::Type::BasicType}, type{type} {}
 

@@ -20,6 +20,9 @@ endif()
 # Set debug mode flags
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -Wpedantic -Wno-unused-function -g -Og")
 
+# Set release mode flags
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+
 # Define YYDEBUG for bison
 add_compile_definitions(YYDEBUG=1)
 
@@ -39,7 +42,7 @@ flex_target(
     "lib/grammar/joos1w_lexer.l"
     "${LEXER_OUT}"
     DEFINES_FILE
-    "${PARSER_DIR}/lexer.h"
+    "${PARSER_DIR}/joos1w.lexer.do.not.use.h"
 )
 
 bison_target(
@@ -47,7 +50,7 @@ bison_target(
     "lib/grammar/joos1w_parser.y"
     "${PARSER_OUT}"
     DEFINES_FILE
-    "${PARSER_DIR}/parser.h"
+    "${PARSER_DIR}/joos1w.parser.tab.h"
     COMPILE_FLAGS
     "--report=state -v --locations --html --graph -k --color=always"
 )

@@ -58,21 +58,13 @@ int main(int argc, char** argv) {
          str = std::string(std::istreambuf_iterator<char>(std::cin), eos);
       }
 
-      // Now that we have the string, lex it
-      std::istringstream iss{str};
-      Joos1WLexer lexer{};
-      auto state = lexer.yy_create_buffer(iss, str.size());
-      lexer.yy_switch_to_buffer(state);
-
-      // Parse the tokens using Bison generated parser
+      // Parse the input
+      Joos1WParser parser{str};
       parsetree::Node* parse_tree = nullptr;
-      int result = yyparse(&parse_tree, lexer);
+      int result = parser.parse(parse_tree);
       if(!is_piped) {
          std::cout << "Result: " << result << std::endl;
       }
-
-      // Clean up lexer state
-      lexer.yy_delete_buffer(state);
 
       // Now print the parse tree
       if(parse_tree) {
@@ -81,7 +73,6 @@ int main(int argc, char** argv) {
          } else {
             std::cout << *parse_tree << std::endl;
          }
-         delete parse_tree;
       }
 
       if(is_piped) {

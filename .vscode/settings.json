@@ -13,5 +13,6 @@
   },
   "[cmake]": {
     "editor.tabSize": 8
-  }
+  },
+  "cmake.buildDirectory": "${workspaceFolder}/build"
 }

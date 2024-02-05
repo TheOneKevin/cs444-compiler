@@ -78,7 +78,7 @@ std::ostream& Identifier::print(std::ostream& os) const {
 }
 
 std::ostream& Literal::print(std::ostream& os) const {
-   std::string formattedValue = value;
+   std::string formattedValue{value};
    std::replace(formattedValue.begin(), formattedValue.end(), '\"', ' ');
    os << "(Literal " << Type_to_string(type, "??") << " " << formattedValue
       << ")";
