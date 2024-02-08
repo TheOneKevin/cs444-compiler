@@ -2,6 +2,7 @@
 
 #include "ast/AST.h"
 #include "parsetree/ParseTree.h"
+#include <list>
 
 namespace parsetree {
 
@@ -88,6 +89,10 @@ ast::Decl* visit<pty::InterfaceMemberDeclarationList>(Node* node);
 // Statements visitors /////////////////////////////////////////////////////////
 
 ast::Stmt* visitBlock(Node* node);
+
+// Expression visitors /////////////////////////////////////////////////////////
+
+std::list<ast::ExprOp> visitExpr(Node* node);
 
 // Leaf node visitors //////////////////////////////////////////////////////////
 
