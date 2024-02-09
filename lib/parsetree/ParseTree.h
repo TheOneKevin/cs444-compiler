@@ -76,7 +76,7 @@ struct Node {
    F(VariableDeclaratorList)            \
    /* Expressions  */                   \
    F(Expression)                        \
-   F(ArgumentList)                      \
+      F(ArgumentList)                      \
    F(FieldAccess)                       \
    F(ArrayAccess)                       \
    F(CastExpression)                    \
@@ -274,6 +274,8 @@ public:
    // Get the string representation of the operator
    std::string to_string() const;
 
+   Type get_type() const { return type; }
+   
 private:
    Type type;
 };

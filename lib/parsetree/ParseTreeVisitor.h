@@ -92,7 +92,9 @@ ast::Stmt* visitBlock(Node* node);
 
 // Expression visitors /////////////////////////////////////////////////////////
 
-std::list<ast::ExprOp> visitExpr(Node* node);
+std::list<ast::ExprNode> visitStatementExpression(Node* node);
+std::list<ast::ExprNode> visitExprChild(Node* node);
+std::list<ast::ExprNode> visitExpr(Node* node);
 
 // Leaf node visitors //////////////////////////////////////////////////////////
 

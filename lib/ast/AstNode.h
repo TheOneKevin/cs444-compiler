@@ -48,8 +48,6 @@ std::ostream& operator<<(std::ostream& os, const AstNode& astNode);
 
 // Other classes ///////////////////////////////////////////////////////////////
 
-class Expr;
-class ExprOp;
 class Modifiers {
    bool isPublic_;
    bool isProtected_;
