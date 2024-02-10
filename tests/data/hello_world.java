@@ -4,7 +4,7 @@ public class HelloWorld {
   // int test = another.object().method();
   // int nullField = null;
   public static void main(String[] args) {
-    a = 5;
+    a = (x [])y;
     // if (a.b("hello").y == b.c()) {}
   }
 

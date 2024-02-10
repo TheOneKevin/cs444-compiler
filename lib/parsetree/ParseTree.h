@@ -76,9 +76,10 @@ struct Node {
    F(VariableDeclaratorList)            \
    /* Expressions  */                   \
    F(Expression)                        \
-      F(ArgumentList)                      \
+   F(ArgumentList)                      \
    F(FieldAccess)                       \
    F(ArrayAccess)                       \
+   F(ArrayCastType)                     \
    F(CastExpression)                    \
    F(MethodInvocation)                  \
    F(ArrayCreationExpression)           \

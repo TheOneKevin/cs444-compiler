@@ -77,16 +77,137 @@ std::list<ast::ExprNode> visitExpr(parsetree::Node* node) {
 }
 
 // expression can have different types of children, so we need to visit them
-// possible nodes: expression, literal, qualifiedIdentifier, methodInvocation, 
-//                  arrayAccess, fieldAccess, castExpression, this, ClassInstanceCreationExpression
+// possible nodes: expression, literal, THIS, qualifiedIdentifier, methodInvocation,
+//                  arrayAccess, fieldAccess, castExpression, ArrayCreationExpression
+//                  ClassInstanceCreationExpression
 std::list<ast::ExprNode> visitExprChild(Node* node) {
-    if (node->get_node_type() == pty::Expression) {
-        return visitExpr(node);
-    } 
-    if (node->get_node_type() == pty::Literal) {
-
-    }
-    unreachable();
+   if(node->get_node_type() == pty::Expression) {
+      return visitExpr(node);
+   }
+   if(node->get_node_type() == pty::Literal) {
+      
+   }
+   if(node->get_node_type() == pty::QualifiedIdentifier) {
+      return visitQualifiedIdentifierInExpr(node);
+   }
+   if(node->get_node_type() == pty::MethodInvocation) {
+      return visitMethodInvocation(node);
+   }
+   if(node->get_node_type() == pty::ArrayAccess) {
+      return visitArrayAccess(node);
+   }
+   if(node->get_node_type() == pty::FieldAccess) {
+      return visitFieldAccess(node);
+   }
+   if(node->get_node_type() == pty::CastExpression) {
+      return visitCastExpression(node);
+   }
+   if(node->get_node_type() == pty::ArrayCreationExpression) {
+      return visitArrayCreation(node);
+   }
+   if(node->get_node_type() == pty::ClassInstanceCreationExpression) {
+      return visitClassCreation(node);
+   }
+   unreachable();
 }
+
+std::list<ast::ExprNode> visitQualifiedIdentifierInExpr(Node* node) {
+   check_node_type(node, pty::QualifiedIdentifier);
+   check_num_children(node, 1, 2);
+   std::list<ast::ExprNode> ops;
+   if(node->num_children() == 1) {
+      ops.push_back(ast::MemberName(visitIdentifier(node->child(1))));
+   } else if(node->num_children() == 2) {
+      ops = visitQualifiedIdentifierInExpr(node->child(0));
+      ops.push_back(ast::MemberName(visitIdentifier(node->child(1))));
+      ops.push_back(ast::MemberAccess());
+   }
+   return ops;
+}
+
+std::list<ast::ExprNode> visitMethodInvocation(Node* node) {
+   check_node_type(node, pty::MethodInvocation);
+   check_num_children(node, 2, 3);
+   std::list<ast::ExprNode> ops;
+   if(node->num_children() == 2) {
+      ops.splice(ops.end(), visitQualifiedIdentifierInExpr(node->child(0)));
+
+      std::list<ast::ExprNode> args;
+      visitArgumentList(node->child(1), args);
+      ops.splice(ops.end(), args);
+
+      ops.push_back(ast::MethodInvocation(args.size() + 1));
+      return ops;
+   } else if(node->num_children() == 3) {
+      ops.splice(ops.end(), visitExprChild(node->child(0)));
+      ops.push_back(ast::MemberName(visitIdentifier(node->child(1))));
+      ops.push_back(ast::MemberAccess());
+
+      std::list<ast::ExprNode> args;
+      visitArgumentList(node->child(2), args);
+      ops.splice(ops.end(), args);
+
+      ops.push_back(ast::MethodInvocation(args.size() + 1));
+      return ops;
+   }
+   unreachable();
+}
+
+std::list<ast::ExprNode> visitFieldAccess(Node* node) {
+   check_node_type(node, pty::FieldAccess);
+   check_num_children(node, 2, 2);
+   std::list<ast::ExprNode> ops;
+   ops.splice(ops.end(), visitExprChild(node->child(0)));
+   ops.push_back(ast::MemberName(visitIdentifier(node->child(1))));
+   ops.push_back(ast::MemberAccess());
+   return ops;
+}
+
+std::list<ast::ExprNode> visitClassCreation(Node* node) {
+   check_node_type(node, pty::ClassInstanceCreationExpression);
+   check_num_children(node, 2, 2);
+   std::list<ast::ExprNode> ops;
+   ops.push_back(ast::MemberName(visitIdentifier(node->child(0))));
+   std::list<ast::ExprNode> args;
+   visitArgumentList(node->child(1), args);
+   ops.splice(ops.end(), args);
+   ops.push_back(ast::ClassInstanceCreation(args.size() + 1));
+   return ops;
+}
+
+std::list<ast::ExprNode> visitArrayAccess(Node* node) {
+   check_node_type(node, pty::ArrayAccess);
+   check_num_children(node, 2, 2);
+   std::list<ast::ExprNode> ops;
+   ops.splice(ops.end(), visitExprChild(node->child(0)));
+   ops.splice(ops.end(), visitExpr(node->child(1)));
+   ops.push_back(ast::ArrayAccess());
+   return ops;
+}
+
+std::list<ast::ExprNode> visitArrayAccess(Node* node) {
+   check_node_type(node, pty::ArrayAccess);
+   check_num_children(node, 2, 2);
+   std::list<ast::ExprNode> ops;
+   ops.splice(ops.end(), visitExprChild(node->child(0)));
+   ops.splice(ops.end(), visitExpr(node->child(1)));
+   ops.push_back(ast::ArrayAccess());
+   return ops;
+}
+
+void visitArgumentList(Node* node, std::list<ast::ExprNode>& ops) {
+   if (node == nullptr) return;
+   check_node_type(node, pty::ArgumentList);
+   check_num_children(node, 1, 2);
+   if(node->num_children() == 1) {
+      ops.splice(ops.end(), visitExpr(node->child(0)));
+   } else if(node->num_children() == 2) {
+      visitArgumentList(node->child(0), ops);
+      ops.splice(ops.end(), visitExpr(node->child(1)));
+   }
+   return;
+}
+
+
 
 } // namespace parsetree

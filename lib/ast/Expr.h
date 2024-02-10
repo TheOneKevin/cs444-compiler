@@ -14,21 +14,16 @@ public:
 };
 
 class ExprNode {
-
+public:
+    virtual std::string toString() const {
+        return "ExprNode";
+    }
 };
 
-class TypeName: public ExprNode {
+class MemberName: public ExprNode {
     std::string name;
-};
-
-class Field: public ExprNode {
-    std::string name;
-    FieldDecl* decl; // populated by semantic analysis
-};
-
-class Method: public ExprNode {
-    std::string name;
-    MethodDecl* decl; // populated by semantic analysis
+public:
+    MemberName(std::string name) : name{name} {}
 };
 
 class ExprOp : public ExprNode {
@@ -38,20 +33,24 @@ private:
     int num_args;
 };
 
-class FieldAccess: public ExprOp {
+class MemberAccess: public ExprOp {
 public:
-    FieldAccess() : ExprOp(1) {}
-};
-
-class MethodAccess : public ExprOp {
-public:
-    MethodAccess() : ExprOp(1) {}
+    MemberAccess() : ExprOp(1) {}
 };
 
 class MethodInvocation : public ExprOp {
-    Method* method;
 public:
-    MethodInvocation(Method *method, int num_args) : ExprOp(num_args), method{method} {}
+    MethodInvocation(int num_args) : ExprOp(num_args) {}
+};
+
+class ClassInstanceCreation : public ExprOp {
+public:
+    ClassInstanceCreation(int num_args) : ExprOp(num_args) {}
+};
+
+class ArrayAccess : public ExprOp {
+public:
+    ArrayAccess() : ExprOp(2) {}
 };
 
 class UnaryOp : public ExprOp {
