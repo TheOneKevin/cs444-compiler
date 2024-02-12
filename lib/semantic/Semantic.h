@@ -1,29 +1,53 @@
 #pragma once
 
 #include "ast/AST.h"
+#include "utils/BumpAllocator.h"
 
 namespace ast {
 
 class Semantic {
-    using string = std::string;
+   using string = std::string;
+
 public:
-    /* ===----------------------------------------------------------------=== */
-    // ast/Decl.h
-    /* ===----------------------------------------------------------------=== */
+   Semantic(BumpAllocator& alloc) : alloc(alloc) {}
 
-    VarDecl* BuildVarDecl(Type* type, string name);
-    FieldDecl* BuildFieldDecl(Modifiers modifiers, Type* type, string name);
+public:
+   /* ===-----------------------------------------------------------------=== */
+   // ast/Decl.h
+   /* ===-----------------------------------------------------------------=== */
 
-    /* ===----------------------------------------------------------------=== */
-    // ast/DeclContext.h
-    /* ===----------------------------------------------------------------=== */
+   VarDecl* BuildVarDecl(Type* type, string_view name);
+   FieldDecl* BuildFieldDecl(Modifiers modifiers, Type* type, string_view name);
 
-    CompilationUnit* BuildCompilationUnit(QualifiedIdentifier* package,
-                                         std::vector<ImportDeclaration> imports,
-                                         DeclContext* body);
+   /* ===-----------------------------------------------------------------=== */
+   // ast/DeclContext.h
+   /* ===-----------------------------------------------------------------=== */
 
-    
+   CompilationUnit* BuildCompilationUnit(
+         QualifiedIdentifier* package,
+         array_ref<ImportDeclaration> imports,
+         DeclContext* body);
 
+   ClassDecl* BuildClassDecl(Modifiers modifiers,
+                             string_view name,
+                             QualifiedIdentifier* superClass,
+                             array_ref<QualifiedIdentifier*> interfaces,
+                             array_ref<Decl*> classBodyDecls);
+
+   InterfaceDecl* BuildInterfaceDecl(Modifiers modifiers,
+                                     string_view name,
+                                     array_ref<QualifiedIdentifier*> extends,
+                                     array_ref<Decl*> interfaceBodyDecls);
+
+   MethodDecl* BuildMethodDecl(Modifiers modifiers,
+                               string_view name,
+                               Type* returnType,
+                               array_ref<VarDecl*> parameters,
+                               bool isConstructor,
+                               Stmt* body);
+
+private:
+   BumpAllocator& alloc;
 };
 
 } // namespace ast

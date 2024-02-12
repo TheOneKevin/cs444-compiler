@@ -10,9 +10,11 @@
 #include <sstream>
 #include <vector>
 
+#include "utils/BumpAllocator.h"
+
 class Joos1WParser final {
 public:
-   Joos1WParser(std::string const& in, parsetree::BumpAllocator& alloc)
+   Joos1WParser(std::string const& in, BumpAllocator& alloc)
          : lexer{alloc}, iss{in} {
       buffer = lexer.yy_create_buffer(iss, in.size());
       lexer.yy_switch_to_buffer(buffer);
@@ -37,7 +39,7 @@ public:
 
 private:
    std::pmr::monotonic_buffer_resource mbr;
-   parsetree::BumpAllocator alloc;
+   BumpAllocator alloc;
    Joos1WLexer lexer;
    yy_buffer_state* buffer;
    std::istringstream iss;

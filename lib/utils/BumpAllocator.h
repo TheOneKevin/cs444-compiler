@@ -2,6 +2,8 @@
 
 #include <memory_resource>
 
+using BumpAllocator = std::pmr::polymorphic_allocator<std::byte>;
+
 class CustomBufferResource : public std::pmr::memory_resource {
 public:
    CustomBufferResource() : CustomBufferResource{128 * sizeof(void*)} {}

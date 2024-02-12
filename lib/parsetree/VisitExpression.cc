@@ -1,12 +1,13 @@
 #include "ParseTreeVisitor.h"
+#include <list>
 
 namespace parsetree {
 
 using pty = Node::Type;
 
-std::list<ast::ExprOp> visitExpr(parsetree::Node* node) {
+std::list<ast::ExprOp> ParseTreeVisitor::visitExpr(parsetree::Node* node) {
     if (node == nullptr) {
-        return list<ast::ExprOp>();
+        return std::list<ast::ExprOp>();
     }
     
 

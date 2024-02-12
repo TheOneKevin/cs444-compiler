@@ -5,15 +5,16 @@
 namespace parsetree {
 
 using pty = Node::Type;
+using ptv = ParseTreeVisitor;
 
-ast::CompilationUnit* visitCompilationUnit(Node* node) {
+ast::CompilationUnit* ptv::visitCompilationUnit(Node* node) {
    // Check the node we're visiting
    check_node_type(node, pty::CompilationUnit);
    check_num_children(node, 3, 3);
    // $1: Visit the package declaration
    auto package = visitPackageDeclaration(node->child(0));
    // $2: Visit the import declarations
-   std::vector<ast::ImportDeclaration> imports;
+   ast::pmr_vector<ast::ImportDeclaration> imports;
    visitListPattern<pty::ImportDeclarationList, ast::ImportDeclaration, true>(
          node->child(1), imports);
    // $3: Visit the body, if it is not null
@@ -26,10 +27,10 @@ ast::CompilationUnit* visitCompilationUnit(Node* node) {
       }
    }
    // Return the constructed AST node
-   return new ast::CompilationUnit{package, imports, body_ast_node};
+   return sem.BuildCompilationUnit(package, imports, body_ast_node);
 }
 
-ast::QualifiedIdentifier* visitPackageDeclaration(Node* node) {
+ast::QualifiedIdentifier* ptv::visitPackageDeclaration(Node* node) {
    if(node == nullptr) return nullptr;
    check_node_type(node, pty::PackageDeclaration);
    check_num_children(node, 1, 1);
@@ -37,7 +38,7 @@ ast::QualifiedIdentifier* visitPackageDeclaration(Node* node) {
 }
 
 template <>
-ast::ImportDeclaration visit<pty::ImportDeclarationList>(Node* node) {
+ast::ImportDeclaration ptv::visit<pty::ImportDeclarationList>(Node* node) {
    check_num_children(node, 1, 1);
    auto id = visitQualifiedIdentifier(node->child(0));
    if(node->get_node_type() == pty::SingleTypeImportDeclaration) {

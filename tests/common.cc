@@ -19,7 +19,11 @@ bool testing::build_ast(const string& str) {
    int result = parser.parse(parse_tree);
    if(!parse_tree || result != 0) return false;
    try {
-      auto ast = parsetree::visitCompilationUnit(parse_tree);
+      // FIXME(kevin): We should fix the allocator API... this is quite ugly
+      std::pmr::monotonic_buffer_resource mbr{};
+      BumpAllocator alloc{&mbr};
+      parsetree::ParseTreeVisitor visitor{alloc};
+      auto ast = visitor.visitCompilationUnit(parse_tree);
       (void)ast;
       return true;
    } catch(...) {

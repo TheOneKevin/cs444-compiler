@@ -7,6 +7,7 @@
 #include <type_traits>
 
 #include "utils/EnumMacros.h"
+#include "utils/BumpAllocator.h"
 
 class Joos1WLexer;
 class Joos1WParser;
@@ -19,8 +20,6 @@ class Identifier;
 class Operator;
 class Modifier;
 class BasicType;
-
-using BumpAllocator = std::pmr::polymorphic_allocator<std::byte>;
 
 /// @brief The basic type-tagged node in the parse tree.
 struct Node {

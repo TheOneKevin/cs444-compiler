@@ -4,8 +4,9 @@
 namespace parsetree {
 
 using pty = Node::Type;
+using ptv = ParseTreeVisitor;
 
-ast::QualifiedIdentifier* visitQualifiedIdentifier(
+ast::QualifiedIdentifier* ptv::visitQualifiedIdentifier(
       Node* node, ast::QualifiedIdentifier* ast_node) {
    check_node_type(node, pty::QualifiedIdentifier);
    check_num_children(node, 1, 2);
@@ -23,12 +24,12 @@ ast::QualifiedIdentifier* visitQualifiedIdentifier(
    unreachable();
 }
 
-std::string visitIdentifier(Node* node) {
+std::string ptv::visitIdentifier(Node* node) {
    check_node_type(node, pty::Identifier);
    return dynamic_cast<Identifier*>(node)->get_name();
 }
 
-ast::Modifiers visitModifierList(Node* node, ast::Modifiers modifiers) {
+ast::Modifiers ptv::visitModifierList(Node* node, ast::Modifiers modifiers) {
    if(node == nullptr) {
       return modifiers;
    }
@@ -45,12 +46,12 @@ ast::Modifiers visitModifierList(Node* node, ast::Modifiers modifiers) {
    unreachable();
 }
 
-Modifier visitModifier(Node* node) {
+Modifier ptv::visitModifier(Node* node) {
    check_node_type(node, pty::Modifier);
    return *dynamic_cast<Modifier*>(node);
 }
 
-ast::Type* visitType(Node* node) {
+ast::Type* ptv::visitType(Node* node) {
    check_num_children(node, 1, 1);
    auto innerTy = node;
    innerTy = node->child(0);

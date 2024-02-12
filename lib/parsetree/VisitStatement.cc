@@ -5,10 +5,11 @@
 namespace parsetree {
 
 using pty = Node::Type;
+using ptv = ParseTreeVisitor;
 
 // pty::Block //////////////////////////////////////////////////////////////////
 
-ast::Stmt* visitBlock(Node* node) {
+ast::Stmt* ptv::visitBlock(Node* node) {
    check_node_type(node, pty::Block);
    check_num_children(node, 1, 1);
    if(node->child(0) == nullptr) return new ast::CompoundStmt{};

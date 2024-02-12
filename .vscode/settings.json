@@ -8,11 +8,17 @@
   "cmake.sourceDirectory": "${workspaceFolder}",
   "editor.indentSize": "tabSize",
   "editor.tabSize": 4,
-  "[c,cpp]": {
-    "editor.tabSize": 3
+  "[cpp]": {
+    "editor.tabSize": 3,
+    "editor.detectIndentation": false,
+    "editor.indentSize": "tabSize"
   },
   "[cmake]": {
     "editor.tabSize": 8
   },
-  "cmake.buildDirectory": "${workspaceFolder}/build"
+  "cmake.buildDirectory": "${workspaceFolder}/build",
+  "todo-tree.filtering.excludeGlobs": [
+    "**/node_modules/*/**",
+    "**/build/*/**"
+  ]
 }

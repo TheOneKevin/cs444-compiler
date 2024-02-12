@@ -1,107 +1,120 @@
 #pragma once
 
+#include <list>
+
 #include "ast/AST.h"
 #include "parsetree/ParseTree.h"
-#include <list>
+#include "semantic/Semantic.h"
 
 namespace parsetree {
 
-using pty = Node::Type;
+class ParseTreeVisitor {
+   using pty = Node::Type;
 
-// Basic helper functions //////////////////////////////////////////////////////
+public:
+   ParseTreeVisitor(BumpAllocator& astAlloc) : sem{astAlloc} {}
 
-static inline void check_node_type(Node* node, Node::Type type) {
-   if(node->get_node_type() != type) {
-      throw std::runtime_error(
-            "Called on a node that is not the correct type!"
-            " Expected: " +
-            Node::type_string(type) + " Actual: " + node->type_string());
+private:
+   // Basic helper functions ///////////////////////////////////////////////////
+
+   static inline void check_node_type(Node* node, Node::Type type) {
+      if(node->get_node_type() != type) {
+         throw std::runtime_error(
+               "Called on a node that is not the correct type!"
+               " Expected: " +
+               Node::type_string(type) + " Actual: " + node->type_string());
+      }
    }
-}
 
-static inline void check_num_children(Node* node, size_t min, size_t max) {
-   if(node->num_children() < min || node->num_children() > max) {
-      throw std::runtime_error(
-            "Node has incorrect number of children!"
-            " Type: " +
-            node->type_string() + " Expected: " + std::to_string(min) + " to " +
-            std::to_string(max) +
-            " Actual: " + std::to_string(node->num_children()));
+   static inline void check_num_children(Node* node, size_t min, size_t max) {
+      if(node->num_children() < min || node->num_children() > max) {
+         throw std::runtime_error(
+               "Node has incorrect number of children!"
+               " Type: " +
+               node->type_string() + " Expected: " + std::to_string(min) +
+               " to " + std::to_string(max) +
+               " Actual: " + std::to_string(node->num_children()));
+      }
    }
-}
 
-[[noreturn]] static inline void unreachable() {
-   throw std::runtime_error("Unreachable code reached!");
-}
-
-// Templated visitor patterns //////////////////////////////////////////////////
-
-// NOTE(kevin): Technically we can re-implement all our visitors using the
-// template patterns. However, the syntax is ugly at best. We only use these
-// for the list patterns, which are more tedious and benefit from templates.
-
-template <parsetree::Node::Type N, typename T>
-T visit(Node* node) {
-   throw std::runtime_error("No visitor for node type " + node->type_string());
-}
-
-template <parsetree::Node::Type N, typename T, bool nullable = false>
-void visitListPattern(Node* node, std::vector<T>& list) {
-   if(nullable && node == nullptr) return;
-   if(!nullable && node == nullptr)
-      throw std::runtime_error("Visited a null node!");
-   check_node_type(node, N);
-   check_num_children(node, 1, 2);
-   if(node->num_children() == 1) {
-      list.push_back(visit<N, T>(node->child(0)));
-   } else if(node->num_children() == 2) {
-      visitListPattern<N, T, nullable>(node->child(0), list);
-      list.push_back(visit<N, T>(node->child(1)));
+   [[noreturn]] static inline void unreachable() {
+      throw std::runtime_error("Unreachable code reached!");
    }
-}
 
-// Compilation unit visitors ///////////////////////////////////////////////////
+   // Templated visitor patterns ///////////////////////////////////////////////
 
-ast::CompilationUnit* visitCompilationUnit(Node* node);
-ast::QualifiedIdentifier* visitPackageDeclaration(Node* node);
-template <>
-ast::ImportDeclaration visit<pty::ImportDeclarationList>(Node* node);
+   // NOTE(kevin): Technically we can re-implement all our visitors using the
+   // template patterns. However, the syntax is ugly at best. We only use these
+   // for the list patterns, which are more tedious and benefit from templates.
 
-// Classes & interfaces visitors ///////////////////////////////////////////////
+   template <parsetree::Node::Type N, typename T>
+   T visit(Node* node) {
+      throw std::runtime_error("No visitor for node type " +
+                               node->type_string());
+   }
 
-ast::ClassDecl* visitClassDeclaration(Node* node);
-ast::InterfaceDecl* visitInterfaceDeclaration(Node* node);
-ast::QualifiedIdentifier* visitSuperOpt(Node* node);
-ast::FieldDecl* visitFieldDeclaration(Node* node);
-ast::MethodDecl* visitMethodDeclaration(Node* node);
-ast::MethodDecl* visitConstructorDeclaration(Node* node);
-ast::MethodDecl* visitAbstractMethodDeclaration(Node* node);
+   template <parsetree::Node::Type N, typename T, bool nullable = false>
+   void visitListPattern(Node* node, ast::array_ref<T> list) {
+      if(nullable && node == nullptr) return;
+      if(!nullable && node == nullptr)
+         throw std::runtime_error("Visited a null node!");
+      check_node_type(node, N);
+      check_num_children(node, 1, 2);
+      if(node->num_children() == 1) {
+         list.push_back(visit<N, T>(node->child(0)));
+      } else if(node->num_children() == 2) {
+         visitListPattern<N, T, nullable>(node->child(0), list);
+         list.push_back(visit<N, T>(node->child(1)));
+      }
+   }
 
-template <>
-ast::Decl* visit<pty::ClassBodyDeclarationList>(Node* node);
-template <>
-ast::VarDecl* visit<pty::VariableDeclaratorList>(Node* node);
-template <>
-ast::VarDecl* visit<pty::FormalParameterList>(Node* node);
-template <>
-ast::Decl* visit<pty::InterfaceMemberDeclarationList>(Node* node);
+public:
+   // Compilation unit visitors ////////////////////////////////////////////////
 
-// Statements visitors /////////////////////////////////////////////////////////
+   ast::CompilationUnit* visitCompilationUnit(Node* node);
+   ast::QualifiedIdentifier* visitPackageDeclaration(Node* node);
+   template <>
+   ast::ImportDeclaration visit<pty::ImportDeclarationList>(Node* node);
 
-ast::Stmt* visitBlock(Node* node);
+   // Classes & interfaces visitors ////////////////////////////////////////////
 
-// Expression visitors /////////////////////////////////////////////////////////
+   ast::ClassDecl* visitClassDeclaration(Node* node);
+   ast::InterfaceDecl* visitInterfaceDeclaration(Node* node);
+   ast::QualifiedIdentifier* visitSuperOpt(Node* node);
+   ast::FieldDecl* visitFieldDeclaration(Node* node);
+   ast::MethodDecl* visitMethodDeclaration(Node* node);
+   ast::MethodDecl* visitConstructorDeclaration(Node* node);
+   ast::MethodDecl* visitAbstractMethodDeclaration(Node* node);
 
-std::list<ast::ExprOp> visitExpr(Node* node);
+   template <>
+   ast::Decl* visit<pty::ClassBodyDeclarationList>(Node* node);
+   template <>
+   ast::VarDecl* visit<pty::VariableDeclaratorList>(Node* node);
+   template <>
+   ast::VarDecl* visit<pty::FormalParameterList>(Node* node);
+   template <>
+   ast::Decl* visit<pty::InterfaceMemberDeclarationList>(Node* node);
 
-// Leaf node visitors //////////////////////////////////////////////////////////
+   // Statements visitors //////////////////////////////////////////////////////
 
-ast::QualifiedIdentifier* visitQualifiedIdentifier(
-      Node* node, ast::QualifiedIdentifier* ast_node = nullptr);
-std::string visitIdentifier(Node* node);
-ast::Modifiers visitModifierList(Node* node,
-                                 ast::Modifiers modifiers = ast::Modifiers{});
-Modifier visitModifier(Node* node);
-ast::Type* visitType(Node* node);
+   ast::Stmt* visitBlock(Node* node);
+
+   // Expression visitors //////////////////////////////////////////////////////
+
+   std::list<ast::ExprOp> visitExpr(Node* node);
+
+   // Leaf node visitors ///////////////////////////////////////////////////////
+
+   ast::QualifiedIdentifier* visitQualifiedIdentifier(
+         Node* node, ast::QualifiedIdentifier* ast_node = nullptr);
+   std::string visitIdentifier(Node* node);
+   ast::Modifiers visitModifierList(
+         Node* node, ast::Modifiers modifiers = ast::Modifiers{});
+   Modifier visitModifier(Node* node);
+   ast::Type* visitType(Node* node);
+
+private:
+   ast::Semantic sem;
+};
 
 } // namespace parsetree

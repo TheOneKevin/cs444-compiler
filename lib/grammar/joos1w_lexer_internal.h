@@ -5,6 +5,7 @@
 
 #include "joos1w.parser.tab.h"
 #include "parsetree/ParseTree.h"
+#include "utils/BumpAllocator.h"
 
 class Joos1WParser;
 
@@ -18,7 +19,7 @@ class Joos1WLexer : public yyFlexLexer {
    friend class Joos1WParser;
 
 private:
-   Joos1WLexer(parsetree::BumpAllocator& alloc) : yycolumn{1}, alloc{alloc} {}
+   Joos1WLexer(BumpAllocator& alloc) : yycolumn{1}, alloc{alloc} {}
 
 public:
    // This is the generate Flex lexer function
@@ -60,5 +61,5 @@ private:
    YYLTYPE yylloc;
    YYSTYPE yylval;
    int yycolumn;
-   parsetree::BumpAllocator& alloc;
+   BumpAllocator& alloc;
 };

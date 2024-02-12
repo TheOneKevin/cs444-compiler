@@ -5,47 +5,38 @@
 namespace ast {
 
 class TypedDecl : public Decl {
-   Type* type;
-
 public:
-   TypedDecl(Type* type, std::string name) : Decl{name}, type{type} {}
-   Type* getType() const { return type; }
+   TypedDecl(BumpAllocator& alloc, Type* type, string_view name) noexcept
+         : Decl{alloc, name}, type_{type} {}
+   Type* type() const { return type_; }
+
+private:
+   Type* type_;
 };
 
 class VarDecl : public TypedDecl {
-   Stmt* init;
-
 public:
-   VarDecl(Type* type, std::string name) : TypedDecl{type, name} {}
-   bool hasInit() const { return init != nullptr; }
-   Stmt* getInit() const { return init; }
+   VarDecl(BumpAllocator& alloc, Type* type, string_view name) noexcept
+         : TypedDecl{alloc, type, name} {}
+   bool hasInit() const { return init_ != nullptr; }
+   Stmt* init() const { return init_; }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
+
+private:
+   Stmt* init_;
 };
 
 class FieldDecl : public VarDecl {
-   Modifiers modifiers;
-
 public:
-   FieldDecl(Modifiers modifiers, Type* type, std::string name)
-         : VarDecl{type, name}, modifiers{modifiers} {
-      if(modifiers.isFinal()) {
-         throw std::runtime_error("FieldDecl cannot be final");
-      }
-      if(modifiers.isAbstract()) {
-         throw std::runtime_error("FieldDecl cannot be abstract");
-      }
-      if(modifiers.isNative()) {
-         throw std::runtime_error("FieldDecl cannot be native");
-      }
-      if(modifiers.isPublic() && modifiers.isProtected()) {
-         throw std::runtime_error(
-               "A method cannot be both public and protected. " + name);
-      }
-      if(!modifiers.isPublic() && !modifiers.isProtected()) {
-         throw std::runtime_error("Field must have a visibility modifier");
-      }
-   };
+   FieldDecl(BumpAllocator& alloc,
+             Modifiers modifiers,
+             Type* type,
+             string_view name) noexcept
+         : VarDecl{alloc, type, name}, modifiers{modifiers} {};
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
+
+private:
+   Modifiers modifiers;
 };
 
 } // namespace ast

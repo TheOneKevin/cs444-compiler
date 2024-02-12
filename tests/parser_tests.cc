@@ -13,7 +13,7 @@
 namespace {
 
 // FIXME(kevin): This is a hack! We should move this to custom.cc instead
-bool my_parse_grammar(const string& str, parsetree::BumpAllocator& alloc) {
+bool my_parse_grammar(const string& str, BumpAllocator& alloc) {
    Joos1WParser parser{str, alloc};
    parsetree::Node* parse_tree = nullptr;
    int result = parser.parse(parse_tree);
@@ -26,7 +26,7 @@ bool my_parse_grammar(const string& str, parsetree::BumpAllocator& alloc) {
 TEST(ParserTests, SimpleGrammar) {
    testing::BasicGrammarGenerator g{};
    CustomBufferResource mbr{4096};
-   parsetree::BumpAllocator alloc{&mbr};
+   BumpAllocator alloc{&mbr};
    for(auto x : g.match_string("class T{void f(){$<stmt>$}}")) {
       mbr.reset();
       if(!::my_parse_grammar(x, alloc)) {

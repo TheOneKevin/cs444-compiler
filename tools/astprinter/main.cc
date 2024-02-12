@@ -25,7 +25,11 @@ int main() {
       return 1;
    }
 
-   ast::CompilationUnit* ast = parsetree::visitCompilationUnit(parse_tree);
+   // FIXME(kevin): We should fix the allocator API... this is quite ugly
+   std::pmr::monotonic_buffer_resource mbr{};
+   BumpAllocator alloc{&mbr};
+   parsetree::ParseTreeVisitor visitor{alloc};
+   ast::CompilationUnit* ast = visitor.visitCompilationUnit(parse_tree);
    ast->print(std::cout);
 
    return 0;

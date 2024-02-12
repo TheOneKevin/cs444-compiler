@@ -87,7 +87,8 @@ int main(int argc, char** argv) {
    ast::CompilationUnit* ast = nullptr;
    try {
       if(parse_tree->is_poisoned()) throw parse_error();
-      ast = parsetree::visitCompilationUnit(parse_tree);
+      // FIXME(kevin): Patch this!
+      // ast = parsetree::visitCompilationUnit(parse_tree);
    } catch(const std::runtime_error& re) {
       std::cerr << "Runtime error: " << re.what() << std::endl;
       return 42;
@@ -98,7 +99,7 @@ int main(int argc, char** argv) {
    if(!ast) return 42;
 
    // Check the AST to make sure the class/intf has the same name as file
-   auto cuBody = dynamic_cast<ast::Decl*>(ast->getBody());
+   auto cuBody = dynamic_cast<ast::Decl*>(ast->body());
    fileName = fileName.substr(0, fileName.length() - 5);
    if(cuBody->getName() != fileName) {
       std::cerr << "Parse error: class/interface name does not match file name"

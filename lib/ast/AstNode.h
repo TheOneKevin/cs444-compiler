@@ -8,6 +8,12 @@
 
 namespace ast {
 
+template <typename T>
+using pmr_vector = std::pmr::vector<T>;
+template <typename T>
+using array_ref = std::pmr::vector<T>&;
+using std::string_view;
+
 // Base class for all AST nodes ////////////////////////////////////////////////
 
 class Type;
@@ -25,11 +31,13 @@ public:
 };
 
 class Decl : public AstNode {
-   std::string name;
-
 public:
-   Decl(std::string name) : name{name} {}
-   std::string getName() const { return name; }
+   Decl(BumpAllocator& alloc, std::string_view name) noexcept
+         : name{name, alloc} {}
+   std::string_view getName() const { return name; }
+
+private:
+   std::pmr::string name;
 };
 
 class DeclContext : public AstNode {};

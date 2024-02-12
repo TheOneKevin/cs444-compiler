@@ -651,7 +651,7 @@ std::string joos1w_parser_resolve_token (int yysymbol) {
 static void yyerror(YYLTYPE* yylloc, YYSTYPE* ret, Joos1WLexer& lexer, const char* s) {
     (void) ret;
     (void) lexer;
-    // TODO: Grab the location somehow
+    // FIXME(kevin): Grab the location somehow
     std::cerr << "Parse error: " << s << std::endl;
     std::cerr
         << "At: "

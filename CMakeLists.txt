@@ -18,7 +18,7 @@ if (${FORCE_COLORED_OUTPUT})
 endif()
 
 # Set debug mode flags
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -Wpedantic -Wno-unused-function -g -Og")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -Wpedantic -Wno-unused-function -Wno-unused-private-field -g -Og")
 
 # Set release mode flags
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
@@ -82,6 +82,8 @@ add_library(OLKCompilerLib
     "lib/ast/Expr.cc"
     "lib/ast/Stmt.cc"
     "lib/ast/Modifiers.cc"
+    # semantic
+    "lib/semantic/Semantic.cc"
     # grammar
     "lib/grammar/Joos1W.cc"
     # parsetree
