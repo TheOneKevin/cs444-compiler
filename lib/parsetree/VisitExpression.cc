@@ -4,56 +4,57 @@
 namespace parsetree {
 
 using pty = Node::Type;
-using opType = Operator::Type;
+using ptv = ParseTreeVisitor;
 
-std::list<ast::ExprNode> visitStatementExpression(Node* node) {
+std::list<ast::ExprNode> ptv::visitStatementExpression(Node* node) {
    check_node_type(node, pty::StatementExpression);
    check_num_children(node, 1, 1);
 }
 
-ast::BinaryOp convertToBinaryOp(opType type) {
+static ast::BinaryOp convertToBinaryOp(Operator::Type type) {
+   using oty = Operator::Type;
    switch(type) {
-      case opType::Assign:
+      case oty::Assign:
          return ast::BinaryOp(ast::BinaryOp::OpType::Assignment);
-      case opType::Or:
+      case oty::Or:
          return ast::BinaryOp(ast::BinaryOp::OpType::Or);
-      case opType::And:
+      case oty::And:
          return ast::BinaryOp(ast::BinaryOp::OpType::And);
-      case opType::BitwiseOr:
+      case oty::BitwiseOr:
          return ast::BinaryOp(ast::BinaryOp::OpType::BitwiseOr);
-      case opType::BitwiseXor:
+      case oty::BitwiseXor:
          return ast::BinaryOp(ast::BinaryOp::OpType::BitwiseXor);
-      case opType::BitwiseAnd:
+      case oty::BitwiseAnd:
          return ast::BinaryOp(ast::BinaryOp::OpType::BitwiseAnd);
-      case opType::Equal:
+      case oty::Equal:
          return ast::BinaryOp(ast::BinaryOp::OpType::Equal);
-      case opType::NotEqual:
+      case oty::NotEqual:
          return ast::BinaryOp(ast::BinaryOp::OpType::NotEqual);
-      case opType::LessThan:
+      case oty::LessThan:
          return ast::BinaryOp(ast::BinaryOp::OpType::LessThan);
          break;
-      case opType::LessThanOrEqual:
+      case oty::LessThanOrEqual:
          return ast::BinaryOp(ast::BinaryOp::OpType::LessThanOrEqual);
-      case opType::GreaterThan:
+      case oty::GreaterThan:
          return ast::BinaryOp(ast::BinaryOp::OpType::GreaterThan);
-      case opType::GreaterThanOrEqual:
+      case oty::GreaterThanOrEqual:
          return ast::BinaryOp(ast::BinaryOp::OpType::GreaterThanOrEqual);
-      case opType::InstanceOf:
+      case oty::InstanceOf:
          return ast::BinaryOp(ast::BinaryOp::OpType::InstanceOf);
-      case opType::Add:
+      case oty::Add:
          return ast::BinaryOp(ast::BinaryOp::OpType::Add);
-      case opType::Subtract:
+      case oty::Subtract:
          return ast::BinaryOp(ast::BinaryOp::OpType::Subtract);
-      case opType::Multiply:
+      case oty::Multiply:
          return ast::BinaryOp(ast::BinaryOp::OpType::Multiply);
-      case opType::Divide:
+      case oty::Divide:
          return ast::BinaryOp(ast::BinaryOp::OpType::Divide);
-      case opType::Modulo:
+      case oty::Modulo:
          return ast::BinaryOp(ast::BinaryOp::OpType::Modulo);
    }
 }
 
-std::list<ast::ExprNode> visitExpr(parsetree::Node* node) {
+std::list<ast::ExprNode> ptv::visitExpr(parsetree::Node* node) {
    check_node_type(node, pty::Expression);
    check_num_children(node, 1, 3);
    if(node->num_children() == 1) {
@@ -81,7 +82,7 @@ std::list<ast::ExprNode> visitExpr(parsetree::Node* node) {
 // possible nodes: expression, literal, THIS, qualifiedIdentifier, methodInvocation,
 //                  arrayAccess, fieldAccess, castExpression, ArrayCreationExpression
 //                  ClassInstanceCreationExpression
-std::list<ast::ExprNode> visitExprChild(Node* node) {
+std::list<ast::ExprNode> ptv::visitExprChild(Node* node) {
    if(node->get_node_type() == pty::Expression) {
       return visitExpr(node);
    }
@@ -112,7 +113,7 @@ std::list<ast::ExprNode> visitExprChild(Node* node) {
    unreachable();
 }
 
-std::list<ast::ExprNode> visitQualifiedIdentifierInExpr(Node* node) {
+std::list<ast::ExprNode> ptv::visitQualifiedIdentifierInExpr(Node* node) {
    check_node_type(node, pty::QualifiedIdentifier);
    check_num_children(node, 1, 2);
    std::list<ast::ExprNode> ops;
@@ -126,7 +127,7 @@ std::list<ast::ExprNode> visitQualifiedIdentifierInExpr(Node* node) {
    return ops;
 }
 
-std::list<ast::ExprNode> visitMethodInvocation(Node* node) {
+std::list<ast::ExprNode> ptv::visitMethodInvocation(Node* node) {
    check_node_type(node, pty::MethodInvocation);
    check_num_children(node, 2, 3);
    std::list<ast::ExprNode> ops;
@@ -154,7 +155,7 @@ std::list<ast::ExprNode> visitMethodInvocation(Node* node) {
    unreachable();
 }
 
-std::list<ast::ExprNode> visitFieldAccess(Node* node) {
+std::list<ast::ExprNode> ptv::visitFieldAccess(Node* node) {
    check_node_type(node, pty::FieldAccess);
    check_num_children(node, 2, 2);
    std::list<ast::ExprNode> ops;
@@ -164,7 +165,7 @@ std::list<ast::ExprNode> visitFieldAccess(Node* node) {
    return ops;
 }
 
-std::list<ast::ExprNode> visitClassCreation(Node* node) {
+std::list<ast::ExprNode> ptv::visitClassCreation(Node* node) {
    check_node_type(node, pty::ClassInstanceCreationExpression);
    check_num_children(node, 2, 2);
    std::list<ast::ExprNode> ops;
@@ -176,7 +177,7 @@ std::list<ast::ExprNode> visitClassCreation(Node* node) {
    return ops;
 }
 
-std::list<ast::ExprNode> visitArrayAccess(Node* node) {
+std::list<ast::ExprNode> ptv::visitArrayAccess(Node* node) {
    check_node_type(node, pty::ArrayAccess);
    check_num_children(node, 2, 2);
    std::list<ast::ExprNode> ops;
@@ -186,17 +187,7 @@ std::list<ast::ExprNode> visitArrayAccess(Node* node) {
    return ops;
 }
 
-std::list<ast::ExprNode> visitArrayAccess(Node* node) {
-   check_node_type(node, pty::ArrayAccess);
-   check_num_children(node, 2, 2);
-   std::list<ast::ExprNode> ops;
-   ops.splice(ops.end(), visitExprChild(node->child(0)));
-   ops.splice(ops.end(), visitExpr(node->child(1)));
-   ops.push_back(ast::ArrayAccess());
-   return ops;
-}
-
-void visitArgumentList(Node* node, std::list<ast::ExprNode>& ops) {
+void ptv::visitArgumentList(Node* node, std::list<ast::ExprNode>& ops) {
    if (node == nullptr) return;
    check_node_type(node, pty::ArgumentList);
    check_num_children(node, 1, 2);

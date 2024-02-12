@@ -18,6 +18,7 @@ public:
     virtual std::string toString() const {
         return "ExprNode";
     }
+    virtual ~ExprNode() = default;
 };
 
 class MemberName: public ExprNode {

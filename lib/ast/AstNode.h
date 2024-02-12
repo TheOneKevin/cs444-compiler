@@ -28,6 +28,7 @@ static std::string indent(int indentation) {
 class AstNode {
 public:
    virtual std::ostream& print(std::ostream& os, int indentation = 0) const = 0;
+   virtual ~AstNode() = default;
 };
 
 class Decl : public AstNode {
