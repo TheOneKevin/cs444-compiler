@@ -23,10 +23,9 @@ public:
    // ast/DeclContext.h
    /* ===-----------------------------------------------------------------=== */
 
-   CompilationUnit* BuildCompilationUnit(
-         QualifiedIdentifier* package,
-         array_ref<ImportDeclaration> imports,
-         DeclContext* body);
+   CompilationUnit* BuildCompilationUnit(QualifiedIdentifier* package,
+                                         array_ref<ImportDeclaration> imports,
+                                         DeclContext* body);
 
    ClassDecl* BuildClassDecl(Modifiers modifiers,
                              string_view name,

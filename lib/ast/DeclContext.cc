@@ -127,7 +127,8 @@ ostream& MethodDecl::print(ostream& os, int indentation) const {
    os << i1 << "MethodDecl {\n"
       << i2 << "modifiers: " << modifiers_.toString() << "\n"
       << i2 << "name: " << this->getName() << "\n"
-      << i2 << "returnType: " << (returnType_ ? returnType_->toString() : "null")
+      << i2
+      << "returnType: " << (returnType_ ? returnType_->toString() : "null")
       << "\n"
       << i2 << "parameters:\n";
    for(auto& parameter : parameters_) {

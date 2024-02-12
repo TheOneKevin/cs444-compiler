@@ -1,5 +1,6 @@
-#include "ParseTreeVisitor.h"
 #include <list>
+
+#include "ParseTreeVisitor.h"
 
 namespace parsetree {
 
@@ -79,15 +80,15 @@ std::list<ast::ExprNode> ptv::visitExpr(parsetree::Node* node) {
 }
 
 // expression can have different types of children, so we need to visit them
-// possible nodes: expression, literal, THIS, qualifiedIdentifier, methodInvocation,
-//                  arrayAccess, fieldAccess, castExpression, ArrayCreationExpression
-//                  ClassInstanceCreationExpression
+// possible nodes: expression, literal, THIS, qualifiedIdentifier,
+// methodInvocation,
+//                  arrayAccess, fieldAccess, castExpression,
+//                  ArrayCreationExpression ClassInstanceCreationExpression
 std::list<ast::ExprNode> ptv::visitExprChild(Node* node) {
    if(node->get_node_type() == pty::Expression) {
       return visitExpr(node);
    }
    if(node->get_node_type() == pty::Literal) {
-      
    }
    if(node->get_node_type() == pty::QualifiedIdentifier) {
       return visitQualifiedIdentifierInExpr(node);
@@ -188,7 +189,7 @@ std::list<ast::ExprNode> ptv::visitArrayAccess(Node* node) {
 }
 
 void ptv::visitArgumentList(Node* node, std::list<ast::ExprNode>& ops) {
-   if (node == nullptr) return;
+   if(node == nullptr) return;
    check_node_type(node, pty::ArgumentList);
    check_num_children(node, 1, 2);
    if(node->num_children() == 1) {
@@ -199,7 +200,5 @@ void ptv::visitArgumentList(Node* node, std::list<ast::ExprNode>& ops) {
    }
    return;
 }
-
-
 
 } // namespace parsetree

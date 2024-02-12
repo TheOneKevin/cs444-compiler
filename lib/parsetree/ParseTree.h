@@ -6,8 +6,8 @@
 #include <string>
 #include <type_traits>
 
-#include "utils/EnumMacros.h"
 #include "utils/BumpAllocator.h"
+#include "utils/EnumMacros.h"
 
 class Joos1WLexer;
 class Joos1WParser;
@@ -275,7 +275,7 @@ public:
    std::string to_string() const;
 
    Type get_type() const { return type; }
-   
+
 private:
    Type type;
 };

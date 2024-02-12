@@ -17,8 +17,5 @@
     "editor.tabSize": 8
   },
   "cmake.buildDirectory": "${workspaceFolder}/build",
-  "todo-tree.filtering.excludeGlobs": [
-    "**/node_modules/*/**",
-    "**/build/*/**"
-  ]
+  "todo-tree.filtering.excludeGlobs": ["**/node_modules/*/**", "**/build/*/**"]
 }
