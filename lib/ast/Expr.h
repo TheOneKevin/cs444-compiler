@@ -5,41 +5,55 @@
 #include <list>
 
 namespace ast {
+
+class ExprNode;
 class Expr : public AstNode {
-    std::list<ExprOp> rpn_ops;
+    std::list<ExprNode> rpn_ops;
 public: 
     
 };
 
-class ExprOp {
+class ExprNode {
+public:
+    virtual std::string toString() const {
+        return "ExprNode";
+    }
+};
+
+class MemberName: public ExprNode {
+    std::string name;
+public:
+    MemberName(std::string name) : name{name} {}
+};
+
+class ExprOp : public ExprNode {
 protected:
     ExprOp(int num_args) : num_args{num_args} {}
 private:
     int num_args;
 };
 
-class LiteralOp : ExprOp {
-    std::string value;
-};
-
-class FunctionOp : ExprOp {
-    std::string name;
+class MemberAccess: public ExprOp {
 public:
-    FunctionOp(std::string name) : ExprOp(0), name(name) {
-
-    }
+    MemberAccess() : ExprOp(1) {}
 };
 
-class CallOp : ExprOp {
-    std::string name;  
-};
-class IdentifierOp : ExprOp {
-    std::string name;
+class MethodInvocation : public ExprOp {
 public:
-    IdentifierOp(std::string name) : ExprOp(0), name(name) {}
+    MethodInvocation(int num_args) : ExprOp(num_args) {}
 };
 
-class UnaryOp : ExprOp {
+class ClassInstanceCreation : public ExprOp {
+public:
+    ClassInstanceCreation(int num_args) : ExprOp(num_args) {}
+};
+
+class ArrayAccess : public ExprOp {
+public:
+    ArrayAccess() : ExprOp(2) {}
+};
+
+class UnaryOp : public ExprOp {
 
 #define UNARY_OP_TYPE_LIST(F)           \
     /* Leaf nodes */                    \
@@ -59,11 +73,10 @@ public:
     UnaryOp(OpType type) : ExprOp(1), type{type} {}
 };
 
-class BinaryOp : ExprOp {
+class BinaryOp : public ExprOp {
 
 #define BINARY_OP_TYPE_LIST(F)          \
-    /* Leaf nodes */                    \
-    F(Assign)                           \
+    F(Assignment)                       \
     F(GreaterThan)                      \
     F(LessThan)                         \
     F(Equal)                            \
@@ -80,8 +93,6 @@ class BinaryOp : ExprOp {
     F(Multiply)                         \
     F(Divide)                           \
     F(Modulo)                           \
-    F(Plus)                             \
-    F(Minus)                            \
     F(InstanceOf)
 public:
     DECLARE_ENUM(OpType, BINARY_OP_TYPE_LIST)

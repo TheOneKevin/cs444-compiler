@@ -2,8 +2,12 @@ package com.example;
 
 public class HelloWorld {
   public HelloWorld() {}
+  // int test = another.object().method();
+  // int nullField = null;
   public static void main(String[] args) {
-    a.b(id, "hello").y = 12 + "int";
-    System.out.println("Hello, World");
+    a = (x [])y;
+    // if (a.b("hello").y == b.c()) {}
   }
+
+  // [ a b methodAccess c d methodAccess methodInvocation "hello" methodInvocation y memberaccess 5 = ]
 }

@@ -101,7 +101,19 @@ public:
 
    // Expression visitors //////////////////////////////////////////////////////
 
-   std::list<ast::ExprOp> visitExpr(Node* node);
+   std::list<ast::ExprNode> visitStatementExpression(Node* node);
+   std::list<ast::ExprNode> visitExprChild(Node* node);
+   std::list<ast::ExprNode> visitExpr(Node* node);
+   std::list<ast::ExprNode> visitMethodInvocation(Node* node);
+   std::list<ast::ExprNode> visitQualifiedIdentifierInExpr(Node* node);
+   std::list<ast::ExprNode> visitArgumentList(Node* node);
+   std::list<ast::ExprNode> visitFieldAccess(Node* node);
+   std::list<ast::ExprNode> visitClassCreation(Node* node);
+   std::list<ast::ExprNode> visitArrayAccess(Node* node);
+   std::list<ast::ExprNode> visitArrayCreation(Node* node);
+   std::list<ast::ExprNode> visitCastExpression(Node* node);
+
+   void visitArgumentList(Node* node, std::list<ast::ExprNode>& ops);
 
    // Leaf node visitors ///////////////////////////////////////////////////////
 

@@ -395,11 +395,13 @@ CastExpression
         // 1. $2 is a qualified identifier
         // 2. $2 is an array type and has only one child
         bool isType = $2->get_node_type() == pty::QualifiedIdentifier;
-        bool isArrType = $2->get_node_type() == pty::ArrayAccess;
-        bool hasOneChild = $2->num_children() == 1;
-        if(isType || (isArrType && hasOneChild)) {
+        bool isArrType = $2->get_node_type() == pty::ArrayCastType;
+        if(isType) {
             $$ = jl.make_node(pty::CastExpression, $2, $4);
-        } else {
+        } else if (isArrType) {
+            $$ = jl.make_node(pty::CastExpression, $2, jl.make_leaf(pty::Dims), $4);
+        }
+        else {
             // std::cerr << "Invalid cast expression" << std::endl;
             $$ = jl.make_poison();
         }
@@ -419,6 +421,7 @@ Primary
     : PrimaryNoNewArray
     | ArrayCreationExpression
     | ArrayAccess
+    | ArrayCastType
     ;
 
 PrimaryNoNewArray
@@ -437,12 +440,11 @@ FieldAccess
 ArrayAccess
     : PrimaryNoNewArray '[' Expression ']'                                      { $$ = jl.make_node(pty::ArrayAccess, $1, $3); }
     | QualifiedIdentifier '[' Expression ']'                                    { $$ = jl.make_node(pty::ArrayAccess, $1, $3); }
-    // FIXME(kevin): This rule is a hack because cast type is actually an expression
-    // and needs to be handled in the semantic analysis phase. This rule is to
-    // support (x[]) y !!ONLY!! and should be invalid in all other expressions.
-    | QualifiedIdentifier '[' ']'                                               { $$ = jl.make_node(pty::ArrayAccess, $1); }
     ;
 
+ArrayCastType
+    : QualifiedIdentifier '[' ']'                                               { $$ = jl.make_node(pty::ArrayCastType, $1); }
+    ;
 MethodInvocation
     : QualifiedIdentifier '(' ArgumentListOpt ')'                               { $$ = jl.make_node(pty::MethodInvocation, $1, $3); }
     | Primary '.' IDENTIFIER '(' ArgumentListOpt ')'                            { $$ = jl.make_node(pty::MethodInvocation, $1, $3, $5); }

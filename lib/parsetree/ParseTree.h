@@ -78,6 +78,7 @@ struct Node {
    F(ArgumentList)                      \
    F(FieldAccess)                       \
    F(ArrayAccess)                       \
+   F(ArrayCastType)                     \
    F(CastExpression)                    \
    F(MethodInvocation)                  \
    F(ArrayCreationExpression)           \
@@ -273,6 +274,8 @@ public:
    // Get the string representation of the operator
    std::string to_string() const;
 
+   Type get_type() const { return type; }
+   
 private:
    Type type;
 };
