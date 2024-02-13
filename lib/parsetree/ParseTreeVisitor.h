@@ -47,12 +47,37 @@ private:
    // template patterns. However, the syntax is ugly at best. We only use these
    // for the list patterns, which are more tedious and benefit from templates.
 
+   /**
+    * @brief This function is not intended to be called.
+    * Instead, the function should to be template-specialized to be used by the
+    * visitListPattern<N, T> function.
+    * 
+    * @tparam N This parameter must match the N parameter of the visitListPattern
+    * function that calls this function.
+    * @tparam T This parameter must match the T parameter of the visitListPattern
+    * function that calls this function.
+    * @param node The node to visit.
+    * @return T The result of visiting the node.
+    */
    template <parsetree::Node::Type N, typename T>
    T visit(Node* node) {
       throw std::runtime_error("No visitor for node type " +
                                node->type_string());
    }
 
+   /**
+    * @brief Visits a list-pattern node. A list pattern is a node that is
+    * recursive in the first-child. The node either has 1 or 2 children.
+    * If the node has 1 child, the list is simply the result of visiting the
+    * child. The visitor will be implemented by the visit<N, T> function
+    * (which you need to specialize in order to use this function).
+    * 
+    * @tparam N The type of the node to visit.
+    * @tparam T The type of the list elements.
+    * @tparam nullable If true, the node can be null (for empty lists).
+    * @param node The node to visit.
+    * @param list The list to append the results to.
+    */
    template <parsetree::Node::Type N, typename T, bool nullable = false>
    void visitListPattern(Node* node, ast::array_ref<T> list) {
       if(nullable && node == nullptr) return;
