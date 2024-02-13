@@ -140,4 +140,11 @@ MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers,
          alloc, modifiers, name, returnType, parameters, isConstructor, body);
 }
 
+/* ===-----------------------------------------------------------------=== */
+// ast/DeclContext.h
+/* ===-----------------------------------------------------------------=== */
+
+Expr* Semantic::BuildExpr(std::list<ExprNode> rpn_ops) {
+   return alloc.new_object<Expr>(alloc, rpn_ops);
+}
 } // namespace ast

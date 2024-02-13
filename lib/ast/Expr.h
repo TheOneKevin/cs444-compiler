@@ -10,8 +10,8 @@ namespace ast {
 class ExprNode;
 class Expr : public AstNode {
    std::list<ExprNode> rpn_ops;
-
 public:
+   Expr(std::list<ExprNode> rpn_ops) : rpn_ops{rpn_ops} {}
 };
 
 class ExprNode {
@@ -20,12 +20,15 @@ public:
    virtual ~ExprNode() = default;
 };
 
+
 class MemberName : public ExprNode {
    std::string name;
 
 public:
    MemberName(std::string name) : name{name} {}
 };
+
+class ThisNode : public ExprNode {};
 
 class ExprOp : public ExprNode {
 protected:
@@ -53,6 +56,16 @@ public:
 class ArrayAccess : public ExprOp {
 public:
    ArrayAccess() : ExprOp(2) {}
+};
+
+class ArrayTypeNode : public ExprOp {
+public:
+   ArrayTypeNode() : ExprOp(1) {}
+};
+
+class Cast : public ExprOp {
+public:
+   Cast() : ExprOp(2) {}
 };
 
 class UnaryOp : public ExprOp {

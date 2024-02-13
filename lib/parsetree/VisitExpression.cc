@@ -7,6 +7,11 @@ namespace parsetree {
 using pty = Node::Type;
 using ptv = ParseTreeVisitor;
 
+ast::Expr* ptv::visitExpression(Node* node) {
+   std::list<ast::ExprNode> ops = visitExpr(node);
+   sem.BuildExpr(ops);
+}
+
 std::list<ast::ExprNode> ptv::visitStatementExpression(Node* node) {
    check_node_type(node, pty::StatementExpression);
    check_num_children(node, 1, 1);
@@ -81,7 +86,7 @@ std::list<ast::ExprNode> ptv::visitExpr(parsetree::Node* node) {
 
 // expression can have different types of children, so we need to visit them
 // possible nodes: expression, literal, THIS, qualifiedIdentifier,
-// methodInvocation,
+// methodInvocation, TypeNotBasic
 //                  arrayAccess, fieldAccess, castExpression,
 //                  ArrayCreationExpression ClassInstanceCreationExpression
 std::list<ast::ExprNode> ptv::visitExprChild(Node* node) {
@@ -89,9 +94,23 @@ std::list<ast::ExprNode> ptv::visitExprChild(Node* node) {
       return visitExpr(node);
    }
    if(node->get_node_type() == pty::Literal) {
+      // return visitLiteral(node);
+   }
+   if (node->get_node_type() == pty::Type) {
+      
+   }
+   if(node->get_node_type() == pty::Identifier) {
+      std::string name = visitIdentifier(node);
+      if (name == "this") {
+         return std::list<ast::ExprNode>({ast::ThisNode()});
+      }
+      return std::list<ast::ExprNode>({ast::MemberName(name)});
    }
    if(node->get_node_type() == pty::QualifiedIdentifier) {
       return visitQualifiedIdentifierInExpr(node);
+   }
+   if (node->get_node_type() == pty::ArrayCastType) {
+      return visitQualifiedIdentifierInExpr(node->child(0));
    }
    if(node->get_node_type() == pty::MethodInvocation) {
       return visitMethodInvocation(node);
@@ -185,6 +204,21 @@ std::list<ast::ExprNode> ptv::visitArrayAccess(Node* node) {
    ops.splice(ops.end(), visitExprChild(node->child(0)));
    ops.splice(ops.end(), visitExpr(node->child(1)));
    ops.push_back(ast::ArrayAccess());
+   return ops;
+}
+
+std::list<ast::ExprNode> ptv::visitCastExpression(Node* node) {
+   check_node_type(node, pty::CastExpression);
+   check_num_children(node, 2, 3);
+   std::list<ast::ExprNode> ops;
+   auto type = visitExprChild(node->child(0));
+   ops.splice(ops.end(), type);
+   if (node->num_children() == 3 && node->child(1) != nullptr) {
+      ops.push_back(ast::ArrayTypeNode());
+   }
+   auto expr = visitExprChild(node->child(1));
+   ops.splice(ops.end(), type);
+   ops.push_back(ast::Cast());
    return ops;
 }
 
