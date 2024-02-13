@@ -106,6 +106,8 @@ void Node::printTypeAndValue(std::ostream& os) const {
       print(os);
    } else {
       printType(os);
+      os << "\n";
+      loc.print(os);
    }
 }
 

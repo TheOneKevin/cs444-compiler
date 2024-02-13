@@ -74,61 +74,61 @@ Keyword: one of
 */
 %}
 
-"class"         { yylval = make_poison(); return CLASS; }
-"else"          { yylval = make_poison(); return ELSE; }
-"extends"       { yylval = make_poison(); return EXTENDS; }
-"for"           { yylval = make_poison(); return FOR; }
-"if"            { yylval = make_poison(); return IF; }
-"implements"    { yylval = make_poison(); return IMPLEMENTS; }
-"import"        { yylval = make_poison(); return IMPORT; }
-"interface"     { yylval = make_poison(); return INTERFACE; }
-"new"           { yylval = make_poison(); return NEW; }
-"package"       { yylval = make_poison(); return PACKAGE; }
-"return"        { yylval = make_poison(); return RETURN; }
-"void"          { yylval = make_poison(); return VOID; }
-"while"         { yylval = make_poison(); return WHILE; }
-"super"         { yylval = make_poison(); return SUPER; }
-"do"            { yylval = make_poison(); return DO; }
-"try"           { yylval = make_poison(); return TRY; }
-"catch"         { yylval = make_poison(); return CATCH; }
-"switch"        { yylval = make_poison(); return SWITCH; }
-"case"          { yylval = make_poison(); return CASE; }
-"default"       { yylval = make_poison(); return DEFAULT; }
+"class"         { yylval = make_poison(yylloc); return CLASS; }
+"else"          { yylval = make_poison(yylloc); return ELSE; }
+"extends"       { yylval = make_poison(yylloc); return EXTENDS; }
+"for"           { yylval = make_poison(yylloc); return FOR; }
+"if"            { yylval = make_poison(yylloc); return IF; }
+"implements"    { yylval = make_poison(yylloc); return IMPLEMENTS; }
+"import"        { yylval = make_poison(yylloc); return IMPORT; }
+"interface"     { yylval = make_poison(yylloc); return INTERFACE; }
+"new"           { yylval = make_poison(yylloc); return NEW; }
+"package"       { yylval = make_poison(yylloc); return PACKAGE; }
+"return"        { yylval = make_poison(yylloc); return RETURN; }
+"void"          { yylval = make_poison(yylloc); return VOID; }
+"while"         { yylval = make_poison(yylloc); return WHILE; }
+"super"         { yylval = make_poison(yylloc); return SUPER; }
+"do"            { yylval = make_poison(yylloc); return DO; }
+"try"           { yylval = make_poison(yylloc); return TRY; }
+"catch"         { yylval = make_poison(yylloc); return CATCH; }
+"switch"        { yylval = make_poison(yylloc); return SWITCH; }
+"case"          { yylval = make_poison(yylloc); return CASE; }
+"default"       { yylval = make_poison(yylloc); return DEFAULT; }
 
-"finally"       { yylval = make_poison(); return FINALLY; }
-"throw"         { yylval = make_poison(); return THROW; }
-"throws"        { yylval = make_poison(); return THROWS; }
-"transient"     { yylval = make_poison(); return TRANSIENT; }
-"synchronized"  { yylval = make_poison(); return SYNCHRONIZED; }
-"volatile"      { yylval = make_poison(); return VOLATILE; }
-"const"         { yylval = make_poison(); return CONST; }
-"goto"          { yylval = make_poison(); return GOTO; }
-"continue"      { yylval = make_poison(); return CONTINUE; }
-"break"         { yylval = make_poison(); return BREAK; }
-"double"        { yylval = make_poison(); return DOUBLE; }
-"float"         { yylval = make_poison(); return FLOAT; }
-"long"          { yylval = make_poison(); return LONG; }
-"private"       { yylval = make_poison(); return PRIVATE; }
+"finally"       { yylval = make_poison(yylloc); return FINALLY; }
+"throw"         { yylval = make_poison(yylloc); return THROW; }
+"throws"        { yylval = make_poison(yylloc); return THROWS; }
+"transient"     { yylval = make_poison(yylloc); return TRANSIENT; }
+"synchronized"  { yylval = make_poison(yylloc); return SYNCHRONIZED; }
+"volatile"      { yylval = make_poison(yylloc); return VOLATILE; }
+"const"         { yylval = make_poison(yylloc); return CONST; }
+"goto"          { yylval = make_poison(yylloc); return GOTO; }
+"continue"      { yylval = make_poison(yylloc); return CONTINUE; }
+"break"         { yylval = make_poison(yylloc); return BREAK; }
+"double"        { yylval = make_poison(yylloc); return DOUBLE; }
+"float"         { yylval = make_poison(yylloc); return FLOAT; }
+"long"          { yylval = make_poison(yylloc); return LONG; }
+"private"       { yylval = make_poison(yylloc); return PRIVATE; }
 
-"abstract"  { yylval = make_modifier(pmt::Abstract);    return ABSTRACT; }
-"final"     { yylval = make_modifier(pmt::Final);       return FINAL; }
-"native"    { yylval = make_modifier(pmt::Native);      return NATIVE; }
-"protected" { yylval = make_modifier(pmt::Protected);   return PROTECTED; }
-"public"    { yylval = make_modifier(pmt::Public);      return PUBLIC; }
-"static"    { yylval = make_modifier(pmt::Static);      return STATIC; }
+"abstract"  { yylval = make_modifier(yylloc, pmt::Abstract);    return ABSTRACT; }
+"final"     { yylval = make_modifier(yylloc, pmt::Final);       return FINAL; }
+"native"    { yylval = make_modifier(yylloc, pmt::Native);      return NATIVE; }
+"protected" { yylval = make_modifier(yylloc, pmt::Protected);   return PROTECTED; }
+"public"    { yylval = make_modifier(yylloc, pmt::Public);      return PUBLIC; }
+"static"    { yylval = make_modifier(yylloc, pmt::Static);      return STATIC; }
 
-"boolean"   { yylval = make_basic_type(pbtt::Boolean);   return BOOLEAN; }
-"byte"      { yylval = make_basic_type(pbtt::Byte);      return BYTE; }
-"char"      { yylval = make_basic_type(pbtt::Char);      return CHAR; }
-"short"     { yylval = make_basic_type(pbtt::Short);     return SHORT; }
-"int"       { yylval = make_basic_type(pbtt::Int);       return INT; }
+"boolean"   { yylval = make_basic_type(yylloc, pbtt::Boolean);   return BOOLEAN; }
+"byte"      { yylval = make_basic_type(yylloc, pbtt::Byte);      return BYTE; }
+"char"      { yylval = make_basic_type(yylloc, pbtt::Char);      return CHAR; }
+"short"     { yylval = make_basic_type(yylloc, pbtt::Short);     return SHORT; }
+"int"       { yylval = make_basic_type(yylloc, pbtt::Int);       return INT; }
 "instanceof" {
-    yylval = make_operator(pot::InstanceOf);
+    yylval = make_operator(yylloc, pot::InstanceOf);
     return INSTANCEOF;
 }
 
 "this" {
-    yylval = make_identifier(yytext);
+    yylval = make_identifier(yylloc, yytext);
     return THIS;
 }
 
@@ -166,27 +166,27 @@ Literal: one of
 %}
 
 {DecimalIntegerLiteral} {
-    yylval = make_literal(plt::Integer, yytext);
+    yylval = make_literal(yylloc, plt::Integer, yytext);
     return LITERAL;
 }
 
 {BooleanLiteral} {
-    yylval = make_literal(plt::Boolean, yytext); 
+    yylval = make_literal(yylloc, plt::Boolean, yytext); 
     return LITERAL;
 }
 
 {CharacterLiteral} {
-    yylval = make_literal(plt::Character, yytext); 
+    yylval = make_literal(yylloc, plt::Character, yytext); 
     return LITERAL;
 }
 
 {StringLiteral} {
-    yylval = make_literal(plt::String, yytext); 
+    yylval = make_literal(yylloc, plt::String, yytext); 
     return LITERAL;
 }
 
 "null" {
-    yylval = make_literal(plt::Null, yytext); 
+    yylval = make_literal(yylloc, plt::Null, yytext); 
     return LITERAL;
 }
 
@@ -201,15 +201,15 @@ Separator: one of
 */
 %}
 
-"(" { yylval = make_poison(); return '('; }
-")" { yylval = make_poison(); return ')'; }
-"{" { yylval = make_poison(); return '{'; }
-"}" { yylval = make_poison(); return '}'; }
-"[" { yylval = make_poison(); return '['; }
-"]" { yylval = make_poison(); return ']'; }
-";" { yylval = make_poison(); return ';'; }
-"," { yylval = make_poison(); return ','; }
-"." { yylval = make_poison(); return '.'; }
+"(" { yylval = make_poison(yylloc); return '('; }
+")" { yylval = make_poison(yylloc); return ')'; }
+"{" { yylval = make_poison(yylloc); return '{'; }
+"}" { yylval = make_poison(yylloc); return '}'; }
+"[" { yylval = make_poison(yylloc); return '['; }
+"]" { yylval = make_poison(yylloc); return ']'; }
+";" { yylval = make_poison(yylloc); return ';'; }
+"," { yylval = make_poison(yylloc); return ','; }
+"." { yylval = make_poison(yylloc); return '.'; }
 
 %{
 /* ========================================================================== */
@@ -227,27 +227,27 @@ Operator: one of
 */
 %}
 
-"="  { yylval = make_operator(pot::Assign);             return OP_ASSIGN; }
-">"  { yylval = make_operator(pot::GreaterThan);        return OP_GT; }
-"<"  { yylval = make_operator(pot::LessThan);           return OP_LT; }
-"!"  { yylval = make_operator(pot::Not);                return OP_NOT; }
-"==" { yylval = make_operator(pot::Equal);              return OP_EQ; }
-"<=" { yylval = make_operator(pot::LessThanOrEqual);    return OP_LTE; }
-">=" { yylval = make_operator(pot::GreaterThanOrEqual); return OP_GTE; }
-"!=" { yylval = make_operator(pot::NotEqual);           return OP_NEQ; }
-"&&" { yylval = make_operator(pot::And);                return OP_AND; }
-"||" { yylval = make_operator(pot::Or);                 return OP_OR; }
-"&"  { yylval = make_operator(pot::BitwiseAnd);         return OP_BIT_AND; }
-"|"  { yylval = make_operator(pot::BitwiseOr);          return OP_BIT_OR; }
-"+"  { yylval = make_operator(pot::Plus);               return OP_PLUS; }
-"-"  { yylval = make_operator(pot::Minus);              return OP_MINUS; }
-"*"  { yylval = make_operator(pot::Multiply);           return OP_MUL; }
-"/"  { yylval = make_operator(pot::Divide);             return OP_DIV; }
-"%"  { yylval = make_operator(pot::Modulo);             return OP_MOD; }
-"^"  { yylval = make_operator(pot::BitwiseXor);         return OP_BIT_XOR; }
+"="  { yylval = make_operator(yylloc, pot::Assign);             return OP_ASSIGN; }
+">"  { yylval = make_operator(yylloc, pot::GreaterThan);        return OP_GT; }
+"<"  { yylval = make_operator(yylloc, pot::LessThan);           return OP_LT; }
+"!"  { yylval = make_operator(yylloc, pot::Not);                return OP_NOT; }
+"==" { yylval = make_operator(yylloc, pot::Equal);              return OP_EQ; }
+"<=" { yylval = make_operator(yylloc, pot::LessThanOrEqual);    return OP_LTE; }
+">=" { yylval = make_operator(yylloc, pot::GreaterThanOrEqual); return OP_GTE; }
+"!=" { yylval = make_operator(yylloc, pot::NotEqual);           return OP_NEQ; }
+"&&" { yylval = make_operator(yylloc, pot::And);                return OP_AND; }
+"||" { yylval = make_operator(yylloc, pot::Or);                 return OP_OR; }
+"&"  { yylval = make_operator(yylloc, pot::BitwiseAnd);         return OP_BIT_AND; }
+"|"  { yylval = make_operator(yylloc, pot::BitwiseOr);          return OP_BIT_OR; }
+"+"  { yylval = make_operator(yylloc, pot::Plus);               return OP_PLUS; }
+"-"  { yylval = make_operator(yylloc, pot::Minus);              return OP_MINUS; }
+"*"  { yylval = make_operator(yylloc, pot::Multiply);           return OP_MUL; }
+"/"  { yylval = make_operator(yylloc, pot::Divide);             return OP_DIV; }
+"%"  { yylval = make_operator(yylloc, pot::Modulo);             return OP_MOD; }
+"^"  { yylval = make_operator(yylloc, pot::BitwiseXor);         return OP_BIT_XOR; }
 
 {Identifier} {
-    yylval = make_identifier(yytext);
+    yylval = make_identifier(yylloc, yytext);
     return IDENTIFIER;
 }
 

@@ -6,6 +6,7 @@
 #include <string>
 #include <type_traits>
 
+#include "diagnostics/Location.h"
 #include "utils/BumpAllocator.h"
 #include "utils/EnumMacros.h"
 
@@ -94,15 +95,17 @@ private:
 protected:
    /// @brief Protected constructor for leaf nodes
    /// @param type The type of the leaf node
-   Node(Type type) : type{type}, args{nullptr}, num_args{0} {}
+   Node(SourceRange loc, Type type)
+         : loc{loc}, type{type}, args{nullptr}, num_args{0} {}
 
    /// @brief Protected constructor for non-leaf nodes
    /// @tparam ...Args The child node types (should be Node*)
    /// @param type The type of the node
    /// @param ...args The child nodes
    template <typename... Args>
-   Node(BumpAllocator& alloc, Type type, Args&&... args)
-         : type{type},
+   Node(SourceRange loc, BumpAllocator& alloc, Type type, Args&&... args)
+         : loc{loc},
+           type{type},
            args{static_cast<Node**>(alloc.allocate_bytes(
                  sizeof...(Args) * sizeof(Node*), alignof(Node*)))},
            num_args{sizeof...(Args)} {
@@ -142,6 +145,8 @@ public:
          return false;
       }
    }
+   /// @brief Get the location of the node
+   SourceRange location() const { return loc; }
 
 public:
    /// @brief Virtual function to print the node
@@ -160,6 +165,7 @@ private:
                          int& id_counter) const;
 
 private:
+   SourceRange loc;
    Type type;
    Node** args;
    size_t num_args;
@@ -189,8 +195,11 @@ private:
 #undef LITERAL_TYPE_LIST
 
 private:
-   Literal(BumpAllocator const& alloc, Type type, char const* value)
-         : Node{Node::Type::Literal},
+   Literal(SourceRange loc,
+           BumpAllocator const& alloc,
+           Type type,
+           char const* value)
+         : Node{loc, Node::Type::Literal},
            type{type},
            isNegative{false},
            value{value, alloc} {}
@@ -217,8 +226,8 @@ class Identifier : public Node {
    friend class ::Joos1WParser;
 
 private:
-   Identifier(BumpAllocator const& alloc, char const* name)
-         : Node{Node::Type::Identifier}, name{name, alloc} {}
+   Identifier(SourceRange loc, BumpAllocator const& alloc, char const* name)
+         : Node{loc, Node::Type::Identifier}, name{name, alloc} {}
 
 public:
    // Get the name of the identifier
@@ -264,7 +273,8 @@ public:
    };
 
 private:
-   Operator(Type type) : Node{Node::Type::Operator}, type{type} {}
+   Operator(SourceRange loc, Type type)
+         : Node{loc, Node::Type::Operator}, type{type} {}
 
 public:
    // Get the type of the operator
@@ -302,7 +312,8 @@ private:
 #undef MODIFIER_TYPE_LIST
 
 private:
-   Modifier(Type type) : Node{Node::Type::Modifier}, modty{type} {}
+   Modifier(SourceRange loc, Type type)
+         : Node{loc, Node::Type::Modifier}, modty{type} {}
 
 public:
    // Get the type of the modifier
@@ -335,7 +346,8 @@ private:
 #undef BASIC_TYPE_LIST
 
 private:
-   BasicType(Type type) : Node{Node::Type::BasicType}, type{type} {}
+   BasicType(SourceRange loc, Type type)
+         : Node{loc, Node::Type::BasicType}, type{type} {}
 
 public:
    // Get the type of the basic type

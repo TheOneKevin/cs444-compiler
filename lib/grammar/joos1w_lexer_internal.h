@@ -3,6 +3,7 @@
 #include <memory_resource>
 #include <vector>
 
+#include "diagnostics/Location.h"
 #include "joos1w.parser.tab.h"
 #include "parsetree/ParseTree.h"
 #include "utils/BumpAllocator.h"
@@ -27,38 +28,47 @@ public:
    // This is a bison-specific lexer function, implemented in the .l file
    int bison_lex(YYSTYPE* lvalp, YYLTYPE* llocp);
 
-   /// @brief Wrapper around the node constructor to keep track of all nodes
+   /// @brief Wrapper around the node constructor
    /// @param ...args The arguments to the node constructor
    /// @return The newly created node
    template <typename... Args>
-   Node* make_node(Node::Type type, Args&&... args) {
+   Node* make_node(YYLTYPE& loc, Node::Type type, Args&&... args) {
       void* bytes = alloc.allocate_bytes(sizeof(Node));
-      return new(bytes) Node(alloc, type, std::forward<Args>(args)...);
+      return new(bytes)
+            Node(make_range(loc), alloc, type, std::forward<Args>(args)...);
    }
-   Node* make_leaf(Node::Type type) {
+   /// @brief Wrapper around constructing a dataless leaf node
+   /// @param type The type of the leaf node
+   /// @return The newly created leaf node
+   Node* make_leaf(YYLTYPE& loc, Node::Type type) {
       void* bytes = alloc.allocate_bytes(sizeof(Node));
-      return new(bytes) Node(type);
+      return new(bytes) Node(make_range(loc), type);
    }
    /// @brief See make_node
-   Node* make_poison();
+   Node* make_poison(YYLTYPE& loc);
    /// @brief See make_node
-   Node* make_operator(Operator::Type type);
+   Node* make_operator(YYLTYPE& loc, Operator::Type type);
    /// @brief See make_node
-   Node* make_literal(Literal::Type type, char const* value);
+   Node* make_literal(YYLTYPE& loc, Literal::Type type, char const* value);
    /// @brief See make_node
-   Node* make_identifier(char const* name);
+   Node* make_identifier(YYLTYPE& loc, char const* name);
    /// @brief See make_node
-   Node* make_modifier(Modifier::Type type);
+   Node* make_modifier(YYLTYPE& loc, Modifier::Type type);
    /// @brief See make_node
-   Node* make_basic_type(BasicType::Type type);
+   Node* make_basic_type(YYLTYPE& loc, BasicType::Type type);
 
 private:
    // This is a private function that is called by the lexer to handle comments
    // It is implemented in the .l file
    void comment();
+   SourceRange make_range(YYLTYPE& loc) {
+      return SourceRange{SourceLocation{file, loc.first_line, loc.first_column},
+                         SourceLocation{file, loc.last_line, loc.last_column}};
+   }
 
 private:
-   YYLTYPE yylloc;
+   FileId file;
+   YYLTYPE yylloc; // This is the LEXER location
    YYSTYPE yylval;
    int yycolumn;
    BumpAllocator& alloc;
