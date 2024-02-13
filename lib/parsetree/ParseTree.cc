@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "utils/DotPrinter.h"
+
 namespace parsetree {
 
 bool Literal::isValid() const {
@@ -95,25 +97,31 @@ std::ostream& BasicType::print(std::ostream& os) const {
    return os;
 }
 
+void Identifier::printDotNode(DotPrinter& dp) const {
+   dp.print_table_double_row("Id", name);
+}
+
+void Literal::printDotNode(DotPrinter& dp) const {
+   dp.print_table_double_row("Literal", value);
+}
+
+void Modifier::printDotNode(DotPrinter& dp) const {
+   dp.print_table_double_row("Modifier", Type_to_string(modty, "??"));
+}
+
+void BasicType::printDotNode(DotPrinter& dp) const {
+   dp.print_table_double_row("BasicType", Type_to_string(type, "??"));
+}
+
+void Operator::printDotNode(DotPrinter& dp) const {
+   dp.print_table_double_row("Op", to_string());
+}
+
 // Node printers ///////////////////////////////////////////////////////////////
-
-void Node::printType(std::ostream& os) const {
-   os << Type_to_string(type, "Unknown");
-}
-
-void Node::printTypeAndValue(std::ostream& os) const {
-   if(num_children() == 0) {
-      print(os);
-   } else {
-      printType(os);
-      os << "\n";
-      loc.print(os);
-   }
-}
 
 std::ostream& Node::print(std::ostream& os) const {
    os << "(";
-   printType(os);
+   os << Type_to_string(type, "Unknown");
    for(size_t i = 0; i < num_args; ++i) {
       os << " ";
       if(args[i] == nullptr) {
@@ -126,43 +134,63 @@ std::ostream& Node::print(std::ostream& os) const {
    return os;
 }
 
-int Node::printDotRecursive(std::ostream& os,
-                            const Node& node,
-                            int& id_counter) const {
-   const int id = id_counter++;
-   os << "  " << id << " [label=\"";
-   node.printTypeAndValue(os);
-   os << "\" shape=rect";
+void Node::printDotNode(DotPrinter& dp) const {
+   dp.print_table_single_row(Type_to_string(this->type, "Unknown"));
+   dp.print_table_single_row(this->loc.toString());
+}
+
+int Node::printDotRecursive(DotPrinter& dp, const Node& node) const {
+   const int id = dp.id();
+   // Print the label first
    if(node.get_node_type() == Node::Type::Poison) {
-      os << " style=filled fillcolor=red fontcolor=white";
+      // clang-format off
+      dp.start_tlabel(id, {
+         "style", "filled",
+         "fillcolor", "red",
+         "fontcolor", "white"
+      });
+      // clang-format on
    } else if(node.num_children() == 0) {
-      os << " style=filled fillcolor=lightblue";
+      // clang-format off
+      dp.start_tlabel(id, {
+         "style", "filled",
+         "fillcolor", "lightblue"
+      });
+      // clang-format on
+   } else {
+      dp.start_tlabel(id);
    }
-   os << "];\n";
+   node.printDotNode(dp);
+   dp.end_tlabel();
+
    for(size_t i = 0; i < node.num_children(); i++) {
       const Node* child = node.child(i);
       int child_id = 0;
       if(child != nullptr) {
-         child_id = printDotRecursive(os, *child, id_counter);
+         child_id = printDotRecursive(dp, *child);
       } else {
-         child_id = id_counter++;
-         os << child_id << " ["
-            << "label=\"ε\" "
-            << "shape=rect style=filled fillcolor=lightgrey "
-            << "width=0.25 height=0.25 "
-            << "fontsize=20 "
-            << "];\n";
+         child_id = dp.id();
+         // clang-format off
+         dp.print_label(child_id, "ε", {
+            "shape", "rect",
+            "style", "filled",
+            "fillcolor", "lightgrey",
+            "width", "0.25",
+            "height", "0.25",
+            "fontsize", "20"
+         });
+         // clang-format on
       }
-      os << "  " << id << " -> " << child_id << ";\n";
+      dp.print_connection(id, child_id);
    }
    return id;
 }
 
 std::ostream& Node::printDot(std::ostream& os) const {
-   os << "digraph G {\n";
-   int id_counter = 0;
-   printDotRecursive(os, *this, id_counter);
-   os << "}\n";
+   DotPrinter dp{os};
+   dp.start_graph();
+   printDotRecursive(dp, *this);
+   dp.end_graph();
    return os;
 }
 

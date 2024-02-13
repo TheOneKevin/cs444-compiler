@@ -9,6 +9,7 @@
 #include "diagnostics/Location.h"
 #include "utils/BumpAllocator.h"
 #include "utils/EnumMacros.h"
+#include "utils/DotPrinter.h"
 
 class Joos1WLexer;
 class Joos1WParser;
@@ -154,15 +155,13 @@ public:
    /// @brief Print the node as a dot file
    std::ostream& printDot(std::ostream& os) const;
 
+protected:
+   /// @brief Custom function to print the DOT node
+   virtual void printDotNode(DotPrinter& dp) const;
+
 private:
-   /// @brief Print the type of the node
-   void printType(std::ostream& os) const;
-   /// @brief Print the type and value of the node
-   void printTypeAndValue(std::ostream& os) const;
    /// @brief Recursively print the DOT graph
-   int printDotRecursive(std::ostream& os,
-                         const Node& node,
-                         int& id_counter) const;
+   int printDotRecursive(DotPrinter& dp, const Node& node) const;
 
 private:
    SourceRange loc;
@@ -212,6 +211,9 @@ public:
    // Check if the literal is valid
    bool isValid() const;
 
+protected:
+   void printDotNode(DotPrinter& dp) const override;
+
 private:
    Type type;
    bool isNegative;
@@ -234,6 +236,9 @@ public:
    const char* get_name() const { return name.c_str(); }
    // Override printing for this leaf node
    std::ostream& print(std::ostream& os) const override;
+
+protected:
+   void printDotNode(DotPrinter& dp) const override;
 
 private:
    std::pmr::string name;
@@ -286,6 +291,9 @@ public:
 
    Type get_type() const { return type; }
 
+protected:
+   void printDotNode(DotPrinter& dp) const override;
+
 private:
    Type type;
 };
@@ -321,6 +329,9 @@ public:
    // Print the string representation of the modifier
    std::ostream& print(std::ostream& os) const override;
 
+protected:
+   void printDotNode(DotPrinter& dp) const override;
+
 private:
    Type modty;
 };
@@ -354,6 +365,9 @@ public:
    Type get_type() const { return type; }
    // Print the string representation of the basic type
    std::ostream& print(std::ostream& os) const override;
+
+protected:
+   void printDotNode(DotPrinter& dp) const override;
 
 private:
    Type type;

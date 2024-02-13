@@ -1,5 +1,8 @@
 #pragma once
 
+#include <iostream>
+#include <sstream>
+
 /// @brief An opaque identifier representing a source file.
 class FileId {
 
@@ -16,8 +19,13 @@ public:
    SourceLocation(FileId file, int line, int column)
          : file_{file}, line_{line}, column_{column} {}
    std::ostream& print(std::ostream& os) const {
-      os << "file_unknown:" << line_ << ":" << column_;
+      os << "??:" << line_ << ":" << column_;
       return os;
+   }
+   std::string toString() const {
+      std::ostringstream os;
+      print(os);
+      return os.str();
    }
 private:
    FileId file_;
@@ -34,6 +42,11 @@ public:
       os << " - ";
       end_.print(os);
       return os;
+   }
+   std::string toString() const {
+      std::ostringstream os;
+      print(os);
+      return os.str();
    }
 private:
    SourceLocation begin_;
