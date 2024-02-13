@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "parsetree/ParseTree.h"
+#include "utils/DotPrinter.h"
 
 namespace ast {
 
@@ -21,39 +22,101 @@ class Decl;
 class DeclContext;
 class Stmt;
 
-static std::string indent(int indentation) {
-   return std::string(indentation * 2, ' ');
-}
-
+/// @brief Base class for all AST nodes. Helps unify printing and dot printing.
 class AstNode {
 public:
+   std::ostream& printDot(std::ostream& os) const {
+      DotPrinter dp{os};
+      dp.startGraph();
+      dp.print("compound=true;");
+      printDotNode(dp);
+      dp.endGraph();
+      return os;
+   }
+
    virtual std::ostream& print(std::ostream& os, int indentation = 0) const = 0;
    virtual ~AstNode() = default;
+   virtual int printDotNode(DotPrinter& dp) const = 0;
+
+protected:
+   /**
+    * @brief Get a string of spaces for indentation
+    *
+    * @param indentation The level of indentation
+    * @return std::string String of spaces
+    */
+   static std::string indent(int indentation) {
+      return std::string(indentation * 2, ' ');
+   }
 };
 
+/// @brief Base class for all declarations.
 class Decl : public AstNode {
 public:
    Decl(BumpAllocator& alloc, std::string_view name) noexcept
          : name{name, alloc} {}
    std::string_view getName() const { return name; }
+   virtual int printDotNode(DotPrinter& dp) const override = 0;
 
 private:
    std::pmr::string name;
 };
 
-class DeclContext : public AstNode {};
+/// @brief Base class for all declaration contexts (i.e., methods).
+class DeclContext : public AstNode {
+public:
+   virtual int printDotNode(DotPrinter& dp) const override = 0;
+};
 
+/// @brief Base class for all types.
 class Type : public AstNode {
 public:
    virtual std::string toString() const = 0;
    std::ostream& print(std::ostream& os, int indentation = 0) const override {
       return os << indent(indentation) << toString();
    }
+   int printDotNode(DotPrinter& dp) const override {
+      int id = dp.id();
+      dp.printLabel(id, toString());
+      return id;
+   }
 };
 
-class Stmt : public AstNode {};
+/// @brief Base class for all statements.
+class Stmt : public AstNode {
+public:
+   virtual int printDotNode(DotPrinter& dp) const override = 0;
+};
 
+/// @brief Overload the << operator for AstNode to print the node
 std::ostream& operator<<(std::ostream& os, const AstNode& astNode);
+
+/**
+ * @brief Prints the dot node for each item in the range. The connections
+ * are then formed as first -> second -> third -> fourth -> ...
+ * and the ID of the first node is returned.
+ *
+ * @tparam Range This is inferred
+ * @param dp The DotPrinter
+ * @param range The range must be an iterable of ast::AstNode*
+ * @return The ID of the first node
+ */
+template <std::ranges::range Range>
+   requires std::is_convertible_v<std::ranges::range_value_t<Range>,
+                                  ast::AstNode*>
+int printDotNodeList(DotPrinter& dp, Range&& range) {
+   int childIdFirst = -1;
+   int childIdLast = -1;
+   for(auto p : range) {
+      int childId = p->printDotNode(dp);
+      if(childIdLast != -1)
+         dp.printConnection(childIdLast, childId);
+      else
+         childIdFirst = childId;
+      childIdLast = childId;
+   }
+   return childIdFirst;
+}
 
 // Other classes ///////////////////////////////////////////////////////////////
 

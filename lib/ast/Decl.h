@@ -21,6 +21,7 @@ public:
    bool hasInit() const { return init_ != nullptr; }
    Stmt* init() const { return init_; }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
+   int printDotNode(DotPrinter& dp) const override;
 
 private:
    Stmt* init_;
@@ -34,6 +35,7 @@ public:
              string_view name) noexcept
          : VarDecl{alloc, type, name}, modifiers{modifiers} {};
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
+   int printDotNode(DotPrinter& dp) const override;
 
 private:
    Modifiers modifiers;

@@ -98,23 +98,23 @@ std::ostream& BasicType::print(std::ostream& os) const {
 }
 
 void Identifier::printDotNode(DotPrinter& dp) const {
-   dp.print_table_double_row("Id", name);
+   dp.printTableDoubleRow("Id", name);
 }
 
 void Literal::printDotNode(DotPrinter& dp) const {
-   dp.print_table_double_row("Literal", value);
+   dp.printTableDoubleRow("Literal", value);
 }
 
 void Modifier::printDotNode(DotPrinter& dp) const {
-   dp.print_table_double_row("Modifier", Type_to_string(modty, "??"));
+   dp.printTableDoubleRow("Modifier", Type_to_string(modty, "??"));
 }
 
 void BasicType::printDotNode(DotPrinter& dp) const {
-   dp.print_table_double_row("BasicType", Type_to_string(type, "??"));
+   dp.printTableDoubleRow("BasicType", Type_to_string(type, "??"));
 }
 
 void Operator::printDotNode(DotPrinter& dp) const {
-   dp.print_table_double_row("Op", to_string());
+   dp.printTableDoubleRow("Op", to_string());
 }
 
 // Node printers ///////////////////////////////////////////////////////////////
@@ -135,8 +135,8 @@ std::ostream& Node::print(std::ostream& os) const {
 }
 
 void Node::printDotNode(DotPrinter& dp) const {
-   dp.print_table_single_row(Type_to_string(this->type, "Unknown"));
-   dp.print_table_single_row(this->loc.toString());
+   dp.printTableSingleRow(Type_to_string(this->type, "Unknown"));
+   dp.printTableSingleRow(this->loc.toString());
 }
 
 int Node::printDotRecursive(DotPrinter& dp, const Node& node) const {
@@ -144,24 +144,24 @@ int Node::printDotRecursive(DotPrinter& dp, const Node& node) const {
    // Print the label first
    if(node.get_node_type() == Node::Type::Poison) {
       // clang-format off
-      dp.start_tlabel(id, {
+      dp.startTLabel(id, {
          "style", "filled",
          "fillcolor", "red",
          "fontcolor", "white"
-      });
+      }, "5");
       // clang-format on
    } else if(node.num_children() == 0) {
       // clang-format off
-      dp.start_tlabel(id, {
+      dp.startTLabel(id, {
          "style", "filled",
          "fillcolor", "lightblue"
-      });
+      }, "5");
       // clang-format on
    } else {
-      dp.start_tlabel(id);
+      dp.startTLabel(id, {}, "5");
    }
    node.printDotNode(dp);
-   dp.end_tlabel();
+   dp.endTLabel();
 
    for(size_t i = 0; i < node.num_children(); i++) {
       const Node* child = node.child(i);
@@ -171,7 +171,7 @@ int Node::printDotRecursive(DotPrinter& dp, const Node& node) const {
       } else {
          child_id = dp.id();
          // clang-format off
-         dp.print_label(child_id, "ε", {
+         dp.printLabel(child_id, "ε", {
             "shape", "rect",
             "style", "filled",
             "fillcolor", "lightgrey",
@@ -181,16 +181,16 @@ int Node::printDotRecursive(DotPrinter& dp, const Node& node) const {
          });
          // clang-format on
       }
-      dp.print_connection(id, child_id);
+      dp.printConnection(id, child_id);
    }
    return id;
 }
 
 std::ostream& Node::printDot(std::ostream& os) const {
-   DotPrinter dp{os};
-   dp.start_graph();
+   DotPrinter dp{os, "35"};
+   dp.startGraph();
    printDotRecursive(dp, *this);
-   dp.end_graph();
+   dp.endGraph();
    return os;
 }
 
