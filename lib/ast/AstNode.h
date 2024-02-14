@@ -25,8 +25,11 @@ class Decl;
 class DeclContext;
 class Stmt;
 
+class Expr;
+
 /// @brief Base class for all AST nodes. Helps unify printing and dot printing.
 class AstNode {
+   friend class Expr;
 public:
    std::ostream& printDot(std::ostream& os) const {
       DotPrinter dp{os};

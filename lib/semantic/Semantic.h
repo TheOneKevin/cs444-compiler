@@ -47,11 +47,6 @@ public:
                                bool isConstructor,
                                Stmt* body);
 
-   /* ===-----------------------------------------------------------------=== */
-   // ast/Expr.h
-   /* ===-----------------------------------------------------------------=== */
-
-   Expr* BuildExpr(std::list<ExprNode> rpn_ops);
 private:
    BumpAllocator& alloc;
    diagnostics::DiagnosticEngine& diag;
