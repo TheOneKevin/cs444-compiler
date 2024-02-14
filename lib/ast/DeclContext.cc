@@ -238,7 +238,7 @@ int MethodDecl::printDotNode(DotPrinter& dp) const {
    if(!body_) return id;
 
    // Print the body subgraph and connect it to the method
-   if(auto stmt = dynamic_cast<CompoundStmt*>(body_)) {
+   if(auto stmt = dynamic_cast<BlockStatement*>(body_)) {
       int firstBodyId = -1;
       dp.startSubgraph(bodySubgraphId);
       dp.print("label=\"Body\"");

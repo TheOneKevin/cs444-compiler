@@ -16,24 +16,23 @@ private:
 
 class VarDecl : public TypedDecl {
 public:
-   VarDecl(BumpAllocator& alloc, Type* type, string_view name) noexcept
-         : TypedDecl{alloc, type, name} {}
+   VarDecl(BumpAllocator& alloc, Type* type, string_view name, Expr* init) noexcept
+         : TypedDecl{alloc, type, name}, init_{init} {}
    bool hasInit() const { return init_ != nullptr; }
-   Stmt* init() const { return init_; }
+   Expr* init() const { return init_; }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
 
 private:
-   Stmt* init_;
+   Expr* init_;
 };
 
 class FieldDecl : public VarDecl {
 public:
    FieldDecl(BumpAllocator& alloc,
              Modifiers modifiers,
-             Type* type,
-             string_view name) noexcept
-         : VarDecl{alloc, type, name}, modifiers{modifiers} {};
+             Type* type, string_view name, Expr* init) noexcept
+         : VarDecl{alloc, type, name, init}, modifiers{modifiers} {};
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
 

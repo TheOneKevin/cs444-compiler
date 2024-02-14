@@ -69,21 +69,9 @@ ast::FieldDecl* ptv::visitFieldDeclaration(Node* node) {
    check_num_children(node, 3, 3);
    // $1: Visit the modifiers
    auto modifiers = visitModifierList(node->child(0));
-   // $2: Visit the type
-   auto type = visitType(node->child(1));
-   // $3: Visit the declarators
-   ast::pmr_vector<ast::VarDecl*> declarators;
-   visitListPattern<pty::VariableDeclaratorList, ast::VarDecl*, false>(
-         node->child(2), declarators);
-   return sem.BuildFieldDecl(modifiers, type, "");
-}
-
-template <>
-ast::VarDecl* ptv::visit<pty::VariableDeclaratorList>(Node* node) {
-   check_node_type(node, pty::VariableDeclarator);
-   check_num_children(node, 1, 2);
-   // FIXME(kevin): Implement this
-   return sem.BuildVarDecl(nullptr, "");
+   // $2, $3: Visit the type and declarator
+   auto decl = visitVariableDeclarator(node->child(1), node->child(2));
+   return sem.BuildFieldDecl(modifiers, decl.type, decl.name, decl.init);
 }
 
 // pty::MethodDeclaration //////////////////////////////////////////////////////

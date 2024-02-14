@@ -62,11 +62,15 @@ static ast::BinaryOp convertToBinaryOp(Operator::Type type) {
    throw std::runtime_error("Invalid operator type");
 }
 
-std::list<ast::ExprNode> ptv::visitExpr(parsetree::Node* node) {
+ast::Expr* ptv::visitExpr(Node* node) {
+   // FIXME(larry): Implement
+}
+
+std::list<ast::ExprNode> ptv::visitExprNode(parsetree::Node* node) {
    check_node_type(node, pty::Expression);
    check_num_children(node, 1, 3);
    if(node->num_children() == 1) {
-      return visitExpr(node->child(0));
+      return visitExprNode(node->child(0));
    } else if(node->num_children() == 2) {
       // unary expression
       std::list<ast::ExprNode> ops;
@@ -102,7 +106,7 @@ std::list<ast::ExprNode> ptv::visitExpr(parsetree::Node* node) {
 //                  ArrayCreationExpression ClassInstanceCreationExpression
 std::list<ast::ExprNode> ptv::visitExprChild(Node* node) {
    if(node->get_node_type() == pty::Expression) {
-      return visitExpr(node);
+      return visitExprNode(node);
    }
    if(node->get_node_type() == pty::Literal) {
       return std::list<ast::ExprNode>({visitLiteral(node)});
@@ -216,7 +220,7 @@ std::list<ast::ExprNode> ptv::visitArrayAccess(Node* node) {
    check_num_children(node, 2, 2);
    std::list<ast::ExprNode> ops;
    ops.splice(ops.end(), visitExprChild(node->child(0)));
-   ops.splice(ops.end(), visitExpr(node->child(1)));
+   ops.splice(ops.end(), visitExprNode(node->child(1)));
    ops.push_back(ast::ArrayAccess());
    return ops;
 }
@@ -308,10 +312,10 @@ void ptv::visitArgumentList(Node* node, std::list<ast::ExprNode>& ops) {
    check_node_type(node, pty::ArgumentList);
    check_num_children(node, 1, 2);
    if(node->num_children() == 1) {
-      ops.splice(ops.end(), visitExpr(node->child(0)));
+      ops.splice(ops.end(), visitExprNode(node->child(0)));
    } else if(node->num_children() == 2) {
       visitArgumentList(node->child(0), ops);
-      ops.splice(ops.end(), visitExpr(node->child(1)));
+      ops.splice(ops.end(), visitExprNode(node->child(1)));
    }
    return;
 }

@@ -90,7 +90,6 @@ add_library(OLKCompilerLib
     "lib/parsetree/ParseTree.cc"
     "lib/parsetree/ParseTreeVisitor.cc"
     "lib/parsetree/VisitClassInterface.cc"
-    "lib/parsetree/VisitDeclaration.cc"
     "lib/parsetree/VisitExpression.cc"
     "lib/parsetree/VisitLeaf.cc"
     "lib/parsetree/VisitStatement.cc"

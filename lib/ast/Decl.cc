@@ -30,7 +30,8 @@ int VarDecl::printDotNode(DotPrinter& dp) const {
    dp.printTableDoubleRow("name", getName());
    dp.printTableDoubleRow("init", "", {}, {"port", "init"});
    dp.endTLabel();
-   if(hasInit()) dp.printConnection(id, ":init", init()->printDotNode(dp));
+   // FIXME(kevin): Wait for Larry to implement this
+   // if(hasInit()) dp.printConnection(id, ":init", init()->printDotNode(dp));
    return id;
 }
 
@@ -58,7 +59,8 @@ int FieldDecl::printDotNode(DotPrinter& dp) const {
    dp.printTableDoubleRow("name", getName());
    dp.printTableDoubleRow("init", "", {}, {"port", "init"});
    dp.endTLabel();
-   if(hasInit()) dp.printConnection(id, ":init", init()->printDotNode(dp));
+   // FIXME(kevin)
+   // if(hasInit()) dp.printConnection(id, ":init", init()->printDotNode(dp));
    return id;
 }
 

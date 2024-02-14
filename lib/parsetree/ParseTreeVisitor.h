@@ -114,20 +114,36 @@ public:
    template <>
    ast::Decl* visit<pty::ClassBodyDeclarationList>(Node* node);
    template <>
-   ast::VarDecl* visit<pty::VariableDeclaratorList>(Node* node);
-   template <>
    ast::VarDecl* visit<pty::FormalParameterList>(Node* node);
    template <>
    ast::Decl* visit<pty::InterfaceMemberDeclarationList>(Node* node);
 
    // Statements visitors //////////////////////////////////////////////////////
 
-   ast::Stmt* visitBlock(Node* node);
+   struct TmpVarDecl {
+      ast::Type* type;
+      std::string_view name;
+      ast::Expr* init;
+   };
+   static_assert(std::is_standard_layout_v<TmpVarDecl>);
+   static_assert(std::is_trivially_copyable_v<TmpVarDecl>);
+
+   TmpVarDecl visitVariableDeclarator(Node* ty, Node* node);
+   ast::DeclStmt* visitLocalVariableDeclarationStatement(Node* node);
+
+   ast::BlockStatement* visitBlock(Node* node);
+   ast::Stmt* visitStatement(Node* node);
+   ast::IfStmt* visitIfThenStatement(Node* node);
+   ast::WhileStmt* visitWhileStatement(Node* node);
+   ast::ForStmt* visitForStatement(Node* node);
+   ast::ReturnStmt* visitReturnStatement(Node* node);
+   ast::ExprStmt* visitExpressionStatement(Node* node);
 
    // Expression visitors //////////////////////////////////////////////////////
 
+   ast::Expr* visitExpr(Node* node);
    std::list<ast::ExprNode> visitExprChild(Node* node);
-   std::list<ast::ExprNode> visitExpr(Node* node);
+   std::list<ast::ExprNode> visitExprNode(Node* node);
    std::list<ast::ExprNode> visitMethodInvocation(Node* node);
    std::list<ast::ExprNode> visitQualifiedIdentifierInExpr(Node* node);
    std::list<ast::ExprNode> visitArgumentList(Node* node);
@@ -142,6 +158,9 @@ public:
    ast::LiteralNode visitLiteral(Node* node);
 
    void visitArgumentList(Node* node, std::list<ast::ExprNode>& ops);
+
+   template <>
+   ast::Stmt* visit<pty::BlockStatementList>(Node* node);
 
    // Leaf node visitors ///////////////////////////////////////////////////////
 

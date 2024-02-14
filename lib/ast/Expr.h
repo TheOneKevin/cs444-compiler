@@ -7,6 +7,14 @@
 
 namespace ast {
 
+class ExprNode;
+class Expr : public AstNode {
+   std::list<ExprNode> rpn_ops;
+
+public:
+   
+};
+
 class ExprNode {
 public:
    virtual std::ostream& print(std::ostream& os) const { 
@@ -143,6 +151,8 @@ class UnaryOp : public ExprOp {
 #define UNARY_OP_TYPE_LIST(F) \
    /* Leaf nodes */           \
    F(Not)                     \
+   F(BitwiseNot)              \
+   F(Plus)                    \
    F(Minus)
 public:
    DECLARE_ENUM(OpType, UNARY_OP_TYPE_LIST)

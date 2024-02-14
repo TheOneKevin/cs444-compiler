@@ -172,7 +172,7 @@ ClassMemberDeclaration
     ;
 
 FieldDeclaration
-    : MemberModifiersOpt Type VariableDeclaratorList ';'                        { $$ = jl.make_node(@$, pty::FieldDeclaration, $1, $2, $3); }
+    : MemberModifiersOpt Type VariableDeclarator ';'                        { $$ = jl.make_node(@$, pty::FieldDeclaration, $1, $2, $3); }
     ;
 
 MemberModifiersOpt
@@ -512,12 +512,12 @@ Block
 
 BlockStatementsOpt
     : %empty                                                                    { $$ = nullptr; }
-    | BlockStatements
+    | BlockStatementList
     ;
 
-BlockStatements
-    : BlockStatement
-    | BlockStatements BlockStatement                                            { $$ = jl.make_node(@$, pty::Block, $1, $2); }
+BlockStatementList
+    : BlockStatement                                                            { $$ = jl.make_node(@$, pty::BlockStatementList, $1); }
+    | BlockStatementList BlockStatement                                         { $$ = jl.make_node(@$, pty::BlockStatementList, $1, $2); }
     ;
 
 BlockStatement
@@ -623,11 +623,6 @@ LocalVariableDeclarationStatement
 
 LocalVariableDeclaration                                                        
     : Type VariableDeclarator                                                   { $$ = jl.make_node(@$, pty::LocalVariableDeclaration, $1, $2); }
-    ;
-
-// FIXME(kevin): Remove this rule and fix the AST later :)
-VariableDeclaratorList
-    : VariableDeclarator                                                        { $$ = jl.make_node(@$, pty::VariableDeclaratorList, $1); }
     ;
 
 VariableDeclarator

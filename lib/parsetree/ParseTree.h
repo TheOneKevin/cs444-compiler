@@ -68,6 +68,7 @@ struct Node {
    /* Statements */                     \
    F(Statement)                         \
    F(Block)                             \
+   F(BlockStatementList)                \
    F(IfThenStatement)                   \
    F(WhileStatement)                    \
    F(ForStatement)                      \
@@ -76,7 +77,6 @@ struct Node {
    /* Variable declarations and such */ \
    F(VariableDeclarator)                \
    F(LocalVariableDeclaration)          \
-   F(VariableDeclaratorList)            \
    /* Expressions  */                   \
    F(Expression)                        \
    F(ArgumentList)                      \

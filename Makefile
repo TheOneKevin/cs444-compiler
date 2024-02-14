@@ -22,7 +22,6 @@ JOOSC_SRCS = tools/joosc/main.cc \
              lib/parsetree/ParseTreeVisitor.cc \
              lib/parsetree/ParseTreeTypes.cc \
              lib/parsetree/VisitClassInterface.cc \
-             lib/parsetree/VisitDeclaration.cc \
              lib/parsetree/VisitExpression.cc \
              lib/parsetree/VisitLeaf.cc \
              lib/parsetree/VisitStatement.cc \
