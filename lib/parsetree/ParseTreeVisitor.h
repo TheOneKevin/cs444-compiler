@@ -101,9 +101,6 @@ public:
 
    // Expression visitors //////////////////////////////////////////////////////
 
-   ast::Expr* visitExpression(Node* node);
-   
-   std::list<ast::ExprNode> visitStatementExpression(Node* node);
    std::list<ast::ExprNode> visitExprChild(Node* node);
    std::list<ast::ExprNode> visitExpr(Node* node);
    std::list<ast::ExprNode> visitMethodInvocation(Node* node);

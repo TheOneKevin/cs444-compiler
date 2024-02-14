@@ -7,14 +7,15 @@ namespace parsetree {
 using pty = Node::Type;
 using ptv = ParseTreeVisitor;
 
-ast::Expr* ptv::visitExpression(Node* node) {
-   std::list<ast::ExprNode> ops = visitExpr(node);
-   sem.BuildExpr(ops);
-}
-
-std::list<ast::ExprNode> ptv::visitStatementExpression(Node* node) {
-   check_node_type(node, pty::StatementExpression);
-   check_num_children(node, 1, 1);
+static ast::UnaryOp convertToUnaryOp(Operator::Type type) {
+   using oty = Operator::Type;
+   switch(type) {
+      case oty::Not:
+         return ast::UnaryOp(ast::UnaryOp::OpType::Not);
+      case oty::Minus:
+         return ast::UnaryOp(ast::UnaryOp::OpType::Minus);
+   } 
+   throw std::runtime_error("Invalid operator type");
 }
 
 static ast::BinaryOp convertToBinaryOp(Operator::Type type) {
@@ -58,6 +59,7 @@ static ast::BinaryOp convertToBinaryOp(Operator::Type type) {
       case oty::Modulo:
          return ast::BinaryOp(ast::BinaryOp::OpType::Modulo);
    }
+   throw std::runtime_error("Invalid operator type");
 }
 
 std::list<ast::ExprNode> ptv::visitExpr(parsetree::Node* node) {
@@ -66,7 +68,16 @@ std::list<ast::ExprNode> ptv::visitExpr(parsetree::Node* node) {
    if(node->num_children() == 1) {
       return visitExpr(node->child(0));
    } else if(node->num_children() == 2) {
-      // unary expression, add later
+      // unary expression
+      std::list<ast::ExprNode> ops;
+      auto right = visitExprChild(node->child(1));
+      ops.splice(ops.end(), right);
+      if(auto op = dynamic_cast<parsetree::Operator*>(node->child(0))) {
+         ops.push_back(convertToUnaryOp(op->get_type()));
+         return ops;
+      } else {
+         unreachable();
+      }
    } else if(node->num_children() == 3) {
       // binary expression
       std::list<ast::ExprNode> ops;
