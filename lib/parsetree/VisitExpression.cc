@@ -156,7 +156,7 @@ std::list<ast::ExprNode> ptv::visitQualifiedIdentifierInExpr(Node* node) {
    check_num_children(node, 1, 2);
    std::list<ast::ExprNode> ops;
    if(node->num_children() == 1) {
-      ops.push_back(ast::MemberName(visitIdentifier(node->child(1))));
+      ops.push_back(ast::MemberName(visitIdentifier(node->child(0))));
    } else if(node->num_children() == 2) {
       ops = visitQualifiedIdentifierInExpr(node->child(0));
       ops.push_back(ast::MemberName(visitIdentifier(node->child(1))));
