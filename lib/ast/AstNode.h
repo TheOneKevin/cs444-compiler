@@ -9,6 +9,8 @@
 
 namespace ast {
 
+using utils::DotPrinter;
+
 template <typename T>
 using pmr_vector = std::pmr::vector<T>;
 template <typename T>

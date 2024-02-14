@@ -3,6 +3,7 @@
 #include <memory_resource>
 #include <vector>
 
+#include "diagnostics/Diagnostics.h"
 #include "diagnostics/Location.h"
 #include "joos1w.parser.tab.h"
 #include "parsetree/ParseTree.h"
@@ -20,10 +21,11 @@ class Joos1WLexer : public yyFlexLexer {
    friend class Joos1WParser;
 
 private:
-   Joos1WLexer(BumpAllocator& alloc) : yycolumn{1}, alloc{alloc} {}
+   Joos1WLexer(BumpAllocator& alloc, diagnostics::DiagnosticEngine* diag)
+         : yycolumn{1}, diag{diag}, alloc{alloc} {}
 
 public:
-   // This is the generate Flex lexer function
+   /// @brief This is the generate Flex lexer function
    int yylex();
    // This is a bison-specific lexer function, implemented in the .l file
    int bison_lex(YYSTYPE* lvalp, YYLTYPE* llocp);
@@ -57,19 +59,35 @@ public:
    /// @brief See make_node
    Node* make_basic_type(YYLTYPE& loc, BasicType::Type type);
 
+   /// @brief Report a parser or lexer error to the diagnostic engine
+   /// @param loc The location of the error
+   /// @param msg The message to report
+   /// @param ranges List of additional ranges to report
+   inline void report_parser_error(YYLTYPE& loc,
+                                   char const* msg,
+                                   std::initializer_list<YYLTYPE> ranges = {}) {
+      if(!diag) return;
+      auto os = diag->ReportError(make_range(loc));
+      os << msg;
+      for(auto const& range : ranges) os << make_range(range);
+   }
+
 private:
-   // This is a private function that is called by the lexer to handle comments
-   // It is implemented in the .l file
+   /// @brief This is a private function that is called by the lexer to handle
+   /// comments. It is implemented in the .l file
    void comment();
-   SourceRange make_range(YYLTYPE& loc) {
+
+   /// @brief Converts the lexer location to a source range
+   SourceRange make_range(YYLTYPE const& loc) {
       return SourceRange{SourceLocation{file, loc.first_line, loc.first_column},
                          SourceLocation{file, loc.last_line, loc.last_column}};
    }
 
 private:
-   FileId file;
+   SourceFile file;
    YYLTYPE yylloc; // This is the LEXER location
    YYSTYPE yylval;
    int yycolumn;
+   diagnostics::DiagnosticEngine* diag;
    BumpAllocator& alloc;
 };

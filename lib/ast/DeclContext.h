@@ -47,7 +47,7 @@ public:
              string_view name,
              QualifiedIdentifier* superClass,
              array_ref<QualifiedIdentifier*> interfaces,
-             array_ref<Decl*> classBodyDecls);
+             array_ref<Decl*> classBodyDecls) throw();
    auto fields() const { return std::views::all(fields_); }
    auto methods() const { return std::views::all(methods_); }
    auto constructors() const { return std::views::all(constructors_); }
@@ -73,7 +73,7 @@ public:
                  Modifiers modifiers,
                  string_view name,
                  array_ref<QualifiedIdentifier*> extends,
-                 array_ref<Decl*> interfaceBodyDecls);
+                 array_ref<Decl*> interfaceBodyDecls) throw();
    auto extends() const { return std::views::all(extends_); }
    auto methods() const { return std::views::all(methods_); }
    auto modifiers() const { return modifiers_; }

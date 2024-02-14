@@ -10,18 +10,22 @@
 #include <sstream>
 #include <vector>
 
+#include "diagnostics/Diagnostics.h"
 #include "utils/BumpAllocator.h"
 
 class Joos1WParser final {
 public:
-   Joos1WParser(std::string const& in, BumpAllocator& alloc)
-         : lexer{alloc}, iss{in} {
+   Joos1WParser(std::string const& in,
+                BumpAllocator& alloc,
+                diagnostics::DiagnosticEngine* diag = nullptr)
+         : lexer{alloc, diag}, iss{in} {
       buffer = lexer.yy_create_buffer(iss, in.size());
       lexer.yy_switch_to_buffer(buffer);
    }
 
-   Joos1WParser(std::string const& in)
-         : mbr{}, alloc{&mbr}, lexer{alloc}, iss{in} {
+   Joos1WParser(std::string const& in,
+                diagnostics::DiagnosticEngine* diag = nullptr)
+         : mbr{}, alloc{&mbr}, lexer{alloc, diag}, iss{in} {
       buffer = lexer.yy_create_buffer(iss, in.size());
       lexer.yy_switch_to_buffer(buffer);
    }

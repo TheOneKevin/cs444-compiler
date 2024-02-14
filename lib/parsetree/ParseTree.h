@@ -16,6 +16,8 @@ class Joos1WParser;
 
 namespace parsetree {
 
+using utils::DotPrinter;
+
 struct Node;
 class Literal;
 class Identifier;

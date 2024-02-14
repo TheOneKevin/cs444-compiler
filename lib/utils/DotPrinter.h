@@ -4,6 +4,8 @@
 #include <ranges>
 #include <string_view>
 
+namespace utils {
+
 /// @brief A class to help print DOT graphs!
 class DotPrinter {
    using string_view = std::string_view;
@@ -206,3 +208,5 @@ private:
    int id_ = 0;
    string_view min_height_;
 };
+
+} // namespace utils

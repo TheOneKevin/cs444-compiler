@@ -25,7 +25,6 @@
         yylloc.last_column = yycolumn + yyleng - 1; \
         yycolumn += yyleng;
 
-    static void comment(void);
 %}
 
 %{
@@ -272,10 +271,6 @@ int Joos1WLexer::bison_lex(YYSTYPE *lvalp, YYLTYPE *llocp) {
     return ret;
 }
 
-static void yyerror(const char* s) {
-    std::cerr << "Lexing error: " << s << std::endl;
-}
-
 void Joos1WLexer::comment(void) {
     // Iterate through the comment and count the number of newlines
     // so we can update the line number
@@ -287,5 +282,9 @@ void Joos1WLexer::comment(void) {
             if (c == 0) break;
         }
     }
-    yyerror("unterminated comment");
+    auto loc = yylloc;
+    loc.first_column = 1;
+    loc.first_line = loc.last_line;
+    loc.last_column = 1;
+    report_parser_error(yylloc, "Unterminated comment");
 }

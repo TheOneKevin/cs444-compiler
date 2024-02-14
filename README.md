@@ -1,4 +1,4 @@
-# JOOS1W Compiler Framework
+# JOOS1W Compiler Framework {#mainpage}
 
 Compiler project for the University of Waterloo CS444/644 compiler construction course.
 The Joos1W language is based off the Java 1.3 language.
@@ -63,7 +63,7 @@ This allows the lexer to be re-entrant and not rely on global state.
 that are not intended to be part of a parse tree are poisoned to catch incorrect parser rules.
 4. Since we're generating a C++ class, a Bison-compatible interface must be generated manually. See `Joos1WLexer::bison_lex`.
 
-Some notes about the Bison grammar file:
+Some notes about the Bison grammar file `joos1w_parser.y`:
 1. Our grammar is written based off the JLS provided rules.
 2. The Bison grammar is reentrant by declaring `%define api.pure full`
 3. The grammar file contains minimal code to construct the parse tree except in 2 cases:
@@ -75,13 +75,13 @@ Some notes about the Bison grammar file:
    They were also not complex enough to warrant a place in the AST semantic checker.
 
 Now we can talk about the parse tree design. Our parse tree lives under `lib/parsetree/`
-and is mainly defined by the `parstree::Node` class. Some notes about the tree:
+and is mainly defined by the `parsetree::Node` class. Some notes about the tree:
 1. The parse tree is untyped, allowing for simpler parser actions. This is desirable
 as Bison is really difficult to debug.
 2. The basic structure of a parse tree is represented by the S-expression
 `(NodeType child1 ... childN)`. However, leaf nodes will contain additional
-data, and so they are subclassed from `Node`.
-3. Since the parse tree is untyped, it must be validated on-the-fly by the `ParseTreeVisitor` class.
+data, and so they are subclassed from `parsetree::Node`.
+3. Since the parse tree is untyped, it must be validated on-the-fly by the `parsetree::ParseTreeVisitor` class.
 This visitor class is also responsible for generating the AST.
 
 ## 3. AST design and diagnostics

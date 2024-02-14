@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cassert>
 #include <ostream>
 #include <ranges>
 #include <string>
@@ -55,7 +56,7 @@ ClassDecl::ClassDecl(BumpAllocator& alloc,
                      string_view name,
                      QualifiedIdentifier* superClass,
                      array_ref<QualifiedIdentifier*> interfaces,
-                     array_ref<Decl*> classBodyDecls)
+                     array_ref<Decl*> classBodyDecls) throw()
       : Decl{alloc, name},
         modifiers_{modifiers},
         superClass_{superClass},
@@ -73,7 +74,7 @@ ClassDecl::ClassDecl(BumpAllocator& alloc,
          else
             methods_.push_back(methodDecl);
       } else {
-         throw std::runtime_error("Invalid class body declaration");
+         assert(false && "Unexpected class body declaration type");
       }
    }
 }
@@ -131,7 +132,7 @@ InterfaceDecl::InterfaceDecl(BumpAllocator& alloc,
                              Modifiers modifiers,
                              string_view name,
                              array_ref<QualifiedIdentifier*> extends,
-                             array_ref<Decl*> interfaceBodyDecls)
+                             array_ref<Decl*> interfaceBodyDecls) throw()
       : Decl{alloc, name},
         modifiers_{modifiers},
         extends_{alloc},
@@ -140,7 +141,7 @@ InterfaceDecl::InterfaceDecl(BumpAllocator& alloc,
       if(auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {
          methods_.push_back(methodDecl);
       } else {
-         throw std::runtime_error("Invalid interface body declaration");
+         assert(false && "Unexpected interface body declaration type");
       }
    }
 }

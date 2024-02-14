@@ -1,5 +1,7 @@
 #include "utils/DotPrinter.h"
 
+namespace utils {
+
 std::ostream& operator<<(std::ostream& os, DotPrinter::Sanitize s) {
    for(auto c : s.str) {
       switch(c) {
@@ -28,3 +30,5 @@ std::ostream& operator<<(std::ostream& os, DotPrinter::Sanitize s) {
    }
    return os;
 }
+
+} // namespace utils
