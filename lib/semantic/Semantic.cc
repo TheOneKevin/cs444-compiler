@@ -10,35 +10,28 @@ using std::string;
 // ast/Decl.h
 /* ===--------------------------------------------------------------------=== */
 
-VarDecl* Semantic::BuildVarDecl(Type* type, string_view name) {
-   return alloc.new_object<VarDecl>(alloc, type, name);
+VarDecl* Semantic::BuildVarDecl(Type* type, string_view name, Expr* init) {
+   return alloc.new_object<VarDecl>(alloc, type, name, init);
 }
 
 FieldDecl* Semantic::BuildFieldDecl(Modifiers modifiers,
-                                    Type* type,
-                                    string_view name) {
+                                    Type* type, string_view name, Expr* init) {
    if(modifiers.isFinal()) {
-      diag.ReportError(modifiers.getLocation(Modifiers::Type::Final))
-            << "field declaration cannot be final";
+      throw std::runtime_error("FieldDecl cannot be final");
    }
    if(modifiers.isAbstract()) {
-      diag.ReportError(modifiers.getLocation(Modifiers::Type::Abstract))
-            << "field declaration cannot be abstract";
+      throw std::runtime_error("FieldDecl cannot be abstract");
    }
    if(modifiers.isNative()) {
-      diag.ReportError(modifiers.getLocation(Modifiers::Type::Native))
-            << "field declaration cannot be native";
+      throw std::runtime_error("FieldDecl cannot be native");
    }
    if(modifiers.isPublic() && modifiers.isProtected()) {
-      diag.ReportError(modifiers.getLocation(Modifiers::Type::Public))
-            << "field cannot be both public and protected";
+      throw std::runtime_error("A method cannot be both public and protected.");
    }
    if(!modifiers.isPublic() && !modifiers.isProtected()) {
-      // FIXME(kevin)
-      // diag.ReportError()
-      //       << "field must have a visibility modifier";
+      throw std::runtime_error("Field must have a visibility modifier");
    }
-   return alloc.new_object<FieldDecl>(alloc, modifiers, type, name);
+   return alloc.new_object<FieldDecl>(alloc, modifiers, type, name, init);
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -144,6 +137,38 @@ MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers,
    // Create the AST node
    return alloc.new_object<MethodDecl>(
          alloc, modifiers, name, returnType, parameters, isConstructor, body);
+}
+
+/* ===-----------------------------------------------------------------=== */
+// ast/Stmt.h
+/* ===-----------------------------------------------------------------=== */
+
+BlockStatement* Semantic::BuildBlockStatement(array_ref<Stmt*> stmts) {
+   return alloc.new_object<BlockStatement>(alloc, stmts);
+}
+
+DeclStmt* Semantic::BuildDeclStmt(VarDecl* decl) {
+   return alloc.new_object<DeclStmt>(decl);
+}
+
+ExprStmt* Semantic::BuildExprStmt(Expr* expr) {
+   return alloc.new_object<ExprStmt>(expr);
+}
+
+IfStmt* Semantic::BuildIfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt) {
+   return alloc.new_object<IfStmt>(condition, thenStmt, elseStmt);
+}
+
+WhileStmt* Semantic::BuildWhileStmt(Expr* condition, Stmt* body) {
+   return alloc.new_object<WhileStmt>(condition, body);
+}
+
+ForStmt* Semantic::BuildForStmt(Stmt* init, Expr* condition, Stmt* update, Stmt* body) {
+   return alloc.new_object<ForStmt>(init, condition, update, body);
+}
+
+ReturnStmt* Semantic::BuildReturnStmt(Expr* expr) {
+   return alloc.new_object<ReturnStmt>(expr);
 }
 
 } // namespace ast

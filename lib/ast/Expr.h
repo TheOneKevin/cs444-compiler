@@ -7,25 +7,19 @@
 
 namespace ast {
 
+class ExprNode;
+class Expr : public AstNode {
+   std::list<ExprNode> rpn_ops;
+
+public:
+   
+};
+
 class ExprNode {
 public:
    virtual std::string toString() const { return "ExprNode"; }
    virtual ~ExprNode() = default;
 };
-
-class Expr {
-   std::list<ExprNode> rpn_ops;
-public:
-   Expr(std::list<ExprNode> rpn_ops) : rpn_ops{rpn_ops} {}
-   std::ostream& print(std::ostream& os, int indentation = 0) const {
-      os << AstNode::indent(indentation);
-      for (const auto& op : rpn_ops) {
-         os << op.toString() << " ";
-      }
-      return os;
-   }
-};
-
 
 class MemberName : public ExprNode {
    std::string name;
@@ -33,8 +27,6 @@ class MemberName : public ExprNode {
 public:
    MemberName(std::string name) : name{name} {}
 };
-
-class ThisNode : public ExprNode {};
 
 class ExprOp : public ExprNode {
 protected:
@@ -64,20 +56,12 @@ public:
    ArrayAccess() : ExprOp(2) {}
 };
 
-class ArrayTypeNode : public ExprOp {
-public:
-   ArrayTypeNode() : ExprOp(1) {}
-};
-
-class Cast : public ExprOp {
-public:
-   Cast() : ExprOp(2) {}
-};
-
 class UnaryOp : public ExprOp {
 #define UNARY_OP_TYPE_LIST(F) \
    /* Leaf nodes */           \
    F(Not)                     \
+   F(BitwiseNot)              \
+   F(Plus)                    \
    F(Minus)
 public:
    DECLARE_ENUM(OpType, UNARY_OP_TYPE_LIST)

@@ -5,7 +5,6 @@
 #include "utils/BumpAllocator.h"
 
 namespace ast {
-
 class Semantic {
    using string = std::string;
 
@@ -18,8 +17,9 @@ public:
    // ast/Decl.h
    /* ===-----------------------------------------------------------------=== */
 
-   VarDecl* BuildVarDecl(Type* type, string_view name);
-   FieldDecl* BuildFieldDecl(Modifiers modifiers, Type* type, string_view name);
+   VarDecl* BuildVarDecl(Type* type, string_view name, Expr* init = nullptr);
+   FieldDecl* BuildFieldDecl(Modifiers modifiers,
+                                    Type* type, string_view name, Expr* init = nullptr);
 
    /* ===-----------------------------------------------------------------=== */
    // ast/DeclContext.h
@@ -46,6 +46,20 @@ public:
                                array_ref<VarDecl*> parameters,
                                bool isConstructor,
                                Stmt* body);
+   /* ===-----------------------------------------------------------------=== */
+   // ast/Stmt.h
+   /* ===-----------------------------------------------------------------=== */
+
+   BlockStatement* BuildBlockStatement(array_ref<Stmt*> stmts);
+   DeclStmt* BuildDeclStmt(VarDecl* decl);
+   ExprStmt* BuildExprStmt(Expr* expr);
+   IfStmt* BuildIfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt = nullptr);
+   WhileStmt* BuildWhileStmt(Expr* condition, Stmt* body);
+   ForStmt* BuildForStmt(Stmt* init, Expr* condition, Stmt* update, Stmt* body);
+   ReturnStmt* BuildReturnStmt(Expr* expr);
+   NullStmt* BuildNullStmt() {
+      return alloc.new_object<NullStmt>();
+   }
 
 private:
    BumpAllocator& alloc;
