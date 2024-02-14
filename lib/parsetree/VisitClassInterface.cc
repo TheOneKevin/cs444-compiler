@@ -225,9 +225,7 @@ ast::MethodDecl* ptv::visitAbstractMethodDeclaration(Node* node) {
             node->child(3), params);
    }
    // Set as abstract
-   if(!modifiers.isAbstract()) {
-      modifiers.setAbstract();
-   }
+   modifiers.set(ast::Modifiers::Type::Abstract);
    // Return the constructed AST node
    return sem.BuildMethodDecl(modifiers, name, type, params, false, nullptr);
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <ranges>
 #include <string>
 #include <vector>
 
@@ -123,33 +124,79 @@ int printDotNodeList(DotPrinter& dp, Range&& range) {
 // Other classes ///////////////////////////////////////////////////////////////
 
 class Modifiers {
-   bool isPublic_;
-   bool isProtected_;
-   bool isStatic_;
-   bool isFinal_;
-   bool isAbstract_;
-   bool isNative_;
+public:
+   enum class Type {
+      Public = 0,
+      Protected = 1,
+      Static = 2,
+      Final = 3,
+      Abstract = 4,
+      Native = 5,
+      NumModifiers = 6
+   };
 
 public:
-   void set(parsetree::Modifier modifier);
+   /// @brief Will clear + set the modifier given a parsetree::Modifier
+   /// Will also set the location of the modifier.
+   /// @param modifier The modifier to assign to this Modifiers object
+   void set(parsetree::Modifier target);
 
-   void set(ast::Modifiers modifier);
+   /// @brief Will union the modifier with the current modifiers
+   /// @param modifier The modifier to union with this Modifiers object
+   /// @return True if the modifier was already set
+   bool set(ast::Modifiers::Type target) {
+      bool wasSet = test(modifiers, target);
+      modifiers |= (1 << (uint8_t)target);
+      return wasSet;
+   }
 
-   bool isPublic() const { return isPublic_; }
-   bool isProtected() const { return isProtected_; }
-   bool isStatic() const { return isStatic_; }
-   bool isFinal() const { return isFinal_; }
-   bool isAbstract() const { return isAbstract_; }
-   bool isNative() const { return isNative_; }
+   /// @brief Will union the modifiers with the current modifiers
+   /// @param target The set of modifiers to union
+   /// @return True if any of the modifiers were already set
+   bool set(ast::Modifiers target) {
+      bool wasSet = false;
+      for(int i = 0; i < (int)Type::NumModifiers; i++) {
+         if(test(target.modifiers, (Type)i)) {
+            wasSet |= set((Type)i);
+         }
+      }
+      return wasSet;
+   }
 
-   void setPublic();
-   void setProtected();
-   void setStatic();
-   void setFinal();
-   void setAbstract();
-   void setNative();
+   /// @brief Returns an iterator over the locations of the modifiers that
+   /// are set in both this Modifiers object and the given Modifiers object.
+   /// @param target The set of modifiers to intersect
+   auto getLocationsMasked(Modifiers target) const {
+      auto masked = target.modifiers & modifiers;
+      return std::views::iota(0, (int) Type::NumModifiers) |
+             std::views::filter(
+                   [masked](int i) { return (masked & (1 << i)) != 0; }) |
+             std::views::transform(
+                   [this](int i) { return modifierLocations[i]; });
+   }
+
+   /// @brief Returns the location of the given modifier. Returns an
+   /// undefined location if the modifier is not set.
+   auto getLocation(Type modifier) const {
+      return modifierLocations[(int)modifier];
+   }
+
+   bool isPublic() const { return test(modifiers, Type::Public); }
+   bool isProtected() const { return test(modifiers, Type::Protected); }
+   bool isStatic() const { return test(modifiers, Type::Static); }
+   bool isFinal() const { return test(modifiers, Type::Final); }
+   bool isAbstract() const { return test(modifiers, Type::Abstract); }
+   bool isNative() const { return test(modifiers, Type::Native); }
 
    std::string toString() const;
+
+private:
+   SourceRange modifierLocations[(int)Type::NumModifiers];
+   uint8_t modifiers = 0;
+
+   static constexpr int test(uint8_t value, Type bit) {
+      return (value & (1 << (uint8_t)bit)) != 0;
+   }
 };
 
 class QualifiedIdentifier {

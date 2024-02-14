@@ -22,7 +22,9 @@ bool testing::build_ast(const string& str) {
       // FIXME(kevin): We should fix the allocator API... this is quite ugly
       std::pmr::monotonic_buffer_resource mbr{};
       BumpAllocator alloc{&mbr};
-      parsetree::ParseTreeVisitor visitor{alloc};
+      diagnostics::DiagnosticEngine diag{};
+      ast::Semantic sem{alloc, diag};
+      parsetree::ParseTreeVisitor visitor{sem};
       auto ast = visitor.visitCompilationUnit(parse_tree);
       (void)ast;
       return true;
