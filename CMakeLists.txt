@@ -96,6 +96,7 @@ add_library(OLKCompilerLib
     "lib/parsetree/VisitStatement.cc"
     # utils
     "lib/utils/FragmentGenerator.cc"
+    "lib/utils/DotPrinter.cc"
 )
 target_include_directories(
     OLKCompilerLib

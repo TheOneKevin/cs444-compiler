@@ -9,16 +9,26 @@
 #include "parsetree/ParseTreeVisitor.h"
 #include "utils/CommandLine.h"
 
-int main() {
+int main(int argc, char** argv) {
+   utils::InputParser input(argc, argv);
+
    // Read entire input until enter
    std::istreambuf_iterator<char> eos;
    std::string str = std::string(std::istreambuf_iterator<char>(std::cin), eos);
+
+   // Flag to print the parse tree in dot format
+   bool print_dot = false;
+   if(input.cmdOptionExists("-x")) {
+      print_dot = true;
+   }
 
    // Parse input
    Joos1WParser parser{str};
    parsetree::Node* parse_tree = nullptr;
    int result = parser.parse(parse_tree);
-   std::cout << "Result: " << result << std::endl;
+   if(!print_dot) {
+      std::cout << "Result: " << result << std::endl;
+   }
 
    if(result != 0 || parse_tree == nullptr) {
       std::cout << "Parsing failed" << std::endl;
@@ -28,9 +38,16 @@ int main() {
    // FIXME(kevin): We should fix the allocator API... this is quite ugly
    std::pmr::monotonic_buffer_resource mbr{};
    BumpAllocator alloc{&mbr};
-   parsetree::ParseTreeVisitor visitor{alloc};
+   diagnostics::DiagnosticEngine diag{};
+   ast::Semantic sem{alloc, diag};
+   parsetree::ParseTreeVisitor visitor{sem};
    ast::CompilationUnit* ast = visitor.visitCompilationUnit(parse_tree);
-   ast->print(std::cout);
+
+   if(print_dot) {
+      ast->printDot(std::cout);
+   } else {
+      ast->print(std::cout);
+   }
 
    return 0;
 }

@@ -406,7 +406,7 @@ CastExpression
             $$ = jl.make_node(@$, pty::CastExpression, $2, jl.make_leaf(@$, pty::Dims), $4);
         }
         else {
-            // std::cerr << "Invalid cast expression" << std::endl;
+            jl.report_parser_error(@$, "Invalid expression for cast", {@1});
             $$ = jl.make_poison(@$);
         }
     }
@@ -656,13 +656,5 @@ std::string joos1w_parser_resolve_token (int yysymbol) {
 
 static void yyerror(YYLTYPE* yylloc, YYSTYPE* ret, Joos1WLexer& lexer, const char* s) {
     (void) ret;
-    (void) lexer;
-    // FIXME(kevin): Grab the location somehow
-    std::cerr << "Parse error: " << s << std::endl;
-    std::cerr
-        << "At: "
-        << yylloc->first_line << ":" << yylloc->first_column
-        << "-"
-        << yylloc->last_line << ":" << yylloc->last_column
-        << std::endl;
+    lexer.report_parser_error(*yylloc, s);
 }

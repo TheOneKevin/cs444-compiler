@@ -25,7 +25,7 @@ bool my_parse_grammar(const string& str, BumpAllocator& alloc) {
 
 TEST(ParserTests, SimpleGrammar) {
    testing::BasicGrammarGenerator g{};
-   CustomBufferResource mbr{4096};
+   utils::CustomBufferResource mbr{4096};
    BumpAllocator alloc{&mbr};
    for(auto x : g.match_string("class T{void f(){$<stmt>$}}")) {
       mbr.reset();

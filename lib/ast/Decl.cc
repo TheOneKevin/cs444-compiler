@@ -8,6 +8,8 @@ namespace ast {
 using std::ostream;
 using std::string;
 
+// VarDecl /////////////////////////////////////////////////////////////////////
+
 ostream& VarDecl::print(ostream& os, int indentation) const {
    auto i1 = indent(indentation);
    os << i1 << "VarDecl {\n"
@@ -20,6 +22,20 @@ ostream& VarDecl::print(ostream& os, int indentation) const {
    return os;
 }
 
+int VarDecl::printDotNode(DotPrinter& dp) const {
+   int id = dp.id();
+   dp.startTLabel(id);
+   dp.printTableSingleRow("VarDecl");
+   dp.printTableDoubleRow("type", type()->toString());
+   dp.printTableDoubleRow("name", getName());
+   dp.printTableDoubleRow("init", "", {}, {"port", "init"});
+   dp.endTLabel();
+   if(hasInit()) dp.printConnection(id, ":init", init()->printDotNode(dp));
+   return id;
+}
+
+// FieldDecl ///////////////////////////////////////////////////////////////////
+
 ostream& FieldDecl::print(ostream& os, int indentation) const {
    auto i1 = indent(indentation);
    os << i1 << "FieldDecl {\n"
@@ -31,6 +47,19 @@ ostream& FieldDecl::print(ostream& os, int indentation) const {
    }
    os << i1 << "}\n";
    return os;
+}
+
+int FieldDecl::printDotNode(DotPrinter& dp) const {
+   int id = dp.id();
+   dp.startTLabel(id);
+   dp.printTableSingleRow("FieldDecl");
+   dp.printTableDoubleRow("modifiers", modifiers.toString());
+   dp.printTableDoubleRow("type", type()->toString());
+   dp.printTableDoubleRow("name", getName());
+   dp.printTableDoubleRow("init", "", {}, {"port", "init"});
+   dp.endTLabel();
+   if(hasInit()) dp.printConnection(id, ":init", init()->printDotNode(dp));
+   return id;
 }
 
 } // namespace ast

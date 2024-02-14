@@ -18,19 +18,25 @@ FieldDecl* Semantic::BuildFieldDecl(Modifiers modifiers,
                                     Type* type,
                                     string_view name) {
    if(modifiers.isFinal()) {
-      throw std::runtime_error("FieldDecl cannot be final");
+      diag.ReportError(modifiers.getLocation(Modifiers::Type::Final))
+            << "field declaration cannot be final";
    }
    if(modifiers.isAbstract()) {
-      throw std::runtime_error("FieldDecl cannot be abstract");
+      diag.ReportError(modifiers.getLocation(Modifiers::Type::Abstract))
+            << "field declaration cannot be abstract";
    }
    if(modifiers.isNative()) {
-      throw std::runtime_error("FieldDecl cannot be native");
+      diag.ReportError(modifiers.getLocation(Modifiers::Type::Native))
+            << "field declaration cannot be native";
    }
    if(modifiers.isPublic() && modifiers.isProtected()) {
-      throw std::runtime_error("A method cannot be both public and protected.");
+      diag.ReportError(modifiers.getLocation(Modifiers::Type::Public))
+            << "field cannot be both public and protected";
    }
    if(!modifiers.isPublic() && !modifiers.isProtected()) {
-      throw std::runtime_error("Field must have a visibility modifier");
+      // FIXME(kevin)
+      // diag.ReportError()
+      //       << "field must have a visibility modifier";
    }
    return alloc.new_object<FieldDecl>(alloc, modifiers, type, name);
 }

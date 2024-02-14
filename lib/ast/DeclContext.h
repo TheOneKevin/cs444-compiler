@@ -29,8 +29,10 @@ public:
                       std::make_move_iterator(imports.begin()),
                       std::make_move_iterator(imports.end()));
    }
-   std::ostream& print(std::ostream& os, int indentation = 0) const override;
    auto body() const { return body_; }
+
+   std::ostream& print(std::ostream& os, int indentation = 0) const override;
+   int printDotNode(DotPrinter& dp) const override;
 
 private:
    QualifiedIdentifier* package_;
@@ -45,10 +47,16 @@ public:
              string_view name,
              QualifiedIdentifier* superClass,
              array_ref<QualifiedIdentifier*> interfaces,
-             array_ref<Decl*> classBodyDecls);
+             array_ref<Decl*> classBodyDecls) throw();
+   auto fields() const { return std::views::all(fields_); }
+   auto methods() const { return std::views::all(methods_); }
+   auto constructors() const { return std::views::all(constructors_); }
+   auto interfaces() const { return std::views::all(interfaces_); }
+   auto superClass() const { return superClass_; }
+   auto modifiers() const { return modifiers_; }
+
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
-   auto methods() { return std::views::all(methods_); }
-   auto constructors() { return std::views::all(constructors_); }
+   int printDotNode(DotPrinter& dp) const override;
 
 private:
    Modifiers modifiers_;
@@ -65,8 +73,13 @@ public:
                  Modifiers modifiers,
                  string_view name,
                  array_ref<QualifiedIdentifier*> extends,
-                 array_ref<Decl*> interfaceBodyDecls);
+                 array_ref<Decl*> interfaceBodyDecls) throw();
+   auto extends() const { return std::views::all(extends_); }
+   auto methods() const { return std::views::all(methods_); }
+   auto modifiers() const { return modifiers_; }
+
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
+   int printDotNode(DotPrinter& dp) const override;
 
 private:
    Modifiers modifiers_;
@@ -96,9 +109,12 @@ public:
                          std::make_move_iterator(parameters.begin()),
                          std::make_move_iterator(parameters.end()));
    }
-   std::ostream& print(std::ostream& os, int indentation = 0) const override;
-   Modifiers& modifiers() { return modifiers_; }
+   auto modifiers() const { return modifiers_; }
    bool isConstructor() const { return isConstructor_; }
+   auto parameters() const { return std::views::all(parameters_); }
+
+   std::ostream& print(std::ostream& os, int indentation = 0) const override;
+   int printDotNode(DotPrinter& dp) const override;
 
 private:
    Modifiers modifiers_;

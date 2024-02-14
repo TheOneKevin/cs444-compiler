@@ -59,11 +59,18 @@ int main(int argc, char** argv) {
       }
 
       // Parse the input
-      Joos1WParser parser{str};
+      diagnostics::DiagnosticEngine diag;
+      Joos1WParser parser{str, &diag};
       parsetree::Node* parse_tree = nullptr;
       int result = parser.parse(parse_tree);
       if(!is_piped) {
          std::cout << "Result: " << result << std::endl;
+      }
+
+      if(diag.hasErrors()) {
+         for(auto& msg : diag.messages()) {
+            msg.emit(std::cerr) << std::endl;
+         }
       }
 
       // Now print the parse tree

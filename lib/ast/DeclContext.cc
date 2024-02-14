@@ -1,4 +1,7 @@
+#include <algorithm>
+#include <cassert>
 #include <ostream>
+#include <ranges>
 #include <string>
 
 #include "ast/AST.h"
@@ -30,6 +33,22 @@ ostream& CompilationUnit::print(ostream& os, int indentation) const {
    return os;
 }
 
+int CompilationUnit::printDotNode(DotPrinter& dp) const {
+   int id = dp.id();
+   dp.startTLabel(id);
+   dp.printTableSingleRow("CompilationUnit");
+   dp.printTableDoubleRow("package", package_ ? package_->toString() : "??");
+   std::string imports;
+   for(auto& import : imports_) {
+      imports += import.qualifiedIdentifier->toString() +
+                 (import.isOnDemand ? ".*" : "") + "\\n";
+   }
+   dp.printTableDoubleRow("imports", imports);
+   dp.endTLabel();
+   if(body_) dp.printConnection(id, body_->printDotNode(dp));
+   return id;
+}
+
 // ClassDecl ///////////////////////////////////////////////////////////////////
 
 ClassDecl::ClassDecl(BumpAllocator& alloc,
@@ -37,7 +56,7 @@ ClassDecl::ClassDecl(BumpAllocator& alloc,
                      string_view name,
                      QualifiedIdentifier* superClass,
                      array_ref<QualifiedIdentifier*> interfaces,
-                     array_ref<Decl*> classBodyDecls)
+                     array_ref<Decl*> classBodyDecls) throw()
       : Decl{alloc, name},
         modifiers_{modifiers},
         superClass_{superClass},
@@ -55,7 +74,7 @@ ClassDecl::ClassDecl(BumpAllocator& alloc,
          else
             methods_.push_back(methodDecl);
       } else {
-         throw std::runtime_error("Invalid class body declaration");
+         assert(false && "Unexpected class body declaration type");
       }
    }
 }
@@ -82,13 +101,38 @@ ostream& ClassDecl::print(ostream& os, int indentation) const {
    return os;
 }
 
+int ClassDecl::printDotNode(DotPrinter& dp) const {
+   int id = dp.id();
+   dp.startTLabel(id);
+   dp.printTableSingleRow("ClassDecl");
+   dp.printTableDoubleRow("modifiers", modifiers_.toString());
+   dp.printTableDoubleRow("name", getName());
+   dp.printTableDoubleRow("superClass",
+                          superClass_ ? superClass_->toString() : "");
+   string intf;
+   for(auto& i : interfaces()) intf += i->toString() + "\\n";
+   dp.printTableDoubleRow("interfaces", intf);
+   dp.printTableDoubleRow("fields", "", {}, {"port", "fields"});
+   dp.printTableDoubleRow("constructors", "", {"port", "constructors"}, {});
+   dp.printTableDoubleRow("methods", "", {}, {"port", "methods"});
+   dp.endTLabel();
+
+   for(auto& f : fields())
+      dp.printConnection(id, ":fields", f->printDotNode(dp));
+   for(auto& f : constructors())
+      dp.printConnection(id, ":constructors:w", f->printDotNode(dp));
+   for(auto& f : methods())
+      dp.printConnection(id, ":methods:e", f->printDotNode(dp));
+   return id;
+}
+
 // InterfaceDecl ///////////////////////////////////////////////////////////////
 
 InterfaceDecl::InterfaceDecl(BumpAllocator& alloc,
                              Modifiers modifiers,
                              string_view name,
                              array_ref<QualifiedIdentifier*> extends,
-                             array_ref<Decl*> interfaceBodyDecls)
+                             array_ref<Decl*> interfaceBodyDecls) throw()
       : Decl{alloc, name},
         modifiers_{modifiers},
         extends_{alloc},
@@ -97,7 +141,7 @@ InterfaceDecl::InterfaceDecl(BumpAllocator& alloc,
       if(auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {
          methods_.push_back(methodDecl);
       } else {
-         throw std::runtime_error("Invalid interface body declaration");
+         assert(false && "Unexpected interface body declaration type");
       }
    }
 }
@@ -116,6 +160,25 @@ ostream& InterfaceDecl::print(ostream& os, int indentation) const {
    }
    os << i1 << "}\n";
    return os;
+}
+
+int InterfaceDecl::printDotNode(DotPrinter& dp) const {
+   int id = dp.id();
+   dp.startTLabel(id);
+   dp.printTableSingleRow("InterfaceDecl");
+   dp.printTableDoubleRow("modifiers", modifiers_.toString());
+   dp.printTableDoubleRow("name", getName());
+   string ext;
+   for(auto& e : extends()) {
+      ext += e->toString() + "\\n";
+   }
+   dp.printTableDoubleRow("extends", ext);
+   dp.printTableDoubleRow("methods", "", {}, {"port", "methods"});
+   dp.endTLabel();
+
+   for(auto& f : methods())
+      dp.printConnection(id, ":methods", f->printDotNode(dp));
+   return id;
 }
 
 // MethodDecl //////////////////////////////////////////////////////////////////
@@ -139,6 +202,55 @@ ostream& MethodDecl::print(ostream& os, int indentation) const {
    }
    os << i1 << "}\n";
    return os;
+}
+
+int MethodDecl::printDotNode(DotPrinter& dp) const {
+   int id = dp.id();
+   int paramSubgraphId = dp.id();
+   int bodySubgraphId = dp.id();
+
+   // Print the method declaration node itself
+   dp.startTLabel(id);
+   {
+      dp.printTableSingleRow("MethodDecl");
+      dp.printTableDoubleRow("modifiers", modifiers_.toString());
+      dp.printTableDoubleRow("name", getName());
+      dp.printTableDoubleRow("returnType",
+                             returnType_ ? returnType_->toString() : "null");
+      dp.printTableDoubleRow("parameters", "", {}, {"port", "parameters"});
+      dp.printTableSingleRow("Body", {"port", "body"});
+   }
+   dp.endTLabel();
+
+   // Print the parameter subgraph and connect it to the method node
+   int firstParamId = -1;
+   dp.startSubgraph(paramSubgraphId);
+   if(!parameters().empty()) {
+      dp.print("label=\"Parameters\"");
+      dp.print("color=lightcoral");
+      firstParamId = printDotNodeList(dp, parameters());
+   }
+   dp.endSubgraph();
+   if(firstParamId != -1)
+      dp.printConnection(id, ":parameters", firstParamId, paramSubgraphId);
+
+   // If there's no body, just bail out here
+   if(!body_) return id;
+
+   // Print the body subgraph and connect it to the method
+   if(auto stmt = dynamic_cast<CompoundStmt*>(body_)) {
+      int firstBodyId = -1;
+      dp.startSubgraph(bodySubgraphId);
+      dp.print("label=\"Body\"");
+      dp.print("color=lightblue");
+      firstBodyId = printDotNodeList(dp, stmt->stmts());
+      dp.endSubgraph();
+      if(firstBodyId != -1)
+         dp.printConnection(id, ":body", firstBodyId, bodySubgraphId);
+   } else {
+      dp.printConnection(id, ":body", body_->printDotNode(dp));
+   }
+   return id;
 }
 
 } // namespace ast

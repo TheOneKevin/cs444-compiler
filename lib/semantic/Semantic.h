@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast/AST.h"
+#include "diagnostics/Diagnostics.h"
 #include "utils/BumpAllocator.h"
 
 namespace ast {
@@ -9,7 +10,8 @@ class Semantic {
    using string = std::string;
 
 public:
-   Semantic(BumpAllocator& alloc) : alloc(alloc) {}
+   Semantic(BumpAllocator& alloc, diagnostics::DiagnosticEngine& diag)
+         : alloc{alloc}, diag{diag} {}
 
 public:
    /* ===-----------------------------------------------------------------=== */
@@ -52,6 +54,7 @@ public:
    Expr* BuildExpr(std::list<ExprNode> rpn_ops);
 private:
    BumpAllocator& alloc;
+   diagnostics::DiagnosticEngine& diag;
 };
 
 } // namespace ast
