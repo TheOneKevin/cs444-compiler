@@ -97,7 +97,7 @@ std::list<ast::ExprNode> ptv::visitExpr(parsetree::Node* node) {
 
 // expression can have different types of children, so we need to visit them
 // possible nodes: expression, literal, THIS, qualifiedIdentifier,
-// methodInvocation, TypeNotBasic
+// methodInvocation, Type, ArrayType,
 //                  arrayAccess, fieldAccess, castExpression,
 //                  ArrayCreationExpression ClassInstanceCreationExpression
 std::list<ast::ExprNode> ptv::visitExprChild(Node* node) {
@@ -105,10 +105,13 @@ std::list<ast::ExprNode> ptv::visitExprChild(Node* node) {
       return visitExpr(node);
    }
    if(node->get_node_type() == pty::Literal) {
-      // return visitLiteral(node);
+      return std::list<ast::ExprNode>({visitLiteral(node)});
    }
    if (node->get_node_type() == pty::Type) {
-      
+      return visitTypeInExpr(node);
+   }
+   if (node->get_node_type() == pty::ArrayType) {
+      return visitArrayType(node);
    }
    if(node->get_node_type() == pty::Identifier) {
       std::string name = visitIdentifier(node);
@@ -231,6 +234,73 @@ std::list<ast::ExprNode> ptv::visitCastExpression(Node* node) {
    ops.splice(ops.end(), type);
    ops.push_back(ast::Cast());
    return ops;
+}
+
+std::list<ast::ExprNode> ptv::visitArrayCreation(Node* node) {
+   check_node_type(node, pty::ArrayCreationExpression);
+   check_num_children(node, 2, 2);
+   if (node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
+      auto ops = visitQualifiedIdentifierInExpr(node->child(0));
+      ops.splice(ops.end(), visitExpr(node->child(1)));
+      ops.push_back(ast::ArrayInstanceCreation());
+      return ops;
+   } else if (auto basicType = dynamic_cast<parsetree::BasicType*>(node->child(0))) {
+      ast::BuiltInType type = ast::BuiltInType(basicType->get_type());
+      std::list<ast::ExprNode> ops({ast::BasicTypeNode(&type)});
+      ops.splice(ops.end(), visitExpr(node->child(1)));
+      ops.push_back(ast::ArrayInstanceCreation());
+      return ops;
+   }
+   unreachable();
+
+}
+
+std::list<ast::ExprNode> ptv::visitTypeInExpr(Node* node) {
+   check_node_type(node, pty::Type);
+   check_num_children(node, 1, 1);
+   if (node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
+      return visitQualifiedIdentifierInExpr(node->child(0));
+   } else if (auto basicType = dynamic_cast<parsetree::BasicType*>(node->child(0))) {
+      ast::BuiltInType type = ast::BuiltInType(basicType->get_type());
+      return std::list<ast::ExprNode>({ast::BasicTypeNode(&type)});
+   }
+   unreachable();
+}
+
+std::list<ast::ExprNode> ptv::visitArrayType(Node* node) {
+   check_node_type(node, pty::ArrayType);
+   check_num_children(node, 1, 1);
+   if (node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
+      auto ops = visitQualifiedIdentifierInExpr(node->child(0));
+      ops.push_back(ast::ArrayTypeNode());
+      return ops;
+   } else if (auto basicType = dynamic_cast<parsetree::BasicType*>(node->child(0))) {
+      ast::BuiltInType type = ast::BuiltInType(basicType->get_type());
+      std::list<ast::ExprNode> ops({ast::BasicTypeNode(&type)});
+      ops.push_back(ast::ArrayTypeNode());
+      return ops;
+   }
+   unreachable();
+}
+
+ast::LiteralNode ptv::visitLiteral(Node* node) {
+   check_node_type(node, pty::Literal);
+   check_num_children(node, 1, 1);
+   if (auto lit = dynamic_cast<parsetree::Literal*>(node)) {
+      switch (lit->get_type()) {
+         case parsetree::Literal::Type::Integer:
+            return ast::LiteralNode(lit->get_value(), ast::LiteralNode::Type::Integer);
+         case parsetree::Literal::Type::Character:
+            return ast::LiteralNode(lit->get_value(), ast::LiteralNode::Type::Character);
+         case parsetree::Literal::Type::String:
+            return ast::LiteralNode(lit->get_value(), ast::LiteralNode::Type::String);
+         case parsetree::Literal::Type::Boolean:
+            return ast::LiteralNode(lit->get_value(), ast::LiteralNode::Type::Boolean);
+         case parsetree::Literal::Type::Null:
+            return ast::LiteralNode(lit->get_value(), ast::LiteralNode::Type::Null);
+      }
+   } 
+   unreachable();
 }
 
 void ptv::visitArgumentList(Node* node, std::list<ast::ExprNode>& ops) {

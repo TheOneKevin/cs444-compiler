@@ -136,6 +136,10 @@ public:
    std::list<ast::ExprNode> visitArrayAccess(Node* node);
    std::list<ast::ExprNode> visitArrayCreation(Node* node);
    std::list<ast::ExprNode> visitCastExpression(Node* node);
+   std::list<ast::ExprNode> visitTypeInExpr(Node* node);
+   std::list<ast::ExprNode> visitArrayType(Node* node);
+
+   ast::LiteralNode visitLiteral(Node* node);
 
    void visitArgumentList(Node* node, std::list<ast::ExprNode>& ops);
 

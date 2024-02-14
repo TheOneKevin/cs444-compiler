@@ -21,6 +21,7 @@ using std::string_view;
 // Base class for all AST nodes ////////////////////////////////////////////////
 
 class Type;
+class BuiltInType;
 class Decl;
 class DeclContext;
 class Stmt;

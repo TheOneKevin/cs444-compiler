@@ -212,6 +212,10 @@ public:
    void setNegative() { isNegative = true; }
    // Check if the literal is valid
    bool isValid() const;
+   // Get the type of the literal
+   Type get_type() const { return type; }
+   // Get the string representation of the literal
+   std::pmr::string get_value() const { return value; }
 
 protected:
    void printDotNode(DotPrinter& dp) const override;
