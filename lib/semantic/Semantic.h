@@ -61,6 +61,10 @@ public:
       return alloc.new_object<NullStmt>();
    }
 
+   BumpAllocator& getAllocator() {
+      return alloc;
+   }
+
 private:
    BumpAllocator& alloc;
    diagnostics::DiagnosticEngine& diag;

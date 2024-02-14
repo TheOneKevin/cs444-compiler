@@ -26,7 +26,7 @@ class ParseTreeVisitor {
    using pty = Node::Type;
 
 public:
-   ParseTreeVisitor(ast::Semantic& sem) : sem{sem} {}
+   ParseTreeVisitor(ast::Semantic& sem) : sem{sem}, alloc{sem.getAllocator()} {}
 
 private:
    // Basic helper functions ///////////////////////////////////////////////////
@@ -190,6 +190,7 @@ public:
 
 private:
    ast::Semantic& sem;
+   BumpAllocator& alloc;
 };
 
 } // namespace parsetree
