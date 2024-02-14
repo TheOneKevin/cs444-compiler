@@ -245,13 +245,13 @@ std::list<ast::ExprNode> ptv::visitArrayCreation(Node* node) {
    check_num_children(node, 2, 2);
    if (node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
       auto ops = visitQualifiedIdentifierInExpr(node->child(0));
-      ops.splice(ops.end(), visitExpr(node->child(1)));
+      ops.splice(ops.end(), visitExprNode(node->child(1)));
       ops.push_back(ast::ArrayInstanceCreation());
       return ops;
    } else if (auto basicType = dynamic_cast<parsetree::BasicType*>(node->child(0))) {
       ast::BuiltInType type = ast::BuiltInType(basicType->get_type());
       std::list<ast::ExprNode> ops({ast::BasicTypeNode(&type)});
-      ops.splice(ops.end(), visitExpr(node->child(1)));
+      ops.splice(ops.end(), visitExprNode(node->child(1)));
       ops.push_back(ast::ArrayInstanceCreation());
       return ops;
    }

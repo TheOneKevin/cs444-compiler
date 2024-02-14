@@ -7,14 +7,6 @@
 
 namespace ast {
 
-class ExprNode;
-class Expr : public AstNode {
-   std::list<ExprNode> rpn_ops;
-
-public:
-   
-};
-
 class ExprNode {
 public:
    virtual std::ostream& print(std::ostream& os) const { 
