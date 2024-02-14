@@ -234,7 +234,7 @@ std::list<ast::ExprNode> ptv::visitCastExpression(Node* node) {
    if (node->num_children() == 3 && node->child(1) != nullptr) {
       ops.push_back(ast::ArrayTypeNode());
    }
-   auto expr = visitExprChild(node->child(1));
+   auto expr = visitExprChild(node->child(node->num_children() - 1));
    ops.splice(ops.end(), type);
    ops.push_back(ast::Cast());
    return ops;
