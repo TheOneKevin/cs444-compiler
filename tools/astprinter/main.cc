@@ -9,6 +9,21 @@
 #include "parsetree/ParseTreeVisitor.h"
 #include "utils/CommandLine.h"
 
+static inline void trace_node(parsetree::Node const* node) {
+   if(node->parent() != nullptr) {
+      trace_node(node->parent());
+      std::cerr << " -> ";
+   }
+   std::cerr << node->type_string() << std::endl;
+}
+
+static inline void mark_node(parsetree::Node* node) {
+   if(!node)
+      return;
+   mark_node(node->parent());
+   node->mark();
+}
+
 int main(int argc, char** argv) {
    utils::InputParser input(argc, argv);
 
@@ -41,7 +56,19 @@ int main(int argc, char** argv) {
    diagnostics::DiagnosticEngine diag{};
    ast::Semantic sem{alloc, diag};
    parsetree::ParseTreeVisitor visitor{sem};
-   ast::CompilationUnit* ast = visitor.visitCompilationUnit(parse_tree);
+   ast::CompilationUnit* ast = nullptr;
+   try {
+      ast = visitor.visitCompilationUnit(parse_tree);
+   } catch(const parsetree::ParseTreeException& e) {
+      std::cerr << "ParseTreeException: " << e.what() << std::endl;
+      if(print_dot) {
+         mark_node(e.get_where());
+         parse_tree->printDot(std::cout);
+      } else {
+         trace_node(e.get_where());
+      }
+      return 1;
+   }
 
    if(print_dot) {
       ast->printDot(std::cout);

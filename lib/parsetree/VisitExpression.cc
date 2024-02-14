@@ -70,7 +70,7 @@ std::list<ast::ExprNode> ptv::visitExprNode(parsetree::Node* node) {
    check_node_type(node, pty::Expression);
    check_num_children(node, 1, 3);
    if(node->num_children() == 1) {
-      return visitExprNode(node->child(0));
+      return visitExprChild(node->child(0));
    } else if(node->num_children() == 2) {
       // unary expression
       std::list<ast::ExprNode> ops;
@@ -220,7 +220,7 @@ std::list<ast::ExprNode> ptv::visitArrayAccess(Node* node) {
    check_num_children(node, 2, 2);
    std::list<ast::ExprNode> ops;
    ops.splice(ops.end(), visitExprChild(node->child(0)));
-   ops.splice(ops.end(), visitExprNode(node->child(1)));
+   ops.splice(ops.end(), visitExprChild(node->child(1)));
    ops.push_back(ast::ArrayAccess());
    return ops;
 }
@@ -245,13 +245,13 @@ std::list<ast::ExprNode> ptv::visitArrayCreation(Node* node) {
    check_num_children(node, 2, 2);
    if (node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
       auto ops = visitQualifiedIdentifierInExpr(node->child(0));
-      ops.splice(ops.end(), visitExprNode(node->child(1)));
+      ops.splice(ops.end(), visitExprChild(node->child(1)));
       ops.push_back(ast::ArrayInstanceCreation());
       return ops;
    } else if (auto basicType = dynamic_cast<parsetree::BasicType*>(node->child(0))) {
       ast::BuiltInType type = ast::BuiltInType(basicType->get_type());
       std::list<ast::ExprNode> ops({ast::BasicTypeNode(&type)});
-      ops.splice(ops.end(), visitExprNode(node->child(1)));
+      ops.splice(ops.end(), visitExprChild(node->child(1)));
       ops.push_back(ast::ArrayInstanceCreation());
       return ops;
    }
@@ -312,10 +312,10 @@ void ptv::visitArgumentList(Node* node, std::list<ast::ExprNode>& ops) {
    check_node_type(node, pty::ArgumentList);
    check_num_children(node, 1, 2);
    if(node->num_children() == 1) {
-      ops.splice(ops.end(), visitExprNode(node->child(0)));
+      ops.splice(ops.end(), visitExprChild(node->child(0)));
    } else if(node->num_children() == 2) {
       visitArgumentList(node->child(0), ops);
-      ops.splice(ops.end(), visitExprNode(node->child(1)));
+      ops.splice(ops.end(), visitExprChild(node->child(1)));
    }
    return;
 }

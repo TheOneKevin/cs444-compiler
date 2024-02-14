@@ -8,8 +8,8 @@
 
 #include "diagnostics/Location.h"
 #include "utils/BumpAllocator.h"
-#include "utils/EnumMacros.h"
 #include "utils/DotPrinter.h"
+#include "utils/EnumMacros.h"
 
 class Joos1WLexer;
 class Joos1WParser;
@@ -99,7 +99,7 @@ protected:
    /// @brief Protected constructor for leaf nodes
    /// @param type The type of the leaf node
    Node(SourceRange loc, Type type)
-         : loc{loc}, type{type}, args{nullptr}, num_args{0} {}
+         : loc{loc}, type{type}, args{nullptr}, num_args{0}, parent_{nullptr} {}
 
    /// @brief Protected constructor for non-leaf nodes
    /// @tparam ...Args The child node types (should be Node*)
@@ -118,6 +118,7 @@ protected:
       std::array<Node*, sizeof...(Args)> tmp{std::forward<Args>(args)...};
       for(size_t i = 0; i < sizeof...(Args); i++) {
          this->args[i] = tmp[i];
+         if(this->args[i] != nullptr) this->args[i]->parent_ = this;
       }
    }
 
@@ -150,6 +151,11 @@ public:
    }
    /// @brief Get the location of the node
    SourceRange location() const { return loc; }
+   /// @brief Get the parent of the node
+   Node const* parent() const { return parent_; }
+   Node* parent() { return parent_; }
+   void mark() { marked = true; }
+   bool is_marked() const { return marked; }
 
 public:
    /// @brief Virtual function to print the node
@@ -169,7 +175,9 @@ private:
    SourceRange loc;
    Type type;
    Node** args;
+   Node* parent_;
    size_t num_args;
+   bool marked = false;
 };
 
 // Output stream operator for a parse tree node

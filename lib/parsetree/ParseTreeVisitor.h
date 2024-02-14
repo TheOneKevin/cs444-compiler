@@ -8,6 +8,20 @@
 
 namespace parsetree {
 
+class ParseTreeException : public std::exception {
+public:
+   ParseTreeException(Node* where, const std::string& what)
+         : msg{what}, where{where} {}
+
+   const char* what() const noexcept override { return msg.c_str(); }
+
+   Node* get_where() const { return where; }
+
+private:
+   std::string msg;
+   Node* where;
+};
+
 class ParseTreeVisitor {
    using pty = Node::Type;
 
@@ -19,10 +33,12 @@ private:
 
    static inline void check_node_type(Node* node, Node::Type type) {
       if(node->get_node_type() != type) {
-         throw std::runtime_error(
+         throw ParseTreeException(
+               node,
                "Called on a node that is not the correct type!"
                " Expected: " +
-               Node::type_string(type) + " Actual: " + node->type_string());
+                     Node::type_string(type) +
+                     " Actual: " + node->type_string());
       }
    }
 

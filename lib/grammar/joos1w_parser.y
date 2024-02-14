@@ -521,8 +521,8 @@ BlockStatementList
     ;
 
 BlockStatement
-    : LocalVariableDeclarationStatement
-    | Statement
+    : LocalVariableDeclarationStatement                                         /* This is already wrapped */
+    | Statement                                                                 /* This is already wrapped */
     ;
 
 /* ========================================================================== */
@@ -530,25 +530,25 @@ BlockStatement
 /* ========================================================================== */
 
 Statement
-    : StatementWithoutTrailingSubstatement
-    | IfThenStatement
-	| IfThenElseStatement
-	| WhileStatement
-	| ForStatement
+    : StatementWithoutTrailingSubstatement                                      /* This is already wrapped */
+    | IfThenStatement                                                           { $$ = jl.make_node(@$, pty::Statement, $1); }
+	| IfThenElseStatement                                                       { $$ = jl.make_node(@$, pty::Statement, $1); }
+	| WhileStatement                                                            { $$ = jl.make_node(@$, pty::Statement, $1); }
+	| ForStatement                                                              { $$ = jl.make_node(@$, pty::Statement, $1); }
     ;
 
 StatementWithoutTrailingSubstatement
     : Block                                                                     { $$ = jl.make_node(@$, pty::Statement, $1); }
-	| EmptyStatement                                                            /* No action as EmptyStatement returns Statement */
-    | ExpressionStatement                                                       /* No action as ExpressionStatement returns Statement */
-    | ReturnStatement                                                           /* No action as ReturnStatement returns Statement */
+	| EmptyStatement                                                            /* Empty statement is already wrapped */
+    | ExpressionStatement                                                       /* Expression statement is already wrapped */
+    | ReturnStatement                                                           { $$ = jl.make_node(@$, pty::Statement, $1); }
     ;
 
 StatementNoShortIf
-    : StatementWithoutTrailingSubstatement
-    | IfThenElseStatementNoShortIf
-    | WhileStatementNoShortIf
-    | ForStatementNoShortIf
+    : StatementWithoutTrailingSubstatement                                      /* This is already wrapped */
+    | IfThenElseStatementNoShortIf                                              { $$ = jl.make_node(@$, pty::Statement, $1); }
+    | WhileStatementNoShortIf                                                   { $$ = jl.make_node(@$, pty::Statement, $1); }
+    | ForStatementNoShortIf                                                     { $$ = jl.make_node(@$, pty::Statement, $1); }
     ;
 
 ExpressionStatement

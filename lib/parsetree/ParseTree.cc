@@ -142,7 +142,13 @@ void Node::printDotNode(DotPrinter& dp) const {
 int Node::printDotRecursive(DotPrinter& dp, const Node& node) const {
    const int id = dp.id();
    // Print the label first
-   if(node.get_node_type() == Node::Type::Poison) {
+   if(node.is_marked()) {
+      // clang-format off
+      dp.startTLabel(id, {
+         "color", "red",
+      }, "5");
+      // clang-format on
+   } else if(node.get_node_type() == Node::Type::Poison) {
       // clang-format off
       dp.startTLabel(id, {
          "style", "filled",
