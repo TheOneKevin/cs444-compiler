@@ -3,28 +3,30 @@
 namespace ast {
 
 void Modifiers::set(parsetree::Modifier target) {
+   Type modifier;
    switch(target.get_type()) {
       case parsetree::Modifier::Type::Public:
-         modifiers = (uint8_t) Type::Public;
+         modifier = Type::Public;
          break;
       case parsetree::Modifier::Type::Protected:
-         modifiers = (uint8_t) Type::Protected;
+         modifier = Type::Protected;
          break;
       case parsetree::Modifier::Type::Static:
-         modifiers = (uint8_t) Type::Static;
+         modifier = Type::Static;
          break;
       case parsetree::Modifier::Type::Final:
-         modifiers = (uint8_t) Type::Final;
+         modifier = Type::Final;
          break;
       case parsetree::Modifier::Type::Abstract:
-         modifiers = (uint8_t) Type::Abstract;
+         modifier = Type::Abstract;
          break;
       case parsetree::Modifier::Type::Native:
-         modifiers = (uint8_t) Type::Native;
+         modifier = Type::Native;
          break;
       default:
          assert(false && "Unknown modifier type");
    }
+   set(modifier);
    modifierLocations[(int)modifiers] = target.location();
 }
 

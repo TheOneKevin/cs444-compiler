@@ -63,7 +63,7 @@ static ast::BinaryOp convertToBinaryOp(Operator::Type type) {
 }
 
 ast::Expr* ptv::visitExpr(Node* node) {
-   // FIXME(larry): Implement
+   return new ast::Expr(visitExprNode(node));
 }
 
 std::list<ast::ExprNode> ptv::visitExprNode(parsetree::Node* node) {

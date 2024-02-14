@@ -12,7 +12,6 @@ using ptv = ParseTreeVisitor;
 ast::BlockStatement* ptv::visitBlock(Node* node) {
    check_node_type(node, pty::Block);
    check_num_children(node, 1, 1);
-   if(node->child(0) == nullptr) return nullptr;
    ast::pmr_vector<ast::Stmt*> stmts;
    visitListPattern<pty::BlockStatementList, ast::Stmt*, true>(
       node->child(0), stmts);

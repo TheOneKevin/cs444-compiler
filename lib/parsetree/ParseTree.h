@@ -130,11 +130,11 @@ public:
    Type get_node_type() const { return type; }
    /// @brief Operator to turn Type into a string
    std::string type_string() const {
-      return type_strings[static_cast<int>(type)];
+      return Type_to_string(type, "Unknown Type");
    }
    /// @brief Operator to turn Type into a string
    static std::string type_string(Type type) {
-      return type_strings[static_cast<int>(type)];
+      return Type_to_string(type, "Unknown Type");
    }
    /// @brief Check if the tree has been poisoned
    bool is_poisoned() const {

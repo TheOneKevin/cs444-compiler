@@ -19,14 +19,8 @@ class Expr {
    std::list<ExprNode> rpn_ops;
 public:
    Expr(std::list<ExprNode> rpn_ops) : rpn_ops{rpn_ops} {}
-   std::ostream& print(std::ostream& os, int indentation = 0) const {
-      os << AstNode::indent(indentation);
-      for (const auto& op : rpn_ops) {
-         op.print(os);
-         os << " ";
-      }
-      return os;
-   }
+   std::ostream& print(std::ostream& os, int indentation) const;
+   int printDotNode(DotPrinter& dp) const;
 };
 
 

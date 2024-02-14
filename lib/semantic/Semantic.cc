@@ -97,7 +97,7 @@ MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers,
    // Check modifiers
    if((body == nullptr) != (modifiers.isAbstract() || modifiers.isNative())) {
       throw std::runtime_error(
-            "A method has a body if and only if it is neither abstract nor"
+            "A method has a body if and only if it is neither abstract nor "
             "native.");
    }
    if(modifiers.isAbstract() &&
