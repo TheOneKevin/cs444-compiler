@@ -12,11 +12,11 @@ public:
       BumpAllocator& alloc, 
       array_ref<Stmt*> stmts
    ) noexcept :
-      stmts_{stmts} {
+      stmts_{alloc} {
          stmts_.reserve(stmts_.size());
          stmts_.insert(stmts_.end(),
-            std::make_move_iterator(stmts_.begin()),
-            std::make_move_iterator(stmts_.end()));
+            std::make_move_iterator(stmts.begin()),
+            std::make_move_iterator(stmts.end()));
       }
 
    auto stmts() const { return std::views::all(stmts_); }

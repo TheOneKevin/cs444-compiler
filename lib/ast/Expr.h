@@ -9,34 +9,34 @@ namespace ast {
 
 class ExprNode {
 public:
-   virtual std::ostream& print(std::ostream& os) const { 
+   virtual std::ostream& print(std::ostream& os) const {
       return os << "ExprNode";
    }
    virtual ~ExprNode() = default;
 };
 
 class Expr {
-   std::list<ExprNode> rpn_ops;
+   std::list<ExprNode*> rpn_ops;
 public:
-   Expr(std::list<ExprNode> rpn_ops) : rpn_ops{rpn_ops} {}
+   Expr(std::list<ExprNode*> rpn_ops) : rpn_ops{rpn_ops} {}
    std::ostream& print(std::ostream& os, int indentation) const;
    int printDotNode(DotPrinter& dp) const;
 };
 
 
 class MemberName : public ExprNode {
-   std::string_view name;
+   std::pmr::string name;
 
 public:
    MemberName(std::string_view name) : name{name} {}
-   virtual std::ostream& print(std::ostream& os) const {
+   std::ostream& print(std::ostream& os) const override{
       return os << "(Member name:" << name << ")";
    }
 };
 
 class ThisNode : public ExprNode {
-   virtual std::ostream& print(std::ostream& os) const {
-      return os << "THIS";
+   std::ostream& print(std::ostream& os) const override {
+      return os << "(THIS)";
    }
 };
 
@@ -44,6 +44,9 @@ class BasicTypeNode : public ExprNode {
    BuiltInType *type;
 public:
    BasicTypeNode(BuiltInType *type) : type{type} {}
+   std::ostream& print(std::ostream& os) const override {
+      return os << "(BasicTypeNode)";
+   }
 };
 
 class LiteralNode : public ExprNode {
@@ -66,8 +69,8 @@ private:
 
 public:
    LiteralNode(std::string_view value, Type type) : value{value}, type{type} {}
-   virtual std::ostream& print(std::ostream& os) const {
-      return os << "(" << Type_to_string(type, "unknown literal type") << " " << value << " )";
+   std::ostream& print(std::ostream& os) const override{
+      return os << "(" << Type_to_string(type, "unknown literal type") << " " << value << ")";
    }
 };
 
@@ -75,12 +78,16 @@ class ExprOp : public ExprNode {
 protected:
    ExprOp(int num_args) : num_args{num_args} {}
    int num_args;
+public:
+   std::ostream& print(std::ostream& os) const override {
+      return os << "ExprOp";
+   }
 };
 
 class MemberAccess : public ExprOp {
 public:
    MemberAccess() : ExprOp(1) {}
-   virtual std::ostream& print(std::ostream& os) const {
+   std::ostream& print(std::ostream& os) const override {
       return os << "MemberAccess";
    }
 };
@@ -88,7 +95,7 @@ public:
 class MethodInvocation : public ExprOp {
 public:
    MethodInvocation(int num_args) : ExprOp(num_args) {}
-   virtual std::ostream& print(std::ostream& os) const {
+   std::ostream& print(std::ostream& os) const override {
       return os << "MethodInvocation";
    }
 };
@@ -96,7 +103,7 @@ public:
 class ClassInstanceCreation : public ExprOp {
 public:
    ClassInstanceCreation(int num_args) : ExprOp(num_args) {}
-   virtual std::ostream& print(std::ostream& os) const {
+   std::ostream& print(std::ostream& os) const override {
       return os << "(ClassInstanceCreation args: " << std::to_string(num_args) << ")";
    }
 };
@@ -104,7 +111,7 @@ public:
 class ArrayInstanceCreation : public ExprOp {
 public:
    ArrayInstanceCreation() : ExprOp(2) {}
-   virtual std::ostream& print(std::ostream& os) const {
+   std::ostream& print(std::ostream& os) const override {
       return os << "ArrayInstanceCreation";
    }
 };
@@ -112,7 +119,7 @@ public:
 class ArrayAccess : public ExprOp {
 public:
    ArrayAccess() : ExprOp(2) {}
-   virtual std::ostream& print(std::ostream& os) const {
+   std::ostream& print(std::ostream& os) const override {
       return os << "ArrayAccess";
    }
 };
@@ -120,7 +127,7 @@ public:
 class ArrayTypeNode : public ExprOp {
 public:
    ArrayTypeNode() : ExprOp(1) {}
-   virtual std::ostream& print(std::ostream& os) const{
+   std::ostream& print(std::ostream& os) const override{
       return os << "ArrayTypeNode";
    }
 };
@@ -128,7 +135,7 @@ public:
 class Cast : public ExprOp {
 public:
    Cast() : ExprOp(2) {}
-   virtual std::ostream& print(std::ostream& os) const{
+   std::ostream& print(std::ostream& os) const override{
       return os << "Cast";
    }
 };
@@ -151,7 +158,7 @@ private:
 
 public:
    UnaryOp(OpType type) : ExprOp(1), type{type} {}
-   virtual std::ostream& print(std::ostream& os) const {
+   std::ostream& print(std::ostream& os) const override {
       return os << OpType_to_string(type, "(Unknown unary op)");
    }
 };
@@ -187,7 +194,7 @@ private:
 
 public:
    BinaryOp(OpType type) : ExprOp(2), type{type} {}
-   virtual std::ostream& print(std::ostream& os) const {
+   std::ostream& print(std::ostream& os) const override {
       return os << OpType_to_string(type, "(Unknown binary op)");
    }
 };

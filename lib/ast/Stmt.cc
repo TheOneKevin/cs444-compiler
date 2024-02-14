@@ -46,6 +46,7 @@ int DeclStmt::printDotNode(DotPrinter& dp) const {
 // ExprStmt ////////////////////////////////////////////////////////////////////
 
 std::ostream& ExprStmt::print(std::ostream& os, int indentation) const {
+   expr_->print(os, indentation);
    return os;
 }
 

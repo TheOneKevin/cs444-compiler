@@ -9,7 +9,7 @@ namespace ast {
 std::ostream& Expr::print(std::ostream& os, int indentation) const {
    os << AstNode::indent(indentation);
    for(const auto& op : rpn_ops) {
-      op.print(os);
+      op->print(os);
       os << " ";
    }
    return os;
