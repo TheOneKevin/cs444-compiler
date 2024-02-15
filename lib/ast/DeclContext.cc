@@ -39,10 +39,11 @@ int LinkingUnit::printDotNode(DotPrinter& dp) const {
    int id = dp.id();
    dp.startTLabel(id);
    dp.printTableSingleRow("LinkingUnit", {"bgcolor", "lightblue"});
+   dp.endTLabel();
+
    for(auto& cu : compilationUnits_) {
       dp.printConnection(id, cu->printDotNode(dp));
    }
-   dp.endTLabel();
    return id;
 }
 

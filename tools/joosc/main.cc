@@ -22,6 +22,8 @@ bool isLiteralTypeValid(parsetree::Node* node) {
 }
 
 int main(int argc, char** argv) {
+   bool printDot = false;
+
    // Check for correct number of arguments
    if(argc < 2) {
       std::cerr << "Usage: " << argv[0] << " input-file " << std::endl;
@@ -36,9 +38,11 @@ int main(int argc, char** argv) {
 
    std::pmr::vector<ast::CompilationUnit*> asts;
 
-   // fixme(Owen): figure out how to do flags to print
-
-    for (int i = 1; i < argc; i++) {
+   for (int i = 1; i < argc; i++) {
+      if (std::string(argv[i]) == "-x") {
+         printDot = true;
+         continue;
+      }
       // Check if the file is a .java file
       std::string filePath = argv[i];
       std::string fileName = filePath.substr(filePath.find_last_of("/\\") + 1);
@@ -142,8 +146,9 @@ int main(int argc, char** argv) {
       return 42;
    }
    
-   
-   linkingUnit->printDot(std::cout);
+   if (printDot) {
+      linkingUnit->printDot(std::cout);
+   }
 
    return 0;
 }
