@@ -70,7 +70,7 @@ public:
 class UnresolvedType : public ReferenceType {
    BumpAllocator& alloc;
    pmr_vector<std::pmr::string> identifiers;
-   std::pmr::string canonicalName;
+   mutable std::pmr::string canonicalName;
 
 public:
    UnresolvedType(BumpAllocator& alloc)
@@ -78,10 +78,16 @@ public:
 
    void addIdentifier(string_view identifier) {
       identifiers.emplace_back(identifier);
-      canonicalName += identifier;
    }
 
-   string_view toString() const { return canonicalName; }
+   string_view toString() const {
+      for(auto& id : identifiers) {
+         canonicalName += id;
+         canonicalName += ".";
+      }
+      canonicalName.pop_back();
+      return canonicalName;
+   }
 
    std::ostream& operator<<(std::ostream& os) const { return os << toString(); }
 };
