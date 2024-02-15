@@ -7,15 +7,46 @@
 namespace ast {
 
 std::ostream& Expr::print(std::ostream& os, int indentation) const {
-   os << AstNode::indent(indentation);
-   for(const auto& op : rpn_ops) {
-      op->print(os);
-      os << " ";
+   if(indentation >= 0) {
+      os << AstNode::indent(indentation);
+      os << "Expr {\n";
    }
-   os << "\n";
+   os << AstNode::indent(indentation + 1);
+   char state = '(';
+   for(const auto& op : rpn_ops) {
+      if(indentation >= 0) {
+         std::ostringstream oss;
+         op->print(oss);
+         char cur = (oss.str().begin()[0] == '(') ? '(' : '.';
+         if(cur == state) {
+            os << oss.str() << " ";
+         } else {
+            os << "\n" << AstNode::indent(indentation + 1) << oss.str() << " ";
+         }
+         state = cur;
+      } else {
+         op->print(os);
+         os << "\n";
+      }
+   }
+   if(indentation >= 0) {
+      os << "\n" << AstNode::indent(indentation) << "}\n";
+   }
    return os;
 }
 
-int Expr::printDotNode(DotPrinter& dp) const { return dp.id(); }
+int Expr::printDotNode(DotPrinter& dp) const {
+   std::ostringstream os;
+   for(const auto& op : rpn_ops) {
+      op->print(os);
+      if(os.str().ends_with(")")) {
+         os << "\n";
+      } else {
+         os << " ";
+      }
+   }
+   dp.sanitize(os.str());
+   return -1;
+}
 
 } // namespace ast

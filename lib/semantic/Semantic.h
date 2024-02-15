@@ -1,8 +1,10 @@
 #pragma once
 
+#include <unordered_set>
+
 #include "ast/AST.h"
-#include "parsetree/ParseTree.h"
 #include "diagnostics/Diagnostics.h"
+#include "parsetree/ParseTree.h"
 #include "utils/BumpAllocator.h"
 
 namespace ast {
@@ -72,11 +74,64 @@ public:
    ReturnStmt* BuildReturnStmt(Expr* expr);
    NullStmt* BuildNullStmt() { return alloc.new_object<NullStmt>(); }
 
-   BumpAllocator& getAllocator() { return alloc; }
+public:
+   BumpAllocator& allocator() { return alloc; }
+
+public:
+   /// @brief Clears the lexical local scope names
+   void ResetLexicalLocalScope() {
+      lexicalLocalScope.clear();
+      lexicalLocalDecls.clear();
+      lexicalLocalDeclStack.clear();
+   }
+
+   /**
+    * @brief Checks if a name is in the lexical local scope
+    * and if it is not, add it to the scope.
+    * @param name The name to add to the scope
+    * @return true If the name was added to the scope
+    * @return false If the name was already in the scope
+    */
+   bool AddLexicalLocal(VarDecl* decl) {
+      std::string nameCpy{decl->name()};
+      if(lexicalLocalScope.find(nameCpy) != lexicalLocalScope.end())
+         return false;
+      lexicalLocalScope.insert(std::move(nameCpy));
+      lexicalLocalDecls.push_back(decl);
+      lexicalLocalDeclStack.push_back(decl);
+      return true;
+   }
+
+   /**
+    * @brief Called when a new lexical scope is entered. Returns the size of the
+    * local declaration stack so it can be restored when the scope is exited.
+    * @return int Returns the size of the local declaration stack
+    */
+   int EnterLexicalScope() {
+      int size = lexicalLocalDeclStack.size();
+      return size;
+   }
+
+   /**
+    * @brief Called when a lexical scope is exited. Resizes the local decl
+    * stack to the size it was when the scope was entered. Deletes the locals
+    * from the set as well.
+    * @param size The size of the local declaration stack when the scope was entered
+    */
+   void ExitLexicalScope(int size) {
+      for(int i = lexicalLocalDeclStack.size() - 1; i >= size; --i)
+         lexicalLocalScope.erase(lexicalLocalDeclStack[i]->name().data());
+      lexicalLocalDeclStack.resize(size);
+   }
+
+   auto getAllLexicalDecls() const { return std::views::all(lexicalLocalDecls); }
 
 private:
    BumpAllocator& alloc;
    diagnostics::DiagnosticEngine& diag;
+   std::vector<VarDecl*> lexicalLocalDeclStack;
+   std::vector<VarDecl*> lexicalLocalDecls;
+   std::unordered_set<std::string> lexicalLocalScope;
 };
 
 } // namespace ast

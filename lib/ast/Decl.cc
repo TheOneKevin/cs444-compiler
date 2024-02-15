@@ -23,14 +23,15 @@ ostream& VarDecl::print(ostream& os, int indentation) const {
 }
 
 int VarDecl::printDotNode(DotPrinter& dp) const {
-   int id = dp.id();
+   int id = dp.id(this);
    dp.startTLabel(id);
-   dp.printTableSingleRow("VarDecl");
+   dp.printTableSingleRow("VarDecl", {"bgcolor", "lightblue"});
    dp.printTableDoubleRow("type", type()->toString());
    dp.printTableDoubleRow("name", name());
-   dp.printTableDoubleRow("init", "", {}, {"port", "init"});
+   std::ostringstream expr;
+   if(init_) init_->print(expr, -1);
+   dp.printTableDoubleRow("init", expr.str(), {"port", "init"}, {"balign", "left"});
    dp.endTLabel();
-   if(hasInit()) dp.printConnection(id, ":init", init()->printDotNode(dp));
    return id;
 }
 
@@ -50,15 +51,16 @@ ostream& FieldDecl::print(ostream& os, int indentation) const {
 }
 
 int FieldDecl::printDotNode(DotPrinter& dp) const {
-   int id = dp.id();
+   int id = dp.id(this);
    dp.startTLabel(id);
-   dp.printTableSingleRow("FieldDecl");
+   dp.printTableSingleRow("FieldDecl", {"bgcolor", "lightblue"});
    dp.printTableDoubleRow("modifiers", modifiers.toString());
    dp.printTableDoubleRow("type", type()->toString());
    dp.printTableDoubleRow("name", name());
-   dp.printTableDoubleRow("init", "", {}, {"port", "init"});
+   std::ostringstream expr;
+   if(hasInit()) init()->print(expr, -1);
+   dp.printTableDoubleRow("init", expr.str(), {"port", "init"}, {"balign", "left"});
    dp.endTLabel();
-   if(hasInit()) dp.printConnection(id, ":init", init()->printDotNode(dp));
    return id;
 }
 

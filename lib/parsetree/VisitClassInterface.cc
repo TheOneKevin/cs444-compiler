@@ -28,11 +28,8 @@ ast::ClassDecl* ptv::visitClassDeclaration(Node* node) {
    visitListPattern<pty::ClassBodyDeclarationList, ast::Decl*, true>(
          node->child(4), classBodyDeclarations);
    // Return the constructed AST node
-   return sem.BuildClassDecl(modifiers,
-                             visitIdentifier(node->child(1)),
-                             super,
-                             interfaces,
-                             classBodyDeclarations);
+   return sem.BuildClassDecl(
+         modifiers, name, super, interfaces, classBodyDeclarations);
 }
 
 ast::ReferenceType* ptv::visitSuperOpt(Node* node) {
@@ -114,11 +111,14 @@ ast::MethodDecl* ptv::visitMethodDeclaration(Node* node) {
    auto pt_body = node->child(1);
    ast::Stmt* body = nullptr;
    if(pt_body != nullptr) {
+      sem.ResetLexicalLocalScope();
       body = visitBlock(pt_body);
    }
 
    // Return the constructed AST node
-   return sem.BuildMethodDecl(modifiers, name, type, params, false, body);
+   auto ast = sem.BuildMethodDecl(modifiers, name, type, params, false, body);
+   ast->addDecls(sem.getAllLexicalDecls());
+   return ast;
 }
 
 ast::MethodDecl* ptv::visitConstructorDeclaration(Node* node) {
@@ -136,10 +136,13 @@ ast::MethodDecl* ptv::visitConstructorDeclaration(Node* node) {
    // $4: Visit the body
    ast::Stmt* body = nullptr;
    if(node->child(3) != nullptr) {
+      sem.ResetLexicalLocalScope();
       body = visitBlock(node->child(3));
    }
-
-   return sem.BuildMethodDecl(modifiers, name, nullptr, params, true, body);
+   // Create the AST and attach the lexical local declarations
+   auto ast = sem.BuildMethodDecl(modifiers, name, nullptr, params, true, body);
+   ast->addDecls(sem.getAllLexicalDecls());
+   return ast;
 }
 
 template <>

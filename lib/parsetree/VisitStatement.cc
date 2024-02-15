@@ -7,14 +7,16 @@ namespace parsetree {
 using pty = Node::Type;
 using ptv = ParseTreeVisitor;
 
-// pty::Block  /////////////////////////////////////////////////////////////////
+// pty::Block //////////////////////////////////////////////////////////////////
 
 ast::BlockStatement* ptv::visitBlock(Node* node) {
    check_node_type(node, pty::Block);
    check_num_children(node, 1, 1);
    ast::pmr_vector<ast::Stmt*> stmts;
+   auto scope = sem.EnterLexicalScope();
    visitListPattern<pty::BlockStatementList, ast::Stmt*, true>(
       node->child(0), stmts);
+   sem.ExitLexicalScope(scope);
    return sem.BuildBlockStatement(stmts);
 }
 
@@ -65,10 +67,14 @@ ast::IfStmt* ptv::visitIfThenStatement(Node* node) {
    // $1: Visit the expression
    auto expr = visitExpr(node->child(0));
    // $2: Visit the statement
+   auto scope = sem.EnterLexicalScope();
    auto stmt = visitStatement(node->child(1));
+   sem.ExitLexicalScope(scope);
 
    if (node->num_children() == 3) {
+      auto scope = sem.EnterLexicalScope();
       auto elseStmt = visitStatement(node->child(2));
+      sem.ExitLexicalScope(scope);
       return sem.BuildIfStmt(expr, stmt, elseStmt);
    }
 
@@ -87,7 +93,9 @@ ast::WhileStmt* ptv::visitWhileStatement(Node* node) {
    // $1: Visit the condition
    auto condition = visitExpr(node->child(0));
    // $2: Visit the body
+   auto scope = sem.EnterLexicalScope();
    auto body = visitStatement(node->child(1));
+   sem.ExitLexicalScope(scope);
    return sem.BuildWhileStmt(condition, body);
 }
 
@@ -105,24 +113,20 @@ ast::ForStmt* ptv::visitForStatement(Node* node) {
    ast::Stmt* update = nullptr;
    ast::Stmt* body = nullptr;
 
-   if (node->child(0) != nullptr) {
+   auto scope = sem.EnterLexicalScope();
+   if (node->child(0) != nullptr)
       init = visitStatement(node->child(0));
-   }
-
-   if (node->child(1) != nullptr) {
+   if (node->child(1) != nullptr)
       condition = visitExpr(node->child(1));
-   }
-   
-   if (node->child(2) != nullptr) {
+   if (node->child(2) != nullptr)
       update = visitStatement(node->child(2));
-   }
-   
    body = visitStatement(node->child(3));
+   sem.ExitLexicalScope(scope);
 
    return sem.BuildForStmt(init, condition, update, body);
 }
 
-// pty::ReturnStatement /////////////////////////////////////////////////////////
+// pty::ReturnStatement ////////////////////////////////////////////////////////
 
 ast::ReturnStmt* ptv::visitReturnStatement(Node* node) {
    check_node_type(node, pty::ReturnStatement);
@@ -134,7 +138,7 @@ ast::ReturnStmt* ptv::visitReturnStatement(Node* node) {
    return sem.BuildReturnStmt(expr);
 }
 
-// pty::ExpressionStatement /////////////////////////////////////////////////////
+// pty::ExpressionStatement ////////////////////////////////////////////////////
 
 ast::ExprStmt* ptv::visitExpressionStatement(Node* node) {
    check_node_type(node, pty::StatementExpression);

@@ -604,13 +604,13 @@ ForStatementNoShortIf
 
 ForInitOpt
     : %empty                                                                    { $$ = nullptr; }
-    | LocalVariableDeclaration                                                  /* No action for union type */
-    | StatementExpression                                                       /* No action for union type */
+    | LocalVariableDeclaration                                                  { $$ = jl.make_node(@$, pty::Statement, $1); }
+    | StatementExpression                                                       { $$ = jl.make_node(@$, pty::Statement, $1); }
     ;
 
 ForUpdateOpt
     : %empty                                                                    { $$ = nullptr; }
-    | StatementExpression                                                       /* No action for optional type */
+    | StatementExpression                                                       { $$ = jl.make_node(@$, pty::Statement, $1); }
     ;
 
 /* ========================================================================== */

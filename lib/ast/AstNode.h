@@ -146,6 +146,17 @@ int printDotNodeList(DotPrinter& dp, Range&& range) {
    return childIdFirst;
 }
 
+/**
+ * @brief Draws either a single statement node or a subgraph of statements
+ * if the statement is a block statement. Returns the ID of the first node
+ * and the ID of the subgraph if it is a block statement.
+ * 
+ * @param dp The DotPrinter
+ * @param stmt The statement to draw
+ * @return std::pair<int, int> Returns -1 if stmt is not a block statement
+ */
+std::pair<int, int> printStmtSubgraph(utils::DotPrinter& dp, ast::Stmt* stmt);
+
 // Other classes ///////////////////////////////////////////////////////////////
 
 class Modifiers {

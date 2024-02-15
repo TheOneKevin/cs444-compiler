@@ -98,6 +98,7 @@ public:
            modifiers_{modifiers},
            returnType_{returnType},
            parameters_{alloc},
+           locals_{alloc},
            isConstructor_{isConstructor},
            body_{body} {
       utils::move_vector<VarDecl*>(parameters, parameters_);
@@ -110,11 +111,18 @@ public:
    int printDotNode(DotPrinter& dp) const override;
    /// @brief Overrides the setParent to construct canonical name.
    void setParent(DeclContext* parent) override;
+   template<std::ranges::range T>
+   requires std::same_as<std::ranges::range_value_t<T>, VarDecl*>
+   void addDecls(T decls) {
+      locals_.reserve(decls.size());
+      locals_.insert(locals_.end(), decls.begin(), decls.end());
+   }
 
 private:
    Modifiers modifiers_;
    Type* returnType_;
    pmr_vector<VarDecl*> parameters_;
+   pmr_vector<VarDecl*> locals_;
    bool isConstructor_;
    Stmt* body_;
 };

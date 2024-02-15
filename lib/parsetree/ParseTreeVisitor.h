@@ -26,7 +26,7 @@ class ParseTreeVisitor {
    using pty = Node::Type;
 
 public:
-   ParseTreeVisitor(ast::Semantic& sem) : sem{sem}, alloc{sem.getAllocator()} {}
+   ParseTreeVisitor(ast::Semantic& sem) : sem{sem}, alloc{sem.allocator()} {}
 
 private:
    // Basic helper functions ///////////////////////////////////////////////////

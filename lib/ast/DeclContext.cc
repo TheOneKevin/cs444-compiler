@@ -50,7 +50,7 @@ ostream& CompilationUnit::print(ostream& os, int indentation) const {
 int CompilationUnit::printDotNode(DotPrinter& dp) const {
    int id = dp.id();
    dp.startTLabel(id);
-   dp.printTableSingleRow("CompilationUnit");
+   dp.printTableSingleRow("CompilationUnit", {"bgcolor", "lightblue"});
    dp.printTableDoubleRow("package", package_ ? package_->toString() : "??");
    std::string imports;
    for(auto& import : imports_) {
@@ -120,7 +120,7 @@ ostream& ClassDecl::print(ostream& os, int indentation) const {
 int ClassDecl::printDotNode(DotPrinter& dp) const {
    int id = dp.id();
    dp.startTLabel(id);
-   dp.printTableSingleRow("ClassDecl");
+   dp.printTableSingleRow("ClassDecl", {"bgcolor", "lightblue"});
    dp.printTableDoubleRow("modifiers", modifiers_.toString());
    dp.printTableDoubleRow("name", name());
    dp.printTableDoubleRow("superClass",
@@ -128,15 +128,18 @@ int ClassDecl::printDotNode(DotPrinter& dp) const {
    string intf;
    for(auto& i : interfaces()) intf += string{i->toString()} + "\n";
    dp.printTableDoubleRow("interfaces", intf);
-   dp.printTableDoubleRow("fields", "", {}, {"port", "fields"});
-   dp.printTableDoubleRow("constructors", "", {"port", "constructors"}, {});
-   dp.printTableDoubleRow("methods", "", {}, {"port", "methods"});
+   dp.printTableTripleRow("fields",
+                          "ctors",
+                          "methods",
+                          {"port", "fields"},
+                          {"port", "constructors"},
+                          {"port", "methods"});
    dp.endTLabel();
 
    for(auto& f : fields())
-      dp.printConnection(id, ":fields", f->printDotNode(dp));
+      dp.printConnection(id, ":fields:w", f->printDotNode(dp));
    for(auto& f : constructors())
-      dp.printConnection(id, ":constructors:w", f->printDotNode(dp));
+      dp.printConnection(id, ":constructors:c", f->printDotNode(dp));
    for(auto& f : methods())
       dp.printConnection(id, ":methods:e", f->printDotNode(dp));
    return id;
@@ -197,7 +200,7 @@ ostream& InterfaceDecl::print(ostream& os, int indentation) const {
 int InterfaceDecl::printDotNode(DotPrinter& dp) const {
    int id = dp.id();
    dp.startTLabel(id);
-   dp.printTableSingleRow("InterfaceDecl");
+   dp.printTableSingleRow("InterfaceDecl", {"bgcolor", "lightblue"});
    dp.printTableDoubleRow("modifiers", modifiers_.toString());
    dp.printTableDoubleRow("name", name());
    string ext;
@@ -250,18 +253,17 @@ ostream& MethodDecl::print(ostream& os, int indentation) const {
 int MethodDecl::printDotNode(DotPrinter& dp) const {
    int id = dp.id();
    int paramSubgraphId = dp.id();
-   int bodySubgraphId = dp.id();
 
    // Print the method declaration node itself
    dp.startTLabel(id);
    {
-      dp.printTableSingleRow("MethodDecl");
+      dp.printTableSingleRow("MethodDecl", {"bgcolor", "lightblue"});
       dp.printTableDoubleRow("modifiers", modifiers_.toString());
       dp.printTableDoubleRow("name", name());
       dp.printTableDoubleRow("returnType",
                              returnType_ ? returnType_->toString() : "null");
-      dp.printTableDoubleRow("parameters", "", {}, {"port", "parameters"});
-      dp.printTableSingleRow("Body", {"port", "body"});
+      dp.printTableDoubleRow(
+            "Params", "Body", {"port", "parameters"}, {"port", "body"});
    }
    dp.endTLabel();
 
@@ -281,17 +283,17 @@ int MethodDecl::printDotNode(DotPrinter& dp) const {
    if(!body_) return id;
 
    // Print the body subgraph and connect it to the method
-   if(auto stmt = dynamic_cast<BlockStatement*>(body_)) {
-      int firstBodyId = -1;
-      dp.startSubgraph(bodySubgraphId);
-      dp.print("label=\"Body\"");
-      dp.print("color=lightblue");
-      firstBodyId = printDotNodeList(dp, stmt->stmts());
-      dp.endSubgraph();
-      if(firstBodyId != -1)
-         dp.printConnection(id, ":body", firstBodyId, bodySubgraphId);
-   } else {
-      dp.printConnection(id, ":body", body_->printDotNode(dp));
+   auto ids = printStmtSubgraph(dp, body_);
+   if(ids.second != -1)
+      dp.printConnection(id, ":body:c", ids.first, ids.second);
+   else
+      dp.printConnection(id, ":body:c", ids.first);
+
+   // Print backedges here
+   for(auto& p : locals_) {
+      if(int d = dp.getId(p)) {
+         if(d != -1) dp.printBackedge(d, id);
+      }
    }
    return id;
 }

@@ -48,9 +48,9 @@ ast::BinaryOp* ptv::convertToBinaryOp(Operator::Type type) {
          return alloc.new_object<ast::BinaryOp>(ast::BinaryOp::OpType::GreaterThanOrEqual);
       case oty::InstanceOf:
          return alloc.new_object<ast::BinaryOp>(ast::BinaryOp::OpType::InstanceOf);
-      case oty::Add:
+      case oty::Plus:
          return alloc.new_object<ast::BinaryOp>(ast::BinaryOp::OpType::Add);
-      case oty::Subtract:
+      case oty::Minus:
          return alloc.new_object<ast::BinaryOp>(ast::BinaryOp::OpType::Subtract);
       case oty::Multiply:
          return alloc.new_object<ast::BinaryOp>(ast::BinaryOp::OpType::Multiply);

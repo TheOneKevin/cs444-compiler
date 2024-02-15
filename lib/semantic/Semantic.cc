@@ -27,7 +27,12 @@ BuiltInType* Semantic::BuildBuiltInType(parsetree::BasicType::Type type) {
 /* ===--------------------------------------------------------------------=== */
 
 VarDecl* Semantic::BuildVarDecl(Type* type, string_view name, Expr* init) {
-   return alloc.new_object<VarDecl>(alloc, type, name, init);
+   auto decl = alloc.new_object<VarDecl>(alloc, type, name, init);
+   if(!AddLexicalLocal(decl)) {
+      throw std::runtime_error("Variable already declared in this scope: " +
+         std::string{name});
+   }
+   return decl;
 }
 
 FieldDecl* Semantic::BuildFieldDecl(Modifiers modifiers,
