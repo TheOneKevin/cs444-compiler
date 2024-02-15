@@ -1,5 +1,8 @@
 package com.example;
 
+import java.io.Serializable;
+import java.lang.Runnable;
+
 public class HelloWorld extends Object implements Runnable, Serializable {
   public HelloWorld() {}
   public int test = another.object().method();

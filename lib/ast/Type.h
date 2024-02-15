@@ -81,6 +81,9 @@ public:
    }
 
    string_view toString() const {
+      if(!canonicalName.empty()) {
+         return canonicalName;
+      }
       for(auto& id : identifiers) {
          canonicalName += id;
          canonicalName += ".";
