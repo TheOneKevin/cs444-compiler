@@ -35,31 +35,15 @@ ostream& LinkingUnit::print(ostream& os, int indentation) const {
    return os;
 }
 
-int CompilationUnit::printDotNode(DotPrinter& dp) const {
-   int id = dp.id();
-   dp.startTLabel(id);
-   dp.printTableSingleRow("CompilationUnit", {"bgcolor", "lightblue"});
-   dp.printTableDoubleRow("package", package_ ? package_->toString() : "??");
-   std::string imports;
-   for(auto& import : imports_) {
-      imports += import.type->toString();
-      imports += import.isOnDemand ? ".*" : "";
-      imports += "\n";
-   }
-   dp.printTableDoubleRow("imports", imports);
-   dp.endTLabel();
-   if(body_) dp.printConnection(id, body_->printDotNode(dp));
-   return id;
-}
-
 int LinkingUnit::printDotNode(DotPrinter& dp) const {
    int id = dp.id();
    dp.startTLabel(id);
    dp.printTableSingleRow("LinkingUnit", {"bgcolor", "lightblue"});
+   dp.endTLabel();
+
    for(auto& cu : compilationUnits_) {
       dp.printConnection(id, cu->printDotNode(dp));
    }
-   dp.endTLabel();
    return id;
 }
 
