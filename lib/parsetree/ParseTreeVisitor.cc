@@ -30,17 +30,17 @@ ast::CompilationUnit* ptv::visitCompilationUnit(Node* node) {
    return sem.BuildCompilationUnit(package, imports, body_ast_node);
 }
 
-ast::QualifiedIdentifier* ptv::visitPackageDeclaration(Node* node) {
+ast::ReferenceType* ptv::visitPackageDeclaration(Node* node) {
    if(node == nullptr) return nullptr;
    check_node_type(node, pty::PackageDeclaration);
    check_num_children(node, 1, 1);
-   return visitQualifiedIdentifier(node->child(0));
+   return visitReferenceType(node->child(0));
 }
 
 template <>
 ast::ImportDeclaration ptv::visit<pty::ImportDeclarationList>(Node* node) {
    check_num_children(node, 1, 1);
-   auto id = visitQualifiedIdentifier(node->child(0));
+   auto id = visitReferenceType(node->child(0));
    if(node->get_node_type() == pty::SingleTypeImportDeclaration) {
       return ast::ImportDeclaration{id, false};
    } else if(node->get_node_type() == pty::TypeImportOnDemandDeclaration) {

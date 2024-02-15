@@ -3,21 +3,16 @@
 #include <ranges>
 
 #include "AstNode.h"
+#include "utils/Utils.h"
 
 namespace ast {
 
 class BlockStatement : public Stmt {
 public:
-   BlockStatement(
-      BumpAllocator& alloc, 
-      array_ref<Stmt*> stmts
-   ) noexcept :
-      stmts_{alloc} {
-         stmts_.reserve(stmts_.size());
-         stmts_.insert(stmts_.end(),
-            std::make_move_iterator(stmts.begin()),
-            std::make_move_iterator(stmts.end()));
-      }
+   BlockStatement(BumpAllocator& alloc, array_ref<Stmt*> stmts) noexcept
+         : stmts_{alloc} {
+      utils::move_vector<Stmt*>(stmts, stmts_);
+   }
 
    auto stmts() const { return std::views::all(stmts_); }
 
@@ -56,8 +51,8 @@ private:
 
 class IfStmt : public Stmt {
 public:
-   IfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt) 
-      : condition_{condition}, thenStmt_{thenStmt}, elseStmt_{elseStmt} {}
+   IfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt)
+         : condition_{condition}, thenStmt_{thenStmt}, elseStmt_{elseStmt} {}
 
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
@@ -74,7 +69,8 @@ private:
 
 class WhileStmt : public Stmt {
 public:
-   WhileStmt(Expr* condition, Stmt* body) : condition_{condition}, body_{body} {}
+   WhileStmt(Expr* condition, Stmt* body)
+         : condition_{condition}, body_{body} {}
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
 
@@ -88,17 +84,17 @@ private:
 
 class ForStmt : public Stmt {
 public:
-   ForStmt(Stmt* init, Expr* condition, Stmt* update, Stmt* body) 
-      : init_{init}, condition_{condition}, update_{update}, body_{body} {}
+   ForStmt(Stmt* init, Expr* condition, Stmt* update, Stmt* body)
+         : init_{init}, condition_{condition}, update_{update}, body_{body} {}
 
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
-   
+
    auto init() const { return init_; }
    auto condition() const { return condition_; }
    auto update() const { return update_; }
    auto body() const { return body_; }
-   
+
 private:
    Stmt* init_;
    Expr* condition_;

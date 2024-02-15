@@ -101,10 +101,10 @@ int main(int argc, char** argv) {
    // Check the AST to make sure the class/intf has the same name as file
    auto cuBody = dynamic_cast<ast::Decl*>(ast->body());
    fileName = fileName.substr(0, fileName.length() - 5);
-   if(cuBody->getName() != fileName) {
+   if(cuBody->name() != fileName) {
       std::cerr << "Parse error: class/interface name does not match file name"
                 << std::endl;
-      std::cerr << "Class/interface name: " << cuBody->getName() << std::endl;
+      std::cerr << "Class/interface name: " << cuBody->name() << std::endl;
       std::cerr << "File name: " << fileName << std::endl;
       return 42;
    }

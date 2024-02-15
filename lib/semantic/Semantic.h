@@ -14,30 +14,38 @@ public:
 
 public:
    /* ===-----------------------------------------------------------------=== */
+   // ast/Type.h
+   /* ===-----------------------------------------------------------------=== */
+
+   UnresolvedType* BuildUnresolvedType();
+
+   /* ===-----------------------------------------------------------------=== */
    // ast/Decl.h
    /* ===-----------------------------------------------------------------=== */
 
    VarDecl* BuildVarDecl(Type* type, string_view name, Expr* init = nullptr);
    FieldDecl* BuildFieldDecl(Modifiers modifiers,
-                                    Type* type, string_view name, Expr* init = nullptr);
+                             Type* type,
+                             string_view name,
+                             Expr* init = nullptr);
 
    /* ===-----------------------------------------------------------------=== */
    // ast/DeclContext.h
    /* ===-----------------------------------------------------------------=== */
 
-   CompilationUnit* BuildCompilationUnit(QualifiedIdentifier* package,
+   CompilationUnit* BuildCompilationUnit(ReferenceType* package,
                                          array_ref<ImportDeclaration> imports,
                                          DeclContext* body);
 
    ClassDecl* BuildClassDecl(Modifiers modifiers,
                              string_view name,
-                             QualifiedIdentifier* superClass,
-                             array_ref<QualifiedIdentifier*> interfaces,
+                             ReferenceType* superClass,
+                             array_ref<ReferenceType*> interfaces,
                              array_ref<Decl*> classBodyDecls);
 
    InterfaceDecl* BuildInterfaceDecl(Modifiers modifiers,
                                      string_view name,
-                                     array_ref<QualifiedIdentifier*> extends,
+                                     array_ref<ReferenceType*> extends,
                                      array_ref<Decl*> interfaceBodyDecls);
 
    MethodDecl* BuildMethodDecl(Modifiers modifiers,
@@ -53,17 +61,15 @@ public:
    BlockStatement* BuildBlockStatement(array_ref<Stmt*> stmts);
    DeclStmt* BuildDeclStmt(VarDecl* decl);
    ExprStmt* BuildExprStmt(Expr* expr);
-   IfStmt* BuildIfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt = nullptr);
+   IfStmt* BuildIfStmt(Expr* condition,
+                       Stmt* thenStmt,
+                       Stmt* elseStmt = nullptr);
    WhileStmt* BuildWhileStmt(Expr* condition, Stmt* body);
    ForStmt* BuildForStmt(Stmt* init, Expr* condition, Stmt* update, Stmt* body);
    ReturnStmt* BuildReturnStmt(Expr* expr);
-   NullStmt* BuildNullStmt() {
-      return alloc.new_object<NullStmt>();
-   }
+   NullStmt* BuildNullStmt() { return alloc.new_object<NullStmt>(); }
 
-   BumpAllocator& getAllocator() {
-      return alloc;
-   }
+   BumpAllocator& getAllocator() { return alloc; }
 
 private:
    BumpAllocator& alloc;

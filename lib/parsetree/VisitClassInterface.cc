@@ -18,10 +18,10 @@ ast::ClassDecl* ptv::visitClassDeclaration(Node* node) {
    // $3: Visit identifier
    auto name = visitIdentifier(node->child(1));
    // $4: Visit SuperOpt
-   ast::QualifiedIdentifier* super = visitSuperOpt(node->child(2));
+   auto super = visitSuperOpt(node->child(2));
    // $5: Visit InterfaceTypeList
-   ast::pmr_vector<ast::QualifiedIdentifier*> interfaces;
-   visitListPattern<pty::InterfaceTypeList, ast::QualifiedIdentifier*, true>(
+   ast::pmr_vector<ast::ReferenceType*> interfaces;
+   visitListPattern<pty::InterfaceTypeList, ast::ReferenceType*, true>(
          node->child(3), interfaces);
    // $6: Visit ClassBody
    ast::pmr_vector<ast::Decl*> classBodyDeclarations;
@@ -35,16 +35,16 @@ ast::ClassDecl* ptv::visitClassDeclaration(Node* node) {
                              classBodyDeclarations);
 }
 
-ast::QualifiedIdentifier* ptv::visitSuperOpt(Node* node) {
+ast::ReferenceType* ptv::visitSuperOpt(Node* node) {
    if(node == nullptr) return nullptr;
    check_node_type(node, pty::SuperOpt);
    check_num_children(node, 1, 1);
-   return visitQualifiedIdentifier(node->child(0));
+   return visitReferenceType(node->child(0));
 }
 
 template <>
-ast::QualifiedIdentifier* ptv::visit<pty::InterfaceTypeList>(Node* node) {
-   return visitQualifiedIdentifier(node);
+ast::ReferenceType* ptv::visit<pty::InterfaceTypeList>(Node* node) {
+   return visitReferenceType(node);
 }
 
 template <>
@@ -165,8 +165,8 @@ ast::InterfaceDecl* ptv::visitInterfaceDeclaration(Node* node) {
    // $2: Visit identifier
    auto name = visitIdentifier(node->child(1));
    // $3: Visit ExtendsInterfacesOpt
-   ast::pmr_vector<ast::QualifiedIdentifier*> extends;
-   visitListPattern<pty::InterfaceTypeList, ast::QualifiedIdentifier*, true>(
+   ast::pmr_vector<ast::ReferenceType*> extends;
+   visitListPattern<pty::InterfaceTypeList, ast::ReferenceType*, true>(
          node->child(2), extends);
    // $4: Visit InterfaceBody
    ast::pmr_vector<ast::Decl*> interfaceBodyDeclarations;

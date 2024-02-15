@@ -113,7 +113,7 @@ public:
    // Compilation unit visitors ////////////////////////////////////////////////
 
    ast::CompilationUnit* visitCompilationUnit(Node* node);
-   ast::QualifiedIdentifier* visitPackageDeclaration(Node* node);
+   ast::ReferenceType* visitPackageDeclaration(Node* node);
    template <>
    ast::ImportDeclaration visit<pty::ImportDeclarationList>(Node* node);
 
@@ -121,7 +121,7 @@ public:
 
    ast::ClassDecl* visitClassDeclaration(Node* node);
    ast::InterfaceDecl* visitInterfaceDeclaration(Node* node);
-   ast::QualifiedIdentifier* visitSuperOpt(Node* node);
+   ast::ReferenceType* visitSuperOpt(Node* node);
    ast::FieldDecl* visitFieldDeclaration(Node* node);
    ast::MethodDecl* visitMethodDeclaration(Node* node);
    ast::MethodDecl* visitConstructorDeclaration(Node* node);
@@ -182,8 +182,8 @@ public:
 
    // Leaf node visitors ///////////////////////////////////////////////////////
 
-   ast::QualifiedIdentifier* visitQualifiedIdentifier(
-         Node* node, ast::QualifiedIdentifier* ast_node = nullptr);
+   ast::UnresolvedType* visitReferenceType(
+         Node* node, ast::UnresolvedType* ast_node = nullptr);
    std::string visitIdentifier(Node* node);
    ast::Modifiers visitModifierList(
          Node* node, ast::Modifiers modifiers = ast::Modifiers{});

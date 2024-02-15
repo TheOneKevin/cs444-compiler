@@ -6,18 +6,18 @@ namespace parsetree {
 using pty = Node::Type;
 using ptv = ParseTreeVisitor;
 
-ast::QualifiedIdentifier* ptv::visitQualifiedIdentifier(
-      Node* node, ast::QualifiedIdentifier* ast_node) {
+ast::UnresolvedType* ptv::visitReferenceType(
+      Node* node, ast::UnresolvedType* ast_node) {
    check_node_type(node, pty::QualifiedIdentifier);
    check_num_children(node, 1, 2);
    if(ast_node == nullptr) {
-      ast_node = new ast::QualifiedIdentifier{};
+      ast_node = sem.BuildUnresolvedType();
    }
    if(node->num_children() == 1) {
       ast_node->addIdentifier(visitIdentifier(node->child(0)));
       return ast_node;
    } else if(node->num_children() == 2) {
-      ast_node = visitQualifiedIdentifier(node->child(0), ast_node);
+      ast_node = visitReferenceType(node->child(0), ast_node);
       ast_node->addIdentifier(visitIdentifier(node->child(1)));
       return ast_node;
    }
@@ -60,7 +60,7 @@ ast::Type* ptv::visitType(Node* node) {
       elemTy =
             new ast::BuiltInType{dynamic_cast<BasicType*>(innerTy)->get_type()};
    } else if(innerTy->get_node_type() == pty::QualifiedIdentifier) {
-      elemTy = new ast::ReferenceType{visitQualifiedIdentifier(innerTy)};
+      elemTy = visitReferenceType(innerTy);
    }
    if(elemTy == nullptr)
       throw std::runtime_error(

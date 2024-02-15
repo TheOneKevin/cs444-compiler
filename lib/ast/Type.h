@@ -1,3 +1,5 @@
+#pragma once
+
 #include "ast/AstNode.h"
 #include "parsetree/ParseTree.h"
 #include "utils/EnumMacros.h"
@@ -59,11 +61,31 @@ public:
 };
 
 class ReferenceType : public Type {
-   QualifiedIdentifier* name;
+public:
+   std::string toString() const override {
+      return "Unknown";
+   }
+};
+
+class UnresolvedType : public ReferenceType {
+   std::vector<std::string> identifiers;
 
 public:
-   ReferenceType(QualifiedIdentifier* name) : name{name} {}
-   std::string toString() const override { return name->toString(); }
+   UnresolvedType(BumpAllocator& a) {}
+
+   void addIdentifier(std::string identifier) {
+      identifiers.push_back(identifier);
+   }
+   std::string toString() const {
+      std::string result;
+      for(auto& identifier : identifiers) {
+         result += identifier;
+         result += ".";
+      }
+      result.pop_back();
+      return result;
+   }
+   std::ostream& operator<<(std::ostream& os) const { return os << toString(); }
 };
 
 } // namespace ast

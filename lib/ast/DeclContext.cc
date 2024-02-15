@@ -6,6 +6,7 @@
 
 #include "ast/AST.h"
 #include "utils/BumpAllocator.h"
+#include "utils/Utils.h"
 
 namespace ast {
 
@@ -13,6 +14,19 @@ using std::ostream;
 using std::string;
 
 // CompilationUnit /////////////////////////////////////////////////////////////
+
+CompilationUnit::CompilationUnit(BumpAllocator& alloc,
+                                 ReferenceType* package,
+                                 array_ref<ImportDeclaration> imports,
+                                 DeclContext* body) noexcept
+      : package_{package}, imports_{alloc}, body_{body} {
+   if(auto decl = dynamic_cast<Decl*>(body)) {
+      decl->setParent(this);
+   } else {
+      assert(false && "Body must be a Decl.");
+   }
+   utils::move_vector<ImportDeclaration>(imports, imports_);
+}
 
 ostream& CompilationUnit::print(ostream& os, int indentation) const {
    auto i1 = indent(indentation);
@@ -22,8 +36,8 @@ ostream& CompilationUnit::print(ostream& os, int indentation) const {
       << i2 << "package: " << (package_ ? package_->toString() : "null") << "\n"
       << i2 << "imports: [";
    for(auto& import : imports_) {
-      os << "\"" << import.qualifiedIdentifier->toString()
-         << (import.isOnDemand ? ".*" : "") << "\",";
+      os << "\"" << import.type->toString() << (import.isOnDemand ? ".*" : "")
+         << "\",";
    }
    os << "]\n";
    if(body_) {
@@ -40,8 +54,8 @@ int CompilationUnit::printDotNode(DotPrinter& dp) const {
    dp.printTableDoubleRow("package", package_ ? package_->toString() : "??");
    std::string imports;
    for(auto& import : imports_) {
-      imports += import.qualifiedIdentifier->toString() +
-                 (import.isOnDemand ? ".*" : "") + "\\n";
+      imports +=
+            import.type->toString() + (import.isOnDemand ? ".*" : "") + "\n";
    }
    dp.printTableDoubleRow("imports", imports);
    dp.endTLabel();
@@ -54,21 +68,24 @@ int CompilationUnit::printDotNode(DotPrinter& dp) const {
 ClassDecl::ClassDecl(BumpAllocator& alloc,
                      Modifiers modifiers,
                      string_view name,
-                     QualifiedIdentifier* superClass,
-                     array_ref<QualifiedIdentifier*> interfaces,
+                     ReferenceType* superClass,
+                     array_ref<ReferenceType*> interfaces,
                      array_ref<Decl*> classBodyDecls) throw()
       : Decl{alloc, name},
         modifiers_{modifiers},
         superClass_{superClass},
-        interfaces_{interfaces.size(), alloc},
+        interfaces_{alloc},
         fields_{alloc},
         methods_{alloc},
         constructors_{alloc} {
+   utils::move_vector<ReferenceType*>(interfaces, interfaces_);
    // Sort the classBodyDecls into fields, methods, and constructors
    for(auto bodyDecl : classBodyDecls) {
       if(auto fieldDecl = dynamic_cast<FieldDecl*>(bodyDecl)) {
          fields_.push_back(fieldDecl);
+         fieldDecl->setParent(this);
       } else if(auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {
+         methodDecl->setParent(this);
          if(methodDecl->isConstructor())
             constructors_.push_back(methodDecl);
          else
@@ -85,7 +102,7 @@ ostream& ClassDecl::print(ostream& os, int indentation) const {
    auto i3 = indent(indentation + 2);
    os << i1 << "ClassDecl {\n"
       << i2 << "modifiers: " << modifiers_.toString() << "\n"
-      << i2 << "name: " << this->getName() << "\n"
+      << i2 << "name: " << this->name() << "\n"
       << i2
       << "superClass: " << (superClass_ ? superClass_->toString() : "null")
       << "\n"
@@ -106,7 +123,7 @@ int ClassDecl::printDotNode(DotPrinter& dp) const {
    dp.startTLabel(id);
    dp.printTableSingleRow("ClassDecl");
    dp.printTableDoubleRow("modifiers", modifiers_.toString());
-   dp.printTableDoubleRow("name", getName());
+   dp.printTableDoubleRow("name", name());
    dp.printTableDoubleRow("superClass",
                           superClass_ ? superClass_->toString() : "");
    string intf;
@@ -131,7 +148,7 @@ int ClassDecl::printDotNode(DotPrinter& dp) const {
 InterfaceDecl::InterfaceDecl(BumpAllocator& alloc,
                              Modifiers modifiers,
                              string_view name,
-                             array_ref<QualifiedIdentifier*> extends,
+                             array_ref<ReferenceType*> extends,
                              array_ref<Decl*> interfaceBodyDecls) throw()
       : Decl{alloc, name},
         modifiers_{modifiers},
@@ -140,6 +157,7 @@ InterfaceDecl::InterfaceDecl(BumpAllocator& alloc,
    for(auto bodyDecl : interfaceBodyDecls) {
       if(auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {
          methods_.push_back(methodDecl);
+         methodDecl->setParent(this);
       } else {
          assert(false && "Unexpected interface body declaration type");
       }
@@ -152,7 +170,7 @@ ostream& InterfaceDecl::print(ostream& os, int indentation) const {
    auto i3 = indent(indentation + 2);
    os << i1 << "InterfaceDecl {\n"
       << i2 << "modifiers: " << modifiers_.toString() << "\n"
-      << i2 << "name: " << this->getName() << "\n"
+      << i2 << "name: " << this->name() << "\n"
       << i2 << "extends: []\n"
       << i2 << "methods:\n";
    for(auto& method : methods_) {
@@ -167,7 +185,7 @@ int InterfaceDecl::printDotNode(DotPrinter& dp) const {
    dp.startTLabel(id);
    dp.printTableSingleRow("InterfaceDecl");
    dp.printTableDoubleRow("modifiers", modifiers_.toString());
-   dp.printTableDoubleRow("name", getName());
+   dp.printTableDoubleRow("name", name());
    string ext;
    for(auto& e : extends()) {
       ext += e->toString() + "\\n";
@@ -189,7 +207,7 @@ ostream& MethodDecl::print(ostream& os, int indentation) const {
    auto i3 = indent(indentation + 2);
    os << i1 << "MethodDecl {\n"
       << i2 << "modifiers: " << modifiers_.toString() << "\n"
-      << i2 << "name: " << this->getName() << "\n"
+      << i2 << "name: " << this->name() << "\n"
       << i2
       << "returnType: " << (returnType_ ? returnType_->toString() : "null")
       << "\n"
@@ -214,7 +232,7 @@ int MethodDecl::printDotNode(DotPrinter& dp) const {
    {
       dp.printTableSingleRow("MethodDecl");
       dp.printTableDoubleRow("modifiers", modifiers_.toString());
-      dp.printTableDoubleRow("name", getName());
+      dp.printTableDoubleRow("name", name());
       dp.printTableDoubleRow("returnType",
                              returnType_ ? returnType_->toString() : "null");
       dp.printTableDoubleRow("parameters", "", {}, {"port", "parameters"});

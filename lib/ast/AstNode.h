@@ -31,6 +31,7 @@ class Expr;
 /// @brief Base class for all AST nodes. Helps unify printing and dot printing.
 class AstNode {
    friend class Expr;
+
 public:
    std::ostream& printDot(std::ostream& os) const {
       DotPrinter dp{os};
@@ -60,19 +61,33 @@ protected:
 /// @brief Base class for all declarations.
 class Decl : public AstNode {
 public:
-   Decl(BumpAllocator& alloc, std::string_view name) noexcept
-         : name{name, alloc} {}
-   std::string_view getName() const { return name; }
-   virtual int printDotNode(DotPrinter& dp) const override = 0;
+   Decl(BumpAllocator& alloc,
+        std::string_view name) noexcept
+         : name_{name, alloc}, parent_{nullptr} {}
+
+   /// @brief Gets the (non qualified) name of this declaration.
+   std::string_view name() const { return name_; }
+   /// @brief Gets the context in which this declaration is declared.
+   DeclContext* parent() const { return parent_; }
+   /// @brief Sets the parent. See parent().
+   void setParent(DeclContext* parent) {
+      assert(parent_ == nullptr );
+      parent_ = parent;
+   }
+   /// @brief Gets the fully qualified name of this declaration. Returns
+   /// undefined value if the declaration does not have a canonical name.
+   virtual std::string_view getCanonicalName() const = 0;
+   /// @brief Returns if the declaration has a canonical name.
+   virtual bool hasCanonicalName() const = 0;
 
 private:
-   std::pmr::string name;
+   std::pmr::string name_;
+   DeclContext* parent_;
 };
 
 /// @brief Base class for all declaration contexts (i.e., methods).
 class DeclContext : public AstNode {
 public:
-   virtual int printDotNode(DotPrinter& dp) const override = 0;
 };
 
 /// @brief Base class for all types.
@@ -92,7 +107,6 @@ public:
 /// @brief Base class for all statements.
 class Stmt : public AstNode {
 public:
-   virtual int printDotNode(DotPrinter& dp) const override = 0;
 };
 
 /// @brief Overload the << operator for AstNode to print the node
@@ -172,7 +186,7 @@ public:
    /// @param target The set of modifiers to intersect
    auto getLocationsMasked(Modifiers target) const {
       auto masked = target.modifiers & modifiers;
-      return std::views::iota(0, (int) Type::NumModifiers) |
+      return std::views::iota(0, (int)Type::NumModifiers) |
              std::views::filter(
                    [masked](int i) { return (masked & (1 << i)) != 0; }) |
              std::views::transform(
@@ -201,25 +215,6 @@ private:
    static constexpr int test(uint8_t value, Type bit) {
       return (value & (1 << (uint8_t)bit)) != 0;
    }
-};
-
-class QualifiedIdentifier {
-   std::vector<std::string> identifiers;
-
-public:
-   void addIdentifier(std::string identifier) {
-      identifiers.push_back(identifier);
-   }
-   std::string toString() const {
-      std::string result;
-      for(auto& identifier : identifiers) {
-         result += identifier;
-         result += ".";
-      }
-      result.pop_back();
-      return result;
-   }
-   std::ostream& operator<<(std::ostream& os) const { return os << toString(); }
 };
 
 } // namespace ast

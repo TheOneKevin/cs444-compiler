@@ -2,7 +2,9 @@
 
 #include <ranges>
 
-#include "AstNode.h"
+#include "ast/AstNode.h"
+#include "ast/Type.h"
+#include "utils/Utils.h"
 
 namespace ast {
 
@@ -11,31 +13,23 @@ class FieldDecl;
 class MethodDecl;
 
 struct ImportDeclaration {
-   QualifiedIdentifier* qualifiedIdentifier;
+   ReferenceType* type;
    bool isOnDemand;
 };
 
 class CompilationUnit final : public DeclContext {
 public:
    CompilationUnit(BumpAllocator& alloc,
-                   QualifiedIdentifier* package,
+                   ReferenceType* package,
                    array_ref<ImportDeclaration> imports,
-                   DeclContext* body) noexcept
-         : package_{package}, imports_{alloc}, body_{body} {
-      // FIXME(kevin): Is there a better way to do this? vector + insert
-      // seems like a very common pattern here.
-      imports_.reserve(imports.size());
-      imports_.insert(imports_.end(),
-                      std::make_move_iterator(imports.begin()),
-                      std::make_move_iterator(imports.end()));
-   }
+                   DeclContext* body) noexcept;
    auto body() const { return body_; }
 
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
 
 private:
-   QualifiedIdentifier* package_;
+   ReferenceType* package_;
    pmr_vector<ImportDeclaration> imports_;
    DeclContext* body_;
 };
@@ -45,8 +39,8 @@ public:
    ClassDecl(BumpAllocator& alloc,
              Modifiers modifiers,
              string_view name,
-             QualifiedIdentifier* superClass,
-             array_ref<QualifiedIdentifier*> interfaces,
+             ReferenceType* superClass,
+             array_ref<ReferenceType*> interfaces,
              array_ref<Decl*> classBodyDecls) throw();
    auto fields() const { return std::views::all(fields_); }
    auto methods() const { return std::views::all(methods_); }
@@ -54,14 +48,15 @@ public:
    auto interfaces() const { return std::views::all(interfaces_); }
    auto superClass() const { return superClass_; }
    auto modifiers() const { return modifiers_; }
-
+   std::string_view getCanonicalName() const override { return ""; }
+   bool hasCanonicalName() const override { return true; }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
 
 private:
    Modifiers modifiers_;
-   QualifiedIdentifier* superClass_;
-   pmr_vector<QualifiedIdentifier*> interfaces_;
+   ReferenceType* superClass_;
+   pmr_vector<ReferenceType*> interfaces_;
    pmr_vector<FieldDecl*> fields_;
    pmr_vector<MethodDecl*> methods_;
    pmr_vector<MethodDecl*> constructors_;
@@ -72,18 +67,21 @@ public:
    InterfaceDecl(BumpAllocator& alloc,
                  Modifiers modifiers,
                  string_view name,
-                 array_ref<QualifiedIdentifier*> extends,
+                 array_ref<ReferenceType*> extends,
                  array_ref<Decl*> interfaceBodyDecls) throw();
    auto extends() const { return std::views::all(extends_); }
    auto methods() const { return std::views::all(methods_); }
    auto modifiers() const { return modifiers_; }
+
+   std::string_view getCanonicalName() const override { return ""; }
+   bool hasCanonicalName() const override { return true; }
 
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
 
 private:
    Modifiers modifiers_;
-   pmr_vector<QualifiedIdentifier*> extends_;
+   pmr_vector<ReferenceType*> extends_;
    pmr_vector<MethodDecl*> methods_;
 };
 
@@ -102,16 +100,14 @@ public:
            parameters_{alloc},
            isConstructor_{isConstructor},
            body_{body} {
-      // FIXME(kevin): Is there a better way to do this? vector + insert
-      // seems like a very common pattern here.
-      parameters_.reserve(parameters.size());
-      parameters_.insert(parameters_.end(),
-                         std::make_move_iterator(parameters.begin()),
-                         std::make_move_iterator(parameters.end()));
+      utils::move_vector<VarDecl*>(parameters, parameters_);
    }
    auto modifiers() const { return modifiers_; }
    bool isConstructor() const { return isConstructor_; }
    auto parameters() const { return std::views::all(parameters_); }
+
+   std::string_view getCanonicalName() const override { return ""; }
+   bool hasCanonicalName() const override { return true; }
 
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;

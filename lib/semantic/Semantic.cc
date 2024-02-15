@@ -7,6 +7,14 @@ namespace ast {
 using std::string;
 
 /* ===--------------------------------------------------------------------=== */
+// ast/Type.h
+/* ===--------------------------------------------------------------------=== */
+
+UnresolvedType* Semantic::BuildUnresolvedType() {
+   return alloc.new_object<UnresolvedType>(alloc);
+}
+
+/* ===--------------------------------------------------------------------=== */
 // ast/Decl.h
 /* ===--------------------------------------------------------------------=== */
 
@@ -15,7 +23,9 @@ VarDecl* Semantic::BuildVarDecl(Type* type, string_view name, Expr* init) {
 }
 
 FieldDecl* Semantic::BuildFieldDecl(Modifiers modifiers,
-                                    Type* type, string_view name, Expr* init) {
+                                    Type* type,
+                                    string_view name,
+                                    Expr* init) {
    if(modifiers.isFinal()) {
       throw std::runtime_error("FieldDecl cannot be final");
    }
@@ -39,7 +49,7 @@ FieldDecl* Semantic::BuildFieldDecl(Modifiers modifiers,
 /* ===--------------------------------------------------------------------=== */
 
 CompilationUnit* Semantic::BuildCompilationUnit(
-      QualifiedIdentifier* package,
+      ReferenceType* package,
       array_ref<ImportDeclaration> imports,
       DeclContext* body) {
    return alloc.new_object<CompilationUnit>(alloc, package, imports, body);
@@ -47,8 +57,8 @@ CompilationUnit* Semantic::BuildCompilationUnit(
 
 ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers,
                                     string_view name,
-                                    QualifiedIdentifier* superClass,
-                                    array_ref<QualifiedIdentifier*> interfaces,
+                                    ReferenceType* superClass,
+                                    array_ref<ReferenceType*> interfaces,
                                     array_ref<Decl*> classBodyDecls) {
    // Check that the modifiers are valid for a class
    if(modifiers.isAbstract() && modifiers.isFinal())
@@ -68,7 +78,7 @@ ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers,
 InterfaceDecl* Semantic::BuildInterfaceDecl(
       Modifiers modifiers,
       string_view name,
-      array_ref<QualifiedIdentifier*> extends,
+      array_ref<ReferenceType*> extends,
       array_ref<Decl*> interfaceBodyDecls) {
    // Check that the modifiers are valid for an interface
    if(modifiers.isFinal())
@@ -163,7 +173,10 @@ WhileStmt* Semantic::BuildWhileStmt(Expr* condition, Stmt* body) {
    return alloc.new_object<WhileStmt>(condition, body);
 }
 
-ForStmt* Semantic::BuildForStmt(Stmt* init, Expr* condition, Stmt* update, Stmt* body) {
+ForStmt* Semantic::BuildForStmt(Stmt* init,
+                                Expr* condition,
+                                Stmt* update,
+                                Stmt* body) {
    return alloc.new_object<ForStmt>(init, condition, update, body);
 }
 
