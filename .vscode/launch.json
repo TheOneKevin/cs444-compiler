@@ -7,6 +7,22 @@
     {
       "type": "lldb",
       "request": "launch",
+      "name": "joosc",
+      "program": "${workspaceRoot}/build/joosc",
+      "args": ["-x", "${workspaceRoot}/build/same_name.java"],
+      "cwd": "${workspaceRoot}",
+      "preLaunchTask": "build"
+    },
+    {
+      "type": "java",
+      "name": "same_name",
+      "request": "launch",
+      "mainClass": "build.same_name",
+      "projectName": "cs444-compiler_b6a10127"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
       "name": "all_tests",
       "program": "${workspaceRoot}/build/all_tests",
       "args": [],

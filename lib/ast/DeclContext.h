@@ -22,22 +22,38 @@ public:
    CompilationUnit(BumpAllocator& alloc,
                    ReferenceType* package,
                    array_ref<ImportDeclaration> imports,
+                   SourceRange location,
                    DeclContext* body) noexcept;
    auto body() const { return body_; }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
-   string_view getPackageName() const { return package_->toString(); }
+   string_view getPackageName() const { return "Invalid"; }
+   SourceRange location() const { return location_; }
 
 private:
    ReferenceType* package_;
    pmr_vector<ImportDeclaration> imports_;
    DeclContext* body_;
+   SourceRange location_;
+};
+
+class LinkingUnit final : public DeclContext{
+public:
+   LinkingUnit(BumpAllocator& alloc,
+               array_ref<CompilationUnit*> compilationUnits) noexcept;
+   auto compliationUnits() const { return std::views::all(compilationUnits_); }
+   std::ostream& print(std::ostream& os, int indentation = 0) const override;
+   int printDotNode(DotPrinter& dp) const override;
+
+private:
+   pmr_vector<CompilationUnit*> compilationUnits_;
 };
 
 class ClassDecl : public DeclContext, public Decl {
 public:
    ClassDecl(BumpAllocator& alloc,
              Modifiers modifiers,
+             SourceRange location,
              string_view name,
              ReferenceType* superClass,
              array_ref<ReferenceType*> interfaces,
@@ -53,6 +69,7 @@ public:
    int printDotNode(DotPrinter& dp) const override;
    /// @brief Overrides the setParent to construct canonical name.
    void setParent(DeclContext* parent) override;
+   SourceRange location() const { return location_; }
 
 private:
    Modifiers modifiers_;
@@ -61,12 +78,14 @@ private:
    pmr_vector<FieldDecl*> fields_;
    pmr_vector<MethodDecl*> methods_;
    pmr_vector<MethodDecl*> constructors_;
+   SourceRange location_;
 };
 
 class InterfaceDecl : public DeclContext, public Decl {
 public:
    InterfaceDecl(BumpAllocator& alloc,
                  Modifiers modifiers,
+                 SourceRange location,
                  string_view name,
                  array_ref<ReferenceType*> extends,
                  array_ref<Decl*> interfaceBodyDecls) throw();
@@ -78,11 +97,13 @@ public:
    int printDotNode(DotPrinter& dp) const override;
    /// @brief Overrides the setParent to construct canonical name.
    void setParent(DeclContext* parent) override;
+   SourceRange location() const { return location_; }
 
 private:
    Modifiers modifiers_;
    pmr_vector<ReferenceType*> extends_;
    pmr_vector<MethodDecl*> methods_;
+   SourceRange location_;
 };
 
 class MethodDecl : public DeclContext, public Decl {

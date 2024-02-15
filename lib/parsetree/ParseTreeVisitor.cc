@@ -2,6 +2,8 @@
 
 #include "ParseTree.h"
 
+#include "ast/AST.h"
+
 namespace parsetree {
 
 using pty = Node::Type;
@@ -18,16 +20,16 @@ ast::CompilationUnit* ptv::visitCompilationUnit(Node* node) {
    visitListPattern<pty::ImportDeclarationList, ast::ImportDeclaration, true>(
          node->child(1), imports);
    // $3: Visit the body, if it is not null
-   ast::DeclContext* body_ast_node = nullptr;
    if(auto body = node->child(2)) {
       if(body->get_node_type() == pty::ClassDeclaration) {
-         body_ast_node = visitClassDeclaration(body);
+         ast::ClassDecl* class_body = visitClassDeclaration(body);
+         return sem.BuildCompilationUnit(package, imports, class_body->location(), class_body);
       } else if(body->get_node_type() == pty::InterfaceDeclaration) {
-         body_ast_node = visitInterfaceDeclaration(body);
+         ast::InterfaceDecl* intf_body = visitInterfaceDeclaration(body);
+         return sem.BuildCompilationUnit(package, imports, intf_body->location(), intf_body);
       }
    }
-   // Return the constructed AST node
-   return sem.BuildCompilationUnit(package, imports, body_ast_node);
+   return nullptr;
 }
 
 ast::ReferenceType* ptv::visitPackageDeclaration(Node* node) {

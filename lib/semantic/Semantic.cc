@@ -1,5 +1,6 @@
 #include "semantic/Semantic.h"
 
+#include <set>
 #include <string>
 
 #include "ast/AstNode.h"
@@ -72,11 +73,29 @@ FieldDecl* Semantic::BuildFieldDecl(Modifiers modifiers,
 // ast/DeclContext.h
 /* ===--------------------------------------------------------------------=== */
 
+LinkingUnit* Semantic::BuildLinkingUnit(array_ref<CompilationUnit*> compilationUnits) {
+   std::pmr::set<std::string_view> names;
+   
+   for(auto cu : compilationUnits) {
+      Decl* body = dynamic_cast<Decl*>(cu->body());
+      std::string_view name = body->getCanonicalName();
+
+      if (names.count(name) > 0) {
+         diag.ReportError(cu->location()) << "No two classes or interfaces can have the same canonical name.";
+      }
+
+      names.insert(name);
+   }
+
+   return alloc.new_object<LinkingUnit>(alloc, compilationUnits);
+}
+
 CompilationUnit* Semantic::BuildCompilationUnit(
       ReferenceType* package,
       array_ref<ImportDeclaration> imports,
+      SourceRange loc,
       DeclContext* body) {
-   return alloc.new_object<CompilationUnit>(alloc, package, imports, body);
+   return alloc.new_object<CompilationUnit>(alloc, package, imports, loc, body);
 }
 
 ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers,
@@ -92,7 +111,7 @@ ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers,
       diag.ReportError(loc) << "class must have a visibility modifier";
    // Create the AST node
    auto node = alloc.new_object<ClassDecl>(
-         alloc, modifiers, name, superClass, interfaces, classBodyDecls);
+         alloc, modifiers, loc, name, superClass, interfaces, classBodyDecls);
    // Check if the class has at least one constructor
    if(node->constructors().size() == 0)
       diag.ReportError(loc) << "class must have at least one constructor";
@@ -131,7 +150,7 @@ InterfaceDecl* Semantic::BuildInterfaceDecl(
    }
    // Create the AST node
    return alloc.new_object<InterfaceDecl>(
-         alloc, modifiers, name, extends, interfaceBodyDecls);
+         alloc, modifiers, loc, name, extends, interfaceBodyDecls);
 }
 
 MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers,

@@ -13,13 +13,64 @@ namespace ast {
 using std::ostream;
 using std::string;
 
+// LinkingUnit /////////////////////////////////////////////////////////////
+
+LinkingUnit::LinkingUnit(BumpAllocator& alloc,
+               array_ref<CompilationUnit*> compilationUnits) noexcept
+      : compilationUnits_{compilationUnits} {
+   utils::move_vector<CompilationUnit*>(compilationUnits, compilationUnits_);
+}
+
+ostream& LinkingUnit::print(ostream& os, int indentation) const {
+   auto i1 = indent(indentation);
+   auto i2 = indent(indentation + 1);
+   auto i3 = indent(indentation + 2);
+   os << i1 << "LinkingUnit {\n" << i2 << "asts: "; 
+
+   for(auto& cu : compilationUnits_) {
+      cu->print(os, indentation + 1) << "\n";
+   }
+
+   os << i1 << "}\n";
+   return os;
+}
+
+int CompilationUnit::printDotNode(DotPrinter& dp) const {
+   int id = dp.id();
+   dp.startTLabel(id);
+   dp.printTableSingleRow("CompilationUnit", {"bgcolor", "lightblue"});
+   dp.printTableDoubleRow("package", package_ ? package_->toString() : "??");
+   std::string imports;
+   for(auto& import : imports_) {
+      imports += import.type->toString();
+      imports += import.isOnDemand ? ".*" : "";
+      imports += "\n";
+   }
+   dp.printTableDoubleRow("imports", imports);
+   dp.endTLabel();
+   if(body_) dp.printConnection(id, body_->printDotNode(dp));
+   return id;
+}
+
+int LinkingUnit::printDotNode(DotPrinter& dp) const {
+   int id = dp.id();
+   dp.startTLabel(id);
+   dp.printTableSingleRow("LinkingUnit", {"bgcolor", "lightblue"});
+   for(auto& cu : compilationUnits_) {
+      dp.printConnection(id, cu->printDotNode(dp));
+   }
+   dp.endTLabel();
+   return id;
+}
+
 // CompilationUnit /////////////////////////////////////////////////////////////
 
 CompilationUnit::CompilationUnit(BumpAllocator& alloc,
                                  ReferenceType* package,
                                  array_ref<ImportDeclaration> imports,
+                                 SourceRange location,
                                  DeclContext* body) noexcept
-      : package_{package}, imports_{alloc}, body_{body} {
+      : package_{package}, imports_{alloc}, body_{body}, location_{location} {
    if(auto decl = dynamic_cast<Decl*>(body)) {
       decl->setParent(this);
    } else {
@@ -68,6 +119,7 @@ int CompilationUnit::printDotNode(DotPrinter& dp) const {
 
 ClassDecl::ClassDecl(BumpAllocator& alloc,
                      Modifiers modifiers,
+                     SourceRange location,
                      string_view name,
                      ReferenceType* superClass,
                      array_ref<ReferenceType*> interfaces,
@@ -78,7 +130,8 @@ ClassDecl::ClassDecl(BumpAllocator& alloc,
         interfaces_{alloc},
         fields_{alloc},
         methods_{alloc},
-        constructors_{alloc} {
+        constructors_{alloc},
+        location_{location} {
    utils::move_vector<ReferenceType*>(interfaces, interfaces_);
    // Sort the classBodyDecls into fields, methods, and constructors
    for(auto bodyDecl : classBodyDecls) {
@@ -164,13 +217,15 @@ void ClassDecl::setParent(DeclContext* parent) {
 
 InterfaceDecl::InterfaceDecl(BumpAllocator& alloc,
                              Modifiers modifiers,
+                             SourceRange location,
                              string_view name,
                              array_ref<ReferenceType*> extends,
                              array_ref<Decl*> interfaceBodyDecls) throw()
       : Decl{alloc, name},
         modifiers_{modifiers},
         extends_{alloc},
-        methods_{alloc} {
+        methods_{alloc},
+        location_{location} {
    for(auto bodyDecl : interfaceBodyDecls) {
       utils::move_vector<ReferenceType*>(extends, extends_);
       if(auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {

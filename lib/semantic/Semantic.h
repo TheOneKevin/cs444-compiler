@@ -43,8 +43,10 @@ public:
    // ast/DeclContext.h
    /* ===-----------------------------------------------------------------=== */
 
+   LinkingUnit* BuildLinkingUnit(array_ref<CompilationUnit*> compilationUnits);
    CompilationUnit* BuildCompilationUnit(ReferenceType* package,
                                          array_ref<ImportDeclaration> imports,
+                                         SourceRange location,
                                          DeclContext* body);
    ClassDecl* BuildClassDecl(Modifiers modifiers,
                              SourceRange location,
