@@ -1,7 +1,6 @@
-package com.example;
-
 import java.io.Serializable;
 import java.lang.Runnable;
+import java.lang.Serializable;
 
 public class HelloWorld extends Object implements Runnable, Serializable {
   public HelloWorld() {}

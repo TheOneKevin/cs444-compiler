@@ -27,7 +27,11 @@ public:
    auto body() const { return body_; }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
-   string_view getPackageName() const { return "Invalid"; }
+   string_view getPackageName() const { 
+      if (package_)
+         return package_->toString();
+      return "unnamed package"; 
+   }
    SourceRange location() const { return location_; }
 
 private:

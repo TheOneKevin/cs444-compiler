@@ -95,6 +95,27 @@ CompilationUnit* Semantic::BuildCompilationUnit(
       array_ref<ImportDeclaration> imports,
       SourceRange loc,
       DeclContext* body) {
+   std::pmr::set<std::string_view> names;
+   for (auto import : imports) {
+      std::string_view name = import.type->toString();
+      if (names.count(name) > 0) {
+         diag.ReportError(loc) << "No two single-type-import declarations clash with each other.";
+      }
+      names.insert(name);
+   }
+   if (auto classDecl = dynamic_cast<ClassDecl*>(body)) {
+      std::string_view name = classDecl->getCanonicalName();
+      if (names.count(name) > 0) {
+         diag.ReportError(loc) << "No single-type-import declaration clashes with the class or interface declared in the same file.";
+      }
+      names.insert(name);
+   } else if (auto interfaceDecl = dynamic_cast<InterfaceDecl*>(body)) {
+      std::string_view name = interfaceDecl->getCanonicalName();
+      if (names.count(name) > 0) {
+         diag.ReportError(loc) << "No single-type-import declaration clashes with the class or interface declared in the same file.";
+      }
+      names.insert(name);
+   }
    return alloc.new_object<CompilationUnit>(alloc, package, imports, loc, body);
 }
 

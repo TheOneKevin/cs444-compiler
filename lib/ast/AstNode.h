@@ -4,6 +4,7 @@
 #include <ranges>
 #include <string>
 #include <vector>
+#include <set>
 
 #include "parsetree/ParseTree.h"
 #include "utils/DotPrinter.h"
