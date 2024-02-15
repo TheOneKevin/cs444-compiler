@@ -14,6 +14,14 @@ UnresolvedType* Semantic::BuildUnresolvedType() {
    return alloc.new_object<UnresolvedType>(alloc);
 }
 
+ArrayType* Semantic::BuildArrayType(Type* elementType) {
+   return alloc.new_object<ArrayType>(alloc, elementType);
+}
+
+BuiltInType* Semantic::BuildBuiltInType(parsetree::BasicType::Type type) {
+   return alloc.new_object<BuiltInType>(type);
+}
+
 /* ===--------------------------------------------------------------------=== */
 // ast/Decl.h
 /* ===--------------------------------------------------------------------=== */

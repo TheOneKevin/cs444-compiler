@@ -61,24 +61,31 @@ protected:
 /// @brief Base class for all declarations.
 class Decl : public AstNode {
 public:
-   Decl(BumpAllocator& alloc,
-        std::string_view name) noexcept
-         : name_{name, alloc}, parent_{nullptr} {}
+   Decl(BumpAllocator& alloc, std::string_view name) noexcept
+         : canonicalName_{alloc}, name_{name, alloc}, parent_{nullptr} {}
 
    /// @brief Gets the (non qualified) name of this declaration.
-   std::string_view name() const { return name_; }
+   std::string_view name() const {
+      return name_; }
    /// @brief Gets the context in which this declaration is declared.
    DeclContext* parent() const { return parent_; }
    /// @brief Sets the parent. See parent().
-   void setParent(DeclContext* parent) {
-      assert(parent_ == nullptr );
+   virtual void setParent(DeclContext* parent) {
+      assert(parent_ == nullptr);
       parent_ = parent;
    }
    /// @brief Gets the fully qualified name of this declaration. Returns
    /// undefined value if the declaration does not have a canonical name.
-   virtual std::string_view getCanonicalName() const = 0;
+   std::string_view getCanonicalName() const {
+      assert(hasCanonicalName() && "Does not have a canonical name.");
+      assert(parent_ != nullptr && "Canonical name requires a non-null parent.");
+      return canonicalName_;
+   }
    /// @brief Returns if the declaration has a canonical name.
    virtual bool hasCanonicalName() const = 0;
+
+protected:
+   std::pmr::string canonicalName_;
 
 private:
    std::pmr::string name_;
@@ -93,7 +100,7 @@ public:
 /// @brief Base class for all types.
 class Type : public AstNode {
 public:
-   virtual std::string toString() const = 0;
+   virtual string_view toString() const = 0;
    std::ostream& print(std::ostream& os, int indentation = 0) const override {
       return os << indent(indentation) << toString();
    }

@@ -24,9 +24,9 @@ public:
                    array_ref<ImportDeclaration> imports,
                    DeclContext* body) noexcept;
    auto body() const { return body_; }
-
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
+   string_view getPackageName() const { return package_->toString(); }
 
 private:
    ReferenceType* package_;
@@ -48,10 +48,11 @@ public:
    auto interfaces() const { return std::views::all(interfaces_); }
    auto superClass() const { return superClass_; }
    auto modifiers() const { return modifiers_; }
-   std::string_view getCanonicalName() const override { return ""; }
    bool hasCanonicalName() const override { return true; }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
+   /// @brief Overrides the setParent to construct canonical name.
+   void setParent(DeclContext* parent) override;
 
 private:
    Modifiers modifiers_;
@@ -72,12 +73,11 @@ public:
    auto extends() const { return std::views::all(extends_); }
    auto methods() const { return std::views::all(methods_); }
    auto modifiers() const { return modifiers_; }
-
-   std::string_view getCanonicalName() const override { return ""; }
    bool hasCanonicalName() const override { return true; }
-
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
+   /// @brief Overrides the setParent to construct canonical name.
+   void setParent(DeclContext* parent) override;
 
 private:
    Modifiers modifiers_;
@@ -105,12 +105,11 @@ public:
    auto modifiers() const { return modifiers_; }
    bool isConstructor() const { return isConstructor_; }
    auto parameters() const { return std::views::all(parameters_); }
-
-   std::string_view getCanonicalName() const override { return ""; }
    bool hasCanonicalName() const override { return true; }
-
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
+   /// @brief Overrides the setParent to construct canonical name.
+   void setParent(DeclContext* parent) override;
 
 private:
    Modifiers modifiers_;

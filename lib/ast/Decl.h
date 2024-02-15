@@ -29,7 +29,6 @@ public:
    Expr* init() const { return init_; }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
-   virtual string_view getCanonicalName() const override { return ""; }
    virtual bool hasCanonicalName() const override { return false; }
 
 private:
@@ -47,7 +46,6 @@ public:
 
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
-   string_view getCanonicalName() const override;
    bool hasCanonicalName() const override { return true; }
 
 private:

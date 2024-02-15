@@ -184,7 +184,7 @@ public:
 
    ast::UnresolvedType* visitReferenceType(
          Node* node, ast::UnresolvedType* ast_node = nullptr);
-   std::string visitIdentifier(Node* node);
+   std::string_view visitIdentifier(Node* node);
    ast::Modifiers visitModifierList(
          Node* node, ast::Modifiers modifiers = ast::Modifiers{});
    Modifier visitModifier(Node* node);

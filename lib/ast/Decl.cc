@@ -62,8 +62,4 @@ int FieldDecl::printDotNode(DotPrinter& dp) const {
    return id;
 }
 
-string_view FieldDecl::getCanonicalName() const {
-   return "";
-}
-
 } // namespace ast

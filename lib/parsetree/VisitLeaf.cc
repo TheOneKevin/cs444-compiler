@@ -6,8 +6,8 @@ namespace parsetree {
 using pty = Node::Type;
 using ptv = ParseTreeVisitor;
 
-ast::UnresolvedType* ptv::visitReferenceType(
-      Node* node, ast::UnresolvedType* ast_node) {
+ast::UnresolvedType* ptv::visitReferenceType(Node* node,
+                                             ast::UnresolvedType* ast_node) {
    check_node_type(node, pty::QualifiedIdentifier);
    check_num_children(node, 1, 2);
    if(ast_node == nullptr) {
@@ -24,7 +24,7 @@ ast::UnresolvedType* ptv::visitReferenceType(
    unreachable();
 }
 
-std::string ptv::visitIdentifier(Node* node) {
+std::string_view ptv::visitIdentifier(Node* node) {
    check_node_type(node, pty::Identifier);
    return dynamic_cast<Identifier*>(node)->get_name();
 }
@@ -58,7 +58,7 @@ ast::Type* ptv::visitType(Node* node) {
    ast::Type* elemTy = nullptr;
    if(innerTy->get_node_type() == pty::BasicType) {
       elemTy =
-            new ast::BuiltInType{dynamic_cast<BasicType*>(innerTy)->get_type()};
+            sem.BuildBuiltInType(dynamic_cast<BasicType*>(innerTy)->get_type());
    } else if(innerTy->get_node_type() == pty::QualifiedIdentifier) {
       elemTy = visitReferenceType(innerTy);
    }
@@ -67,7 +67,7 @@ ast::Type* ptv::visitType(Node* node) {
             "Expected a BasicType or QualifiedIdentifier node but got " +
             innerTy->type_string());
    if(node->get_node_type() == pty::ArrayType)
-      return new ast::ArrayType{elemTy};
+      return sem.BuildArrayType(elemTy);
    else if(node->get_node_type() == pty::Type)
       return elemTy;
    throw std::runtime_error("Expected a Type or ArrayType node");

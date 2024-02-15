@@ -175,8 +175,8 @@ private:
    SourceRange loc;
    Type type;
    Node** args;
-   Node* parent_;
    size_t num_args;
+   Node* parent_;
    bool marked = false;
 };
 
@@ -247,7 +247,7 @@ private:
 
 public:
    // Get the name of the identifier
-   const char* get_name() const { return name.c_str(); }
+   std::string_view get_name() const { return name; }
    // Override printing for this leaf node
    std::ostream& print(std::ostream& os) const override;
 

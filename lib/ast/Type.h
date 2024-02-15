@@ -47,44 +47,42 @@ public:
       }
    }
    Kind getKind() const { return kind; }
-   std::string toString() const override { return Kind_to_string(kind, "??"); }
+   string_view toString() const override { return Kind_to_string(kind, "??"); }
 };
 
 class ArrayType : public Type {
    Type* elementType;
+   std::pmr::string name;
 
 public:
-   ArrayType(Type* elementType) : elementType{elementType} {}
-   std::string toString() const override {
-      return elementType->toString() + "[]";
+   ArrayType(BumpAllocator& alloc, Type* elementType)
+         : elementType{elementType}, name{elementType->toString(), alloc} {
+      name += "[]";
    }
+   string_view toString() const override { return name; }
 };
 
 class ReferenceType : public Type {
 public:
-   std::string toString() const override {
-      return "Unknown";
-   }
+   string_view toString() const override { return "Unknown"; }
 };
 
 class UnresolvedType : public ReferenceType {
-   std::vector<std::string> identifiers;
+   BumpAllocator& alloc;
+   pmr_vector<std::pmr::string> identifiers;
+   std::pmr::string canonicalName;
 
 public:
-   UnresolvedType(BumpAllocator& a) {}
+   UnresolvedType(BumpAllocator& alloc)
+         : alloc{alloc}, identifiers{alloc}, canonicalName{alloc} {}
 
-   void addIdentifier(std::string identifier) {
-      identifiers.push_back(identifier);
+   void addIdentifier(string_view identifier) {
+      identifiers.emplace_back(identifier);
+      canonicalName += identifier;
    }
-   std::string toString() const {
-      std::string result;
-      for(auto& identifier : identifiers) {
-         result += identifier;
-         result += ".";
-      }
-      result.pop_back();
-      return result;
-   }
+
+   string_view toString() const { return canonicalName; }
+
    std::ostream& operator<<(std::ostream& os) const { return os << toString(); }
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast/AST.h"
+#include "parsetree/ParseTree.h"
 #include "diagnostics/Diagnostics.h"
 #include "utils/BumpAllocator.h"
 
@@ -18,6 +19,8 @@ public:
    /* ===-----------------------------------------------------------------=== */
 
    UnresolvedType* BuildUnresolvedType();
+   ArrayType* BuildArrayType(Type* elementType);
+   BuiltInType* BuildBuiltInType(parsetree::BasicType::Type type);
 
    /* ===-----------------------------------------------------------------=== */
    // ast/Decl.h

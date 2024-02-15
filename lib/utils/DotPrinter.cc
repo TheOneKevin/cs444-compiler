@@ -24,7 +24,12 @@ std::ostream& operator<<(std::ostream& os, DotPrinter::Sanitize s) {
             os << "&amp;";
             break;
          default:
-            os << c;
+            // Check if c is a printable ASCII character
+            if(c < 32 || c > 126) {
+               os << "&#x" << std::hex << static_cast<int>(c) << ";";
+            } else {
+               os << c;
+            }
             break;
       }
    }

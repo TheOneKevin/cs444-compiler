@@ -118,7 +118,7 @@ std::list<ast::ExprNode*> ptv::visitExprChild(Node* node) {
       return visitArrayType(node);
    }
    if(node->get_node_type() == pty::Identifier) {
-      std::string name = visitIdentifier(node);
+      auto name = visitIdentifier(node);
       if (name == "this") {
          return std::list<ast::ExprNode*>({alloc.new_object<ast::ThisNode>()});
       }

@@ -54,8 +54,9 @@ int CompilationUnit::printDotNode(DotPrinter& dp) const {
    dp.printTableDoubleRow("package", package_ ? package_->toString() : "??");
    std::string imports;
    for(auto& import : imports_) {
-      imports +=
-            import.type->toString() + (import.isOnDemand ? ".*" : "") + "\n";
+      imports += import.type->toString();
+      imports += import.isOnDemand ? ".*" : "";
+      imports += "\n";
    }
    dp.printTableDoubleRow("imports", imports);
    dp.endTLabel();
@@ -83,9 +84,7 @@ ClassDecl::ClassDecl(BumpAllocator& alloc,
    for(auto bodyDecl : classBodyDecls) {
       if(auto fieldDecl = dynamic_cast<FieldDecl*>(bodyDecl)) {
          fields_.push_back(fieldDecl);
-         fieldDecl->setParent(this);
       } else if(auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {
-         methodDecl->setParent(this);
          if(methodDecl->isConstructor())
             constructors_.push_back(methodDecl);
          else
@@ -127,7 +126,7 @@ int ClassDecl::printDotNode(DotPrinter& dp) const {
    dp.printTableDoubleRow("superClass",
                           superClass_ ? superClass_->toString() : "");
    string intf;
-   for(auto& i : interfaces()) intf += i->toString() + "\\n";
+   for(auto& i : interfaces()) intf += string{i->toString()} + "\n";
    dp.printTableDoubleRow("interfaces", intf);
    dp.printTableDoubleRow("fields", "", {}, {"port", "fields"});
    dp.printTableDoubleRow("constructors", "", {"port", "constructors"}, {});
@@ -143,6 +142,21 @@ int ClassDecl::printDotNode(DotPrinter& dp) const {
    return id;
 }
 
+void ClassDecl::setParent(DeclContext* parent) {
+   auto cu = dynamic_cast<CompilationUnit*>(parent);
+   assert(cu != nullptr && "Parent must be a CompilationUnit");
+   // Set the parent of the class
+   Decl::setParent(parent);
+   // Build the canonical name
+   canonicalName_ = cu->getPackageName();
+   canonicalName_ += ".";
+   canonicalName_ += name();
+   // Propagate the setParent call to the fields, methods, and constructors
+   for(auto& field : fields_) field->setParent(this);
+   for(auto& method : methods_) method->setParent(this);
+   for(auto& constructor : constructors_) constructor->setParent(this);
+}
+
 // InterfaceDecl ///////////////////////////////////////////////////////////////
 
 InterfaceDecl::InterfaceDecl(BumpAllocator& alloc,
@@ -155,9 +169,9 @@ InterfaceDecl::InterfaceDecl(BumpAllocator& alloc,
         extends_{alloc},
         methods_{alloc} {
    for(auto bodyDecl : interfaceBodyDecls) {
+      utils::move_vector<ReferenceType*>(extends, extends_);
       if(auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {
          methods_.push_back(methodDecl);
-         methodDecl->setParent(this);
       } else {
          assert(false && "Unexpected interface body declaration type");
       }
@@ -187,9 +201,7 @@ int InterfaceDecl::printDotNode(DotPrinter& dp) const {
    dp.printTableDoubleRow("modifiers", modifiers_.toString());
    dp.printTableDoubleRow("name", name());
    string ext;
-   for(auto& e : extends()) {
-      ext += e->toString() + "\\n";
-   }
+   for(auto& e : extends()) ext += string{e->toString()} + "\n";
    dp.printTableDoubleRow("extends", ext);
    dp.printTableDoubleRow("methods", "", {}, {"port", "methods"});
    dp.endTLabel();
@@ -197,6 +209,19 @@ int InterfaceDecl::printDotNode(DotPrinter& dp) const {
    for(auto& f : methods())
       dp.printConnection(id, ":methods", f->printDotNode(dp));
    return id;
+}
+
+void InterfaceDecl::setParent(DeclContext* parent) {
+   auto cu = dynamic_cast<CompilationUnit*>(parent);
+   assert(cu != nullptr && "Parent must be a CompilationUnit");
+   // Set the parent of the interface
+   Decl::setParent(parent);
+   // Build the canonical name
+   canonicalName_ = cu->getPackageName();
+   canonicalName_ += ".";
+   canonicalName_ += name();
+   // Propagate the setParent call to the methods
+   for(auto& method : methods_) method->setParent(this);
 }
 
 // MethodDecl //////////////////////////////////////////////////////////////////
@@ -269,6 +294,23 @@ int MethodDecl::printDotNode(DotPrinter& dp) const {
       dp.printConnection(id, ":body", body_->printDotNode(dp));
    }
    return id;
+}
+
+void MethodDecl::setParent(DeclContext* parent) {
+   // Check that parent is either a ClassDecl or an InterfaceDecl
+   auto decl = dynamic_cast<Decl*>(parent);
+   assert(dynamic_cast<ClassDecl*>(parent) ||
+          dynamic_cast<InterfaceDecl*>(parent));
+   assert(decl != nullptr);
+   // Set the parent of the method
+   Decl::setParent(parent);
+   // Build the canonical name
+   canonicalName_ = decl->getCanonicalName();
+   canonicalName_ += ".";
+   canonicalName_ += name();
+   // Propagate the setParent call to the parameters and the body
+   for(auto& parameter : parameters_) parameter->setParent(this);
+   // if(body_) body_->setParent(this);
 }
 
 } // namespace ast

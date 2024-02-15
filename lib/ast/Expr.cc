@@ -12,6 +12,7 @@ std::ostream& Expr::print(std::ostream& os, int indentation) const {
       op->print(os);
       os << " ";
    }
+   os << "\n";
    return os;
 }
 
