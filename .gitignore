@@ -3,3 +3,4 @@ joosc_build/
 tests/generated/
 .joosc_build/
 docs/
+.cache/

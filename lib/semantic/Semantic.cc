@@ -96,6 +96,15 @@ ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers,
    // Check if the class has at least one constructor
    if(node->constructors().size() == 0)
       diag.ReportError(loc) << "class must have at least one constructor";
+   // Check if multiple fields have the same name
+   for(auto field : node->fields()) {
+      for(auto other : node->fields()) {
+         if(field != other && field->name() == other->name()) {
+            diag.ReportError(field->location())
+                  << "field \"" << field->name() << "\" is already declared.";
+         }
+      }
+   }
    return node;
 }
 
