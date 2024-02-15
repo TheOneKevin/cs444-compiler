@@ -89,6 +89,7 @@ class MethodDecl : public DeclContext, public Decl {
 public:
    MethodDecl(BumpAllocator& alloc,
               Modifiers modifiers,
+              SourceRange location,
               string_view name,
               Type* returnType,
               array_ref<VarDecl*> parameters,
@@ -100,7 +101,8 @@ public:
            parameters_{alloc},
            locals_{alloc},
            isConstructor_{isConstructor},
-           body_{body} {
+           body_{body},
+           location_{location} {
       utils::move_vector<VarDecl*>(parameters, parameters_);
    }
    auto modifiers() const { return modifiers_; }
@@ -111,12 +113,13 @@ public:
    int printDotNode(DotPrinter& dp) const override;
    /// @brief Overrides the setParent to construct canonical name.
    void setParent(DeclContext* parent) override;
-   template<std::ranges::range T>
-   requires std::same_as<std::ranges::range_value_t<T>, VarDecl*>
+   template <std::ranges::range T>
+      requires std::same_as<std::ranges::range_value_t<T>, VarDecl*>
    void addDecls(T decls) {
       locals_.reserve(decls.size());
       locals_.insert(locals_.end(), decls.begin(), decls.end());
    }
+   SourceRange location() const { return location_; }
 
 private:
    Modifiers modifiers_;
@@ -125,6 +128,7 @@ private:
    pmr_vector<VarDecl*> locals_;
    bool isConstructor_;
    Stmt* body_;
+   SourceRange location_;
 };
 
 } // namespace ast

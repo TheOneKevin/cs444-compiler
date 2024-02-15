@@ -4,6 +4,7 @@
 
 #include "ast/AST.h"
 #include "diagnostics/Diagnostics.h"
+#include "diagnostics/Location.h"
 #include "parsetree/ParseTree.h"
 #include "utils/BumpAllocator.h"
 
@@ -28,8 +29,12 @@ public:
    // ast/Decl.h
    /* ===-----------------------------------------------------------------=== */
 
-   VarDecl* BuildVarDecl(Type* type, string_view name, Expr* init = nullptr);
+   VarDecl* BuildVarDecl(Type* type,
+                         SourceRange location,
+                         string_view name,
+                         Expr* init = nullptr);
    FieldDecl* BuildFieldDecl(Modifiers modifiers,
+                             SourceRange location,
                              Type* type,
                              string_view name,
                              Expr* init = nullptr);
@@ -41,19 +46,19 @@ public:
    CompilationUnit* BuildCompilationUnit(ReferenceType* package,
                                          array_ref<ImportDeclaration> imports,
                                          DeclContext* body);
-
    ClassDecl* BuildClassDecl(Modifiers modifiers,
+                             SourceRange location,
                              string_view name,
                              ReferenceType* superClass,
                              array_ref<ReferenceType*> interfaces,
                              array_ref<Decl*> classBodyDecls);
-
    InterfaceDecl* BuildInterfaceDecl(Modifiers modifiers,
+                                     SourceRange location,
                                      string_view name,
                                      array_ref<ReferenceType*> extends,
                                      array_ref<Decl*> interfaceBodyDecls);
-
    MethodDecl* BuildMethodDecl(Modifiers modifiers,
+                               SourceRange location,
                                string_view name,
                                Type* returnType,
                                array_ref<VarDecl*> parameters,
@@ -116,7 +121,8 @@ public:
     * @brief Called when a lexical scope is exited. Resizes the local decl
     * stack to the size it was when the scope was entered. Deletes the locals
     * from the set as well.
-    * @param size The size of the local declaration stack when the scope was entered
+    * @param size The size of the local declaration stack when the scope was
+    * entered
     */
    void ExitLexicalScope(int size) {
       for(int i = lexicalLocalDeclStack.size() - 1; i >= size; --i)
@@ -124,7 +130,9 @@ public:
       lexicalLocalDeclStack.resize(size);
    }
 
-   auto getAllLexicalDecls() const { return std::views::all(lexicalLocalDecls); }
+   auto getAllLexicalDecls() const {
+      return std::views::all(lexicalLocalDecls);
+   }
 
 private:
    BumpAllocator& alloc;

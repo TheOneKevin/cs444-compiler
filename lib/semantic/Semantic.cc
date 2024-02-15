@@ -2,6 +2,9 @@
 
 #include <string>
 
+#include "ast/AstNode.h"
+#include "diagnostics/Location.h"
+
 namespace ast {
 
 using std::string;
@@ -26,35 +29,43 @@ BuiltInType* Semantic::BuildBuiltInType(parsetree::BasicType::Type type) {
 // ast/Decl.h
 /* ===--------------------------------------------------------------------=== */
 
-VarDecl* Semantic::BuildVarDecl(Type* type, string_view name, Expr* init) {
-   auto decl = alloc.new_object<VarDecl>(alloc, type, name, init);
+VarDecl* Semantic::BuildVarDecl(Type* type,
+                                SourceRange loc,
+                                string_view name,
+                                Expr* init) {
+   auto decl = alloc.new_object<VarDecl>(alloc, loc, type, name, init);
    if(!AddLexicalLocal(decl)) {
-      throw std::runtime_error("Variable already declared in this scope: " +
-         std::string{name});
+      diag.ReportError(loc) << "local variable \"" << name
+                            << "\" already declared in this scope.";
    }
    return decl;
 }
 
 FieldDecl* Semantic::BuildFieldDecl(Modifiers modifiers,
+                                    SourceRange loc,
                                     Type* type,
                                     string_view name,
                                     Expr* init) {
    if(modifiers.isFinal()) {
-      throw std::runtime_error("FieldDecl cannot be final");
+      diag.ReportError(modifiers.getLocation(Modifiers::Type::Final))
+            << "field declaration cannot be final.";
    }
    if(modifiers.isAbstract()) {
-      throw std::runtime_error("FieldDecl cannot be abstract");
+      diag.ReportError(modifiers.getLocation(Modifiers::Type::Abstract))
+            << "field declaration cannot be abstract.";
    }
    if(modifiers.isNative()) {
-      throw std::runtime_error("FieldDecl cannot be native");
+      diag.ReportError(modifiers.getLocation(Modifiers::Type::Native))
+            << "field declaration cannot be native.";
    }
    if(modifiers.isPublic() && modifiers.isProtected()) {
-      throw std::runtime_error("A method cannot be both public and protected.");
+      diag.ReportError(modifiers.getLocation(Modifiers::Type::Public))
+            << "field cannot be both public and protected.";
    }
    if(!modifiers.isPublic() && !modifiers.isProtected()) {
-      throw std::runtime_error("Field must have a visibility modifier");
+      diag.ReportError(loc) << "field must have a visibility modifier.";
    }
-   return alloc.new_object<FieldDecl>(alloc, modifiers, type, name, init);
+   return alloc.new_object<FieldDecl>(alloc, loc, modifiers, type, name, init);
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -69,40 +80,43 @@ CompilationUnit* Semantic::BuildCompilationUnit(
 }
 
 ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers,
+                                    SourceRange loc,
                                     string_view name,
                                     ReferenceType* superClass,
                                     array_ref<ReferenceType*> interfaces,
                                     array_ref<Decl*> classBodyDecls) {
    // Check that the modifiers are valid for a class
    if(modifiers.isAbstract() && modifiers.isFinal())
-      throw std::runtime_error("Class cannot be both abstract and final");
+      diag.ReportError(loc) << "class cannot be both abstract and final";
    if(!modifiers.isPublic())
-      throw std::runtime_error("Class must have a visibility modifier");
+      diag.ReportError(loc) << "class must have a visibility modifier";
    // Create the AST node
    auto node = alloc.new_object<ClassDecl>(
          alloc, modifiers, name, superClass, interfaces, classBodyDecls);
    // Check if the class has at least one constructor
-   if(node->constructors().size() == 0) {
-      throw std::runtime_error("A class must have at least one constructor");
-   }
+   if(node->constructors().size() == 0)
+      diag.ReportError(loc) << "class must have at least one constructor";
    return node;
 }
 
 InterfaceDecl* Semantic::BuildInterfaceDecl(
       Modifiers modifiers,
+      SourceRange loc,
       string_view name,
       array_ref<ReferenceType*> extends,
       array_ref<Decl*> interfaceBodyDecls) {
    // Check that the modifiers are valid for an interface
    if(modifiers.isFinal())
-      throw std::runtime_error("Interface cannot be final");
+      diag.ReportError(modifiers.getLocation(Modifiers::Type::Final))
+            << "interface cannot be final";
    if(!modifiers.isPublic())
-      throw std::runtime_error("Interface must have a visibility modifier");
+      diag.ReportError(loc) << "interface must have a visibility modifier";
    // Verify the methods are abstract
    for(auto decl : interfaceBodyDecls) {
       if(auto methodDecl = dynamic_cast<MethodDecl*>(decl)) {
          if(!methodDecl->modifiers().isAbstract()) {
-            throw std::runtime_error("Interface methods must be abstract");
+            diag.ReportError(methodDecl->location())
+                  << "interface method must be abstract";
          }
       }
    }
@@ -112,6 +126,7 @@ InterfaceDecl* Semantic::BuildInterfaceDecl(
 }
 
 MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers,
+                                      SourceRange loc,
                                       string_view name,
                                       Type* returnType,
                                       array_ref<VarDecl*> parameters,
@@ -119,47 +134,54 @@ MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers,
                                       Stmt* body) {
    // Check modifiers
    if((body == nullptr) != (modifiers.isAbstract() || modifiers.isNative())) {
-      throw std::runtime_error(
-            "A method has a body if and only if it is neither abstract nor "
-            "native.");
+      diag.ReportError(loc) << "method has a body if and only if it is "
+                               "neither abstract nor native.";
    }
    if(modifiers.isAbstract() &&
       (modifiers.isFinal() || modifiers.isStatic() || modifiers.isNative())) {
-      throw std::runtime_error(
-            "An abstract method cannot be static, final or native.");
+      diag.ReportError(loc) << "an abstract method cannot be static, final, "
+                               "or native.";
    }
    if(modifiers.isStatic() && modifiers.isFinal()) {
-      throw std::runtime_error("A static method cannot be final.");
+      diag.ReportError(modifiers.getLocation(Modifiers::Type::Final))
+            << "static method cannot be final.";
    }
    if(modifiers.isNative()) {
       if(!modifiers.isStatic()) {
-         throw std::runtime_error("A native method must be static.");
+         diag.ReportError(loc) << "native method must be static.";
       }
       if(auto ty = dynamic_cast<BuiltInType*>(returnType)) {
          if(ty->getKind() != BuiltInType::Kind::Int) {
-            throw std::runtime_error("A native method must return type int.");
+            diag.ReportError(loc) << "native method must have return type int.";
          }
       }
       if(parameters.size() != 1) {
-         throw std::runtime_error(
-               "A native method must have exactly one parameter.");
+         diag.ReportError(loc) << "native method must have exactly one "
+                                  "parameter of type int.";
       }
       if(auto ty = dynamic_cast<BuiltInType*>(parameters[0]->type())) {
          if(ty->getKind() != BuiltInType::Kind::Int) {
-            throw std::runtime_error(
-                  "A native method must have paramter type int.");
+            diag.ReportError(loc) << "native method must have exactly one "
+                                     "parameter of type int.";
          }
       }
    }
    if(modifiers.isPublic() && modifiers.isProtected()) {
-      throw std::runtime_error("A method cannot be both public and protected.");
+      diag.ReportError(modifiers.getLocation(Modifiers::Type::Public))
+            << "method cannot be both public and protected.";
    }
    if(!modifiers.isPublic() && !modifiers.isProtected()) {
-      throw std::runtime_error("Method must have a visibility modifier");
+      diag.ReportError(loc) << "method must have a visibility modifier.";
    }
    // Create the AST node
-   return alloc.new_object<MethodDecl>(
-         alloc, modifiers, name, returnType, parameters, isConstructor, body);
+   return alloc.new_object<MethodDecl>(alloc,
+                                       modifiers,
+                                       loc,
+                                       name,
+                                       returnType,
+                                       parameters,
+                                       isConstructor,
+                                       body);
 }
 
 /* ===-----------------------------------------------------------------=== */

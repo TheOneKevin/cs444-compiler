@@ -138,6 +138,7 @@ public:
 
    struct TmpVarDecl {
       ast::Type* type;
+      SourceRange loc;
       std::string_view name;
       ast::Expr* init;
    };

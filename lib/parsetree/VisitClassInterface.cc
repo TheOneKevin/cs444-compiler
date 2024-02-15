@@ -16,6 +16,7 @@ ast::ClassDecl* ptv::visitClassDeclaration(Node* node) {
    ast::Modifiers modifiers =
          visitModifierList(node->child(0), ast::Modifiers{});
    // $3: Visit identifier
+   auto nameNode = node->child(1);
    auto name = visitIdentifier(node->child(1));
    // $4: Visit SuperOpt
    auto super = visitSuperOpt(node->child(2));
@@ -28,8 +29,12 @@ ast::ClassDecl* ptv::visitClassDeclaration(Node* node) {
    visitListPattern<pty::ClassBodyDeclarationList, ast::Decl*, true>(
          node->child(4), classBodyDeclarations);
    // Return the constructed AST node
-   return sem.BuildClassDecl(
-         modifiers, name, super, interfaces, classBodyDeclarations);
+   return sem.BuildClassDecl(modifiers,
+                             nameNode->location(),
+                             name,
+                             super,
+                             interfaces,
+                             classBodyDeclarations);
 }
 
 ast::ReferenceType* ptv::visitSuperOpt(Node* node) {
@@ -68,7 +73,8 @@ ast::FieldDecl* ptv::visitFieldDeclaration(Node* node) {
    auto modifiers = visitModifierList(node->child(0));
    // $2, $3: Visit the type and declarator
    auto decl = visitVariableDeclarator(node->child(1), node->child(2));
-   return sem.BuildFieldDecl(modifiers, decl.type, decl.name, decl.init);
+   return sem.BuildFieldDecl(
+         modifiers, decl.loc, decl.type, decl.name, decl.init);
 }
 
 // pty::MethodDeclaration //////////////////////////////////////////////////////
@@ -85,6 +91,7 @@ ast::MethodDecl* ptv::visitMethodDeclaration(Node* node) {
    ast::Type* type = nullptr;
    std::string name;
    ast::pmr_vector<ast::VarDecl*> params;
+   Node* nameNode = nullptr;
    if(pt_header->num_children() == 3) {
       // $1: Visit the modifiers
       modifiers = visitModifierList(pt_header->child(0));
@@ -92,6 +99,7 @@ ast::MethodDecl* ptv::visitMethodDeclaration(Node* node) {
       type = nullptr;
       // $2: Visit the identifier
       name = visitIdentifier(pt_header->child(1));
+      nameNode = pt_header->child(1);
       // $3: Visit the formal parameters
       visitListPattern<pty::FormalParameterList, ast::VarDecl*, true>(
             pt_header->child(2), params);
@@ -102,6 +110,7 @@ ast::MethodDecl* ptv::visitMethodDeclaration(Node* node) {
       type = visitType(pt_header->child(1));
       // $3: Visit the identifier
       name = visitIdentifier(pt_header->child(2));
+      nameNode = pt_header->child(2);
       // $4: Visit the formal parameters
       visitListPattern<pty::FormalParameterList, ast::VarDecl*, true>(
             pt_header->child(3), params);
@@ -116,7 +125,8 @@ ast::MethodDecl* ptv::visitMethodDeclaration(Node* node) {
    }
 
    // Return the constructed AST node
-   auto ast = sem.BuildMethodDecl(modifiers, name, type, params, false, body);
+   auto ast = sem.BuildMethodDecl(
+         modifiers, nameNode->location(), name, type, params, false, body);
    ast->addDecls(sem.getAllLexicalDecls());
    return ast;
 }
@@ -128,7 +138,8 @@ ast::MethodDecl* ptv::visitConstructorDeclaration(Node* node) {
    // $1: Visit the modifiers
    auto modifiers = visitModifierList(node->child(0));
    // $2: Visit the identifier
-   auto name = visitIdentifier(node->child(1));
+   auto nameNode = node->child(1);
+   auto name = visitIdentifier(nameNode);
    // $3: Visit the formal parameters
    ast::pmr_vector<ast::VarDecl*> params;
    visitListPattern<pty::FormalParameterList, ast::VarDecl*, true>(
@@ -140,7 +151,8 @@ ast::MethodDecl* ptv::visitConstructorDeclaration(Node* node) {
       body = visitBlock(node->child(3));
    }
    // Create the AST and attach the lexical local declarations
-   auto ast = sem.BuildMethodDecl(modifiers, name, nullptr, params, true, body);
+   auto ast = sem.BuildMethodDecl(
+         modifiers, nameNode->location(), name, nullptr, params, true, body);
    ast->addDecls(sem.getAllLexicalDecls());
    return ast;
 }
@@ -152,9 +164,10 @@ ast::VarDecl* ptv::visit<pty::FormalParameterList>(Node* node) {
    // $1: Visit the type
    auto type = visitType(node->child(0));
    // $2: Visit the identifier
-   auto name = visitIdentifier(node->child(1));
+   auto nameNode = node->child(1);
+   auto name = visitIdentifier(nameNode);
    // Return the constructed AST node
-   return sem.BuildVarDecl(type, name);
+   return sem.BuildVarDecl(type, nameNode->location(), name);
 }
 
 // pty::InterfaceDeclaration ///////////////////////////////////////////////////
@@ -166,6 +179,7 @@ ast::InterfaceDecl* ptv::visitInterfaceDeclaration(Node* node) {
    ast::Modifiers modifiers =
          visitModifierList(node->child(0), ast::Modifiers{});
    // $2: Visit identifier
+   auto nameNode = node->child(1);
    auto name = visitIdentifier(node->child(1));
    // $3: Visit ExtendsInterfacesOpt
    ast::pmr_vector<ast::ReferenceType*> extends;
@@ -176,8 +190,11 @@ ast::InterfaceDecl* ptv::visitInterfaceDeclaration(Node* node) {
    visitListPattern<pty::InterfaceMemberDeclarationList, ast::Decl*, true>(
          node->child(3), interfaceBodyDeclarations);
    // Return the constructed AST node
-   return sem.BuildInterfaceDecl(
-         modifiers, name, extends, interfaceBodyDeclarations);
+   return sem.BuildInterfaceDecl(modifiers,
+                                 nameNode->location(),
+                                 name,
+                                 extends,
+                                 interfaceBodyDeclarations);
 }
 
 template <>
@@ -194,12 +211,14 @@ ast::MethodDecl* ptv::visitAbstractMethodDeclaration(Node* node) {
    ast::Type* type = nullptr;
    std::string name;
    ast::pmr_vector<ast::VarDecl*> params;
+   Node* nameNode = nullptr;
    if(node->num_children() == 3) {
       // $1: Visit the modifiers
       modifiers = visitModifierList(node->child(0));
       // The type is void
       type = nullptr;
       // $2: Visit the identifier
+      nameNode = node->child(1);
       name = visitIdentifier(node->child(1));
       // $3: Visit the formal parameters
       visitListPattern<pty::FormalParameterList, ast::VarDecl*, true>(
@@ -210,6 +229,7 @@ ast::MethodDecl* ptv::visitAbstractMethodDeclaration(Node* node) {
       // $2: Visit the type
       type = visitType(node->child(1));
       // $3: Visit the identifier
+      nameNode = node->child(2);
       name = visitIdentifier(node->child(2));
       // $4: Visit the formal parameters
       visitListPattern<pty::FormalParameterList, ast::VarDecl*, true>(
@@ -218,7 +238,8 @@ ast::MethodDecl* ptv::visitAbstractMethodDeclaration(Node* node) {
    // Set as abstract
    modifiers.set(ast::Modifiers::Type::Abstract);
    // Return the constructed AST node
-   return sem.BuildMethodDecl(modifiers, name, type, params, false, nullptr);
+   return sem.BuildMethodDecl(
+         modifiers, nameNode->location(), name, type, params, false, nullptr);
 }
 
 } // namespace parsetree

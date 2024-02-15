@@ -70,6 +70,14 @@ int main(int argc, char** argv) {
       return 1;
    }
 
+   if(diag.hasErrors()) {
+      for(auto m : diag.messages()) {
+         m.emit(std::cerr);
+         std::cerr << std::endl;
+      }
+      return 1;
+   }
+
    if(print_dot) {
       ast->printDot(std::cout);
    } else {

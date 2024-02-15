@@ -65,7 +65,7 @@ public:
    bool isValid() const { return begin_.isValid() && end_.isValid(); }
 
    std::ostream& print(std::ostream& os) const {
-      os << "??:" << begin_.line_ << ":" << begin_.column_ << "-" << end_.line_
+      os << "??:" << begin_.line_ << ":" << begin_.column_ << " - " << end_.line_
          << ":" << end_.column_;
       return os;
    }
