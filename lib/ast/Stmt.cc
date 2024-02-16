@@ -54,6 +54,7 @@ int BlockStatement::printDotNode(DotPrinter& dp) const {
 // DeclStmt ////////////////////////////////////////////////////////////////////
 
 std::ostream& DeclStmt::print(std::ostream& os, int indentation) const {
+   (void) indentation;
    return os;
 }
 
@@ -83,6 +84,7 @@ int ExprStmt::printDotNode(DotPrinter& dp) const {
 
 std::ostream& IfStmt::print(std::ostream& os, int indentation) const {
    // Implementation for IfStmt print
+   (void) indentation;
    return os;
 }
 
@@ -116,6 +118,7 @@ int IfStmt::printDotNode(DotPrinter& dp) const {
 
 std::ostream& WhileStmt::print(std::ostream& os, int indentation) const {
    // Implementation for WhileStmt print
+   (void) indentation;
    return os;
 }
 
@@ -139,6 +142,7 @@ int WhileStmt::printDotNode(DotPrinter& dp) const {
 
 std::ostream& ForStmt::print(std::ostream& os, int indentation) const {
    // Implementation for ForStmt print
+   (void) indentation;
    return os;
 }
 
@@ -169,6 +173,7 @@ int ForStmt::printDotNode(DotPrinter& dp) const {
 // ReturnStmt //////////////////////////////////////////////////////////////////
 
 std::ostream& ReturnStmt::print(std::ostream& os, int indentation) const {
+   (void) indentation;
    return os;
 }
 
@@ -181,6 +186,7 @@ int ReturnStmt::printDotNode(DotPrinter& dp) const {
 // NullStmt ////////////////////////////////////////////////////////////////////
 
 std::ostream& NullStmt::print(std::ostream& os, int indentation) const {
+   (void) indentation;
    return os;
 }
 

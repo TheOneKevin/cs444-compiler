@@ -7,6 +7,8 @@
 
 namespace ast {
 
+class VarDecl;
+
 class BlockStatement : public Stmt {
 public:
    BlockStatement(BumpAllocator& alloc, array_ref<Stmt*> stmts) noexcept

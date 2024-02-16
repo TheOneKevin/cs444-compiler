@@ -97,7 +97,7 @@ CompilationUnit* Semantic::BuildCompilationUnit(
       DeclContext* body) {
    std::pmr::set<std::string_view> names;
    for (auto import : imports) {
-      std::string_view name = import.simpleName();
+      std::string_view name {import.simpleName()};
       if (names.count(name) > 0) {
          diag.ReportError(loc) << "No two single-type-import declarations clash with each other.";
       }

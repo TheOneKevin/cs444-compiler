@@ -109,6 +109,10 @@ public:
       dp.printLabel(id, toString());
       return id;
    }
+   /// @brief Resolves the type based on the condition of isResolved()
+   virtual void resolve() {}
+   /// @brief Returns if the type is resolved 
+   virtual bool isResolved() const = 0;
 };
 
 /// @brief Base class for all statements.
