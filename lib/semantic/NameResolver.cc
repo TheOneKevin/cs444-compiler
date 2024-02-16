@@ -44,7 +44,7 @@ void NameResolver::buildSymbolTable() {
          // a decl with the same name as the package. This is an error.
          // cf. JLS 6.4.1.
          Pkg::Child const& child = rootPkg_->children[id];
-         if(std::holds_alternative<Pkg*>(child)) {
+         if(std::holds_alternative<ast::Decl*>(child)) {
             auto decl = std::get<ast::Decl*>(child);
             assert(decl && "Package node holds empty decl");
             diag.ReportError(SourceRange{})
