@@ -30,6 +30,7 @@ void NameResolver::buildSymbolTable() {
       pkg->lock();
       // Traverse the package name to find the leaf package.
       Pkg* subPkg = rootPkg_;
+      // FIXME: Default package == package with empty parts() != nullptr
       for(auto const& id : pkg->parts()) {
          // If the subpackage name is not in the symbol table, add it
          // and continue to the next one.
