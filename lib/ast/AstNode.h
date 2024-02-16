@@ -9,6 +9,10 @@
 #include "parsetree/ParseTree.h"
 #include "utils/DotPrinter.h"
 
+namespace semantic {
+class NameResolver;
+} // namespace semantic
+
 namespace ast {
 
 using utils::DotPrinter;
@@ -110,8 +114,8 @@ public:
       return id;
    }
    /// @brief Resolves the type based on the condition of isResolved()
-   virtual void resolve() {}
-   /// @brief Returns if the type is resolved 
+   virtual void resolve(semantic::NameResolver&) {}
+   /// @brief Returns if the type is resolved
    virtual bool isResolved() const = 0;
 };
 

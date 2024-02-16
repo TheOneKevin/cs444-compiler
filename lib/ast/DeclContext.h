@@ -24,19 +24,16 @@ struct ImportDeclaration {
 
 class CompilationUnit final : public DeclContext {
 public:
-   CompilationUnit(BumpAllocator& alloc,
-                   ReferenceType* package,
-                   array_ref<ImportDeclaration> imports,
-                   SourceRange location,
+   CompilationUnit(BumpAllocator& alloc, ReferenceType* package,
+                   array_ref<ImportDeclaration> imports, SourceRange location,
                    DeclContext* body) noexcept;
    auto body() const { return body_; }
    auto bodyAsDecl() const { return dynamic_cast<Decl*>(body_); }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
-   string_view getPackageName() const { 
-      if (package_)
-         return package_->toString();
-      return "unnamed package"; 
+   string_view getPackageName() const {
+      if(package_) return package_->toString();
+      return "unnamed package";
    }
    SourceRange location() const { return location_; }
    auto package() const { return package_; }
@@ -49,7 +46,7 @@ private:
    SourceRange location_;
 };
 
-class LinkingUnit final : public DeclContext{
+class LinkingUnit final : public DeclContext {
 public:
    LinkingUnit(BumpAllocator& alloc,
                array_ref<CompilationUnit*> compilationUnits) noexcept;
@@ -63,11 +60,8 @@ private:
 
 class ClassDecl : public DeclContext, public Decl {
 public:
-   ClassDecl(BumpAllocator& alloc,
-             Modifiers modifiers,
-             SourceRange location,
-             string_view name,
-             ReferenceType* superClass,
+   ClassDecl(BumpAllocator& alloc, Modifiers modifiers, SourceRange location,
+             string_view name, ReferenceType* superClass,
              array_ref<ReferenceType*> interfaces,
              array_ref<Decl*> classBodyDecls) throw();
    auto fields() const { return std::views::all(fields_); }
@@ -83,6 +77,12 @@ public:
    void setParent(DeclContext* parent) override;
    SourceRange location() const { return location_; }
 
+   auto mut_fields() { return std::views::all(fields_); }
+   auto mut_methods() { return std::views::all(methods_); }
+   auto mut_constructors() { return std::views::all(constructors_); }
+   auto mut_interfaces() { return std::views::all(interfaces_); }
+   auto mut_superClass() { return superClass_; }
+
 private:
    Modifiers modifiers_;
    ReferenceType* superClass_;
@@ -95,11 +95,8 @@ private:
 
 class InterfaceDecl : public DeclContext, public Decl {
 public:
-   InterfaceDecl(BumpAllocator& alloc,
-                 Modifiers modifiers,
-                 SourceRange location,
-                 string_view name,
-                 array_ref<ReferenceType*> extends,
+   InterfaceDecl(BumpAllocator& alloc, Modifiers modifiers, SourceRange location,
+                 string_view name, array_ref<ReferenceType*> extends,
                  array_ref<Decl*> interfaceBodyDecls) throw();
    auto extends() const { return std::views::all(extends_); }
    auto methods() const { return std::views::all(methods_); }
@@ -120,14 +117,9 @@ private:
 
 class MethodDecl : public DeclContext, public Decl {
 public:
-   MethodDecl(BumpAllocator& alloc,
-              Modifiers modifiers,
-              SourceRange location,
-              string_view name,
-              Type* returnType,
-              array_ref<VarDecl*> parameters,
-              bool isConstructor,
-              Stmt* body) noexcept
+   MethodDecl(BumpAllocator& alloc, Modifiers modifiers, SourceRange location,
+              string_view name, Type* returnType, array_ref<VarDecl*> parameters,
+              bool isConstructor, Stmt* body) noexcept
          : Decl{alloc, name},
            modifiers_{modifiers},
            returnType_{returnType},

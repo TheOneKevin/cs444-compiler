@@ -4,6 +4,7 @@
 
 #include "ast/AstNode.h"
 #include "parsetree/ParseTree.h"
+#include "semantic/NameResolver.h"
 #include "utils/EnumMacros.h"
 
 namespace ast {
@@ -79,11 +80,10 @@ public:
    bool isResolved() const override { return decl_ != nullptr; }
    auto decl() const { return decl_; }
    /// @brief This does nothing as a reference type is always resolved.
-   virtual void resolve() override {
+   virtual void resolve(semantic::NameResolver&) override {
       assert(isResolved() && "Type is not resolved");
    }
 
-protected:
    /// @brief Resolves the type to a declaration if it is an unresolved type.
    void resolveInternal(Decl* decl) {
       assert(!isResolved() && "Type already resolved");
@@ -142,7 +142,7 @@ public:
    void lock() const { locked_ = true; }
 
    /// @brief Resolves the underlying reference type to a declaration.
-   void resolve() override {}
+   void resolve(semantic::NameResolver& x) override { x.ResolveType(this); }
 
    std::ostream& operator<<(std::ostream& os) const { return os << toString(); }
 };
@@ -159,10 +159,10 @@ public:
    }
    string_view toString() const override { return name; }
    bool isResolved() const override { return elementType->isResolved(); }
-   void resolve() override {
+   void resolve(semantic::NameResolver& x) override {
       // Resolve only if the element type is an unresolved type.
       if(auto unresTy = dynamic_cast<UnresolvedType*>(elementType)) {
-         if(elementType->isResolved()) unresTy->resolve();
+         if(elementType->isResolved()) unresTy->resolve(x);
       }
    }
 };

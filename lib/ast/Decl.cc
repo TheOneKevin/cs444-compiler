@@ -2,6 +2,7 @@
 #include <string>
 
 #include "ast/AST.h"
+#include "semantic/NameResolver.h"
 
 namespace ast {
 

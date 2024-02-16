@@ -146,9 +146,64 @@ NameResolver::Pkg* NameResolver::resolveAstTy(ast::UnresolvedType const* t) cons
    return subPkg;
 }
 
-ast::ReferenceType* NameResolver::ResolveType(ast::UnresolvedType* type) {
-   (void)type;
-   return nullptr;
+void NameResolver::ResolveType(ast::UnresolvedType* type) {
+   assert(type && "Type should not be null");
+   Pkg::Child subTy;
+   for(auto const& id : type->parts()) {
+      if(importsMap_.find(id) == importsMap_.end()) {
+         // If the subpackage does not exist, then the type is invalid.
+         diag.ReportError(SourceRange{})
+               << "failed to resolve type as subpackage does not exist: \"" << id
+               << "\"";
+      }
+      subTy = importsMap_[id];
+      // If the subpackage exists but is a declaration, then the type is invalid.
+      if(std::holds_alternative<ast::Decl*>(subTy)) {
+         diag.ReportError(SourceRange{})
+               << "failed to resolve type as subpackage is a declaration: \"" << id
+               << "\"";
+         return;
+      }
+   }
+   // The final type should be a declaration.
+   if(!std::holds_alternative<ast::Decl*>(subTy)) {
+      diag.ReportError(SourceRange{})
+            << "failed to resolve type, is not a declaration: \""
+            << type->toString() << "\"";
+      return;
+   }
+   // Now we can create a reference type to the declaration.
+   type->resolveInternal(std::get<ast::Decl*>(subTy));
+}
+
+void NameResolver::Resolve() {
+   for(auto cu : lu_->compliationUnits()) {
+      BeginContext(cu);
+      if(auto ast = dynamic_cast<ast::ClassDecl*>(cu->body())) {
+         resolveClass(ast);
+      } else if(auto ast = dynamic_cast<ast::InterfaceDecl*>(cu->body())) {
+         resolveInterface(ast);
+      }
+      assert(false && "Unimplemented");
+   }
+}
+
+void NameResolver::resolveInterface(ast::InterfaceDecl* decl) {
+   (void) decl;
+   assert(false && "Unimplemented");
+}
+
+void NameResolver::resolveClass(ast::ClassDecl* decl) {
+   for(auto ty : decl->mut_interfaces())
+      ResolveType(dynamic_cast<ast::UnresolvedType*>(ty));
+   if(decl->mut_superClass())
+      ResolveType(dynamic_cast<ast::UnresolvedType*>(decl->mut_superClass()));
+   for(auto field : decl->mut_fields()) {
+      // TODO:
+   }
+   for(auto method : decl->mut_methods()) {
+      // TODO:
+   }
 }
 
 } // namespace semantic

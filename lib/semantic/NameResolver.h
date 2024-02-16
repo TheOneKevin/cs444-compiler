@@ -5,11 +5,18 @@
 #include <variant>
 #include <vector>
 
-#include "ast/AST.h"
-#include "ast/DeclContext.h"
-#include "ast/Type.h"
+#include "ast/AstNode.h"
 #include "diagnostics/Diagnostics.h"
 #include "utils/BumpAllocator.h"
+
+// Forward declarations
+namespace ast {
+class LinkingUnit;
+class CompilationUnit;
+class UnresolvedType;
+class InterfaceDecl;
+class ClassDecl;
+} // namespace ast
 
 namespace semantic {
 
@@ -45,14 +52,14 @@ public:
     */
    void BeginContext(ast::CompilationUnit* cu);
 
-   /**
-    * @brief Resolve the type of an unresolved type. The type will be resolved
-    * against the current compilation unit's import table. See BeginContext().
-    *
-    * @param type The unresolved type to resolve.
-    * @return ast::ReferenceType* The resolved type.
-    */
-   ast::ReferenceType* ResolveType(ast::UnresolvedType* type);
+   /// @brief Resolves all types in the current linking unit.
+   void Resolve();
+
+   void ResolveType(ast::UnresolvedType* type);
+
+private:
+   void resolveInterface(ast::InterfaceDecl* decl);
+   void resolveClass(ast::ClassDecl* decl);
 
 private:
    /// @brief Builds the symbol lookup tables and any other data structures
