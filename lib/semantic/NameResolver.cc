@@ -148,6 +148,7 @@ NameResolver::Pkg* NameResolver::resolveAstTy(ast::UnresolvedType const* t) cons
 
 void NameResolver::ResolveType(ast::UnresolvedType* type) {
    assert(type && "Type should not be null");
+   assert(!type->isResolved() && "Type should not be resolved");
    Pkg::Child subTy;
    for(auto const& id : type->parts()) {
       if(importsMap_.find(id) == importsMap_.end()) {
@@ -174,6 +175,8 @@ void NameResolver::ResolveType(ast::UnresolvedType* type) {
    }
    // Now we can create a reference type to the declaration.
    type->resolveInternal(std::get<ast::Decl*>(subTy));
+   // After, the type should be resolved
+   assert(type->isResolved() && "Type should be resolved");
 }
 
 void NameResolver::Resolve() {

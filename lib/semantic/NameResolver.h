@@ -55,6 +55,8 @@ public:
    /// @brief Resolves all types in the current linking unit.
    void Resolve();
 
+   /// @brief Resolves the type in-place (does not return anything)
+   /// @param type The unresolved type to resolve.
    void ResolveType(ast::UnresolvedType* type);
 
 private:

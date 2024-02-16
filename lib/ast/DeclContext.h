@@ -146,6 +146,10 @@ public:
    }
    SourceRange location() const { return location_; }
 
+   auto mut_parameters() { return std::views::all(parameters_); }
+   auto mut_locals() const { return std::views::all(locals_); }
+   auto mut_returnType() const { return returnType_; }
+
 private:
    Modifiers modifiers_;
    Type* returnType_;
