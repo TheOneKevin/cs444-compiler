@@ -112,10 +112,10 @@ std::list<ast::ExprNode*> ptv::visitExprChild(Node* node) {
       return std::list<ast::ExprNode*>({visitLiteral(node)});
    }
    if (node->get_node_type() == pty::Type) {
-      return visitTypeInExpr(node);
+      return std::list<ast::ExprNode*>({visitRegularType(node)});
    }
-   if (node->get_node_type() == pty::ArrayType) {
-      return visitArrayType(node);
+   if (node->get_node_type() == pty::ArrayType || node->get_node_type() == pty::ArrayCastType){
+      return std::list<ast::ExprNode*>({visitArrayType(node)});
    }
    if(node->get_node_type() == pty::Identifier) {
       auto name = visitIdentifier(node);
@@ -126,9 +126,6 @@ std::list<ast::ExprNode*> ptv::visitExprChild(Node* node) {
    }
    if(node->get_node_type() == pty::QualifiedIdentifier) {
       return visitQualifiedIdentifierInExpr(node);
-   }
-   if (node->get_node_type() == pty::ArrayCastType) {
-      return visitQualifiedIdentifierInExpr(node->child(0));
    }
    if(node->get_node_type() == pty::MethodInvocation) {
       return visitMethodInvocation(node);
@@ -229,13 +226,20 @@ std::list<ast::ExprNode*> ptv::visitCastExpression(Node* node) {
    check_node_type(node, pty::CastExpression);
    check_num_children(node, 2, 3);
    std::list<ast::ExprNode*> ops;
-   auto type = visitExprChild(node->child(0));
-   ops.splice(ops.end(), type);
-   if (node->num_children() == 3 && node->child(1) != nullptr) {
-      ops.push_back(alloc.new_object<ast::ArrayTypeNode>());
+   if (auto basicType = dynamic_cast<parsetree::BasicType*>(node->child(0))) {
+      auto type = alloc.new_object<ast::BuiltInType>(basicType->get_type());
+      if (node->num_children() == 3 && node->child(1) != nullptr) {
+         ops.push_back(alloc.new_object<ast::TypeNode>(alloc.new_object<ast::ArrayType>(alloc, type)));
+      } else {
+         ops.push_back(alloc.new_object<ast::TypeNode>(type));
+      }
+   } else if (node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
+      auto type = visitReferenceType(node->child(0));
+      ops.push_back(alloc.new_object<ast::TypeNode>(type));
+   } else {
+      ops.push_back(visitArrayType(node->child(0)));
    }
-   auto expr = visitExprChild(node->child(node->num_children() - 1));
-   ops.splice(ops.end(), type);
+   ops.splice(ops.end(), visitExprChild(node->child(node->num_children() - 1)));
    ops.push_back(alloc.new_object<ast::Cast>());
    return ops;
 }
@@ -243,48 +247,44 @@ std::list<ast::ExprNode*> ptv::visitCastExpression(Node* node) {
 std::list<ast::ExprNode*> ptv::visitArrayCreation(Node* node) {
    check_node_type(node, pty::ArrayCreationExpression);
    check_num_children(node, 2, 2);
-   if (node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
-      auto ops = visitQualifiedIdentifierInExpr(node->child(0));
-      ops.splice(ops.end(), visitExprChild(node->child(1)));
-      ops.push_back(alloc.new_object<ast::ArrayInstanceCreation>());
-      return ops;
-   } else if (auto basicType = dynamic_cast<parsetree::BasicType*>(node->child(0))) {
-      ast::BuiltInType* type = alloc.new_object<ast::BuiltInType>(basicType->get_type());
-      std::list<ast::ExprNode*> ops({alloc.new_object<ast::BasicTypeNode>(type)});
-      ops.splice(ops.end(), visitExprChild(node->child(1)));
-      ops.push_back(alloc.new_object<ast::ArrayInstanceCreation>());
-      return ops;
-   }
+   std::list<ast::ExprNode*> ops({visitArrayTypeInExpr(node->child(0))});
+   ops.splice(ops.end(), visitExprChild(node->child(1)));
+   ops.push_back(alloc.new_object<ast::ArrayInstanceCreation>());
+   return ops;
    unreachable();
-
 }
 
-std::list<ast::ExprNode*> ptv::visitTypeInExpr(Node* node) {
+ast::ExprNode* ptv::visitArrayTypeInExpr(Node* node) {
+   if (auto basicType = dynamic_cast<parsetree::BasicType*>(node)) {
+      auto type = alloc.new_object<ast::BuiltInType>(basicType->get_type());
+      return alloc.new_object<ast::TypeNode>(alloc.new_object<ast::ArrayType>(alloc, type)); 
+   } else if (node->get_node_type() == pty::QualifiedIdentifier) {
+      auto type = visitReferenceType(node);
+      return alloc.new_object<ast::TypeNode>(alloc.new_object<ast::ArrayType>(alloc, type));
+   }
+   unreachable(); 
+}
+
+ast::ExprNode* ptv::visitRegularType(Node* node) {
    check_node_type(node, pty::Type);
-   check_num_children(node, 1, 1);
-   if (node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
-      return visitQualifiedIdentifierInExpr(node->child(0));
-   } else if (auto basicType = dynamic_cast<parsetree::BasicType*>(node->child(0))) {
-      ast::BuiltInType type = ast::BuiltInType(basicType->get_type());
-      return std::list<ast::ExprNode*>({alloc.new_object<ast::BasicTypeNode>(&type)});
+   if (auto basicType = dynamic_cast<parsetree::BasicType*>(node->child(0))) {
+      return alloc.new_object<ast::TypeNode>(alloc.new_object<ast::BuiltInType>(basicType->get_type()));
+   } else if (node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
+      return alloc.new_object<ast::TypeNode>(visitReferenceType(node));
    }
-   unreachable();
 }
 
-std::list<ast::ExprNode*> ptv::visitArrayType(Node* node) {
-   check_node_type(node, pty::ArrayType);
-   check_num_children(node, 1, 1);
-   if (node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
-      auto ops = visitQualifiedIdentifierInExpr(node->child(0));
-      ops.push_back(alloc.new_object<ast::ArrayTypeNode>());
-      return ops;
-   } else if (auto basicType = dynamic_cast<parsetree::BasicType*>(node->child(0))) {
-      ast::BuiltInType* type = alloc.new_object<ast::BuiltInType>(basicType->get_type());
-      std::list<ast::ExprNode*> ops({alloc.new_object<ast::BasicTypeNode>(type)});
-      ops.push_back(alloc.new_object<ast::ArrayTypeNode>());
-      return ops;
+ast::ExprNode* ptv::visitArrayType(Node* node) {
+   if (node->get_node_type() != pty::ArrayType && node->get_node_type() != pty::ArrayCastType) {
+      throw ParseTreeException(
+               node,
+               "Called on a node that is not the correct type!"
+               " Expected: " +
+                     node->type_string() +
+                     " Actual: " + node->type_string());
    }
-   unreachable();
+   check_num_children(node, 1, 1);
+   return visitArrayTypeInExpr(node->child(0));
 }
 
 ast::LiteralNode* ptv::visitLiteral(Node* node) {

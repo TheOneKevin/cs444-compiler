@@ -7,15 +7,15 @@ After constructing all of the environments, the following requirements of the Jo
 
 - ✅ No two fields declared in the same class may have the same name.
 - ✅ No two local variables with overlapping scope have the same name.
-- 🔜 No two classes or interfaces have the same canonical name.
+- ✅ No two classes or interfaces have the same canonical name.
 
 # Type Linking
 The type linking stage connects each use of a named type (class or interface) to the declaration of the type. At this stage, only names that can be syntactically (according to JLS 6.5.1) determined to be names of types need to be linked. Some names are syntactically ambiguous, in the sense that type checking must be done before it can be determined whether they are names of types or of other entities (see JLS 6.5). These ambiguous names will be linked in a later assignment.
 
 When linking type names, the following requirements of the Joos 1W language must be checked:
 
-- 🔜 No single-type-import declaration clashes with the class or interface declared in the same file.
-- 🔜 No two single-type-import declarations clash with each other.
+- ✅ No single-type-import declaration clashes with the class or interface declared in the same file.
+- ✅ No two single-type-import declarations clash with each other.
 - ❌ All type names must resolve to some class or interface declared in some file listed on the Joos command line.
 - ❌ All simple type names must resolve to a unique class or interface.
 - ❌ When a fully qualified name resolves to a type, no strict prefix of the fully qualified name can resolve to a type in the same environment.

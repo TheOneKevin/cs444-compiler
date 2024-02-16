@@ -40,12 +40,12 @@ class ThisNode : public ExprNode {
    }
 };
 
-class BasicTypeNode : public ExprNode {
-   BuiltInType *type;
+class TypeNode : public ExprNode {
+   Type *type;
 public:
-   BasicTypeNode(BuiltInType *type) : type{type} {}
+   TypeNode(Type *type) : type{type} {}
    std::ostream& print(std::ostream& os) const override {
-      return os << "(BasicTypeNode)";
+      return os << "(Type: " << type->toString() << ")";
    }
 };
 
@@ -121,14 +121,6 @@ public:
    ArrayAccess() : ExprOp(2) {}
    std::ostream& print(std::ostream& os) const override {
       return os << "ArrayAccess";
-   }
-};
-
-class ArrayTypeNode : public ExprOp {
-public:
-   ArrayTypeNode() : ExprOp(1) {}
-   std::ostream& print(std::ostream& os) const override{
-      return os << "ArrayTypeNode";
    }
 };
 

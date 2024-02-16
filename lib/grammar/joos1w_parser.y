@@ -403,7 +403,7 @@ CastExpression
         if(isType) {
             $$ = jl.make_node(@$, pty::CastExpression, $2, $4);
         } else if (isArrType) {
-            $$ = jl.make_node(@$, pty::CastExpression, $2, jl.make_leaf(@$, pty::Dims), $4);
+            $$ = jl.make_node(@$, pty::CastExpression, $2, $4);
         }
         else {
             jl.report_parser_error(@$, "Invalid expression for cast", {@1});

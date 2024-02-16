@@ -1,5 +1,5 @@
-CC = clang
-CXXFLAGS = -std=c++23 -g -Og -DYYDEBUG=1
+CC = clang++-16
+CXXFLAGS = -std=c++2b -g -Og -DYYDEBUG=1
 FLEX = flex
 BISON = bison
 BISONFLAGS = --locations -k
@@ -18,7 +18,7 @@ JOOSC_SRCS = \
   lib/parsetree/ParseTreeVisitor.cc lib/parsetree/VisitClassInterface.cc \
   lib/parsetree/VisitExpression.cc lib/parsetree/VisitLeaf.cc \
   lib/parsetree/VisitStatement.cc lib/utils/FragmentGenerator.cc \
-  lib/utils/DotPrinter.cc tools/joosc/main.cc {LEXER_OUT} {PARSER_OUT} \
+  lib/utils/DotPrinter.cc tools/joosc/main.cc ${LEXER_OUT} ${PARSER_OUT} \
 
 JOOSC_OBJS = $(JOOSC_SRCS:%.cc=$(PARSER_DIR)/%.o)
 
