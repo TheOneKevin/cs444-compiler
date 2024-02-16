@@ -58,6 +58,10 @@ private:
    /// @brief Builds the symbol lookup tables and any other data structures
    /// or maps to facilitate name resolution.
    void buildSymbolTable();
+   /// @brief Resolves an unresolved type to a non-leaf node in the tree
+   /// @param t The unresolved type to resolve.
+   /// @return The package node that the unresolved type resolves to.
+   NameResolver::Pkg* resolveAstTy(ast::UnresolvedType const* t) const;
 
 private:
    BumpAllocator& alloc;
@@ -66,7 +70,7 @@ private:
    /// @brief The current compilation unit being resolved.
    ast::CompilationUnit* cu_;
    /// @brief The import map for the current compilation unit.
-   std::pmr::unordered_map<std::pmr::string, Pkg*> importsMap_;
+   std::pmr::unordered_map<std::pmr::string, Pkg::Child> importsMap_;
    /// @brief The root of the symbol table (more of a tree than table).
    Pkg* rootPkg_;
 };

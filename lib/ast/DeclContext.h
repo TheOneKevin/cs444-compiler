@@ -30,6 +30,7 @@ public:
                    SourceRange location,
                    DeclContext* body) noexcept;
    auto body() const { return body_; }
+   auto bodyAsDecl() const { return dynamic_cast<Decl*>(body_); }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
    string_view getPackageName() const { 
@@ -39,6 +40,7 @@ public:
    }
    SourceRange location() const { return location_; }
    auto package() const { return package_; }
+   auto imports() const { return std::views::all(imports_); }
 
 private:
    ReferenceType* package_;

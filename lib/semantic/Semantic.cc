@@ -77,8 +77,7 @@ LinkingUnit* Semantic::BuildLinkingUnit(array_ref<CompilationUnit*> compilationU
    std::pmr::set<std::string_view> names;
    
    for(auto cu : compilationUnits) {
-      Decl* body = dynamic_cast<Decl*>(cu->body());
-      std::string_view name = body->getCanonicalName();
+      std::string_view name = cu->bodyAsDecl()->getCanonicalName();
 
       if (names.count(name) > 0) {
          diag.ReportError(cu->location()) << "No two classes or interfaces can have the same canonical name.";
