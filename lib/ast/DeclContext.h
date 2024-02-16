@@ -61,7 +61,7 @@ private:
    pmr_vector<CompilationUnit*> compilationUnits_;
 };
 
-class ClassDecl : public DeclContext, public Decl {
+class ClassDecl final : public DeclContext, public Decl {
 public:
    ClassDecl(BumpAllocator& alloc, Modifiers modifiers, SourceRange location,
              string_view name, ReferenceType* superClass,
@@ -96,7 +96,7 @@ private:
    SourceRange location_;
 };
 
-class InterfaceDecl : public DeclContext, public Decl {
+class InterfaceDecl final : public DeclContext, public Decl {
 public:
    InterfaceDecl(BumpAllocator& alloc, Modifiers modifiers, SourceRange location,
                  string_view name, array_ref<ReferenceType*> extends,
@@ -118,7 +118,7 @@ private:
    SourceRange location_;
 };
 
-class MethodDecl : public DeclContext, public Decl {
+class MethodDecl final : public DeclContext, public Decl {
 public:
    MethodDecl(BumpAllocator& alloc, Modifiers modifiers, SourceRange location,
               string_view name, Type* returnType, array_ref<VarDecl*> parameters,

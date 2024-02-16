@@ -9,7 +9,7 @@ namespace ast {
 
 class VarDecl;
 
-class BlockStatement : public Stmt {
+class BlockStatement final : public Stmt {
 public:
    BlockStatement(BumpAllocator& alloc, array_ref<Stmt*> stmts) noexcept
          : stmts_{alloc} {
@@ -25,7 +25,7 @@ private:
    pmr_vector<Stmt*> stmts_;
 };
 
-class DeclStmt : public Stmt {
+class DeclStmt final : public Stmt {
 public:
    DeclStmt(VarDecl* decl) : decl_{decl} {}
 
@@ -38,7 +38,7 @@ private:
    VarDecl* decl_;
 };
 
-class ExprStmt : public Stmt {
+class ExprStmt final : public Stmt {
 public:
    ExprStmt(Expr* expr) : expr_{expr} {}
 
@@ -51,7 +51,7 @@ private:
    Expr* expr_;
 };
 
-class IfStmt : public Stmt {
+class IfStmt final : public Stmt {
 public:
    IfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt)
          : condition_{condition}, thenStmt_{thenStmt}, elseStmt_{elseStmt} {}
@@ -69,7 +69,7 @@ private:
    Stmt* elseStmt_;
 };
 
-class WhileStmt : public Stmt {
+class WhileStmt final : public Stmt {
 public:
    WhileStmt(Expr* condition, Stmt* body)
          : condition_{condition}, body_{body} {}
@@ -84,7 +84,7 @@ private:
    Stmt* body_;
 };
 
-class ForStmt : public Stmt {
+class ForStmt final : public Stmt {
 public:
    ForStmt(Stmt* init, Expr* condition, Stmt* update, Stmt* body)
          : init_{init}, condition_{condition}, update_{update}, body_{body} {}
@@ -104,7 +104,7 @@ private:
    Stmt* body_;
 };
 
-class ReturnStmt : public Stmt {
+class ReturnStmt final : public Stmt {
 public:
    ReturnStmt(Expr* expr) : expr_{expr} {}
 
@@ -117,7 +117,7 @@ private:
    Expr* expr_;
 };
 
-class NullStmt : public Stmt {
+class NullStmt final : public Stmt {
 public:
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;

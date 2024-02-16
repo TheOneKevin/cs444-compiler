@@ -114,7 +114,7 @@ protected:
  * is used to represent types whose names are qualified with multiple parts,
  * or simple type names.
  */
-class UnresolvedType : public ReferenceType {
+class UnresolvedType final : public ReferenceType {
    BumpAllocator& alloc;
    pmr_vector<std::pmr::string> identifiers;
    mutable std::pmr::string canonicalName;
