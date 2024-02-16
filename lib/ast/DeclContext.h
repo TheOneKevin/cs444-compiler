@@ -15,15 +15,10 @@ class MethodDecl;
 struct ImportDeclaration {
    ReferenceType* type;
    bool isOnDemand;
-   std::string_view simpleName() {
-      std::string name (type->toString().data(), type->toString().size());
-      size_t lastDotPos = name.find_last_of('.');
-
-      if (lastDotPos != std::string_view::npos) {
-        // Extract the substring starting from the position immediately after the last period
-         return name.substr(lastDotPos + 1);;
-      } 
-      return name;
+   auto simpleName() const {
+      auto unresTy = dynamic_cast<UnresolvedType*>(type);
+      assert(unresTy && "Can only extract simple name from unresolved type");
+      return unresTy->parts().back();
    }
 };
 
