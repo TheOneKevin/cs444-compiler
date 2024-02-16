@@ -139,6 +139,8 @@ int main(int argc, char** argv) {
       asts.push_back(ast);
    }
 
+   
+
    ast::LinkingUnit* linkingUnit = sem.BuildLinkingUnit(asts);
    
    if(diag.hasErrors()) {

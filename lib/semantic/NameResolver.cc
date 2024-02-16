@@ -43,7 +43,7 @@ void NameResolver::buildSymbolTable() {
          // If the subpackage does not hold a package, then it must be a
          // a decl with the same name as the package. This is an error.
          // cf. JLS 6.4.1.
-         Pkg::Child const& child = rootPkg_->children[id];
+         Pkg::Child const& child = subPkg->children[id];
          if(std::holds_alternative<ast::Decl*>(child)) {
             auto decl = std::get<ast::Decl*>(child);
             assert(decl && "Package node holds empty decl");

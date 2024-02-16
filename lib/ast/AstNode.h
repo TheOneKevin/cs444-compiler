@@ -69,7 +69,7 @@ public:
    Decl(BumpAllocator& alloc, std::string_view name) noexcept
          : canonicalName_{alloc}, name_{name, alloc}, parent_{nullptr} {}
 
-   /// @brief Gets the simple  name of this declaration.
+   /// @brief Gets the simple name of this declaration.
    std::string_view name() const { return name_; }
    /// @brief Gets the context in which this declaration is declared.
    DeclContext* parent() const { return parent_; }
@@ -117,6 +117,7 @@ public:
    virtual void resolve(semantic::NameResolver&) {}
    /// @brief Returns if the type is resolved
    virtual bool isResolved() const = 0;
+   virtual bool operator==(const Type& other) const = 0;
 };
 
 /// @brief Base class for all statements.

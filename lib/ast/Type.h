@@ -56,6 +56,7 @@ public:
    Kind getKind() const { return kind; }
    string_view toString() const override { return Kind_to_string(kind, "??"); }
    bool isResolved() const override { return true; }
+   bool operator== (const BuiltInType& other) const { return kind == other.kind; }
 };
 
 /**
@@ -88,6 +89,10 @@ public:
    void resolveInternal(Decl* decl) {
       assert(!isResolved() && "Type already resolved");
       decl_ = decl;
+   }
+
+   bool operator== (const ReferenceType& other) const {
+      return decl_ == other.decl_;
    }
 
 protected:
