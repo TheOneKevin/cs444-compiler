@@ -86,8 +86,10 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
    // cf. JLS 6.3 is visible across all CUs in the same package.
 
    // 1. Package declarations
-   for(auto& kv : rootPkg_->children)
-      importsMap_[kv.first] = Pkg::Child{std::get<Pkg*>(kv.second)};
+   for(auto& kv : rootPkg_->children) {
+      if(std::holds_alternative<Pkg*>(kv.second))
+         importsMap_[kv.first] = Pkg::Child{std::get<Pkg*>(kv.second)};
+   }
    // 2. Import-on-demand declarations
    for(auto const& imp : cu->imports()) {
       if(!imp.isOnDemand) continue;
@@ -186,8 +188,9 @@ void NameResolver::Resolve() {
          resolveClass(ast);
       } else if(auto ast = dynamic_cast<ast::InterfaceDecl*>(cu->body())) {
          resolveInterface(ast);
+      } else {
+         assert(false && "Unimplemented");
       }
-      assert(false && "Unimplemented");
    }
 }
 

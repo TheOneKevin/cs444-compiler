@@ -188,9 +188,12 @@ void ClassDecl::setParent(DeclContext* parent) {
    // Set the parent of the class
    Decl::setParent(parent);
    // Build the canonical name
-   canonicalName_ = cu->getPackageName();
-   canonicalName_ += ".";
+   if (cu->package() != nullptr) {
+      canonicalName_ = cu->getPackageName();
+      canonicalName_ += ".";
+   }
    canonicalName_ += name();
+
    // Propagate the setParent call to the fields, methods, and constructors
    for(auto& field : fields_) field->setParent(this);
    for(auto& method : methods_) method->setParent(this);

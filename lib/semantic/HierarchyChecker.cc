@@ -4,6 +4,41 @@
 #include <vector>
 namespace semantic {
 
+bool dfs(
+   ast::Decl* decl, 
+   std::pmr::map<ast::Decl*, bool>& visited, 
+   std::pmr::map<ast::Decl*, std::pmr::vector<ast::Decl*>>& hierarchyMap
+) {
+   if (visited[decl]) return true;
+   
+   visited[decl] = true;
+
+   for (auto child : hierarchyMap[decl]) {
+      if (!visited[child]) {
+         if (dfs(child, visited, hierarchyMap)) {
+            return true;
+         }
+      }
+   }
+   
+   return false;
+}
+
+// Write a function to check if the hierarchy is acyclic
+bool isAcyclic(std::pmr::map<ast::Decl*, std::pmr::vector<ast::Decl*>>& hierarchyMap) {
+   std::pmr::map<ast::Decl*, bool> visited;
+
+   for (auto [decl, children] : hierarchyMap) {
+      if (!visited[decl]) {
+         if (dfs(decl, visited, hierarchyMap)) {
+            return true;
+         }
+      }
+   }
+
+   return false;
+}
+
 void HierarchyChecker::checkInheritance() {
    std::pmr::map<ast::Decl*, std::pmr::vector<ast::Decl*>> hierarchyMap;
    for (auto cu : lu_->compliationUnits()) {
@@ -61,41 +96,6 @@ void HierarchyChecker::checkInheritance() {
    if (isAcyclic(hierarchyMap)) {
       diag.ReportError(SourceRange{}) << "The inheritance hierarchy is cyclic.";
    }
-}
-
-// Write a function to check if the hierarchy is acyclic
-bool isAcyclic(std::pmr::map<ast::Decl*, std::pmr::vector<ast::Decl*>>& hierarchyMap) {
-   std::pmr::map<ast::Decl*, bool> visited;
-
-   for (auto [decl, children] : hierarchyMap) {
-      if (!visited[decl]) {
-         if (dfs(decl, visited, hierarchyMap)) {
-            return true;
-         }
-      }
-   }
-
-   return false;
-}
-
-bool dfs(
-   ast::Decl* decl, 
-   std::pmr::map<ast::Decl*, bool>& visited, 
-   std::pmr::map<ast::Decl*, std::pmr::vector<ast::Decl*>>& hierarchyMap
-) {
-   if (visited[decl]) return true;
-   
-   visited[decl] = true;
-
-   for (auto child : hierarchyMap[decl]) {
-      if (!visited[child]) {
-         if (dfs(child, visited, hierarchyMap)) {
-            return true;
-         }
-      }
-   }
-   
-   return false;
 }
 
 }

@@ -18,7 +18,8 @@ JOOSC_SRCS = \
   lib/parsetree/ParseTreeVisitor.cc lib/parsetree/VisitClassInterface.cc \
   lib/parsetree/VisitExpression.cc lib/parsetree/VisitLeaf.cc \
   lib/parsetree/VisitStatement.cc lib/utils/FragmentGenerator.cc \
-  lib/utils/DotPrinter.cc lib/semantic/NameResolver.cc tools/joosc/main.cc \
+  lib/utils/DotPrinter.cc lib/semantic/NameResolver.cc lib/semantic/HierarchyChecker.cc \
+  tools/joosc/main.cc \
   ${LEXER_OUT} ${PARSER_OUT} \
 
 JOOSC_OBJS = $(JOOSC_SRCS:%.cc=$(PARSER_DIR)/%.o)

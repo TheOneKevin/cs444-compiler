@@ -10,6 +10,7 @@
 #include "parsetree/ParseTree.h"
 #include "parsetree/ParseTreeVisitor.h"
 #include "semantic/NameResolver.h"
+#include "semantic/HierarchyChecker.h"
 
 // FIXME(kevin): Remove when we have proper AST handling
 bool isLiteralTypeValid(parsetree::Node* node) {
@@ -154,6 +155,15 @@ int main(int argc, char** argv) {
    semantic::NameResolver resolver{alloc, diag, linkingUnit};
 
    resolver.Resolve();
+
+   semantic::HierarchyChecker hierarchy{diag, linkingUnit};
+
+   if(diag.hasErrors()) {
+      for(auto& msg : diag.messages()) {
+         msg.emit(std::cerr) << std::endl;
+      }
+      return 42;
+   }
 
    return 0;
 }
