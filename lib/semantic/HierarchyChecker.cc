@@ -19,7 +19,6 @@ bool dfs(ast::Decl* decl, std::pmr::map<ast::Decl*, bool>& visited,
    return false;
 }
 
-// Write a function to check if the hierarchy is acyclic
 bool isAcyclic(
       std::pmr::map<ast::Decl*, std::pmr::vector<ast::Decl*>>& hierarchyMap) {
    std::pmr::map<ast::Decl*, bool> visited;
@@ -33,6 +32,19 @@ bool isAcyclic(
    }
 
    return false;
+}
+
+bool isSameMethodSignature(ast::MethodDecl* method1, ast::MethodDecl* method2) {
+   if(method1->name() != method2->name()) return false;
+   if(method1->parameters().size() != method2->parameters().size()) return false;
+
+   for(size_t i = 0; i < method1->parameters().size(); i++) {
+      if(method1->parameters()[i]->type() != method2->parameters()[i]->type()) {
+         return false;
+      }
+   }
+
+   return true;
 }
 
 void HierarchyChecker::checkInheritance() {
@@ -119,39 +131,34 @@ void HierarchyChecker::checkClassMethod(ast::ClassDecl* classDecl) {
       }
 
       for(auto other : classDecl->methods()) {
-         if(methods == other) continue;
-         if(methods->name() != other->name()) continue;
-
-         bool isSameSignature = true;
-         if(methods->parameters().size() == other->parameters().size()) {
-            for(size_t i = 0; i < methods->parameters().size(); i++) {
-               if(methods->parameters()[i]->type() !=
-                  other->parameters()[i]->type()) {
-                  isSameSignature = false;
-                  break;
-               }
-            }
-         }
-
-         if(isSameSignature) {
+         if(isSameMethodSignature(methods, other)) {
             if(methods->name() == other->name()) {
                diag.ReportError(methods->location())
-                     << "A class must not declare two methods with the same "
-                        "signature. "
-                     << methods->name();
+                  << "A class must not declare two methods with the same signature. "
+                  << methods->name();
             }
          }
       }
    }
 
-   if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(interface->decl())) {
-      for(auto method : interfaceDecl->methods()) {
-         if(!classDecl->modifiers().isAbstract() &&
-            interfaceDecl->modifiers().isAbstract()) {
-            diag.ReportError(interfaceDecl->location())
-                  << "A non-abstract class must not contain abstract "
-                     "methods. "
-                  << interfaceDecl->name();
+   if(auto superClassDecl = dynamic_cast<ast::ClassDecl*>(classDecl->superClass()->decl())) {
+      for(auto superClassMethod : superClassDecl->methods()) {
+         if(!classDecl->modifiers().isAbstract() && superClassDecl->modifiers().isAbstract()) {
+            for(auto classMethod : classDecl->methods()) {
+               if(isSameMethodSignature(superClassMethod, classMethod)) {
+                  diag.ReportError(superClassDecl->location())
+                     << "A non-abstract class must not inherit abstract methods. "
+                     << superClassDecl->name();
+               }
+            }
+         }
+
+         for(auto classMethod : classDecl->methods()) {
+            if(isSameMethodSignature(superClassMethod, classMethod)) {
+               diag.ReportError(superClassDecl->location())
+                  << "A class must not contain two methods with the same signature. "
+                  << superClassDecl->name();
+            }
          }
       }
    }
