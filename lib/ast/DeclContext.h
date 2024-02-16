@@ -43,6 +43,7 @@ public:
       return "unnamed package"; 
    }
    SourceRange location() const { return location_; }
+   auto package() const { return package_; }
 
 private:
    ReferenceType* package_;

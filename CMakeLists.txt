@@ -84,6 +84,7 @@ add_library(OLKCompilerLib
     "lib/ast/Modifiers.cc"
     # semantic
     "lib/semantic/Semantic.cc"
+    "lib/semantic/NameResolver.cc"
     # grammar
     "lib/grammar/Joos1W.cc"
     # parsetree

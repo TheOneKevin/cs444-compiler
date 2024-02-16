@@ -17,7 +17,7 @@ using std::string;
 
 LinkingUnit::LinkingUnit(BumpAllocator& alloc,
                array_ref<CompilationUnit*> compilationUnits) noexcept
-      : compilationUnits_{compilationUnits} {
+      : compilationUnits_{alloc} {
    utils::move_vector<CompilationUnit*>(compilationUnits, compilationUnits_);
 }
 

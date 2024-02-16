@@ -2,9 +2,9 @@
 
 #include <iostream>
 #include <ranges>
+#include <set>
 #include <string>
 #include <vector>
-#include <set>
 
 #include "parsetree/ParseTree.h"
 #include "utils/DotPrinter.h"
@@ -65,9 +65,8 @@ public:
    Decl(BumpAllocator& alloc, std::string_view name) noexcept
          : canonicalName_{alloc}, name_{name, alloc}, parent_{nullptr} {}
 
-   /// @brief Gets the (non qualified) name of this declaration.
-   std::string_view name() const {
-      return name_; }
+   /// @brief Gets the simple  name of this declaration.
+   std::string_view name() const { return name_; }
    /// @brief Gets the context in which this declaration is declared.
    DeclContext* parent() const { return parent_; }
    /// @brief Sets the parent. See parent().
@@ -131,8 +130,7 @@ std::ostream& operator<<(std::ostream& os, const AstNode& astNode);
  * @return The ID of the first node
  */
 template <std::ranges::range Range>
-   requires std::is_convertible_v<std::ranges::range_value_t<Range>,
-                                  ast::AstNode*>
+   requires std::is_convertible_v<std::ranges::range_value_t<Range>, ast::AstNode*>
 int printDotNodeList(DotPrinter& dp, Range&& range) {
    int childIdFirst = -1;
    int childIdLast = -1;
@@ -151,7 +149,7 @@ int printDotNodeList(DotPrinter& dp, Range&& range) {
  * @brief Draws either a single statement node or a subgraph of statements
  * if the statement is a block statement. Returns the ID of the first node
  * and the ID of the subgraph if it is a block statement.
- * 
+ *
  * @param dp The DotPrinter
  * @param stmt The statement to draw
  * @return std::pair<int, int> Returns -1 if stmt is not a block statement
@@ -208,8 +206,7 @@ public:
       return std::views::iota(0, (int)Type::NumModifiers) |
              std::views::filter(
                    [masked](int i) { return (masked & (1 << i)) != 0; }) |
-             std::views::transform(
-                   [this](int i) { return modifierLocations[i]; });
+             std::views::transform([this](int i) { return modifierLocations[i]; });
    }
 
    /// @brief Returns the location of the given modifier. Returns an

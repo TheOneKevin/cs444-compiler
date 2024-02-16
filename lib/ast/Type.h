@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+
 #include "ast/AstNode.h"
 #include "parsetree/ParseTree.h"
 #include "utils/EnumMacros.h"
@@ -71,15 +73,20 @@ class UnresolvedType : public ReferenceType {
    BumpAllocator& alloc;
    pmr_vector<std::pmr::string> identifiers;
    mutable std::pmr::string canonicalName;
+   mutable bool locked_ = false;
 
 public:
    UnresolvedType(BumpAllocator& alloc)
          : alloc{alloc}, identifiers{alloc}, canonicalName{alloc} {}
 
+   /// @brief Adds a simple name to the unresolved type.
    void addIdentifier(string_view identifier) {
+      assert(!locked_ && "Cannot add identifiers to a locked unresolved type");
       identifiers.emplace_back(identifier);
    }
 
+   /// @brief Converts the unresolved type to a string by concatenating
+   /// all the simple name parts with a '.'. 
    string_view toString() const {
       if(!canonicalName.empty()) {
          return canonicalName;
@@ -91,6 +98,14 @@ public:
       canonicalName.pop_back();
       return canonicalName;
    }
+
+   /// @brief The individual parts (simple names) of the unresolved type.
+   auto parts() const { return std::views::all(identifiers); }
+
+   /// @brief Marks the unresolved type as immutable. This allows us to
+   /// grab references to the parts of the unresolved type without
+   /// worrying about the references being invalidated.
+   void lock() const { locked_ = true; }
 
    std::ostream& operator<<(std::ostream& os) const { return os << toString(); }
 };
