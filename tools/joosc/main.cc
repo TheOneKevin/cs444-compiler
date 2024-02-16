@@ -9,6 +9,7 @@
 #include "grammar/Joos1WGrammar.h"
 #include "parsetree/ParseTree.h"
 #include "parsetree/ParseTreeVisitor.h"
+#include "semantic/NameResolver.h"
 
 // FIXME(kevin): Remove when we have proper AST handling
 bool isLiteralTypeValid(parsetree::Node* node) {
@@ -149,6 +150,10 @@ int main(int argc, char** argv) {
    if (printDot) {
       linkingUnit->printDot(std::cout);
    }
+
+   semantic::NameResolver resolver{alloc, diag, linkingUnit};
+
+   resolver.Resolve();
 
    return 0;
 }

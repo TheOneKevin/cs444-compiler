@@ -25,12 +25,12 @@ When linking type names, the following requirements of the Joos 1W language must
 # Hierarchy Checking
 The fourth stage computes the inheritance relationships for classes, interfaces, methods, and fields, and checks that they conform to the various rules given in Chapters 8 and 9 of the Java Language Specification. Specifically, this stage should check that:
 
-- ❌ A class must not extend an interface. (JLS 8.1.3)
-- ❌ A class must not implement a class. (JLS 8.1.4)
-- ❌ An interface must not be repeated in an implements clause or in an extends clause of an interface. (JLS 8.1.4)
-- ❌ A class must not extend a final class. (JLS 8.1.1.2, 8.1.3)
-- ❌ An interface must not extend a class. (JLS 9.1.2)
-- ❌ The hierarchy must be acyclic. (JLS 8.1.3, 9.1.2)
+- ✅ A class must not extend an interface. (JLS 8.1.3)
+- ✅ A class must not implement a class. (JLS 8.1.4)
+- ✅ An interface must not be repeated in an implements clause or in an extends clause of an interface. (JLS 8.1.4)
+- ✅ A class must not extend a final class. (JLS 8.1.1.2, 8.1.3)
+- ✅ An interface must not extend a class. (JLS 9.1.2)
+- ✅ The hierarchy must be acyclic. (JLS 8.1.3, 9.1.2)
 - ❌ A class or interface must not declare two methods with the same signature (name and parameter types). (JLS 8.4, 9.4)
 - ❌ A class must not declare two constructors with the same parameter types (JLS 8.8.2)
 - ❌ A class or interface must not contain (declare or inherit) two methods with the same signature but different return types (JLS 8.1.1.1, 8.4, 8.4.2, 8.4.6.3, 8.4.6.4, 9.2, 9.4.1)

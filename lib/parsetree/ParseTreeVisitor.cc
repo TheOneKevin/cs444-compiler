@@ -33,7 +33,7 @@ ast::CompilationUnit* ptv::visitCompilationUnit(Node* node) {
 }
 
 ast::ReferenceType* ptv::visitPackageDeclaration(Node* node) {
-   if(node == nullptr) return nullptr;
+   if(node == nullptr) return sem.BuildUnresolvedType();
    check_node_type(node, pty::PackageDeclaration);
    check_num_children(node, 1, 1);
    return visitReferenceType(node->child(0));

@@ -31,9 +31,12 @@ public:
    auto bodyAsDecl() const { return dynamic_cast<Decl*>(body_); }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
-   string_view getPackageName() const {
-      if(package_) return package_->toString();
-      return "unnamed package";
+   string_view getPackageName() const { 
+      auto package = dynamic_cast<UnresolvedType*>(package_);
+      assert(package_ && "Package must be unresolved type");
+      if (package->parts().size() > 0)
+         return package_->toString();
+      return "unnamed package"; 
    }
    SourceRange location() const { return location_; }
    auto package() const { return package_; }

@@ -77,7 +77,8 @@ LinkingUnit* Semantic::BuildLinkingUnit(array_ref<CompilationUnit*> compilationU
    std::pmr::set<std::string_view> names;
    
    for(auto cu : compilationUnits) {
-      std::string_view name = cu->bodyAsDecl()->getCanonicalName();
+      Decl* body = dynamic_cast<Decl*>(cu->body());
+      std::string_view name = body->getCanonicalName();
 
       if (names.count(name) > 0) {
          diag.ReportError(cu->location()) << "No two classes or interfaces can have the same canonical name.";
@@ -144,6 +145,14 @@ ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers,
          }
       }
    }
+   // Check that interfaces cannot be repeated in implements clause
+   for (auto interface : node->interfaces()) {
+      for (auto other : node->interfaces()) {
+         if (interface != other && interface->toString() == other->toString()){
+            diag.ReportError(loc) << "interface \"" << interface->toString() << "\" is already implemented.";
+         }
+      }
+   }
    return node;
 }
 
@@ -165,6 +174,14 @@ InterfaceDecl* Semantic::BuildInterfaceDecl(
          if(!methodDecl->modifiers().isAbstract()) {
             diag.ReportError(methodDecl->location())
                   << "interface method must be abstract";
+         }
+      }
+   }
+   // Check that interfaces cannot be repeated in extends clause
+   for (auto interface : extends) {
+      for (auto other : extends) {
+         if (interface != other && interface->toString() == other->toString()){
+            diag.ReportError(loc) << "interface \"" << interface->toString() << "\" is already implemented.";
          }
       }
    }

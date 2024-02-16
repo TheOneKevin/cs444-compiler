@@ -8,8 +8,8 @@
       "type": "lldb",
       "request": "launch",
       "name": "joosc",
-      "program": "${workspaceRoot}/build/joosc",
-      "args": ["-x", "${workspaceRoot}/build/same_name.java"],
+      "program": "${workspaceRoot}/joosc",
+      "args": ["${workspaceRoot}/tests/data/ast_test/same_name.java"],
       "cwd": "${workspaceRoot}",
       "preLaunchTask": "build"
     },
