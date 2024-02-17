@@ -223,6 +223,7 @@ void NameResolver::ResolveType(ast::UnresolvedType* type) {
 void NameResolver::Resolve() {
    for(auto cu : lu_->compliationUnits()) {
       BeginContext(cu);
+      if(!cu->body()) continue;
       if(auto ast = dynamic_cast<ast::ClassDecl*>(cu->body())) {
          resolveClass(ast);
       } else if(auto ast = dynamic_cast<ast::InterfaceDecl*>(cu->body())) {
