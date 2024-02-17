@@ -56,7 +56,12 @@ public:
    Kind getKind() const { return kind; }
    string_view toString() const override { return Kind_to_string(kind, "??"); }
    bool isResolved() const override { return true; }
-   bool operator== (const BuiltInType& other) const { return kind == other.kind; }
+   bool operator== (const Type& other) const override { 
+      if (auto otherBuiltIn = dynamic_cast<const BuiltInType*>(&other)) {
+         return kind == otherBuiltIn->kind;
+      }
+      return false;
+   }
 };
 
 /**
@@ -91,8 +96,12 @@ public:
       decl_ = decl;
    }
 
-   bool operator== (const ReferenceType& other) const {
-      return decl_ == other.decl_;
+   bool operator== (const Type& other) const override {
+      if (auto otherBuiltIn = dynamic_cast<const ReferenceType*>(&other)) {
+         return decl_ == otherBuiltIn->decl_;
+      }
+      
+      return false;
    }
 
 protected:
@@ -169,6 +178,12 @@ public:
       if(auto unresTy = dynamic_cast<UnresolvedType*>(elementType)) {
          if(elementType->isResolved()) unresTy->resolve(x);
       }
+   }
+   bool operator== (const Type& other) const override {
+      if (auto otherArrayType = dynamic_cast<const ArrayType*>(&other)) {
+         return *elementType == *otherArrayType->elementType;
+      }
+      return false;
    }
 };
 

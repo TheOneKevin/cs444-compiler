@@ -5,3 +5,4 @@ tests/generated/
 docs/
 .cache/
 joosc
+out.dot
