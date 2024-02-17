@@ -53,6 +53,7 @@ for test in valid_files:
         print(f"Return code: {ret}")
         failures += 1
         print(f"Command: {joosc} {' '.join(files)}")
+        print("\n===========================================================\n")
 
 for test in invalid_files:
     test = os.path.join(test_dir, test)
@@ -64,5 +65,6 @@ for test in invalid_files:
         print(f"Return code: {ret}")
         failures += 1
         print(f"Command: {joosc} {' '.join(files)}")
+        print("\n===========================================================\n")
 
 print(f"Total failures: {failures}/{len(test_names)} or {len(test_names) - failures}/{len(test_names)} passing")
