@@ -15,6 +15,7 @@ public:
       ast::LinkingUnit* lu
    ) : diag{diag}, lu_{lu} {
       checkInheritance();
+      checkMethodReplacement();
    }
 
 private:
@@ -28,6 +29,7 @@ private:
    void checkClassConstructors(ast::ClassDecl* classDecl);
    void checkClassMethod(ast::ClassDecl* classDecl);
    void checkInterfaceMethod(ast::InterfaceDecl* interfaceDecl);
+   void checkMethodReplacement();
 
    // Flattening map functions
    void flattenClassMap(std::pmr::map<ast::ClassDecl*, std::pmr::vector<ast::ClassDecl*>> &unflattenedMap);
