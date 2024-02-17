@@ -138,12 +138,13 @@ void HierarchyChecker::checkInheritance() {
          // if there is a superclass
          if(auto superClass = classDecl->superClass()) {
             auto superClassDecl =
-                  dynamic_cast<ast::ClassDecl*>(classDecl->superClass()->decl());
+                  dynamic_cast<ast::ClassDecl*>(superClass->decl());
             // class cannot extend an interface
             if(!superClassDecl) {
                diag.ReportError(classDecl->location())
-                     << "A class must not extend an interface."
+                     << "A class must not extend a interface. "
                      << classDecl->name();
+               continue;
             }
             // class cannot extend a final class
             if(superClassDecl->modifiers().isFinal()) {

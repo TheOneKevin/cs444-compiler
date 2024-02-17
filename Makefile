@@ -44,6 +44,6 @@ joosc: $(JOOSC_OBJS)
 	$(CC) $(CXXFLAGS) $(INCLUDES) -o ./$@ $^
 
 clean:
-	rm -rf $(PARSER_DIR)
+	rm -rf $(PARSER_DIR) && rm joosc
 
 .PHONY: all clean joosc

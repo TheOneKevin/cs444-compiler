@@ -10,8 +10,7 @@
       "request": "launch",
       "name": "joosc",
       "program": "${workspaceRoot}/joosc",
-      "args": ["${workspaceRoot}/tests/data/ast_test/same_name.java", 
-                "${workspaceRoot}/tests/data/ast_test/some_class.java"],
+      "args": ["${workspaceRoot}/tests/data/ast_test/same_name.java"],
       "cwd": "${workspaceRoot}"
     },
     {
