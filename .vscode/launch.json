@@ -41,9 +41,9 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "astprinter",
-      "program": "${workspaceFolder}/build/astprinter",
-      "args": [],
+      "name": "jcc1",
+      "program": "${workspaceFolder}/build/jcc1",
+      "args": ["-a", "out.debug.dot"],
       "cwd": "${workspaceFolder}"
     }
   ]

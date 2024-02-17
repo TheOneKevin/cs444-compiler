@@ -11,6 +11,7 @@ public:
          : Decl{alloc, name}, type_{type} {}
 
    Type* type() const { return type_; }
+   Type* mut_type() const { return type_; }
 
 private:
    Type* type_;

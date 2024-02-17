@@ -1,9 +1,11 @@
 #pragma once
 
+#include <iostream>
 #include <string_view>
 #include <unordered_map>
 #include <variant>
 #include <vector>
+#include <optional>
 
 #include "ast/AstNode.h"
 #include "diagnostics/Diagnostics.h"
@@ -16,6 +18,7 @@ class CompilationUnit;
 class UnresolvedType;
 class InterfaceDecl;
 class ClassDecl;
+class MethodDecl;
 } // namespace ast
 
 namespace semantic {
@@ -30,6 +33,8 @@ private:
       Pkg(BumpAllocator& alloc) : name{}, children{alloc} {}
       Pkg(BumpAllocator& alloc, std::string_view name)
             : name{name}, children{alloc} {}
+      std::ostream& print(std::ostream& os, int indentation = 0) const;
+      void dump() const;
    };
 
 public:
@@ -62,15 +67,18 @@ public:
 private:
    void resolveInterface(ast::InterfaceDecl* decl);
    void resolveClass(ast::ClassDecl* decl);
+   void resolveMethod(ast::MethodDecl* decl);
 
 private:
+   using ChildOpt = std::optional<Pkg::Child>;
+
    /// @brief Builds the symbol lookup tables and any other data structures
    /// or maps to facilitate name resolution.
    void buildSymbolTable();
    /// @brief Resolves an unresolved type to a non-leaf node in the tree
    /// @param t The unresolved type to resolve.
    /// @return The package node that the unresolved type resolves to.
-   NameResolver::Pkg* resolveAstTy(ast::UnresolvedType const* t) const;
+   ChildOpt resolveAstTy(ast::UnresolvedType const* t) const;
 
 private:
    BumpAllocator& alloc;

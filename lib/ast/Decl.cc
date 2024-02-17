@@ -9,6 +9,10 @@ namespace ast {
 using std::ostream;
 using std::string;
 
+void AstNode::dump() const {
+   print(std::cout, 0);
+}
+
 // VarDecl /////////////////////////////////////////////////////////////////////
 
 ostream& VarDecl::print(ostream& os, int indentation) const {

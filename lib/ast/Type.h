@@ -136,6 +136,8 @@ public:
    /// @brief Converts the unresolved type to a string by concatenating
    /// all the simple name parts with a '.'.
    string_view toString() const override {
+      if(identifiers.empty())
+         return "";
       if(!canonicalName.empty()) {
          return canonicalName;
       }

@@ -50,6 +50,7 @@ public:
    virtual std::ostream& print(std::ostream& os, int indentation = 0) const = 0;
    virtual ~AstNode() = default;
    virtual int printDotNode(DotPrinter& dp) const = 0;
+   void dump() const;
 
 protected:
    /**

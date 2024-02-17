@@ -41,6 +41,11 @@ public:
    SourceRange location() const { return location_; }
    auto package() const { return package_; }
    auto imports() const { return std::views::all(imports_); }
+   auto isDefaultPackage() const {
+      auto unresTy = dynamic_cast<UnresolvedType*>(package_);
+      assert(unresTy && "Package must be unresolved type");
+      return unresTy->parts().size() == 0;
+   }
 
 private:
    ReferenceType* package_;
@@ -110,6 +115,8 @@ public:
    /// @brief Overrides the setParent to construct canonical name.
    void setParent(DeclContext* parent) override;
    SourceRange location() const { return location_; }
+   auto mut_extends() { return std::views::all(extends_); }
+   auto mut_methods() { return std::views::all(methods_); }
 
 private:
    Modifiers modifiers_;

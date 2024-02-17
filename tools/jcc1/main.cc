@@ -75,6 +75,7 @@ int main(int argc, char** argv) {
    }
 
    // Work on each input buffer
+   int bufIndex = 1;
    std::pmr::vector<ast::CompilationUnit*> compilation_units{gAlloc};
    for(auto const& buffer : input_buffers) {
       // 1. Parse the input into a parse tree
@@ -82,7 +83,8 @@ int main(int argc, char** argv) {
       parsetree::Node* pt = nullptr;
       int parseResult = parser.parse(pt);
       if(parseResult != 0 || pt == nullptr) {
-         std::cerr << "Parsing failed with code: " << parseResult << std::endl;
+         std::cerr << "Parsing failed with code: " << parseResult << " in buffer #"
+                   << bufIndex << std::endl;
          checkAndPrintErrors();
          return 42;
       }
@@ -92,7 +94,8 @@ int main(int argc, char** argv) {
       try {
          ast = visitor.visitCompilationUnit(pt);
       } catch(const parsetree::ParseTreeException& e) {
-         std::cerr << "ParseTreeException: " << e.what() << std::endl;
+         std::cerr << "ParseTreeException: " << e.what() << " in buffer #"
+                   << bufIndex << std::endl;
          std::cerr << "Parse tree trace:" << std::endl;
          trace_node(e.get_where());
          return 1;
@@ -100,6 +103,7 @@ int main(int argc, char** argv) {
       // 3. Check for errors
       checkAndPrintErrors();
       compilation_units.push_back(ast);
+      bufIndex++;
    }
 
    // Link the compilation units
