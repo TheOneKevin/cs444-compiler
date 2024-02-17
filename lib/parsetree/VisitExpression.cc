@@ -66,8 +66,8 @@ ast::BinaryOp* ptv::convertToBinaryOp(Operator::Type type) {
 }
 
 ast::Expr* ptv::visitExpr(Node* node) {
-   // return new ast::Expr(visitExprChild(node));
-   return new ast::Expr(std::list<ast::ExprNode*>());
+   return new ast::Expr(visitExprChild(node));
+   // return new ast::Expr(std::list<ast::ExprNode*>());
 }
 
 std::list<ast::ExprNode*> ptv::visitExprNode(parsetree::Node* node) {
@@ -283,7 +283,7 @@ ast::ExprNode* ptv::visitRegularType(Node* node) {
       return alloc.new_object<ast::TypeNode>(
             alloc.new_object<ast::BuiltInType>(basicType->get_type()));
    } else if(node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
-      return alloc.new_object<ast::TypeNode>(visitReferenceType(node));
+      return alloc.new_object<ast::TypeNode>(visitReferenceType(node->child(0)));
    }
 }
 
