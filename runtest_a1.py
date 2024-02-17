@@ -1,6 +1,7 @@
 import os
 import subprocess
 
+
 def grab_all_java(dir):
     # Recursively grab all java files
     java_files = []
@@ -9,6 +10,7 @@ def grab_all_java(dir):
             if file.endswith(".java"):
                 java_files.append(os.path.join(root, file))
     return java_files
+
 
 # Get the directory of this script
 script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -28,13 +30,17 @@ valid_files = [x for x in test_names if x not in invalid_files]
 for file in valid_files:
     # Run joosc and get return code
     file = os.path.join(test_dir, file)
-    ret = subprocess.run([joosc, file, *stdlib_files], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    ret = subprocess.run(
+        [joosc, file, *stdlib_files], stderr=subprocess.PIPE, stdout=subprocess.PIPE
+    )
     if ret.returncode != 0:
         print("Failed " + file)
 
 for file in invalid_files:
     # Run joosc and get return code
     file = os.path.join(test_dir, file)
-    ret = subprocess.run([joosc, file, *stdlib_files], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    ret = subprocess.run(
+        [joosc, file, *stdlib_files], stderr=subprocess.PIPE, stdout=subprocess.PIPE
+    )
     if ret.returncode != 42:
         print("Failed " + file)

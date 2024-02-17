@@ -15,8 +15,7 @@
 
 class Joos1WParser final {
 public:
-   Joos1WParser(std::string const& in,
-                BumpAllocator& alloc,
+   Joos1WParser(std::string const& in, BumpAllocator& alloc,
                 diagnostics::DiagnosticEngine* diag = nullptr)
          : lexer{alloc, diag}, iss{in} {
       buffer = lexer.yy_create_buffer(iss, in.size());

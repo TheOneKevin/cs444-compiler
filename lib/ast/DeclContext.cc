@@ -16,7 +16,7 @@ using std::string;
 // LinkingUnit /////////////////////////////////////////////////////////////
 
 LinkingUnit::LinkingUnit(BumpAllocator& alloc,
-               array_ref<CompilationUnit*> compilationUnits) noexcept
+                         array_ref<CompilationUnit*> compilationUnits) noexcept
       : compilationUnits_{alloc} {
    utils::move_vector<CompilationUnit*>(compilationUnits, compilationUnits_);
 }
@@ -25,7 +25,7 @@ ostream& LinkingUnit::print(ostream& os, int indentation) const {
    auto i1 = indent(indentation);
    auto i2 = indent(indentation + 1);
    auto i3 = indent(indentation + 2);
-   os << i1 << "LinkingUnit {\n" << i2 << "asts: "; 
+   os << i1 << "LinkingUnit {\n" << i2 << "asts: ";
 
    for(auto& cu : compilationUnits_) {
       cu->print(os, indentation + 1) << "\n";
@@ -49,11 +49,9 @@ int LinkingUnit::printDotNode(DotPrinter& dp) const {
 
 // CompilationUnit /////////////////////////////////////////////////////////////
 
-CompilationUnit::CompilationUnit(BumpAllocator& alloc,
-                                 ReferenceType* package,
+CompilationUnit::CompilationUnit(BumpAllocator& alloc, ReferenceType* package,
                                  array_ref<ImportDeclaration> imports,
-                                 SourceRange location,
-                                 DeclContext* body) noexcept
+                                 SourceRange location, DeclContext* body) noexcept
       : package_{package}, imports_{alloc}, body_{body}, location_{location} {
    if(auto decl = dynamic_cast<Decl*>(body)) {
       decl->setParent(this);
@@ -101,10 +99,8 @@ int CompilationUnit::printDotNode(DotPrinter& dp) const {
 
 // ClassDecl ///////////////////////////////////////////////////////////////////
 
-ClassDecl::ClassDecl(BumpAllocator& alloc,
-                     Modifiers modifiers,
-                     SourceRange location,
-                     string_view name,
+ClassDecl::ClassDecl(BumpAllocator& alloc, Modifiers modifiers,
+                     SourceRange location, string_view name,
                      ReferenceType* superClass,
                      array_ref<ReferenceType*> interfaces,
                      array_ref<Decl*> classBodyDecls) throw()
@@ -139,8 +135,7 @@ ostream& ClassDecl::print(ostream& os, int indentation) const {
    os << i1 << "ClassDecl {\n"
       << i2 << "modifiers: " << modifiers_.toString() << "\n"
       << i2 << "name: " << this->name() << "\n"
-      << i2
-      << "superClass: " << (superClass_ ? superClass_->toString() : "null")
+      << i2 << "superClass: " << (superClass_ ? superClass_->toString() : "null")
       << "\n"
       << i2 << "interfaces: []\n"
       << i2 << "fields:\n";
@@ -148,8 +143,7 @@ ostream& ClassDecl::print(ostream& os, int indentation) const {
    os << i2 << "methods:\n";
    for(auto& method : methods_) method->print(os, indentation + 2);
    os << i2 << "constructors:\n";
-   for(auto& constructor : constructors_)
-      constructor->print(os, indentation + 2);
+   for(auto& constructor : constructors_) constructor->print(os, indentation + 2);
    os << i1 << "}\n";
    return os;
 }
@@ -188,7 +182,7 @@ void ClassDecl::setParent(DeclContext* parent) {
    // Set the parent of the class
    Decl::setParent(parent);
    // Build the canonical name
-   if (cu->package() != nullptr) {
+   if(cu->package() != nullptr) {
       canonicalName_ = cu->getPackageName();
       canonicalName_ += ".";
    }
@@ -202,10 +196,8 @@ void ClassDecl::setParent(DeclContext* parent) {
 
 // InterfaceDecl ///////////////////////////////////////////////////////////////
 
-InterfaceDecl::InterfaceDecl(BumpAllocator& alloc,
-                             Modifiers modifiers,
-                             SourceRange location,
-                             string_view name,
+InterfaceDecl::InterfaceDecl(BumpAllocator& alloc, Modifiers modifiers,
+                             SourceRange location, string_view name,
                              array_ref<ReferenceType*> extends,
                              array_ref<Decl*> interfaceBodyDecls) throw()
       : Decl{alloc, name},
@@ -278,8 +270,7 @@ ostream& MethodDecl::print(ostream& os, int indentation) const {
    os << i1 << "MethodDecl {\n"
       << i2 << "modifiers: " << modifiers_.toString() << "\n"
       << i2 << "name: " << this->name() << "\n"
-      << i2
-      << "returnType: " << (returnType_ ? returnType_->toString() : "null")
+      << i2 << "returnType: " << (returnType_ ? returnType_->toString() : "null")
       << "\n"
       << i2 << "parameters:\n";
    for(auto& parameter : parameters_) {

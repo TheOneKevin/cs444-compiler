@@ -57,9 +57,7 @@ public:
    class Iter {
    public:
       void operator++() { m_coroutine.resume(); }
-      const T& operator*() const {
-         return *m_coroutine.promise().current_value;
-      }
+      const T& operator*() const { return *m_coroutine.promise().current_value; }
       bool operator==(std::default_sentinel_t) const {
          return !m_coroutine || m_coroutine.done();
       }

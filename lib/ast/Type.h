@@ -56,8 +56,8 @@ public:
    Kind getKind() const { return kind; }
    string_view toString() const override { return Kind_to_string(kind, "??"); }
    bool isResolved() const override { return true; }
-   bool operator== (const Type& other) const override { 
-      if (auto otherBuiltIn = dynamic_cast<const BuiltInType*>(&other)) {
+   bool operator==(const Type& other) const override {
+      if(auto otherBuiltIn = dynamic_cast<const BuiltInType*>(&other)) {
          return kind == otherBuiltIn->kind;
       }
       return false;
@@ -96,11 +96,11 @@ public:
       decl_ = decl;
    }
 
-   bool operator== (const Type& other) const override {
-      if (auto otherBuiltIn = dynamic_cast<const ReferenceType*>(&other)) {
+   bool operator==(const Type& other) const override {
+      if(auto otherBuiltIn = dynamic_cast<const ReferenceType*>(&other)) {
          return decl_ == otherBuiltIn->decl_;
       }
-      
+
       return false;
    }
 
@@ -136,8 +136,7 @@ public:
    /// @brief Converts the unresolved type to a string by concatenating
    /// all the simple name parts with a '.'.
    string_view toString() const override {
-      if(identifiers.empty())
-         return "";
+      if(identifiers.empty()) return "";
       if(!canonicalName.empty()) {
          return canonicalName;
       }
@@ -181,8 +180,8 @@ public:
          if(elementType->isResolved()) unresTy->resolve(x);
       }
    }
-   bool operator== (const Type& other) const override {
-      if (auto otherArrayType = dynamic_cast<const ArrayType*>(&other)) {
+   bool operator==(const Type& other) const override {
+      if(auto otherArrayType = dynamic_cast<const ArrayType*>(&other)) {
          return *elementType == *otherArrayType->elementType;
       }
       return false;

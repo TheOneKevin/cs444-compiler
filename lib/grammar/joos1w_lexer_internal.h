@@ -63,8 +63,7 @@ public:
    /// @param loc The location of the error
    /// @param msg The message to report
    /// @param ranges List of additional ranges to report
-   inline void report_parser_error(YYLTYPE& loc,
-                                   char const* msg,
+   inline void report_parser_error(YYLTYPE& loc, char const* msg,
                                    std::initializer_list<YYLTYPE> ranges = {}) {
       if(!diag) return;
       auto os = diag->ReportError(make_range(loc));

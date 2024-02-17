@@ -273,7 +273,7 @@ void HierarchyChecker::checkMethodReplacement() {
 
       if(auto classDecl = dynamic_cast<ast::ClassDecl*>(body)) {
          std::set<ast::MethodDecl*> inheritedMethods;
-         for (auto method : classDecl->methods()) {
+         for(auto method : classDecl->methods()) {
             inheritedMethods.insert(method);
          }
          for(auto superClass : superClassMap_[classDecl]) {
@@ -307,14 +307,14 @@ void HierarchyChecker::checkMethodReplacement() {
                   }
                }
             }
-         } 
+         }
          for(auto superInterface : superInterfaceMap_[classDecl]) {
             for(auto method : superInterface->methods()) {
                inheritedMethods.insert(method);
             }
          }
          for(auto method : classDecl->methods()) {
-            for (auto other : classDecl->methods()) {
+            for(auto other : classDecl->methods()) {
                if(method == other) continue;
                if(isSameMethodSignature(method, other)) {
                   if(method->mut_returnType() != other->mut_returnType()) {

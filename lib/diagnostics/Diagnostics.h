@@ -121,8 +121,7 @@ static inline DiagnosticBuilder& operator<<(DiagnosticBuilder& builder,
 }
 
 template <typename T>
-static inline DiagnosticBuilder& operator<<(DiagnosticBuilder&& builder,
-                                            T value) {
+static inline DiagnosticBuilder& operator<<(DiagnosticBuilder&& builder, T value) {
    return (DiagnosticBuilder&)builder << value;
 }
 

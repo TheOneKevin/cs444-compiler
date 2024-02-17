@@ -4,8 +4,7 @@ using namespace utils;
 using string = std::string;
 using GTy = utils::Generator<string>;
 
-GTy FragmentGenerator::recur_cart_product(std::sregex_iterator& it,
-                                          string input) {
+GTy FragmentGenerator::recur_cart_product(std::sregex_iterator& it, string input) {
    const std::sregex_iterator end;
    if(it == end) {
       co_yield input;

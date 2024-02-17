@@ -33,12 +33,11 @@ private:
 
    static inline void check_node_type(Node* node, Node::Type type) {
       if(node->get_node_type() != type) {
-         throw ParseTreeException(
-               node,
-               "Called on a node that is not the correct type!"
-               " Expected: " +
-                     Node::type_string(type) +
-                     " Actual: " + node->type_string());
+         throw ParseTreeException(node,
+                                  "Called on a node that is not the correct type!"
+                                  " Expected: " +
+                                        Node::type_string(type) +
+                                        " Actual: " + node->type_string());
       }
    }
 
@@ -47,8 +46,8 @@ private:
          throw std::runtime_error(
                "Node has incorrect number of children!"
                " Type: " +
-               node->type_string() + " Expected: " + std::to_string(min) +
-               " to " + std::to_string(max) +
+               node->type_string() + " Expected: " + std::to_string(min) + " to " +
+               std::to_string(max) +
                " Actual: " + std::to_string(node->num_children()));
       }
    }
@@ -77,8 +76,7 @@ private:
     */
    template <parsetree::Node::Type N, typename T>
    T visit(Node* node) {
-      throw std::runtime_error("No visitor for node type " +
-                               node->type_string());
+      throw std::runtime_error("No visitor for node type " + node->type_string());
    }
 
    /**
@@ -173,7 +171,7 @@ public:
    ast::ExprNode* visitRegularType(Node* node);
    ast::ExprNode* visitArrayType(Node* node);
 
-   ast::LiteralNode *visitLiteral(Node* node);
+   ast::LiteralNode* visitLiteral(Node* node);
 
    ast::UnaryOp* convertToUnaryOp(Operator::Type type);
    ast::BinaryOp* convertToBinaryOp(Operator::Type type);
@@ -187,8 +185,8 @@ public:
    ast::UnresolvedType* visitReferenceType(
          Node* node, ast::UnresolvedType* ast_node = nullptr);
    std::string_view visitIdentifier(Node* node);
-   ast::Modifiers visitModifierList(
-         Node* node, ast::Modifiers modifiers = ast::Modifiers{});
+   ast::Modifiers visitModifierList(Node* node,
+                                    ast::Modifiers modifiers = ast::Modifiers{});
    Modifier visitModifier(Node* node);
    ast::Type* visitType(Node* node);
 

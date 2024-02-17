@@ -29,15 +29,10 @@ public:
    // ast/Decl.h
    /* ===-----------------------------------------------------------------=== */
 
-   VarDecl* BuildVarDecl(Type* type,
-                         SourceRange location,
-                         string_view name,
+   VarDecl* BuildVarDecl(Type* type, SourceRange location, string_view name,
                          Expr* init = nullptr);
-   FieldDecl* BuildFieldDecl(Modifiers modifiers,
-                             SourceRange location,
-                             Type* type,
-                             string_view name,
-                             Expr* init = nullptr);
+   FieldDecl* BuildFieldDecl(Modifiers modifiers, SourceRange location, Type* type,
+                             string_view name, Expr* init = nullptr);
 
    /* ===-----------------------------------------------------------------=== */
    // ast/DeclContext.h
@@ -46,25 +41,18 @@ public:
    LinkingUnit* BuildLinkingUnit(array_ref<CompilationUnit*> compilationUnits);
    CompilationUnit* BuildCompilationUnit(ReferenceType* package,
                                          array_ref<ImportDeclaration> imports,
-                                         SourceRange location,
-                                         DeclContext* body);
-   ClassDecl* BuildClassDecl(Modifiers modifiers,
-                             SourceRange location,
-                             string_view name,
-                             ReferenceType* superClass,
+                                         SourceRange location, DeclContext* body);
+   ClassDecl* BuildClassDecl(Modifiers modifiers, SourceRange location,
+                             string_view name, ReferenceType* superClass,
                              array_ref<ReferenceType*> interfaces,
                              array_ref<Decl*> classBodyDecls);
-   InterfaceDecl* BuildInterfaceDecl(Modifiers modifiers,
-                                     SourceRange location,
+   InterfaceDecl* BuildInterfaceDecl(Modifiers modifiers, SourceRange location,
                                      string_view name,
                                      array_ref<ReferenceType*> extends,
                                      array_ref<Decl*> interfaceBodyDecls);
-   MethodDecl* BuildMethodDecl(Modifiers modifiers,
-                               SourceRange location,
-                               string_view name,
-                               Type* returnType,
-                               array_ref<VarDecl*> parameters,
-                               bool isConstructor,
+   MethodDecl* BuildMethodDecl(Modifiers modifiers, SourceRange location,
+                               string_view name, Type* returnType,
+                               array_ref<VarDecl*> parameters, bool isConstructor,
                                Stmt* body);
    /* ===-----------------------------------------------------------------=== */
    // ast/Stmt.h
@@ -73,9 +61,7 @@ public:
    BlockStatement* BuildBlockStatement(array_ref<Stmt*> stmts);
    DeclStmt* BuildDeclStmt(VarDecl* decl);
    ExprStmt* BuildExprStmt(Expr* expr);
-   IfStmt* BuildIfStmt(Expr* condition,
-                       Stmt* thenStmt,
-                       Stmt* elseStmt = nullptr);
+   IfStmt* BuildIfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt = nullptr);
    WhileStmt* BuildWhileStmt(Expr* condition, Stmt* body);
    ForStmt* BuildForStmt(Stmt* init, Expr* condition, Stmt* update, Stmt* body);
    ReturnStmt* BuildReturnStmt(Expr* expr);
@@ -101,8 +87,7 @@ public:
     */
    bool AddLexicalLocal(VarDecl* decl) {
       std::string nameCpy{decl->name()};
-      if(lexicalLocalScope.find(nameCpy) != lexicalLocalScope.end())
-         return false;
+      if(lexicalLocalScope.find(nameCpy) != lexicalLocalScope.end()) return false;
       lexicalLocalScope.insert(std::move(nameCpy));
       lexicalLocalDecls.push_back(decl);
       lexicalLocalDeclStack.push_back(decl);
@@ -132,9 +117,7 @@ public:
       lexicalLocalDeclStack.resize(size);
    }
 
-   auto getAllLexicalDecls() const {
-      return std::views::all(lexicalLocalDecls);
-   }
+   auto getAllLexicalDecls() const { return std::views::all(lexicalLocalDecls); }
 
 private:
    BumpAllocator& alloc;

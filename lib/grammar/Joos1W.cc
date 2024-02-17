@@ -18,8 +18,7 @@ Node* Joos1WLexer::make_operator(YYLTYPE& loc, Operator::Type type) {
    return new(bytes) Operator(make_range(loc), type);
 }
 
-Node* Joos1WLexer::make_literal(YYLTYPE& loc,
-                                Literal::Type type,
+Node* Joos1WLexer::make_literal(YYLTYPE& loc, Literal::Type type,
                                 char const* value) {
    void* bytes = alloc.allocate_bytes(sizeof(Literal));
    return new(bytes) Literal(make_range(loc), alloc, type, value);

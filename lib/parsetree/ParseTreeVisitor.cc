@@ -1,7 +1,6 @@
 #include "ParseTreeVisitor.h"
 
 #include "ParseTree.h"
-
 #include "ast/AST.h"
 
 namespace parsetree {
@@ -23,10 +22,12 @@ ast::CompilationUnit* ptv::visitCompilationUnit(Node* node) {
    if(auto body = node->child(2)) {
       if(body->get_node_type() == pty::ClassDeclaration) {
          ast::ClassDecl* class_body = visitClassDeclaration(body);
-         return sem.BuildCompilationUnit(package, imports, class_body->location(), class_body);
+         return sem.BuildCompilationUnit(
+               package, imports, class_body->location(), class_body);
       } else if(body->get_node_type() == pty::InterfaceDeclaration) {
          ast::InterfaceDecl* intf_body = visitInterfaceDeclaration(body);
-         return sem.BuildCompilationUnit(package, imports, intf_body->location(), intf_body);
+         return sem.BuildCompilationUnit(
+               package, imports, intf_body->location(), intf_body);
       }
    }
    return nullptr;

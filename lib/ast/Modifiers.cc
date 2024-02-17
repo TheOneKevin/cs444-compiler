@@ -32,12 +32,12 @@ void Modifiers::set(parsetree::Modifier target) {
 
 std::string Modifiers::toString() const {
    std::string result;
-   if (test(modifiers, Type::Public)) result += "public ";
-   if (test(modifiers, Type::Protected)) result += "protected ";
-   if (test(modifiers, Type::Static)) result += "static ";
-   if (test(modifiers, Type::Final)) result += "final ";
-   if (test(modifiers, Type::Abstract)) result += "abstract ";
-   if (test(modifiers, Type::Native)) result += "native ";
+   if(test(modifiers, Type::Public)) result += "public ";
+   if(test(modifiers, Type::Protected)) result += "protected ";
+   if(test(modifiers, Type::Static)) result += "static ";
+   if(test(modifiers, Type::Final)) result += "final ";
+   if(test(modifiers, Type::Abstract)) result += "abstract ";
+   if(test(modifiers, Type::Native)) result += "native ";
    return result;
 }
 

@@ -19,11 +19,8 @@ private:
 
 class VarDecl : public TypedDecl {
 public:
-   VarDecl(BumpAllocator& alloc,
-           SourceRange location,
-           Type* type,
-           string_view name,
-           Expr* init) noexcept
+   VarDecl(BumpAllocator& alloc, SourceRange location, Type* type,
+           string_view name, Expr* init) noexcept
          : TypedDecl{alloc, type, name}, init_{init}, location_{location} {}
 
    bool hasInit() const { return init_ != nullptr; }
@@ -40,12 +37,8 @@ private:
 
 class FieldDecl final : public VarDecl {
 public:
-   FieldDecl(BumpAllocator& alloc,
-             SourceRange location,
-             Modifiers modifiers,
-             Type* type,
-             string_view name,
-             Expr* init) noexcept
+   FieldDecl(BumpAllocator& alloc, SourceRange location, Modifiers modifiers,
+             Type* type, string_view name, Expr* init) noexcept
          : VarDecl{alloc, location, type, name, init}, modifiers{modifiers} {};
 
    std::ostream& print(std::ostream& os, int indentation = 0) const override;

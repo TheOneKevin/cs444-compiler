@@ -9,8 +9,8 @@
 #include "grammar/Joos1WGrammar.h"
 #include "parsetree/ParseTree.h"
 #include "parsetree/ParseTreeVisitor.h"
-#include "semantic/NameResolver.h"
 #include "semantic/HierarchyChecker.h"
+#include "semantic/NameResolver.h"
 
 // FIXME(kevin): Remove when we have proper AST handling
 bool isLiteralTypeValid(parsetree::Node* node) {
@@ -40,8 +40,8 @@ int main(int argc, char** argv) {
 
    std::pmr::vector<ast::CompilationUnit*> asts;
 
-   for (int i = 1; i < argc; i++) {
-      if (std::string(argv[i]) == "-x") {
+   for(int i = 1; i < argc; i++) {
+      if(std::string(argv[i]) == "-x") {
          printDot = true;
          continue;
       }
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
          str = buffer.str();
       } catch(...) {
          std::cerr << "Error! Could not open input file \"" << filePath << "\""
-                  << std::endl;
+                   << std::endl;
          exit(EXIT_FAILURE);
       }
 
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
          }
          return 42;
       }
-      
+
       // Build the AST from the parse tree
       ast::CompilationUnit* ast = nullptr;
       try {
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
       fileName = fileName.substr(0, fileName.length() - 5);
       if(cuBody->name() != fileName) {
          std::cerr << "Parse error: class/interface name does not match file name"
-                  << std::endl;
+                   << std::endl;
          std::cerr << "Class/interface name: " << cuBody->name() << std::endl;
          std::cerr << "File name: " << fileName << std::endl;
          return 42;
@@ -139,18 +139,16 @@ int main(int argc, char** argv) {
       asts.push_back(ast);
    }
 
-   
-
    ast::LinkingUnit* linkingUnit = sem.BuildLinkingUnit(asts);
-   
+
    if(diag.hasErrors()) {
       for(auto& msg : diag.messages()) {
          msg.emit(std::cerr) << std::endl;
       }
       return 42;
    }
-   
-   if (printDot) {
+
+   if(printDot) {
       linkingUnit->printDot(std::cout);
    }
 

@@ -1,6 +1,7 @@
 import os
 import subprocess
 
+
 def grab_all_java(dir):
     # Recursively grab all java files
     java_files = []
@@ -9,6 +10,7 @@ def grab_all_java(dir):
             if file.endswith(".java"):
                 java_files.append(os.path.join(root, file))
     return java_files
+
 
 # Get the directory of this script
 script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -26,9 +28,13 @@ stdlib_files = grab_all_java(stdlib_dir)
 invalid_files = [x for x in test_names if x.startswith("Je_")]
 valid_files = [x for x in test_names if x not in invalid_files]
 
+
 def run_on_files(files):
-    ret = subprocess.run([joosc, *files], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    ret = subprocess.run(
+        [joosc, *files], stderr=subprocess.PIPE, stdout=subprocess.PIPE
+    )
     return ret.returncode, ret.stdout, ret.stderr
+
 
 def get_files(test):
     files = [test] if os.path.isfile(test) else grab_all_java(test)
@@ -38,6 +44,7 @@ def get_files(test):
         pass
     files += stdlib_files
     return files
+
 
 # Test the valid files now
 
@@ -67,4 +74,6 @@ for test in invalid_files:
         print(f"Command: {joosc} {' '.join(files)}")
         print("\n===========================================================\n")
 
-print(f"Total failures: {failures}/{len(test_names)} or {len(test_names) - failures}/{len(test_names)} passing")
+print(
+    f"Total failures: {failures}/{len(test_names)} or {len(test_names) - failures}/{len(test_names)} passing"
+)

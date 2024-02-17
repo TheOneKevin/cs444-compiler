@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include "common.h"
 #include "utils/BumpAllocator.h"
 

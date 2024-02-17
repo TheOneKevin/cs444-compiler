@@ -141,7 +141,7 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
    }
    // 5. All declarations in the current CU. This may also shadow anything.
    if(cu->body())
-   importsMap_[cu_->bodyAsDecl()->name().data()] = cu_->bodyAsDecl();
+      importsMap_[cu_->bodyAsDecl()->name().data()] = cu_->bodyAsDecl();
 }
 
 NameResolver::ChildOpt NameResolver::resolveAstTy(
@@ -238,25 +238,19 @@ void NameResolver::Resolve() {
 }
 
 void NameResolver::resolveMethod(ast::MethodDecl* decl) {
-   for(auto local : decl->mut_locals())
-      local->mut_type()->resolve(*this);
-   if(decl->mut_returnType())
-      decl->mut_returnType()->resolve(*this);
+   for(auto local : decl->mut_locals()) local->mut_type()->resolve(*this);
+   if(decl->mut_returnType()) decl->mut_returnType()->resolve(*this);
 }
 
 void NameResolver::resolveInterface(ast::InterfaceDecl* decl) {
-   for(auto ty : decl->mut_extends())
-      ty->resolve(*this);
+   for(auto ty : decl->mut_extends()) ty->resolve(*this);
    for(auto method : decl->mut_methods()) resolveMethod(method);
 }
 
 void NameResolver::resolveClass(ast::ClassDecl* decl) {
-   for(auto ty : decl->mut_interfaces())
-      ty->resolve(*this);
-   if(decl->mut_superClass())
-      decl->mut_superClass()->resolve(*this);
-   for(auto field : decl->mut_fields())
-      field->mut_type()->resolve(*this);
+   for(auto ty : decl->mut_interfaces()) ty->resolve(*this);
+   if(decl->mut_superClass()) decl->mut_superClass()->resolve(*this);
+   for(auto field : decl->mut_fields()) field->mut_type()->resolve(*this);
    for(auto method : decl->mut_methods()) resolveMethod(method);
 }
 

@@ -30,9 +30,7 @@ BuiltInType* Semantic::BuildBuiltInType(parsetree::BasicType::Type type) {
 // ast/Decl.h
 /* ===--------------------------------------------------------------------=== */
 
-VarDecl* Semantic::BuildVarDecl(Type* type,
-                                SourceRange loc,
-                                string_view name,
+VarDecl* Semantic::BuildVarDecl(Type* type, SourceRange loc, string_view name,
                                 Expr* init) {
    auto decl = alloc.new_object<VarDecl>(alloc, loc, type, name, init);
    if(!AddLexicalLocal(decl)) {
@@ -42,11 +40,8 @@ VarDecl* Semantic::BuildVarDecl(Type* type,
    return decl;
 }
 
-FieldDecl* Semantic::BuildFieldDecl(Modifiers modifiers,
-                                    SourceRange loc,
-                                    Type* type,
-                                    string_view name,
-                                    Expr* init) {
+FieldDecl* Semantic::BuildFieldDecl(Modifiers modifiers, SourceRange loc,
+                                    Type* type, string_view name, Expr* init) {
    if(modifiers.isFinal()) {
       diag.ReportError(modifiers.getLocation(Modifiers::Type::Final))
             << "field declaration cannot be final.";
@@ -73,15 +68,17 @@ FieldDecl* Semantic::BuildFieldDecl(Modifiers modifiers,
 // ast/DeclContext.h
 /* ===--------------------------------------------------------------------=== */
 
-LinkingUnit* Semantic::BuildLinkingUnit(array_ref<CompilationUnit*> compilationUnits) {
+LinkingUnit* Semantic::BuildLinkingUnit(
+      array_ref<CompilationUnit*> compilationUnits) {
    std::pmr::set<std::string_view> names;
-   
+
    for(auto cu : compilationUnits) {
       if(!cu->body()) continue;
       std::string_view name = cu->bodyAsDecl()->getCanonicalName();
 
-      if (names.count(name) > 0) {
-         diag.ReportError(cu->location()) << "No two classes or interfaces can have the same canonical name.";
+      if(names.count(name) > 0) {
+         diag.ReportError(cu->location())
+               << "No two classes or interfaces can have the same canonical name.";
       }
 
       names.insert(name);
@@ -93,40 +90,37 @@ LinkingUnit* Semantic::BuildLinkingUnit(array_ref<CompilationUnit*> compilationU
    javaLangPackage->addIdentifier("lang");
    std::pmr::vector<ImportDeclaration> imports;
    compilationUnits.push_back(
-      BuildCompilationUnit(
-         javaLangPackage,
-         imports,
-         SourceRange(),
-         nullptr
-      )
-   );
+         BuildCompilationUnit(javaLangPackage, imports, SourceRange(), nullptr));
 
    return alloc.new_object<LinkingUnit>(alloc, compilationUnits);
 }
 
 CompilationUnit* Semantic::BuildCompilationUnit(
-      ReferenceType* package,
-      array_ref<ImportDeclaration> imports,
-      SourceRange loc,
-      DeclContext* body) {
+      ReferenceType* package, array_ref<ImportDeclaration> imports,
+      SourceRange loc, DeclContext* body) {
    std::pmr::set<std::string_view> names;
-   for (auto import : imports) {
-      std::string_view name {import.simpleName()};
-      if (names.count(name) > 0) {
-         diag.ReportError(loc) << "No two single-type-import declarations clash with each other.";
+   for(auto import : imports) {
+      std::string_view name{import.simpleName()};
+      if(names.count(name) > 0) {
+         diag.ReportError(loc)
+               << "No two single-type-import declarations clash with each other.";
       }
       names.insert(name);
    }
-   if (auto classDecl = dynamic_cast<ClassDecl*>(body)) {
+   if(auto classDecl = dynamic_cast<ClassDecl*>(body)) {
       std::string_view name = classDecl->name();
-      if (names.count(name) > 0) {
-         diag.ReportError(loc) << "No single-type-import declaration clashes with the class or interface declared in the same file.";
+      if(names.count(name) > 0) {
+         diag.ReportError(loc)
+               << "No single-type-import declaration clashes with the class or "
+                  "interface declared in the same file.";
       }
       names.insert(name);
-   } else if (auto interfaceDecl = dynamic_cast<InterfaceDecl*>(body)) {
+   } else if(auto interfaceDecl = dynamic_cast<InterfaceDecl*>(body)) {
       std::string_view name = interfaceDecl->name();
-      if (names.count(name) > 0) {
-         diag.ReportError(loc) << "No single-type-import declaration clashes with the class or interface declared in the same file.";
+      if(names.count(name) > 0) {
+         diag.ReportError(loc)
+               << "No single-type-import declaration clashes with the class or "
+                  "interface declared in the same file.";
       }
       names.insert(name);
    }
@@ -135,17 +129,15 @@ CompilationUnit* Semantic::BuildCompilationUnit(
    auto javaLang = BuildUnresolvedType();
    javaLang->addIdentifier("java");
    javaLang->addIdentifier("lang");
-   ImportDeclaration javaLangImport{ javaLang, true };
+   ImportDeclaration javaLangImport{javaLang, true};
    imports.push_back(javaLangImport);
 
    // Create the AST node
    return alloc.new_object<CompilationUnit>(alloc, package, imports, loc, body);
 }
 
-ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers,
-                                    SourceRange loc,
-                                    string_view name,
-                                    ReferenceType* superClass,
+ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers, SourceRange loc,
+                                    string_view name, ReferenceType* superClass,
                                     array_ref<ReferenceType*> interfaces,
                                     array_ref<Decl*> classBodyDecls) {
    // Check that the modifiers are valid for a class
@@ -169,22 +161,21 @@ ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers,
       }
    }
    // Check that interfaces cannot be repeated in implements clause
-   for (auto interface : node->interfaces()) {
-      for (auto other : node->interfaces()) {
-         if (interface != other && interface->toString() == other->toString()){
-            diag.ReportError(loc) << "interface \"" << interface->toString() << "\" is already implemented.";
+   for(auto interface : node->interfaces()) {
+      for(auto other : node->interfaces()) {
+         if(interface != other && interface->toString() == other->toString()) {
+            diag.ReportError(loc) << "interface \"" << interface->toString()
+                                  << "\" is already implemented.";
          }
       }
    }
    return node;
 }
 
-InterfaceDecl* Semantic::BuildInterfaceDecl(
-      Modifiers modifiers,
-      SourceRange loc,
-      string_view name,
-      array_ref<ReferenceType*> extends,
-      array_ref<Decl*> interfaceBodyDecls) {
+InterfaceDecl* Semantic::BuildInterfaceDecl(Modifiers modifiers, SourceRange loc,
+                                            string_view name,
+                                            array_ref<ReferenceType*> extends,
+                                            array_ref<Decl*> interfaceBodyDecls) {
    // Check that the modifiers are valid for an interface
    if(modifiers.isFinal())
       diag.ReportError(modifiers.getLocation(Modifiers::Type::Final))
@@ -201,10 +192,11 @@ InterfaceDecl* Semantic::BuildInterfaceDecl(
       }
    }
    // Check that interfaces cannot be repeated in extends clause
-   for (auto interface : extends) {
-      for (auto other : extends) {
-         if (interface != other && interface->toString() == other->toString()){
-            diag.ReportError(loc) << "interface \"" << interface->toString() << "\" is already implemented.";
+   for(auto interface : extends) {
+      for(auto other : extends) {
+         if(interface != other && interface->toString() == other->toString()) {
+            diag.ReportError(loc) << "interface \"" << interface->toString()
+                                  << "\" is already implemented.";
          }
       }
    }
@@ -213,13 +205,10 @@ InterfaceDecl* Semantic::BuildInterfaceDecl(
          alloc, modifiers, loc, name, extends, interfaceBodyDecls);
 }
 
-MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers,
-                                      SourceRange loc,
-                                      string_view name,
-                                      Type* returnType,
+MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers, SourceRange loc,
+                                      string_view name, Type* returnType,
                                       array_ref<VarDecl*> parameters,
-                                      bool isConstructor,
-                                      Stmt* body) {
+                                      bool isConstructor, Stmt* body) {
    // Check modifiers
    if((body == nullptr) != (modifiers.isAbstract() || modifiers.isNative())) {
       diag.ReportError(loc) << "method has a body if and only if it is "
@@ -246,8 +235,7 @@ MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers,
       if(parameters.size() != 1) {
          diag.ReportError(loc) << "native method must have exactly one "
                                   "parameter of type int.";
-      } else
-      if(auto ty = dynamic_cast<BuiltInType*>(parameters[0]->type())) {
+      } else if(auto ty = dynamic_cast<BuiltInType*>(parameters[0]->type())) {
          if(ty->getKind() != BuiltInType::Kind::Int) {
             diag.ReportError(loc) << "native method must have exactly one "
                                      "parameter of type int.";
@@ -262,14 +250,8 @@ MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers,
       diag.ReportError(loc) << "method must have a visibility modifier.";
    }
    // Create the AST node
-   return alloc.new_object<MethodDecl>(alloc,
-                                       modifiers,
-                                       loc,
-                                       name,
-                                       returnType,
-                                       parameters,
-                                       isConstructor,
-                                       body);
+   return alloc.new_object<MethodDecl>(
+         alloc, modifiers, loc, name, returnType, parameters, isConstructor, body);
 }
 
 /* ===-----------------------------------------------------------------=== */
@@ -296,9 +278,7 @@ WhileStmt* Semantic::BuildWhileStmt(Expr* condition, Stmt* body) {
    return alloc.new_object<WhileStmt>(condition, body);
 }
 
-ForStmt* Semantic::BuildForStmt(Stmt* init,
-                                Expr* condition,
-                                Stmt* update,
+ForStmt* Semantic::BuildForStmt(Stmt* init, Expr* condition, Stmt* update,
                                 Stmt* body) {
    return alloc.new_object<ForStmt>(init, condition, update, body);
 }

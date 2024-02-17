@@ -82,8 +82,7 @@ std::ostream& Identifier::print(std::ostream& os) const {
 std::ostream& Literal::print(std::ostream& os) const {
    std::string formattedValue{value};
    std::replace(formattedValue.begin(), formattedValue.end(), '\"', ' ');
-   os << "(Literal " << Type_to_string(type, "??") << " " << formattedValue
-      << ")";
+   os << "(Literal " << Type_to_string(type, "??") << " " << formattedValue << ")";
    return os;
 }
 
@@ -200,8 +199,6 @@ std::ostream& Node::printDot(std::ostream& os) const {
    return os;
 }
 
-std::ostream& operator<<(std::ostream& os, Node const& n) {
-   return n.print(os);
-}
+std::ostream& operator<<(std::ostream& os, Node const& n) { return n.print(os); }
 
 } // namespace parsetree

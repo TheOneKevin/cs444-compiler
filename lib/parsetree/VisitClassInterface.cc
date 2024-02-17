@@ -13,8 +13,7 @@ ast::ClassDecl* ptv::visitClassDeclaration(Node* node) {
    check_node_type(node, pty::ClassDeclaration);
    check_num_children(node, 5, 5);
    // $1: Visit the modifiers
-   ast::Modifiers modifiers =
-         visitModifierList(node->child(0), ast::Modifiers{});
+   ast::Modifiers modifiers = visitModifierList(node->child(0), ast::Modifiers{});
    // $3: Visit identifier
    auto nameNode = node->child(1);
    auto name = visitIdentifier(node->child(1));
@@ -73,8 +72,7 @@ ast::FieldDecl* ptv::visitFieldDeclaration(Node* node) {
    auto modifiers = visitModifierList(node->child(0));
    // $2, $3: Visit the type and declarator
    auto decl = visitVariableDeclarator(node->child(1), node->child(2));
-   return sem.BuildFieldDecl(
-         modifiers, decl.loc, decl.type, decl.name, decl.init);
+   return sem.BuildFieldDecl(modifiers, decl.loc, decl.type, decl.name, decl.init);
 }
 
 // pty::MethodDeclaration //////////////////////////////////////////////////////
@@ -142,8 +140,8 @@ ast::MethodDecl* ptv::visitConstructorDeclaration(Node* node) {
    auto name = visitIdentifier(nameNode);
    // $3: Visit the formal parameters
    ast::pmr_vector<ast::VarDecl*> params;
-   visitListPattern<pty::FormalParameterList, ast::VarDecl*, true>(
-         node->child(2), params);
+   visitListPattern<pty::FormalParameterList, ast::VarDecl*, true>(node->child(2),
+                                                                   params);
    // $4: Visit the body
    ast::Stmt* body = nullptr;
    if(node->child(3) != nullptr) {
@@ -176,8 +174,7 @@ ast::InterfaceDecl* ptv::visitInterfaceDeclaration(Node* node) {
    check_node_type(node, pty::InterfaceDeclaration);
    check_num_children(node, 4, 4);
    // $1: Visit the modifiers
-   ast::Modifiers modifiers =
-         visitModifierList(node->child(0), ast::Modifiers{});
+   ast::Modifiers modifiers = visitModifierList(node->child(0), ast::Modifiers{});
    // $2: Visit identifier
    auto nameNode = node->child(1);
    auto name = visitIdentifier(node->child(1));

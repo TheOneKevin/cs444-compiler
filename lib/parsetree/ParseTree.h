@@ -130,9 +130,7 @@ public:
    /// @brief Gets the type of the node
    Type get_node_type() const { return type; }
    /// @brief Operator to turn Type into a string
-   std::string type_string() const {
-      return Type_to_string(type, "Unknown Type");
-   }
+   std::string type_string() const { return Type_to_string(type, "Unknown Type"); }
    /// @brief Operator to turn Type into a string
    static std::string type_string(Type type) {
       return Type_to_string(type, "Unknown Type");
@@ -204,9 +202,7 @@ private:
 #undef LITERAL_TYPE_LIST
 
 private:
-   Literal(SourceRange loc,
-           BumpAllocator const& alloc,
-           Type type,
+   Literal(SourceRange loc, BumpAllocator const& alloc, Type type,
            char const* value)
          : Node{loc, Node::Type::Literal},
            type{type},

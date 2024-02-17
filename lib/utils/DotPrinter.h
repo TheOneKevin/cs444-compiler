@@ -29,19 +29,16 @@ public:
          : os(os), min_height_{min_height}, min_width_{min_height} {}
 
    /// @brief Prints a table row with a single column
-   void printTableSingleRow(string_view cell_text,
-                            string_list cell_attrs = {}) {
+   void printTableSingleRow(string_view cell_text, string_list cell_attrs = {}) {
       print_html_start("tr");
-      print_html_start(
-            "td", {"colspan", "3", "height", min_height_}, cell_attrs);
+      print_html_start("td", {"colspan", "3", "height", min_height_}, cell_attrs);
       os << Sanitize{cell_text};
       print_html_end("td");
       print_html_end("tr");
    }
 
    /// @brief Prints a table row with 2 columns
-   void printTableDoubleRow(string_view cell1_text,
-                            string_view cell2_text,
+   void printTableDoubleRow(string_view cell1_text, string_view cell2_text,
                             string_list cell1_attrs = {},
                             string_list cell2_attrs = {}) {
       print_html_start("tr");
@@ -59,10 +56,8 @@ public:
    }
 
    /// @brief Prints a table row with 3 columns
-   void printTableTripleRow(string_view cell1_text,
-                            string_view cell2_text,
-                            string_view cell3_text,
-                            string_list cell1_attrs = {},
+   void printTableTripleRow(string_view cell1_text, string_view cell2_text,
+                            string_view cell3_text, string_list cell1_attrs = {},
                             string_list cell2_attrs = {},
                             string_list cell3_attrs = {}) {
       print_html_start("tr");
@@ -79,8 +74,7 @@ public:
    }
 
    /// @brief Starts a DOT label that is also an HTML table
-   void startTLabel(int id,
-                    string_list attrs = {},
+   void startTLabel(int id, string_list attrs = {},
                     string_view cellpadding = "1") {
       indent() << "node" << id << " [shape=none margin=0.01";
       print_attr_list(attrs, false);
@@ -168,9 +162,7 @@ public:
    /// @param port1 The port of the from node
    /// @param to The node to which the connection ends
    /// @param lhead_cluster If we should connect to a subgraph, the id of it
-   void printConnection(int from,
-                        string_view port,
-                        int to,
+   void printConnection(int from, string_view port, int to,
                         int lhead_cluster = -1) {
       indent() << "node" << from << port << " -> node" << to;
       if(lhead_cluster != -1) {
@@ -182,13 +174,13 @@ public:
    /// @brief Allocates a new unique id
    int id() { return id_++; }
 
-   template<typename T>
+   template <typename T>
    int id(T const* ptr) {
       auto key = reinterpret_cast<void const*>(ptr);
       return ptr_to_id[key] = id();
    }
 
-   template<typename T>
+   template <typename T>
    int getId(T const* ptr) {
       auto key = reinterpret_cast<void const*>(ptr);
       // Get the id if it exists or return -1
@@ -221,8 +213,7 @@ private:
       }
    }
 
-   void print_html_start(string_view tag,
-                         string_list attrs = {},
+   void print_html_start(string_view tag, string_list attrs = {},
                          string_list attrs2 = {}) {
       bool newline = true;
       if(tag == "td") newline = false;

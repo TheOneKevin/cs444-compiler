@@ -28,8 +28,8 @@ bool lex_string_internal(
    while(int lextok = parser.yylex()) {
       auto exptok = extract_token(*ptr);
       if(lextok != exptok) {
-         std::cout << "Expected token[" << i << "] to be " << exptok
-                   << " but got " << lextok << "\n";
+         std::cout << "Expected token[" << i << "] to be " << exptok << " but got "
+                   << lextok << "\n";
          return false;
       }
       ptr++;
@@ -58,9 +58,8 @@ void lex_string(
 }
 
 TEST(LexerTests, SubcaseHelloWorld) {
-   lex_string(
-         "int main() { return 0; }",
-         {INT, IDENTIFIER, '(', ')', '{', RETURN, LITERAL, ';', '}', YYEOF});
+   lex_string("int main() { return 0; }",
+              {INT, IDENTIFIER, '(', ')', '{', RETURN, LITERAL, ';', '}', YYEOF});
 }
 
 TEST(LexerTests, SubcaseImports) {

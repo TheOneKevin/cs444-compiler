@@ -9,9 +9,7 @@ namespace ast {
 using std::ostream;
 using std::string;
 
-void AstNode::dump() const {
-   print(std::cout, 0);
-}
+void AstNode::dump() const { print(std::cout, 0); }
 
 // VarDecl /////////////////////////////////////////////////////////////////////
 
@@ -35,7 +33,8 @@ int VarDecl::printDotNode(DotPrinter& dp) const {
    dp.printTableDoubleRow("name", name());
    std::ostringstream expr;
    if(init_) init_->print(expr, -1);
-   dp.printTableDoubleRow("init", expr.str(), {"port", "init"}, {"balign", "left"});
+   dp.printTableDoubleRow(
+         "init", expr.str(), {"port", "init"}, {"balign", "left"});
    dp.endTLabel();
    return id;
 }
@@ -64,7 +63,8 @@ int FieldDecl::printDotNode(DotPrinter& dp) const {
    dp.printTableDoubleRow("name", name());
    std::ostringstream expr;
    if(hasInit()) init()->print(expr, -1);
-   dp.printTableDoubleRow("init", expr.str(), {"port", "init"}, {"balign", "left"});
+   dp.printTableDoubleRow(
+         "init", expr.str(), {"port", "init"}, {"balign", "left"});
    dp.endTLabel();
    return id;
 }

@@ -104,8 +104,7 @@ ast::ForStmt* ptv::visitForStatement(Node* node) {
    check_node_type(node, pty::ForStatement);
    check_num_children(node, 4, 4);
 
-   if(node->child(3) == nullptr)
-      throw std::runtime_error("Invalid for statement");
+   if(node->child(3) == nullptr) throw std::runtime_error("Invalid for statement");
 
    ast::Stmt* init = nullptr;
    ast::Expr* condition = nullptr;

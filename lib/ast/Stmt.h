@@ -71,8 +71,7 @@ private:
 
 class WhileStmt final : public Stmt {
 public:
-   WhileStmt(Expr* condition, Stmt* body)
-         : condition_{condition}, body_{body} {}
+   WhileStmt(Expr* condition, Stmt* body) : condition_{condition}, body_{body} {}
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
 

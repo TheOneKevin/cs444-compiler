@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cassert>
+#include <fstream>
 #include <iostream>
 #include <sstream>
-#include <fstream>
 
 class SourceLocation;
 class SourceRange;
@@ -39,7 +39,7 @@ public:
       return os.str();
    }
 
-   /// @brief Returns true if the SourceLocation was not default constructed. 
+   /// @brief Returns true if the SourceLocation was not default constructed.
    bool isValid() const { return line_ != -1; }
 
 private:

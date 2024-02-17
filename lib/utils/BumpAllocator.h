@@ -57,9 +57,7 @@ public:
       }
    }
 
-   void do_deallocate(void* p,
-                      std::size_t bytes,
-                      std::size_t alignment) override {
+   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
       // No-op
       (void)p;
       (void)bytes;

@@ -57,8 +57,7 @@ ast::Type* ptv::visitType(Node* node) {
    innerTy = node->child(0);
    ast::Type* elemTy = nullptr;
    if(innerTy->get_node_type() == pty::BasicType) {
-      elemTy =
-            sem.BuildBuiltInType(dynamic_cast<BasicType*>(innerTy)->get_type());
+      elemTy = sem.BuildBuiltInType(dynamic_cast<BasicType*>(innerTy)->get_type());
    } else if(innerTy->get_node_type() == pty::QualifiedIdentifier) {
       elemTy = visitReferenceType(innerTy);
    }
