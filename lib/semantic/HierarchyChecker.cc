@@ -272,8 +272,13 @@ void HierarchyChecker::checkMethodReplacement() {
       if(!body) continue;
 
       if(auto classDecl = dynamic_cast<ast::ClassDecl*>(body)) {
+         std::set<ast::MethodDecl*> inheritedMethods;
+         for (auto method : classDecl->methods()) {
+            inheritedMethods.insert(method);
+         }
          for(auto superClass : superClassMap_[classDecl]) {
             for(auto method : superClass->methods()) {
+               inheritedMethods.insert(method);
                for(auto other : classDecl->methods()) {
                   if(!isSameMethodSignature(method, other)) continue;
 
@@ -289,11 +294,6 @@ void HierarchyChecker::checkMethodReplacement() {
                            << "A static method must not replace a nonstatic "
                               "method. "
                            << other->name();
-                  } else if(method->mut_returnType() != other->mut_returnType()) {
-                     diag.ReportError(other->location())
-                           << "A method must not replace a method with a "
-                              "different return type. "
-                           << other->name();
                   } else if(other->modifiers().isProtected() &&
                             method->modifiers().isPublic()) {
                      diag.ReportError(other->location())
@@ -303,6 +303,24 @@ void HierarchyChecker::checkMethodReplacement() {
                   } else if(method->modifiers().isFinal()) {
                      diag.ReportError(other->location())
                            << "A method must not replace a final method. "
+                           << other->name();
+                  }
+               }
+            }
+         } 
+         for(auto superInterface : superInterfaceMap_[classDecl]) {
+            for(auto method : superInterface->methods()) {
+               inheritedMethods.insert(method);
+            }
+         }
+         for(auto method : classDecl->methods()) {
+            for (auto other : classDecl->methods()) {
+               if(method == other) continue;
+               if(isSameMethodSignature(method, other)) {
+                  if(method->mut_returnType() != other->mut_returnType()) {
+                     diag.ReportError(other->location())
+                           << "A method must not replace a method with a "
+                              "different return type. "
                            << other->name();
                   }
                }
