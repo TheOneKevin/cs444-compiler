@@ -158,6 +158,13 @@ int main(int argc, char** argv) {
 
    resolver.Resolve();
 
+   if(diag.hasErrors()) {
+      for(auto& msg : diag.messages()) {
+         msg.emit(std::cerr) << std::endl;
+      }
+      return 42;
+   }
+
    semantic::HierarchyChecker hierarchy{diag, linkingUnit};
 
    if(diag.hasErrors()) {
