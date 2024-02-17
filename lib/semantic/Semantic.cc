@@ -116,6 +116,15 @@ CompilationUnit* Semantic::BuildCompilationUnit(
       }
       names.insert(name);
    }
+
+   // cf. JLS 7.5.2, we must import java.lang.*
+   auto javaLang = BuildUnresolvedType();
+   javaLang->addIdentifier("java");
+   javaLang->addIdentifier("lang");
+   ImportDeclaration javaLangImport{ javaLang, true };
+   imports.push_back(javaLangImport);
+
+   // Create the AST node
    return alloc.new_object<CompilationUnit>(alloc, package, imports, loc, body);
 }
 
