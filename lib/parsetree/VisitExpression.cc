@@ -204,7 +204,7 @@ std::list<ast::ExprNode*> ptv::visitClassCreation(Node* node) {
    check_node_type(node, pty::ClassInstanceCreationExpression);
    check_num_children(node, 2, 2);
    std::list<ast::ExprNode*> ops;
-   ops.push_back(alloc.new_object<ast::MemberName>(visitIdentifier(node->child(0))));
+   ops.splice(ops.end(), visitQualifiedIdentifierInExpr(node->child(0)));
    std::list<ast::ExprNode*> args;
    visitArgumentList(node->child(1), args);
    ops.splice(ops.end(), args);
