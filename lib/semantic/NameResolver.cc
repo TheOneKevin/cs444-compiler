@@ -158,6 +158,7 @@ void NameResolver::ResolveType(ast::UnresolvedType* type) {
          diag.ReportError(SourceRange{})
                << "failed to resolve type as subpackage does not exist: \"" << id
                << "\"";
+         return;
       }
       subTy = importsMap_[id];
       // If the subpackage exists but is a declaration, then the type is invalid.
@@ -195,7 +196,7 @@ void NameResolver::Resolve() {
 }
 
 void NameResolver::resolveInterface(ast::InterfaceDecl* decl) {
-   (void) decl;
+   (void)decl;
    assert(false && "Unimplemented");
 }
 

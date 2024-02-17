@@ -16,7 +16,7 @@ private:
    Type* type_;
 };
 
-class VarDecl final : public TypedDecl {
+class VarDecl : public TypedDecl {
 public:
    VarDecl(BumpAllocator& alloc,
            SourceRange location,

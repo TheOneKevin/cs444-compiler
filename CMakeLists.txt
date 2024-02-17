@@ -178,6 +178,6 @@ add_tool(
 )
 
 add_tool(
-    astprinter
-    "tools/astprinter/main.cc"
+    jcc1
+    "tools/jcc1/main.cc"
 )
