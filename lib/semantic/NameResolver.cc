@@ -171,7 +171,8 @@ NameResolver::ChildOpt NameResolver::resolveAstTy(
 }
 
 void NameResolver::ResolveType(ast::UnresolvedType* type) {
-   assert(type && "Type should not be null");
+   // assert(type && "Type should not be null");
+   if(!type) return;
    assert(!type->isResolved() && "Type should not be resolved");
    Pkg::Child subTy;
    auto it = type->parts().begin();
