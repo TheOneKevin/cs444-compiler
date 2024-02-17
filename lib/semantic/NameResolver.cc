@@ -152,6 +152,7 @@ void NameResolver::ResolveType(ast::UnresolvedType* type) {
    assert(type && "Type should not be null");
    assert(!type->isResolved() && "Type should not be resolved");
    Pkg::Child subTy;
+   bool firstIteration = true;
    for(auto const& id : type->parts()) {
       if(importsMap_.find(id) == importsMap_.end()) {
          // If the subpackage does not exist, then the type is invalid.
@@ -160,14 +161,15 @@ void NameResolver::ResolveType(ast::UnresolvedType* type) {
                << "\"";
          return;
       }
-      subTy = importsMap_[id];
       // If the subpackage exists but is a declaration, then the type is invalid.
-      if(std::holds_alternative<ast::Decl*>(subTy)) {
+      if(!firstIteration && std::holds_alternative<ast::Decl*>(subTy)) {
          diag.ReportError(SourceRange{})
                << "failed to resolve type as subpackage is a declaration: \"" << id
                << "\"";
          return;
       }
+      firstIteration = false;
+      subTy = importsMap_[id];
    }
    // The final type should be a declaration.
    if(!std::holds_alternative<ast::Decl*>(subTy)) {
