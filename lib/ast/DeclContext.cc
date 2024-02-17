@@ -57,7 +57,7 @@ CompilationUnit::CompilationUnit(BumpAllocator& alloc,
       : package_{package}, imports_{alloc}, body_{body}, location_{location} {
    if(auto decl = dynamic_cast<Decl*>(body)) {
       decl->setParent(this);
-   } else {
+   } else if(decl != nullptr) {
       assert(false && "Body must be a Decl.");
    }
    utils::move_vector<ImportDeclaration>(imports, imports_);

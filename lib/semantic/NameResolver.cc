@@ -55,6 +55,8 @@ void NameResolver::buildSymbolTable() {
          // Otherwise, we can traverse into the next subpackage.
          subPkg = std::get<Pkg*>(child);
       }
+      // If the CU has no body, then we can skip to the next CU.
+      if(!cu->body()) continue;
       // Check that the declaration is unique, cf. JLS 6.4.1.
       if(subPkg->children.find(cu->bodyAsDecl()->name().data()) !=
          subPkg->children.end()) {
@@ -138,6 +140,7 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
       importsMap_[imp.simpleName()] = decl;
    }
    // 5. All declarations in the current CU. This may also shadow anything.
+   if(cu->body())
    importsMap_[cu_->bodyAsDecl()->name().data()] = cu_->bodyAsDecl();
 }
 

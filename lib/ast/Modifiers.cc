@@ -27,7 +27,7 @@ void Modifiers::set(parsetree::Modifier target) {
          assert(false && "Unknown modifier type");
    }
    set(modifier);
-   modifierLocations[(int)modifiers] = target.location();
+   modifierLocations[(int)modifier] = target.location();
 }
 
 std::string Modifiers::toString() const {

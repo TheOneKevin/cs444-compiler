@@ -4,5 +4,5 @@ tests/generated/
 .joosc_build/
 docs/
 .cache/
-joosc
+./joosc
 out.dot

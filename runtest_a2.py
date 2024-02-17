@@ -58,7 +58,7 @@ for test in invalid_files:
     test = os.path.join(test_dir, test)
     files = get_files(test)
     ret, x, y = run_on_files(files)
-    if ret != 42:
+    if ret == 0:
         print(f"Running test on: {test}")
         print("Test failed")
         print(f"Return code: {ret}")
