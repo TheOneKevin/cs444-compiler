@@ -20,28 +20,15 @@ JOOSC_SRCS = \
   lib/parsetree/VisitStatement.cc lib/utils/FragmentGenerator.cc \
   lib/utils/DotPrinter.cc lib/semantic/NameResolver.cc lib/semantic/HierarchyChecker.cc \
   tools/joosc/main.cc \
-  ${LEXER_OUT} ${PARSER_OUT} \
-
-JOOSC_OBJS = $(JOOSC_SRCS:%.cc=$(PARSER_DIR)/%.o)
+  ${LEXER_OUT} ${PARSER_OUT}
 
 all: joosc
 
-$(JOOSC_OBJS): $(LEXER_OUT) $(PARSER_OUT)
-
-$(PARSER_DIR)/%.o: %.cc
-	mkdir -p $(dir $@)
-	$(CC) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
-
-$(PARSER_OUT): lib/grammar/joos1w_parser.y
+joosc:
 	mkdir -p $(PARSER_DIR)
-	$(BISON) $(BISONFLAGS) --output=$(PARSER_OUT) --defines=$(PARSER_HEADER) $<
-
-$(LEXER_OUT): lib/grammar/joos1w_lexer.l
-	mkdir -p $(PARSER_DIR)
-	$(FLEX) --outfile=$(LEXER_OUT) --header-file=$(LEXER_HEADER) $<
-
-joosc: $(JOOSC_OBJS)
-	$(CC) $(CXXFLAGS) $(INCLUDES) -o ./$@ $^
+	$(FLEX) --outfile=$(LEXER_OUT) --header-file=$(LEXER_HEADER) lib/grammar/joos1w_lexer.l
+	$(BISON) $(BISONFLAGS) --output=$(PARSER_OUT) --defines=$(PARSER_HEADER) lib/grammar/joos1w_parser.y
+	$(CC) $(CXXFLAGS) $(INCLUDES) $(JOOSC_SRCS) -o $@
 
 clean:
 	rm -rf $(PARSER_DIR) && rm joosc
