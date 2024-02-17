@@ -19,7 +19,7 @@ stdlib_dir = "/u/cs444/pub/stdlib/2.0"
 joosc = os.path.join(script_dir, "build", "joosc")
 
 # List test cases files
-test_names = [ os.path.join(test_dir, f) for f in os.listdir(test_dir) ]
+test_names = os.listdir(test_dir)
 stdlib_files = grab_all_java(stdlib_dir)
 
 # Deliniate the valid and invalid files
@@ -35,24 +35,24 @@ def run_on_files(files):
 failures = 0
 
 for test in valid_files:
-    print(f"Running test on: {test}")
+    test = os.path.join(test_dir, test)
     files = [test] if os.path.isfile(test) else grab_all_java(test)
     ret, x, y = run_on_files(files)
     if ret != 0:
+        print(f"Running test on: {test}")
         print("Test failed")
+        print(f"Return code: {ret}")
         failures += 1
         print(f"Command: {joosc} {' '.join(files)}")
-        # print(f"Return code: {ret}")
-        # print(f"Stdout: {x}")
-        # print(f"Stderr: {y}")
-        # exit(0)
 
 for test in invalid_files:
-    print(f"Running test on: {test}")
+    test = os.path.join(test_dir, test)
     ret, x, y = run_on_files([test] if os.path.isfile(test) else grab_all_java(test))
     if ret != 42:
+        print(f"Running test on: {test}")
         print("Test failed")
+        print(f"Return code: {ret}")
         failures += 1
         print(f"Command: {joosc} {' '.join(files)}")
 
-print(f"Total failures: {failures}/{len(valid_files) + len(invalid_files)}")
+print(f"Total failures: {failures}/{len(test_names)} or {len(test_names) - failures}/{len(test_names)} passing")
