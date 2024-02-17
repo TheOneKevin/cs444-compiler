@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
          return 42;
       } catch(...) {
          std::cerr << "Unknown failure occurred." << std::endl;
-         return 1;
+         return 42;
       }
       if(!ast) return 42;
 
