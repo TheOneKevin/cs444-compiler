@@ -239,24 +239,24 @@ void NameResolver::Resolve() {
 
 void NameResolver::resolveMethod(ast::MethodDecl* decl) {
    for(auto local : decl->mut_locals())
-      ResolveType(dynamic_cast<ast::UnresolvedType*>(local->mut_type()));
+      local->mut_type()->resolve(*this);
    if(decl->mut_returnType())
-      ResolveType(dynamic_cast<ast::UnresolvedType*>(decl->mut_returnType()));
+      decl->mut_returnType()->resolve(*this);
 }
 
 void NameResolver::resolveInterface(ast::InterfaceDecl* decl) {
    for(auto ty : decl->mut_extends())
-      ResolveType(dynamic_cast<ast::UnresolvedType*>(ty));
+      ty->resolve(*this);
    for(auto method : decl->mut_methods()) resolveMethod(method);
 }
 
 void NameResolver::resolveClass(ast::ClassDecl* decl) {
    for(auto ty : decl->mut_interfaces())
-      ResolveType(dynamic_cast<ast::UnresolvedType*>(ty));
+      ty->resolve(*this);
    if(decl->mut_superClass())
-      ResolveType(dynamic_cast<ast::UnresolvedType*>(decl->mut_superClass()));
+      decl->mut_superClass()->resolve(*this);
    for(auto field : decl->mut_fields())
-      ResolveType(dynamic_cast<ast::UnresolvedType*>(field->mut_type()));
+      field->mut_type()->resolve(*this);
    for(auto method : decl->mut_methods()) resolveMethod(method);
 }
 
