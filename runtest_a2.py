@@ -30,13 +30,22 @@ def run_on_files(files):
     ret = subprocess.run([joosc, *files], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     return ret.returncode, ret.stdout, ret.stderr
 
+def get_files(test):
+    files = [test] if os.path.isfile(test) else grab_all_java(test)
+    if os.path.isdir(test) and os.path.isdir(os.path.join(test, "java")):
+        pass
+    else:
+        pass
+    files += stdlib_files
+    return files
+
 # Test the valid files now
 
 failures = 0
 
 for test in valid_files:
     test = os.path.join(test_dir, test)
-    files = [test] if os.path.isfile(test) else grab_all_java(test)
+    files = get_files(test)
     ret, x, y = run_on_files(files)
     if ret != 0:
         print(f"Running test on: {test}")
@@ -47,7 +56,8 @@ for test in valid_files:
 
 for test in invalid_files:
     test = os.path.join(test_dir, test)
-    ret, x, y = run_on_files([test] if os.path.isfile(test) else grab_all_java(test))
+    files = get_files(test)
+    ret, x, y = run_on_files(files)
     if ret != 42:
         print(f"Running test on: {test}")
         print("Test failed")
