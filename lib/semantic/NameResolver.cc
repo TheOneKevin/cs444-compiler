@@ -21,7 +21,7 @@ using std::pmr::vector;
 
 namespace semantic {
 
-const std::pmr::string UNNAMED_PACKAGE = "unnamed package";
+static const std::pmr::string UNNAMED_PACKAGE{""};
 
 void NameResolver::buildSymbolTable() {
    rootPkg_ = alloc.new_object<Pkg>(alloc);
@@ -86,7 +86,7 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
    // We can populate the imports map by order of shadowing cf. JLS 6.3.1.
    //   1. Package declarations, does not shadow anything.
    //   2. Import-on-demand declarations, never causes any declaration to be
-   //      shadowed, but maybe shadow other packages.
+   //      shadowed (even with other IOD), but maybe shadow other packages.
    //   3. All declarations in the same package (different CUs).
    //   4. Single-type-import declarations, shadows any other decl in all CUs
    //      under the same package. It also shadows any import-on-demand decls.
@@ -94,12 +94,8 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
    // We should also note the scope of types under the same package declarations
    // cf. JLS 6.3 is visible across all CUs in the same package.
 
-   // 1. Package declarations
-   for(auto& kv : rootPkg_->children) {
-      if(std::holds_alternative<Pkg*>(kv.second))
-         importsMap_[kv.first] = Pkg::Child{std::get<Pkg*>(kv.second)};
-   }
-   // 2. Import-on-demand declarations
+   // 1. Import-on-demand declarations. Populate this first so we can check
+   //    if two import-on-demand declarations shadow each other.
    for(auto const& imp : cu->imports()) {
       if(!imp.isOnDemand) continue;
       // First, resolve the subpackage subtree from the symbol table.
@@ -115,9 +111,35 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
       // Grab the package as a Pkg*.
       auto pkg = std::get<Pkg*>(subPkg.value());
       // Second, add all the Decl from the subpackage to the imports map.
-      for(auto& kv : pkg->children)
-         if(std::holds_alternative<Decl*>(kv.second))
-            importsMap_[kv.first] = Pkg::Child{std::get<Decl*>(kv.second)};
+      // We only add declarations, not subpackages. cf. JLS 7.5:
+      //
+      //    > A type-import-on-demand declaration (§7.5.2) imports all the
+      //    > accessible types of a named type or package as needed.
+      //
+      for(auto& kv : pkg->children) {
+         if(!std::holds_alternative<Decl*>(kv.second)) continue;
+         auto decl = std::get<Decl*>(kv.second);
+         if(importsMap_.find(kv.first) != importsMap_.end()) {
+            auto imported = importsMap_[kv.first];
+            if(std::holds_alternative<Decl*>(imported) &&
+               std::get<Decl*>(imported) == decl)
+               continue; // Same declaration, no error
+            // FIXME(kevin): The import-on-demand shadows another
+            // import-on-demand, so we mark the declaration as a null pointer.
+            importsMap_[kv.first] = static_cast<Decl*>(nullptr);
+            continue;
+         }
+         importsMap_[kv.first] = Pkg::Child{decl};
+      }
+   }
+   // 2. Package declarations. We can ignore any duplicate names as they are
+   //    shadowed by the import-on-demand declarations.
+   for(auto& kv : rootPkg_->children) {
+      if(!std::holds_alternative<Pkg*>(kv.second))
+         continue; // We only care about subpackages
+      if(importsMap_.find(kv.first) != importsMap_.end())
+         continue; // This package is shadowed by an import-on-demand
+      importsMap_[kv.first] = Pkg::Child{std::get<Pkg*>(kv.second)};
    }
    // 3. All declarations in the same package (different CUs). We can shadow
    //    any declarations already existing.
