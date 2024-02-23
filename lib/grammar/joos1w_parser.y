@@ -374,8 +374,7 @@ MultiplicativeExpression
 
 UnaryExpression
     : OP_MINUS UnaryExpression {
-        // FIXME(kevin): Remove this hack and fix the AST later
-        // If $2 is a Literal, then we mark that literal as negative :)
+        // If $2 is a Literal, then we mark that literal as negative
         if($2->get_node_type() == pty::Literal) {
             auto* literal = static_cast<pt::Literal*>($2);
             literal->setNegative();
@@ -394,7 +393,6 @@ UnaryExpressionNotPlusMinus
 CastExpression
     : '(' BasicType Dims ')' UnaryExpression                                    { $$ = jl.make_node(@$, pty::CastExpression, $2, $3, $5); }
     | '(' Expression ')' UnaryExpressionNotPlusMinus {
-        // FIXME(kevin): Remove this hack and fix the AST later
         // Cast is valid iff:
         // 1. $2 is a qualified identifier
         // 2. $2 is an array type and has only one child
