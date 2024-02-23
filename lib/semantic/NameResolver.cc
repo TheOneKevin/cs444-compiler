@@ -21,8 +21,12 @@ using std::pmr::vector;
 
 namespace semantic {
 
+const std::pmr::string UNNAMED_PACKAGE = "unnamed package";
+
 void NameResolver::buildSymbolTable() {
    rootPkg_ = alloc.new_object<Pkg>(alloc);
+   // Add the unnamed package to the root package.
+   rootPkg_->children[UNNAMED_PACKAGE] = alloc.new_object<Pkg>(alloc);
    // Grab the package type from the compilation unit.
    for(auto cu : lu_->compliationUnits()) {
       // Grab the CU's package and mark it as immutable
@@ -31,7 +35,6 @@ void NameResolver::buildSymbolTable() {
       pkg->lock();
       // Traverse the package name to find the leaf package.
       Pkg* subPkg = rootPkg_;
-      // FIXME: Default package == package with empty parts() != nullptr
       for(auto const& id : pkg->parts()) {
          // If the subpackage name is not in the symbol table, add it
          // and continue to the next one.
@@ -55,6 +58,9 @@ void NameResolver::buildSymbolTable() {
          // Otherwise, we can traverse into the next subpackage.
          subPkg = std::get<Pkg*>(child);
       }
+      if (cu->isDefaultPackage()) {
+         subPkg = std::get<Pkg*>(rootPkg_->children[UNNAMED_PACKAGE]);
+      }
       // If the CU has no body, then we can skip to the next CU.
       if(!cu->body()) continue;
       // Check that the declaration is unique, cf. JLS 6.4.1.
@@ -66,6 +72,7 @@ void NameResolver::buildSymbolTable() {
       // Now add the CU's declaration to the subpackage.
       subPkg->children[cu->bodyAsDecl()->name().data()] = cu->bodyAsDecl();
    }
+   rootPkg_->dump();
 }
 
 void NameResolver::BeginContext(ast::CompilationUnit* cu) {
@@ -148,6 +155,9 @@ NameResolver::ChildOpt NameResolver::resolveAstTy(
       ast::UnresolvedType const* t) const {
    assert(t && "Type should not be null");
    assert(!t->isResolved() && "Type should not be resolved");
+   if (t->parts().empty()) {
+      return rootPkg_->children[UNNAMED_PACKAGE];
+   }
    Pkg::Child subPkg = rootPkg_;
    for(auto const& id : t->parts()) {
       // If the subpackage is a declaration, then the import is invalid.
@@ -258,8 +268,7 @@ std::ostream& NameResolver::Pkg::print(std::ostream& os, int indent) const {
    for(auto const& [name, child] : children) {
       for(int i = 0; i < indent; i++) os << "  ";
       if(std::holds_alternative<ast::Decl*>(child)) {
-         os << name << " -> " << std::get<ast::Decl*>(child)->name().data()
-            << std::endl;
+         os << name << std::endl;
       } else {
          os << name << " ->" << std::endl;
          std::get<Pkg*>(child)->print(os, indent + 1);
