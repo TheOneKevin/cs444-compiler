@@ -10,6 +10,17 @@ namespace ast {
 
 using std::string;
 
+Semantic::Semantic(BumpAllocator& alloc, diagnostics::DiagnosticEngine& diag)
+      : alloc{alloc}, diag{diag} {
+   // Preallocate java.lang.Object type
+   auto ty = BuildUnresolvedType(SourceRange{});
+   ty->addIdentifier("java");
+   ty->addIdentifier("lang");
+   ty->addIdentifier("Object");
+   ty->lock();
+   objectType = ty;
+}
+
 /* ===--------------------------------------------------------------------=== */
 // ast/Type.h
 /* ===--------------------------------------------------------------------=== */
@@ -136,8 +147,14 @@ ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers, SourceRange loc,
    if(!modifiers.isPublic())
       diag.ReportError(loc) << "class must have a visibility modifier";
    // Create the AST node
-   auto node = alloc.new_object<ClassDecl>(
-         alloc, modifiers, loc, name, superClass, interfaces, classBodyDecls);
+   auto node = alloc.new_object<ClassDecl>(alloc,
+                                           modifiers,
+                                           loc,
+                                           name,
+                                           superClass,
+                                           objectType,
+                                           interfaces,
+                                           classBodyDecls);
    // Check if the class has at least one constructor
    if(node->constructors().size() == 0)
       diag.ReportError(loc) << "class must have at least one constructor";

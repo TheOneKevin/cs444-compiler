@@ -69,14 +69,18 @@ private:
 class ClassDecl final : public DeclContext, public Decl {
 public:
    ClassDecl(BumpAllocator& alloc, Modifiers modifiers, SourceRange location,
-             string_view name, ReferenceType* superClass,
+             string_view name, ReferenceType* super1, ReferenceType* super2,
              array_ref<ReferenceType*> interfaces,
              array_ref<Decl*> classBodyDecls) throw();
    auto fields() const { return std::views::all(fields_); }
    auto methods() const { return std::views::all(methods_); }
    auto constructors() const { return std::views::all(constructors_); }
    auto interfaces() const { return std::views::all(interfaces_); }
-   auto superClass() const { return superClass_; }
+   // FIXME(larry): Remove this once you're done with it
+   auto superClass() const { return superClasses_[1]; }
+   /// @brief Grabs a view of the super classes.
+   /// Warning: the super classes may be null.
+   auto superClasses() const { return std::views::all(superClasses_); }
    auto modifiers() const { return modifiers_; }
    bool hasCanonicalName() const override { return true; }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
@@ -89,11 +93,11 @@ public:
    auto mut_methods() { return std::views::all(methods_); }
    auto mut_constructors() { return std::views::all(constructors_); }
    auto mut_interfaces() { return std::views::all(interfaces_); }
-   auto mut_superClass() { return superClass_; }
+   auto mut_superClasses() { return std::views::all(superClasses_); }
 
 private:
    Modifiers modifiers_;
-   ReferenceType* superClass_;
+   ReferenceType* superClasses_[2];
    pmr_vector<ReferenceType*> interfaces_;
    pmr_vector<FieldDecl*> fields_;
    pmr_vector<MethodDecl*> methods_;

@@ -100,13 +100,12 @@ int CompilationUnit::printDotNode(DotPrinter& dp) const {
 // ClassDecl ///////////////////////////////////////////////////////////////////
 
 ClassDecl::ClassDecl(BumpAllocator& alloc, Modifiers modifiers,
-                     SourceRange location, string_view name,
-                     ReferenceType* superClass,
-                     array_ref<ReferenceType*> interfaces,
+                     SourceRange location, string_view name, ReferenceType* super1,
+                     ReferenceType* super2, array_ref<ReferenceType*> interfaces,
                      array_ref<Decl*> classBodyDecls) throw()
       : Decl{alloc, name},
         modifiers_{modifiers},
-        superClass_{superClass},
+        superClasses_{super1, super2},
         interfaces_{alloc},
         fields_{alloc},
         methods_{alloc},
@@ -134,9 +133,12 @@ ostream& ClassDecl::print(ostream& os, int indentation) const {
    auto i3 = indent(indentation + 2);
    os << i1 << "ClassDecl {\n"
       << i2 << "modifiers: " << modifiers_.toString() << "\n"
-      << i2 << "name: " << this->name() << "\n"
-      << i2 << "superClass: " << (superClass_ ? superClass_->toString() : "null")
+      << i2 << "name: " << this->name()
       << "\n"
+      // FIXME(kevin): Fix printing of superclasses
+      // << i2 << "superClass: " << (superClass_ ? superClass_->toString() :
+      // "null")
+      // << "\n"
       << i2 << "interfaces: []\n"
       << i2 << "fields:\n";
    for(auto& field : fields_) field->print(os, indentation + 2);
@@ -154,8 +156,9 @@ int ClassDecl::printDotNode(DotPrinter& dp) const {
    dp.printTableSingleRow("ClassDecl", {"bgcolor", "lightblue"});
    dp.printTableDoubleRow("modifiers", modifiers_.toString());
    dp.printTableDoubleRow("name", name());
-   dp.printTableDoubleRow("superClass",
-                          superClass_ ? superClass_->toString() : "");
+   // FIXME(kevin): Fix printing of superclasses
+   // dp.printTableDoubleRow("superClass",
+   //                        superClass_ ? superClass_->toString() : "");
    string intf;
    for(auto& i : interfaces()) intf += string{i->toString()} + "\n";
    dp.printTableDoubleRow("interfaces", intf);

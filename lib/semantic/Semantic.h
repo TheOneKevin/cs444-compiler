@@ -13,8 +13,7 @@ class Semantic {
    using string = std::string;
 
 public:
-   Semantic(BumpAllocator& alloc, diagnostics::DiagnosticEngine& diag)
-         : alloc{alloc}, diag{diag} {}
+   Semantic(BumpAllocator& alloc, diagnostics::DiagnosticEngine& diag);
 
 public:
    /* ===-----------------------------------------------------------------=== */
@@ -125,6 +124,7 @@ private:
    std::vector<VarDecl*> lexicalLocalDeclStack;
    std::vector<VarDecl*> lexicalLocalDecls;
    std::unordered_set<std::string> lexicalLocalScope;
+   ast::ReferenceType* objectType;
 };
 
 } // namespace ast
