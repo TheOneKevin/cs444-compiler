@@ -63,6 +63,10 @@ void HierarchyChecker::flattenClassMap(
       if(visited.count(entry.first)) continue;
       std::pmr::set<ast::ClassDecl*> currentPath;
       flattenClassMapHelper(entry.first, unflattenedMap, visited, currentPath);
+      // Adds object class to the superclasses
+      // auto objectClass =
+      //       dynamic_cast<ast::ClassDecl*>(entry.first->superClasses()[1]->decl());
+      // superClassMap_[entry.first].insert(objectClass);
    }
 }
 
@@ -145,7 +149,7 @@ void HierarchyChecker::checkInheritance() {
 
       if(auto classDecl = dynamic_cast<ast::ClassDecl*>(body)) {
          // if there is a superclass
-         if(auto superClass = classDecl->superClass()) {
+         if(auto superClass = classDecl->superClasses()[0]) {
             auto superClassDecl =
                   dynamic_cast<ast::ClassDecl*>(superClass->decl());
             // class cannot extend an interface
@@ -274,22 +278,20 @@ void HierarchyChecker::checkMethodReplacement() {
 
       if(auto classDecl = dynamic_cast<ast::ClassDecl*>(body)) {
          std::set<ast::MethodDecl*> inheritedMethods;
-         std::set<ast::MethodDecl*> abstractMethods;
+         for(auto method : classDecl->methods()) {
+            inheritedMethods.insert(method);
+         }
          for(auto superClass : superClassMap_[classDecl]) {
             for(auto method : superClass->methods()) {
-               if(method->modifiers().isAbstract()) {
-                  abstractMethods.insert(method);
-               } else {
-                  inheritedMethods.insert(method);
-               }
+               inheritedMethods.insert(method);
             }
          }
          for(auto superInterface : superInterfaceMap_[classDecl]) {
             for(auto method : superInterface->methods()) {
-               abstractMethods.insert(method);
+               inheritedMethods.insert(method);
             }
          }
-         for(auto method : classDecl->methods()) {
+         for(auto method : inheritedMethods) {
             for(auto other : inheritedMethods) {
                if(!isSameMethodSignature(method, other)) continue;
                if(*method->mut_returnType() != *other->mut_returnType()) {
@@ -336,7 +338,8 @@ void HierarchyChecker::checkMethodReplacement() {
                break;
             }
          }
-         for(auto method : abstractMethods) {
+         for(auto method : inheritedMethods) {
+            if (!method->modifiers().isAbstract()) continue;
             bool isImplemented = false;
             for(auto other : classDecl->methods()) {
                if(isSameMethodSignature(method, other)) {
@@ -364,7 +367,9 @@ void HierarchyChecker::checkMethodReplacement() {
             }
             if(!isImplemented && !classDecl->modifiers().isAbstract()) {
                diag.ReportError(method->location())
-                     << "An abstract method must be implemented in an non-abstract class " << method->name();
+                     << "An abstract method must be implemented in an "
+                        "non-abstract class "
+                     << method->name();
             }
          }
       } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(body)) {

@@ -76,8 +76,6 @@ public:
    auto methods() const { return std::views::all(methods_); }
    auto constructors() const { return std::views::all(constructors_); }
    auto interfaces() const { return std::views::all(interfaces_); }
-   // FIXME(larry): Remove this once you're done with it
-   auto superClass() const { return superClasses_[1]; }
    /// @brief Grabs a view of the super classes.
    /// Warning: the super classes may be null.
    auto superClasses() const { return std::views::all(superClasses_); }

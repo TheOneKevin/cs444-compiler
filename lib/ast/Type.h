@@ -163,7 +163,8 @@ public:
 
    bool operator==(const Type& other) const override {
       (void)other;
-      return false;
+      // FIXME(Larry): Temporary fix for comparing unresolved types.
+      return this->toString() == other.toString();
       // throw std::runtime_error("Should not be comparing unresolved types");
    }
 };

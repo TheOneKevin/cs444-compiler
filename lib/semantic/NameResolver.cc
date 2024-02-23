@@ -291,7 +291,7 @@ void NameResolver::resolveInterface(ast::InterfaceDecl* decl) {
 void NameResolver::resolveClass(ast::ClassDecl* decl) {
    for(auto ty : decl->mut_interfaces()) ty->resolve(*this);
    for(auto super : decl->mut_superClasses())
-      if(super) super->resolve(*this);
+      if(super && !super->isResolved())  super->resolve(*this);
    for(auto field : decl->mut_fields()) field->mut_type()->resolve(*this);
    for(auto method : decl->mut_methods()) resolveMethod(method);
 }
