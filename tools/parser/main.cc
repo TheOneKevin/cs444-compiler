@@ -6,22 +6,22 @@
 #include <string>
 
 #include "grammar/Joos1WGrammar.h"
-#include "utils/CommandLine.h"
+#include "utils/CLI11.h"
 
 int main(int argc, char** argv) {
-   utils::InputParser input(argc, argv);
+   bool debug_mode, print_dot;
+
+   CLI::App app{"Joos1W Parser Printer"};
+   app.add_option(
+         "-d", debug_mode, "Enable bison debug mode (prints the parse stack)");
+   app.add_flag("-x", print_dot, "Print the parse tree in DOT format");
+   CLI11_PARSE(app, argc, argv);
 
    // Flag to enable bison debug
-   if(input.cmdOptionExists("-d")) {
+   if(debug_mode) {
       yydebug = 1;
    } else {
       yydebug = 0;
-   }
-
-   // Flag to print the parse tree in dot format
-   bool print_dot = false;
-   if(input.cmdOptionExists("-x")) {
-      print_dot = true;
    }
 
    // Check if input is being piped in
