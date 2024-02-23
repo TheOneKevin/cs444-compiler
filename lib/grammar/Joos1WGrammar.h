@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "diagnostics/Diagnostics.h"
+#include "diagnostics/SourceManager.h"
 #include "utils/BumpAllocator.h"
 
 class Joos1WParser final {
@@ -26,6 +27,16 @@ public:
                 diagnostics::DiagnosticEngine* diag = nullptr)
          : mbr{}, alloc{&mbr}, lexer{alloc, diag}, iss{in} {
       buffer = lexer.yy_create_buffer(iss, in.size());
+      lexer.yy_switch_to_buffer(buffer);
+   }
+
+   Joos1WParser(SourceFile file, BumpAllocator& alloc,
+                diagnostics::DiagnosticEngine* diag = nullptr)
+         : mbr{},
+           alloc{&mbr},
+           lexer{alloc, diag, file},
+           iss{SourceManager::getBuffer(file)} {
+      buffer = lexer.yy_create_buffer(iss, SourceManager::getBuffer(file).size());
       lexer.yy_switch_to_buffer(buffer);
    }
 

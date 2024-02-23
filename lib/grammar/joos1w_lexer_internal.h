@@ -5,6 +5,7 @@
 
 #include "diagnostics/Diagnostics.h"
 #include "diagnostics/Location.h"
+#include "diagnostics/SourceManager.h"
 #include "joos1w.parser.tab.h"
 #include "parsetree/ParseTree.h"
 #include "utils/BumpAllocator.h"
@@ -21,8 +22,9 @@ class Joos1WLexer : public yyFlexLexer {
    friend class Joos1WParser;
 
 private:
-   Joos1WLexer(BumpAllocator& alloc, diagnostics::DiagnosticEngine* diag)
-         : yycolumn{1}, diag{diag}, alloc{alloc} {}
+   Joos1WLexer(BumpAllocator& alloc, diagnostics::DiagnosticEngine* diag,
+               SourceFile file = {})
+         : file{file}, yycolumn{1}, diag{diag}, alloc{alloc} {}
 
 public:
    /// @brief This is the generate Flex lexer function

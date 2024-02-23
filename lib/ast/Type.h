@@ -162,6 +162,7 @@ public:
    std::ostream& operator<<(std::ostream& os) const { return os << toString(); }
 
    bool operator==(const Type& other) const override {
+      (void)other;
       return false;
       // throw std::runtime_error("Should not be comparing unresolved types");
    }

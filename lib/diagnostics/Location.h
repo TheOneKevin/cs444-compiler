@@ -5,21 +5,10 @@
 #include <iostream>
 #include <sstream>
 
+#include "diagnostics/SourceManager.h"
+
 class SourceLocation;
 class SourceRange;
-class SourceFile;
-
-/// @brief An opaque identifier representing a source file.
-class SourceFile {
-public:
-   /// @brief Construct a new SourceFile with no associated file.
-   SourceFile() : id_{-1} {}
-
-   bool operator==(SourceFile const& other) const { return id_ == other.id_; }
-
-private:
-   int id_;
-};
 
 /// @brief A specific location (line, column) in a source file.
 class SourceLocation {
@@ -30,7 +19,8 @@ public:
    SourceLocation(SourceFile file, int line, int column)
          : file_{file}, line_{line}, column_{column} {}
    std::ostream& print(std::ostream& os) const {
-      os << "??:" << line_ << ":" << column_;
+      SourceManager::print(os, file_);
+      os << ":" << line_ << ":" << column_;
       return os;
    }
    std::string toString() const {
@@ -66,10 +56,12 @@ public:
    bool isValid() const { return begin_.isValid() && end_.isValid(); }
 
    std::ostream& print(std::ostream& os) const {
-      os << "??:" << begin_.line_ << ":" << begin_.column_ << " - " << end_.line_
-         << ":" << end_.column_;
+      begin_.print(os);
+      os << " - ";
+      end_.print(os);
       return os;
    }
+
    std::string toString() const {
       std::ostringstream os;
       print(os);

@@ -14,16 +14,9 @@
 #include "utils/BumpAllocator.h"
 #include "utils/CLI11.h"
 
-std::string gASTGraphFile, gPTGraphFile;
-bool gSilent = false;
-InputMode gInputMode = InputMode::Stdin;
-
-utils::CustomBufferResource gResource{};
-BumpAllocator gAlloc{&gResource};
 diagnostics::DiagnosticEngine gDiag{};
-ast::Semantic gSema{gAlloc, gDiag};
 
-static void checkAndPrintErrors() {
+void checkAndPrintErrors() {
    if(gDiag.hasErrors()) {
       for(auto m : gDiag.messages()) {
          m.emit(std::cerr);
@@ -34,14 +27,23 @@ static void checkAndPrintErrors() {
 }
 
 int main(int argc, char** argv) {
+   std::string optASTGraphFile, optPTGraphFile;
+   bool optSilent = false;
+   InputMode optInputMode = InputMode::Stdin;
+
+   utils::CustomBufferResource CbResource{};
+   BumpAllocator Alloc{&CbResource};
+   ast::Semantic Sema{Alloc, gDiag};
+   SourceManager SrcMgr{};
+
    CLI::App app{"Joos1W AST Printer"};
    app.add_option(
-         "-a,--ast-dot", gASTGraphFile, "File to print the AST in DOT format");
+         "-a,--ast-dot", optASTGraphFile, "File to print the AST in DOT format");
    app.add_option("-p,--pt-dot",
-                  gPTGraphFile,
+                  optPTGraphFile,
                   "File to print the parse tree in DOT format");
    app.add_flag("-s,--silent",
-                gSilent,
+                optSilent,
                 "Only indicate if the input is valid or not and print any errors");
    app.add_flag("-x,--split",
                 "Split the input file, contents delimited by ---, into multiple "
@@ -56,46 +58,52 @@ int main(int argc, char** argv) {
          std::cerr << "File " << path << " does not exist" << std::endl;
          return 1;
       }
-      gInputMode = InputMode::File;
+      optInputMode = InputMode::File;
    }
 
-   // Read std cin input until EOF
-   std::string buffer_{std::istreambuf_iterator<char>(std::cin),
-                       std::istreambuf_iterator<char>()};
-   std::vector<std::string> input_buffers;
-   input_buffers.emplace_back();
-   for(auto it = buffer_.begin(); it != buffer_.end(); ++it) {
-      // If we encounter "---" in the input, split the input into multiple bufs
-      if(*it == '-' && *(it + 1) == '-' && *(it + 2) == '-') {
-         input_buffers.emplace_back();
-         it += 2;
-      } else {
-         input_buffers.back().push_back(*it);
+   // Read the input into the source manager (either from file or stdin)
+   if(optInputMode == InputMode::File) {
+      for(auto const& path : files) {
+         SrcMgr.addFile(path);
+      }
+   } else {
+      // Read std cin input until EOF
+      std::string buffer_{std::istreambuf_iterator<char>(std::cin),
+                          std::istreambuf_iterator<char>()};
+      SrcMgr.emplaceBuffer();
+      for(auto it = buffer_.begin(); it != buffer_.end(); ++it) {
+         // If we encounter "---" in the input, split the input into multiple bufs
+         if(*it == '-' && *(it + 1) == '-' && *(it + 2) == '-') {
+            SrcMgr.emplaceBuffer(), it += 2;
+         } else {
+            SrcMgr.currentBuffer().push_back(*it);
+         }
       }
    }
 
    // Work on each input buffer
-   int bufIndex = 1;
-   std::pmr::vector<ast::CompilationUnit*> compilation_units{gAlloc};
-   for(auto const& buffer : input_buffers) {
+   std::pmr::vector<ast::CompilationUnit*> compilation_units{Alloc};
+   for(auto const& file : SrcMgr.files()) {
       // 1. Parse the input into a parse tree
-      Joos1WParser parser{buffer, gAlloc, &gDiag};
+      Joos1WParser parser{file, Alloc, &gDiag};
       parsetree::Node* pt = nullptr;
       int parseResult = parser.parse(pt);
       if(parseResult != 0 || pt == nullptr) {
-         std::cerr << "Parsing failed with code: " << parseResult << " in buffer #"
-                   << bufIndex << std::endl;
+         std::cerr << "Parsing failed with code: " << parseResult << " in file ";
+         SrcMgr.print(std::cerr, file);
+         std::cerr << std::endl;
          checkAndPrintErrors();
          return 42;
       }
       // 2. Run the AST visitor on the parse tree
-      parsetree::ParseTreeVisitor visitor{gSema};
+      parsetree::ParseTreeVisitor visitor{Sema};
       ast::CompilationUnit* ast = nullptr;
       try {
          ast = visitor.visitCompilationUnit(pt);
       } catch(const parsetree::ParseTreeException& e) {
-         std::cerr << "ParseTreeException: " << e.what() << " in buffer #"
-                   << bufIndex << std::endl;
+         std::cerr << "ParseTreeException: " << e.what() << " in file ";
+         SrcMgr.print(std::cerr, file);
+         std::cerr << std::endl;
          std::cerr << "Parse tree trace:" << std::endl;
          trace_node(e.get_where());
          return 1;
@@ -103,19 +111,18 @@ int main(int argc, char** argv) {
       // 3. Check for errors
       checkAndPrintErrors();
       compilation_units.push_back(ast);
-      bufIndex++;
    }
 
    // Link the compilation units
-   auto linking_unit = gSema.BuildLinkingUnit(compilation_units);
-   if(!gASTGraphFile.empty()) {
-      std::ofstream ast_file{gASTGraphFile};
+   auto linking_unit = Sema.BuildLinkingUnit(compilation_units);
+   if(!optASTGraphFile.empty()) {
+      std::ofstream ast_file{optASTGraphFile};
       linking_unit->printDot(ast_file);
    }
    checkAndPrintErrors();
 
    // Run the name resolution pass
-   semantic::NameResolver nameResolverPass{gAlloc, gDiag, linking_unit};
+   semantic::NameResolver nameResolverPass{Alloc, gDiag, linking_unit};
    nameResolverPass.Resolve();
    checkAndPrintErrors();
 
@@ -124,7 +131,7 @@ int main(int argc, char** argv) {
    checkAndPrintErrors();
 
    // Print the AST to stdout at the end only
-   if(gASTGraphFile.empty()) {
+   if(optASTGraphFile.empty()) {
       linking_unit->print(std::cout);
    }
 
