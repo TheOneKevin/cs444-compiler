@@ -6,3 +6,4 @@ docs/
 .cache/
 ./joosc
 out.dot
+joosc
