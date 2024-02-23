@@ -67,7 +67,6 @@ ast::BinaryOp* ptv::convertToBinaryOp(Operator::Type type) {
 
 ast::Expr* ptv::visitExpr(Node* node) {
    return new ast::Expr(visitExprChild(node));
-   // return new ast::Expr(std::list<ast::ExprNode*>());
 }
 
 std::list<ast::ExprNode*> ptv::visitExprNode(parsetree::Node* node) {

@@ -118,9 +118,9 @@ public:
    virtual void resolve(semantic::NameResolver&) {}
    /// @brief Returns if the type is resolved
    virtual bool isResolved() const = 0;
-   virtual bool operator==(const Type&) const {
-      // FIXME(larry + owen): Fix this please
-      return false;
+   virtual bool operator==(const Type&) const = 0;
+   virtual bool operator!=(const Type& other) { 
+      return !(*this == other); 
    }
 };
 

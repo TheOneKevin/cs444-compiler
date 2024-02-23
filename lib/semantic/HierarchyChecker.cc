@@ -10,12 +10,12 @@ static bool isSameMethodSignature(ast::MethodDecl* method1,
    if(method1->parameters().size() != method2->parameters().size()) return false;
 
    for(size_t i = 0; i < method1->parameters().size(); i++) {
-      if(method1->parameters()[i]->type() != method2->parameters()[i]->type()) {
+      if(*method1->parameters()[i]->type() != *method2->parameters()[i]->type()) {
          return false;
       }
    }
 
-   return method1->name() == method2->name();
+   return true;
 }
 
 void HierarchyChecker::flattenClassMapHelper(
@@ -187,6 +187,7 @@ void HierarchyChecker::checkInheritance() {
          }
 
          // Check for duplicate methods
+         
          checkClassMethod(classDecl);
          checkClassConstructors(classDecl);
       } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(body)) {
