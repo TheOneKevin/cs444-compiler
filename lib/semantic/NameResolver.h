@@ -81,7 +81,7 @@ private:
    /// @brief Resolves an unresolved type to a non-leaf node in the tree
    /// @param t The unresolved type to resolve.
    /// @return The package node that the unresolved type resolves to.
-   ChildOpt resolveAstTy(ast::UnresolvedType const* t) const;
+   ChildOpt resolveImport(ast::UnresolvedType const* t) const;
 
 private:
    BumpAllocator& alloc;

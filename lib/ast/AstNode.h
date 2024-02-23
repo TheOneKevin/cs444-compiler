@@ -38,6 +38,13 @@ class AstNode {
    friend class Expr;
 
 public:
+   AstNode() = default;
+   AstNode(const AstNode&) = delete;
+   AstNode(AstNode&&) = delete;
+   AstNode& operator=(const AstNode&) = delete;
+   AstNode& operator=(AstNode&&) = delete;
+
+public:
    std::ostream& printDot(std::ostream& os) const {
       DotPrinter dp{os};
       dp.startGraph();
@@ -88,6 +95,9 @@ public:
    }
    /// @brief Returns if the declaration has a canonical name.
    virtual bool hasCanonicalName() const = 0;
+   /// @brief Returns the location of the declaration. This is an abstract
+   /// method to allow abstract classes of Decl without location.
+   virtual SourceRange location() const = 0;
 
 protected:
    std::pmr::string canonicalName_;
@@ -105,6 +115,7 @@ public:
 /// @brief Base class for all types.
 class Type : public AstNode {
 public:
+   Type(SourceRange loc) : loc_{loc} {}
    virtual string_view toString() const = 0;
    std::ostream& print(std::ostream& os, int indentation = 0) const override {
       return os << indent(indentation) << toString();
@@ -114,14 +125,16 @@ public:
       dp.printLabel(id, toString());
       return id;
    }
+   SourceRange location() const { return loc_; }
    /// @brief Resolves the type based on the condition of isResolved()
    virtual void resolve(semantic::NameResolver&) {}
    /// @brief Returns if the type is resolved
    virtual bool isResolved() const = 0;
    virtual bool operator==(const Type&) const = 0;
-   virtual bool operator!=(const Type& other) { 
-      return !(*this == other); 
-   }
+   virtual bool operator!=(const Type& other) { return !(*this == other); }
+
+private:
+   SourceRange loc_;
 };
 
 /// @brief Base class for all statements.

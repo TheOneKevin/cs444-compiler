@@ -21,9 +21,9 @@ public:
    // ast/Type.h
    /* ===-----------------------------------------------------------------=== */
 
-   UnresolvedType* BuildUnresolvedType();
-   ArrayType* BuildArrayType(Type* elementType);
-   BuiltInType* BuildBuiltInType(parsetree::BasicType::Type type);
+   UnresolvedType* BuildUnresolvedType(SourceRange loc);
+   ArrayType* BuildArrayType(Type* elementType, SourceRange loc);
+   BuiltInType* BuildBuiltInType(parsetree::BasicType::Type type, SourceRange loc);
 
    /* ===-----------------------------------------------------------------=== */
    // ast/Decl.h

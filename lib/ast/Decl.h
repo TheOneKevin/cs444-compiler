@@ -28,7 +28,7 @@ public:
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
    virtual bool hasCanonicalName() const override { return false; }
-   auto location() const { return location_; }
+   SourceRange location() const override { return location_; }
 
 private:
    Expr* init_;

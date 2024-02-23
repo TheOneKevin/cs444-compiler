@@ -11,7 +11,7 @@ ast::UnresolvedType* ptv::visitReferenceType(Node* node,
    check_node_type(node, pty::QualifiedIdentifier);
    check_num_children(node, 1, 2);
    if(ast_node == nullptr) {
-      ast_node = sem.BuildUnresolvedType();
+      ast_node = sem.BuildUnresolvedType(node->location());
    }
    if(node->num_children() == 1) {
       ast_node->addIdentifier(visitIdentifier(node->child(0)));
@@ -57,7 +57,8 @@ ast::Type* ptv::visitType(Node* node) {
    innerTy = node->child(0);
    ast::Type* elemTy = nullptr;
    if(innerTy->get_node_type() == pty::BasicType) {
-      elemTy = sem.BuildBuiltInType(dynamic_cast<BasicType*>(innerTy)->get_type());
+      elemTy = sem.BuildBuiltInType(dynamic_cast<BasicType*>(innerTy)->get_type(),
+                                    node->location());
    } else if(innerTy->get_node_type() == pty::QualifiedIdentifier) {
       elemTy = visitReferenceType(innerTy);
    }
@@ -66,7 +67,7 @@ ast::Type* ptv::visitType(Node* node) {
             "Expected a BasicType or QualifiedIdentifier node but got " +
             innerTy->type_string());
    if(node->get_node_type() == pty::ArrayType)
-      return sem.BuildArrayType(elemTy);
+      return sem.BuildArrayType(elemTy, node->location());
    else if(node->get_node_type() == pty::Type)
       return elemTy;
    throw std::runtime_error("Expected a Type or ArrayType node");

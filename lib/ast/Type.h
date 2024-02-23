@@ -31,8 +31,8 @@ private:
    Kind kind;
 
 public:
-   explicit BuiltInType(Kind kind) : kind{kind} {}
-   explicit BuiltInType(parsetree::BasicType::Type type) {
+   BuiltInType(Kind kind, SourceRange loc) : Type{loc}, kind{kind} {}
+   BuiltInType(parsetree::BasicType::Type type, SourceRange loc = {}) : Type{loc} {
       switch(type) {
          case parsetree::BasicType::Type::Byte:
             kind = Kind::Byte;
@@ -72,12 +72,12 @@ public:
 class ReferenceType : public Type {
 protected:
    /// @brief Only used by unresolved types.
-   ReferenceType() : decl_{nullptr} {}
+   ReferenceType(SourceRange loc) : Type{loc}, decl_{nullptr} {}
 
 public:
    /// @brief Reference types must be resolved when created like this
    /// @param decl The declaration that this reference type refers to.
-   explicit ReferenceType(Decl* decl) : decl_{decl} {
+   ReferenceType(Decl* decl, SourceRange loc) : Type{loc}, decl_{decl} {
       assert(decl && "Declaration cannot be null for reference type");
    }
    /// @brief TODO: Implement this.
@@ -121,8 +121,8 @@ class UnresolvedType final : public ReferenceType {
    mutable bool locked_ = false;
 
 public:
-   explicit UnresolvedType(BumpAllocator& alloc)
-         : ReferenceType{},
+   explicit UnresolvedType(BumpAllocator& alloc, SourceRange loc)
+         : ReferenceType{loc},
            alloc{alloc},
            identifiers{alloc},
            canonicalName{alloc} {}
@@ -174,8 +174,10 @@ class ArrayType final : public Type {
    std::pmr::string name;
 
 public:
-   ArrayType(BumpAllocator& alloc, Type* elementType)
-         : elementType{elementType}, name{elementType->toString(), alloc} {
+   ArrayType(BumpAllocator& alloc, Type* elementType, SourceRange loc = {})
+         : Type{loc},
+           elementType{elementType},
+           name{elementType->toString(), alloc} {
       name += "[]";
    }
    string_view toString() const override { return name; }

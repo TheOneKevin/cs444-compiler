@@ -13,7 +13,7 @@ ast::CompilationUnit* ptv::visitCompilationUnit(Node* node) {
    check_node_type(node, pty::CompilationUnit);
    check_num_children(node, 3, 3);
    // $1: Visit the package declaration
-   auto package = visitPackageDeclaration(node->child(0));
+   auto package = visitPackageDeclaration(node);
    // $2: Visit the import declarations
    ast::pmr_vector<ast::ImportDeclaration> imports;
    visitListPattern<pty::ImportDeclarationList, ast::ImportDeclaration, true>(
@@ -34,7 +34,8 @@ ast::CompilationUnit* ptv::visitCompilationUnit(Node* node) {
 }
 
 ast::ReferenceType* ptv::visitPackageDeclaration(Node* node) {
-   if(node == nullptr) return sem.BuildUnresolvedType();
+   if(node->child(0) == nullptr) return sem.BuildUnresolvedType(node->location());
+   node = node->child(0);
    check_node_type(node, pty::PackageDeclaration);
    check_num_children(node, 1, 1);
    return visitReferenceType(node->child(0));

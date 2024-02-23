@@ -51,8 +51,8 @@ void NameResolver::buildSymbolTable() {
          if(std::holds_alternative<ast::Decl*>(child)) {
             auto decl = std::get<ast::Decl*>(child);
             assert(decl && "Package node holds empty decl");
-            diag.ReportError(SourceRange{})
-                  << "The subpackage name cannot be the same as a declaration.";
+            diag.ReportError(cu->location())
+                  << "subpackage name cannot be the same as a declaration: " << id;
             continue;
          }
          // Otherwise, we can traverse into the next subpackage.
@@ -66,8 +66,8 @@ void NameResolver::buildSymbolTable() {
       // Check that the declaration is unique, cf. JLS 6.4.1.
       if(subPkg->children.find(cu->bodyAsDecl()->name().data()) !=
          subPkg->children.end()) {
-         diag.ReportError(SourceRange{})
-               << "The declaration name is not unique in the subpackage.";
+         diag.ReportError(cu->bodyAsDecl()->location())
+               << "declaration name is not unique in the subpackage.";
       }
       // Now add the CU's declaration to the subpackage.
       subPkg->children[cu->bodyAsDecl()->name().data()] = cu->bodyAsDecl();
@@ -99,13 +99,14 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
    for(auto const& imp : cu->imports()) {
       if(!imp.isOnDemand) continue;
       // First, resolve the subpackage subtree from the symbol table.
-      auto subPkg = resolveAstTy(static_cast<UnresolvedType const*>(imp.type));
+      auto subPkg = resolveImport(static_cast<UnresolvedType const*>(imp.type));
       // No value means an error has been reported, skip this import.
       if(!subPkg) continue;
       if(!std::holds_alternative<Pkg*>(subPkg.value())) {
-         diag.ReportError(SourceRange{}) << "failed to resolve import-on-demand "
-                                            "as subpackage is a declaration: \""
-                                         << imp.simpleName() << "\"";
+         diag.ReportError(imp.location())
+               << "failed to resolve import-on-demand as subpackage is a "
+                  "declaration: \""
+               << imp.simpleName() << "\"";
          continue;
       }
       // Grab the package as a Pkg*.
@@ -144,7 +145,7 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
    // 3. All declarations in the same package (different CUs). We can shadow
    //    any declarations already existing.
    {
-      auto curTree = resolveAstTy(curPkg);
+      auto curTree = resolveImport(curPkg);
       assert(curTree && "Current package should exist!");
       assert(std::holds_alternative<Pkg*>(curTree.value()));
       for(auto& kv : std::get<Pkg*>(curTree.value())->children)
@@ -155,10 +156,10 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
    for(auto const& imp : cu->imports()) {
       if(imp.isOnDemand) continue;
       // First, resolve the subpackage subtree from the symbol table.
-      auto subPkg = resolveAstTy(static_cast<UnresolvedType const*>(imp.type));
+      auto subPkg = resolveImport(static_cast<UnresolvedType const*>(imp.type));
       if(!subPkg) continue;
       if(!std::holds_alternative<Decl*>(subPkg.value())) {
-         diag.ReportError(SourceRange{})
+         diag.ReportError(imp.location())
                << "failed to resolve single-type-import as a declaration: \""
                << imp.simpleName() << "\"";
          continue;
@@ -169,7 +170,7 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
       // If the single-type-import name is the same as the class name, then it
       // shadows the class name. This is an error.
       if((decl->name() == cuDecl->name()) && (decl != cuDecl)) {
-         diag.ReportError(cu->location()) << "The single-type-import is the same "
+         diag.ReportError(cu->location()) << "single-type-import is the same "
                                              "as the class/interface name: "
                                           << decl->name();
          continue;
@@ -181,7 +182,7 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
       importsMap_[cu_->bodyAsDecl()->name().data()] = cu_->bodyAsDecl();
 }
 
-NameResolver::ChildOpt NameResolver::resolveAstTy(
+NameResolver::ChildOpt NameResolver::resolveImport(
       ast::UnresolvedType const* t) const {
    assert(t && "Type should not be null");
    assert(!t->isResolved() && "Type should not be resolved");
@@ -192,7 +193,7 @@ NameResolver::ChildOpt NameResolver::resolveAstTy(
    for(auto const& id : t->parts()) {
       // If the subpackage is a declaration, then the import is invalid.
       if(std::holds_alternative<ast::Decl*>(subPkg)) {
-         diag.ReportError(SourceRange{})
+         diag.ReportError(t->location())
                << "failed to resolve import as subpackage is a declaration: \""
                << id << "\"";
          return std::nullopt;
@@ -201,7 +202,7 @@ NameResolver::ChildOpt NameResolver::resolveAstTy(
       auto pkg = std::get<Pkg*>(subPkg);
       // If the subpackage does not exist, then the import is invalid.
       if(pkg->children.find(id) == pkg->children.end()) {
-         diag.ReportError(SourceRange{})
+         diag.ReportError(t->location())
                << "failed to resolve import as subpackage does not exist: \"" << id
                << "\"";
          return std::nullopt;
@@ -213,27 +214,27 @@ NameResolver::ChildOpt NameResolver::resolveAstTy(
    return subPkg;
 }
 
-void NameResolver::ResolveType(ast::UnresolvedType* type) {
+void NameResolver::ResolveType(ast::UnresolvedType* ty) {
    // assert(type && "Type should not be null");
-   if(!type) return;
-   assert(!type->isResolved() && "Type should not be resolved");
+   if(!ty) return;
+   assert(!ty->isResolved() && "Type should not be resolved");
    Pkg::Child subTy;
-   auto it = type->parts().begin();
+   auto it = ty->parts().begin();
    // Resolve the first level of the type against importMaps_
    if(auto it2 = importsMap_.find(*it); it2 != importsMap_.end()) {
       subTy = it2->second;
    } else {
-      diag.ReportError(SourceRange{})
+      diag.ReportError(ty->location())
             << "failed to resolve type as subpackage does not exist: \"" << *it
             << "\"";
       return;
    }
    // Now resolve the remainder of the type against subTy
    it = std::next(it);
-   for(; it != type->parts().end(); it++) {
+   for(; it != ty->parts().end(); it++) {
       // If the subpackage is a declaration, then the import is invalid.
       if(std::holds_alternative<ast::Decl*>(subTy)) {
-         diag.ReportError(SourceRange{})
+         diag.ReportError(ty->location())
                << "failed to resolve type as subpackage is a declaration: \""
                << *it << "\"";
          return;
@@ -242,7 +243,7 @@ void NameResolver::ResolveType(ast::UnresolvedType* type) {
       auto pkg = std::get<Pkg*>(subTy);
       // If the subpackage does not exist, then the import is invalid.
       if(pkg->children.find(*it) == pkg->children.end()) {
-         diag.ReportError(SourceRange{})
+         diag.ReportError(ty->location())
                << "failed to resolve type as subpackage does not exist: \"" << *it
                << "\"";
          return;
@@ -252,15 +253,15 @@ void NameResolver::ResolveType(ast::UnresolvedType* type) {
    }
    // The final type should be a declaration.
    if(!std::holds_alternative<ast::Decl*>(subTy)) {
-      diag.ReportError(SourceRange{})
-            << "failed to resolve type, is not a declaration: \""
-            << type->toString() << "\"";
+      diag.ReportError(ty->location())
+            << "failed to resolve type, is not a declaration: \"" << ty->toString()
+            << "\"";
       return;
    }
    // Now we can create a reference type to the declaration.
-   type->resolveInternal(std::get<ast::Decl*>(subTy));
+   ty->resolveInternal(std::get<ast::Decl*>(subTy));
    // After, the type should be resolved
-   assert(type->isResolved() && "Type should be resolved");
+   assert(ty->isResolved() && "Type should be resolved");
 }
 
 void NameResolver::Resolve() {

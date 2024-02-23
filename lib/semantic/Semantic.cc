@@ -14,16 +14,17 @@ using std::string;
 // ast/Type.h
 /* ===--------------------------------------------------------------------=== */
 
-UnresolvedType* Semantic::BuildUnresolvedType() {
-   return alloc.new_object<UnresolvedType>(alloc);
+UnresolvedType* Semantic::BuildUnresolvedType(SourceRange loc) {
+   return alloc.new_object<UnresolvedType>(alloc, loc);
 }
 
-ArrayType* Semantic::BuildArrayType(Type* elementType) {
-   return alloc.new_object<ArrayType>(alloc, elementType);
+ArrayType* Semantic::BuildArrayType(Type* elementType, SourceRange loc) {
+   return alloc.new_object<ArrayType>(alloc, elementType, loc);
 }
 
-BuiltInType* Semantic::BuildBuiltInType(parsetree::BasicType::Type type) {
-   return alloc.new_object<BuiltInType>(type);
+BuiltInType* Semantic::BuildBuiltInType(parsetree::BasicType::Type type,
+                                        SourceRange loc) {
+   return alloc.new_object<BuiltInType>(type, loc);
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -85,7 +86,7 @@ LinkingUnit* Semantic::BuildLinkingUnit(
    }
 
    // Build the java.lang package
-   auto javaLangPackage = BuildUnresolvedType();
+   auto javaLangPackage = BuildUnresolvedType(SourceRange{});
    javaLangPackage->addIdentifier("java");
    javaLangPackage->addIdentifier("lang");
    std::pmr::vector<ImportDeclaration> imports;
@@ -115,7 +116,7 @@ CompilationUnit* Semantic::BuildCompilationUnit(
    }
 
    // cf. JLS 7.5.2, we must import java.lang.*
-   auto javaLang = BuildUnresolvedType();
+   auto javaLang = BuildUnresolvedType(SourceRange{});
    javaLang->addIdentifier("java");
    javaLang->addIdentifier("lang");
    ImportDeclaration javaLangImport{javaLang, true};

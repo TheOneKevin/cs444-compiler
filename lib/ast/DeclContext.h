@@ -20,6 +20,7 @@ struct ImportDeclaration {
       assert(unresTy && "Can only extract simple name from unresolved type");
       return unresTy->parts().back();
    }
+   SourceRange location() const { return type->location(); }
 };
 
 class CompilationUnit final : public DeclContext {
@@ -82,7 +83,7 @@ public:
    int printDotNode(DotPrinter& dp) const override;
    /// @brief Overrides the setParent to construct canonical name.
    void setParent(DeclContext* parent) override;
-   SourceRange location() const { return location_; }
+   SourceRange location() const override { return location_; }
 
    auto mut_fields() { return std::views::all(fields_); }
    auto mut_methods() { return std::views::all(methods_); }
@@ -113,7 +114,7 @@ public:
    int printDotNode(DotPrinter& dp) const override;
    /// @brief Overrides the setParent to construct canonical name.
    void setParent(DeclContext* parent) override;
-   SourceRange location() const { return location_; }
+   SourceRange location() const override { return location_; }
    auto mut_extends() { return std::views::all(extends_); }
    auto mut_methods() { return std::views::all(methods_); }
 
@@ -153,7 +154,7 @@ public:
       locals_.reserve(decls.size());
       locals_.insert(locals_.end(), decls.begin(), decls.end());
    }
-   SourceRange location() const { return location_; }
+   SourceRange location() const override { return location_; }
 
    auto mut_parameters() { return std::views::all(parameters_); }
    auto mut_locals() const { return std::views::all(locals_); }
