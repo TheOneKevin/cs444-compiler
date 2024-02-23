@@ -64,6 +64,9 @@ public:
    /// @param type The unresolved type to resolve.
    void ResolveType(ast::UnresolvedType* type);
 
+   /// @brief Dumps the symbol table to the output stream.
+   void dump() const { rootPkg_->dump(); }
+
 private:
    void resolveInterface(ast::InterfaceDecl* decl);
    void resolveClass(ast::ClassDecl* decl);

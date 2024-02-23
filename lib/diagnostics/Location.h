@@ -57,8 +57,7 @@ public:
 
    std::ostream& print(std::ostream& os) const {
       begin_.print(os);
-      os << " - ";
-      end_.print(os);
+      os << " - " << end_.line_ << ":" << end_.column_;
       return os;
    }
 

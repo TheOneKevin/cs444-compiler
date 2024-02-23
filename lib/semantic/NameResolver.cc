@@ -58,7 +58,7 @@ void NameResolver::buildSymbolTable() {
          // Otherwise, we can traverse into the next subpackage.
          subPkg = std::get<Pkg*>(child);
       }
-      if (cu->isDefaultPackage()) {
+      if(cu->isDefaultPackage()) {
          subPkg = std::get<Pkg*>(rootPkg_->children[UNNAMED_PACKAGE]);
       }
       // If the CU has no body, then we can skip to the next CU.
@@ -72,7 +72,6 @@ void NameResolver::buildSymbolTable() {
       // Now add the CU's declaration to the subpackage.
       subPkg->children[cu->bodyAsDecl()->name().data()] = cu->bodyAsDecl();
    }
-   rootPkg_->dump();
 }
 
 void NameResolver::BeginContext(ast::CompilationUnit* cu) {
@@ -155,7 +154,7 @@ NameResolver::ChildOpt NameResolver::resolveAstTy(
       ast::UnresolvedType const* t) const {
    assert(t && "Type should not be null");
    assert(!t->isResolved() && "Type should not be resolved");
-   if (t->parts().empty()) {
+   if(t->parts().empty()) {
       return rootPkg_->children[UNNAMED_PACKAGE];
    }
    Pkg::Child subPkg = rootPkg_;

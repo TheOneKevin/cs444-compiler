@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
    checkAndPrintErrors();
 
    // Print the AST to stdout at the end only
-   if(optASTGraphFile.empty()) {
+   if(optASTGraphFile.empty() && !optSilent) {
       linking_unit->print(std::cout);
    }
 

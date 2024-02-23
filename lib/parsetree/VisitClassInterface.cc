@@ -81,6 +81,9 @@ ast::MethodDecl* ptv::visitMethodDeclaration(Node* node) {
    check_node_type(node, pty::MethodDeclaration);
    check_num_children(node, 2, 2);
 
+   // Reset the lexical local scope
+   sem.ResetLexicalLocalScope();
+
    // $1: Visit the header
    auto pt_header = node->child(0);
    check_node_type(pt_header, pty::MethodHeader);
@@ -118,7 +121,6 @@ ast::MethodDecl* ptv::visitMethodDeclaration(Node* node) {
    auto pt_body = node->child(1);
    ast::Stmt* body = nullptr;
    if(pt_body != nullptr) {
-      sem.ResetLexicalLocalScope();
       body = visitBlock(pt_body);
    }
 
@@ -133,6 +135,9 @@ ast::MethodDecl* ptv::visitConstructorDeclaration(Node* node) {
    check_node_type(node, pty::ConstructorDeclaration);
    check_num_children(node, 4, 4);
 
+   // Reset the lexical local scope
+   sem.ResetLexicalLocalScope();
+
    // $1: Visit the modifiers
    auto modifiers = visitModifierList(node->child(0));
    // $2: Visit the identifier
@@ -145,7 +150,6 @@ ast::MethodDecl* ptv::visitConstructorDeclaration(Node* node) {
    // $4: Visit the body
    ast::Stmt* body = nullptr;
    if(node->child(3) != nullptr) {
-      sem.ResetLexicalLocalScope();
       body = visitBlock(node->child(3));
    }
    // Create the AST and attach the lexical local declarations
@@ -204,6 +208,10 @@ ast::Decl* ptv::visit<pty::InterfaceMemberDeclarationList>(Node* node) {
 ast::MethodDecl* ptv::visitAbstractMethodDeclaration(Node* node) {
    check_node_type(node, pty::AbstractMethodDeclaration);
    check_num_children(node, 3, 4);
+
+   // Reset the lexical local scope
+   sem.ResetLexicalLocalScope();
+
    ast::Modifiers modifiers;
    ast::Type* type = nullptr;
    std::string name;
