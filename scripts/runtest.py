@@ -6,7 +6,7 @@ import sys
 
 # Grab the assignment number from the command line
 if len(sys.argv) != 2:
-    print("Usage: python3 runtest_a2.py <assignment>")
+    print(f"Usage: python3 {sys.argv[0]} <assignment>")
     sys.exit(1)
 assignment = sys.argv[1]
 
@@ -42,7 +42,7 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 # Set up the test directories
 test_dir = f"/u/cs444/pub/assignment_testcases/{assignment}/"
 stdlib_dir = "/u/cs444/pub/stdlib/2.0"
-joosc = os.path.join(script_dir, "..", "build", "joosc")
+joosc = os.path.join(script_dir, "..", "build", "jcc1")
 
 # List test cases files
 test_names = os.listdir(test_dir)
