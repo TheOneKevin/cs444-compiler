@@ -98,17 +98,23 @@ LinkingUnit* Semantic::BuildLinkingUnit(
 CompilationUnit* Semantic::BuildCompilationUnit(
       ReferenceType* package, array_ref<ImportDeclaration> imports,
       SourceRange loc, DeclContext* body) {
-   std::pmr::set<std::string_view> names;
+   std::pmr::set<std::pmr::string> names;
+   std::pmr::set<std::pmr::string> fullImportNames;
    for(auto import : imports) {
-      std::string_view name{import.simpleName()};
-      if(names.count(name) > 0) {
+      if (import.isOnDemand) continue;
+      std::pmr::string name(import.simpleName());
+      std::pmr::string fullName(import.type->toString());
+      // Check that no two single-type-import declarations clash with each other
+      // We allow duplicate if they refer to the same type
+      if(names.count(name) > 0 && fullImportNames.count(fullName) == 0){ 
          diag.ReportError(loc)
                << "No two single-type-import declarations clash with each other.";
       }
       names.insert(name);
+      fullImportNames.insert(fullName);
    }
    if(auto classDecl = dynamic_cast<ClassDecl*>(body)) {
-      std::string_view name = classDecl->name();
+      std::pmr::string name{classDecl->name()};
       if(names.count(name) > 0) {
          diag.ReportError(loc)
                << "No single-type-import declaration clashes with the class or "
@@ -116,7 +122,7 @@ CompilationUnit* Semantic::BuildCompilationUnit(
       }
       names.insert(name);
    } else if(auto interfaceDecl = dynamic_cast<InterfaceDecl*>(body)) {
-      std::string_view name = interfaceDecl->name();
+      std::pmr::string name{interfaceDecl->name()};
       if(names.count(name) > 0) {
          diag.ReportError(loc)
                << "No single-type-import declaration clashes with the class or "
