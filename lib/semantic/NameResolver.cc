@@ -143,6 +143,15 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
       }
       // Second, add the Decl from the subpackage to the imports map.
       auto decl = std::get<Decl*>(subPkg.value());
+      auto cuDecl = cu->bodyAsDecl();
+      // If the single-type-import name is the same as the class name, then it
+      // shadows the class name. This is an error.
+      if((decl->name() == cuDecl->name()) && (decl != cuDecl)) {
+         diag.ReportError(cu->location()) << "The single-type-import is the same "
+                                             "as the class/interface name: "
+                                          << decl->name();
+         continue;
+      }
       importsMap_[imp.simpleName()] = decl;
    }
    // 5. All declarations in the current CU. This may also shadow anything.

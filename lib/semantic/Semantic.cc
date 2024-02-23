@@ -101,34 +101,17 @@ CompilationUnit* Semantic::BuildCompilationUnit(
    std::pmr::set<std::pmr::string> names;
    std::pmr::set<std::pmr::string> fullImportNames;
    for(auto import : imports) {
-      if (import.isOnDemand) continue;
+      if(import.isOnDemand) continue;
       std::pmr::string name(import.simpleName());
       std::pmr::string fullName(import.type->toString());
       // Check that no two single-type-import declarations clash with each other
       // We allow duplicate if they refer to the same type
-      if(names.count(name) > 0 && fullImportNames.count(fullName) == 0){ 
+      if(names.count(name) > 0 && fullImportNames.count(fullName) == 0) {
          diag.ReportError(loc)
                << "No two single-type-import declarations clash with each other.";
       }
       names.insert(name);
       fullImportNames.insert(fullName);
-   }
-   if(auto classDecl = dynamic_cast<ClassDecl*>(body)) {
-      std::pmr::string name{classDecl->name()};
-      if(names.count(name) > 0) {
-         diag.ReportError(loc)
-               << "No single-type-import declaration clashes with the class or "
-                  "interface declared in the same file.";
-      }
-      names.insert(name);
-   } else if(auto interfaceDecl = dynamic_cast<InterfaceDecl*>(body)) {
-      std::pmr::string name{interfaceDecl->name()};
-      if(names.count(name) > 0) {
-         diag.ReportError(loc)
-               << "No single-type-import declaration clashes with the class or "
-                  "interface declared in the same file.";
-      }
-      names.insert(name);
    }
 
    // cf. JLS 7.5.2, we must import java.lang.*
