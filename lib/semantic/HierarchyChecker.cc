@@ -187,7 +187,7 @@ void HierarchyChecker::checkInheritance() {
          }
 
          // Check for duplicate methods
-         
+
          checkClassMethod(classDecl);
          checkClassConstructors(classDecl);
       } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(body)) {
@@ -274,57 +274,97 @@ void HierarchyChecker::checkMethodReplacement() {
 
       if(auto classDecl = dynamic_cast<ast::ClassDecl*>(body)) {
          std::set<ast::MethodDecl*> inheritedMethods;
-         for(auto method : classDecl->methods()) {
-            inheritedMethods.insert(method);
-         }
+         std::set<ast::MethodDecl*> abstractMethods;
          for(auto superClass : superClassMap_[classDecl]) {
             for(auto method : superClass->methods()) {
-               inheritedMethods.insert(method);
-               for(auto other : classDecl->methods()) {
-                  if(!isSameMethodSignature(method, other)) continue;
-
-                  if(method->modifiers().isStatic() &&
-                     !other->modifiers().isStatic()) {
-                     diag.ReportError(other->location())
-                           << "A nonstatic method must not replace a static "
-                              "method. "
-                           << other->name();
-                  } else if(!method->modifiers().isStatic() &&
-                            other->modifiers().isStatic()) {
-                     diag.ReportError(other->location())
-                           << "A static method must not replace a nonstatic "
-                              "method. "
-                           << other->name();
-                  } else if(other->modifiers().isProtected() &&
-                            method->modifiers().isPublic()) {
-                     diag.ReportError(other->location())
-                           << "A protected method must not replace a public "
-                              "method. "
-                           << other->name();
-                  } else if(method->modifiers().isFinal()) {
-                     diag.ReportError(other->location())
-                           << "A method must not replace a final method. "
-                           << other->name();
-                  }
+               if(method->modifiers().isAbstract()) {
+                  abstractMethods.insert(method);
+               } else {
+                  inheritedMethods.insert(method);
                }
             }
          }
          for(auto superInterface : superInterfaceMap_[classDecl]) {
             for(auto method : superInterface->methods()) {
-               inheritedMethods.insert(method);
+               abstractMethods.insert(method);
             }
          }
          for(auto method : classDecl->methods()) {
+            for(auto other : inheritedMethods) {
+               if(!isSameMethodSignature(method, other)) continue;
+               if(*method->mut_returnType() != *other->mut_returnType()) {
+                  diag.ReportError(other->location())
+                        << "A method must not replace a method with a "
+                           "different return type. "
+                        << other->name();
+               }
+               if(!method->modifiers().isStatic() &&
+                  other->modifiers().isStatic()) {
+                  diag.ReportError(other->location())
+                        << "A nonstatic method must not replace a static "
+                           "method. "
+                        << other->name();
+               }
+               if(!method->modifiers().isStatic() &&
+                  other->modifiers().isStatic()) {
+                  diag.ReportError(other->location())
+                        << "A static method must not replace a nonstatic "
+                           "method. "
+                        << other->name();
+               }
+               if(other->modifiers().isProtected() &&
+                  method->modifiers().isPublic()) {
+                  diag.ReportError(other->location())
+                        << "A protected method must not replace a public "
+                           "method. "
+                        << other->name();
+               }
+               if(method->modifiers().isFinal()) {
+                  diag.ReportError(other->location())
+                        << "A method must not replace a final method. "
+                        << other->name();
+               }
+            }
+         }
+         for(auto method : classDecl->methods()) {
+            if(method->modifiers().isAbstract() &&
+               !classDecl->modifiers().isAbstract()) {
+               diag.ReportError(classDecl->location())
+                     << "A class that contains (declares or inherits) any "
+                        "abstract methods must be abstract. "
+                     << classDecl->name();
+               break;
+            }
+         }
+         for(auto method : abstractMethods) {
+            bool isImplemented = false;
             for(auto other : classDecl->methods()) {
-               if(method == other) continue;
                if(isSameMethodSignature(method, other)) {
-                  if(method->mut_returnType() != other->mut_returnType()) {
+                  if(*method->mut_returnType() != *other->mut_returnType()) {
                      diag.ReportError(other->location())
                            << "A method must not replace a method with a "
                               "different return type. "
                            << other->name();
+                  } else {
+                     isImplemented = true;
                   }
                }
+            }
+            for(auto other : inheritedMethods) {
+               if(isSameMethodSignature(method, other)) {
+                  if(*method->mut_returnType() != *other->mut_returnType()) {
+                     diag.ReportError(other->location())
+                           << "A method must not replace a method with a "
+                              "different return type. "
+                           << other->name();
+                  } else {
+                     isImplemented = true;
+                  }
+               }
+            }
+            if(!isImplemented && !classDecl->modifiers().isAbstract()) {
+               diag.ReportError(method->location())
+                     << "An abstract method must be implemented in an non-abstract class " << method->name();
             }
          }
       } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(body)) {
@@ -333,7 +373,7 @@ void HierarchyChecker::checkMethodReplacement() {
                for(auto other : interfaceDecl->methods()) {
                   if(!isSameMethodSignature(method, other)) continue;
 
-                  if(method->mut_returnType() != other->mut_returnType()) {
+                  if(*method->mut_returnType() != *other->mut_returnType()) {
                      diag.ReportError(other->location())
                            << "A method must not replace a method with a "
                               "different return type. "

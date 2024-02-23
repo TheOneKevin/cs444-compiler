@@ -14,8 +14,9 @@ ast::UnaryOp* ptv::convertToUnaryOp(Operator::Type type) {
          return alloc.new_object<ast::UnaryOp>(ast::UnaryOp::OpType::Not);
       case oty::Minus:
          return alloc.new_object<ast::UnaryOp>(ast::UnaryOp::OpType::Minus);
+      default:
+         throw std::runtime_error("Invalid operator type");
    }
-   throw std::runtime_error("Invalid operator type");
 }
 
 ast::BinaryOp* ptv::convertToBinaryOp(Operator::Type type) {
@@ -61,8 +62,9 @@ ast::BinaryOp* ptv::convertToBinaryOp(Operator::Type type) {
          return alloc.new_object<ast::BinaryOp>(ast::BinaryOp::OpType::Divide);
       case oty::Modulo:
          return alloc.new_object<ast::BinaryOp>(ast::BinaryOp::OpType::Modulo);
+      default:
+         throw std::runtime_error("Invalid operator type");
    }
-   throw std::runtime_error("Invalid operator type");
 }
 
 ast::Expr* ptv::visitExpr(Node* node) {
@@ -284,6 +286,7 @@ ast::ExprNode* ptv::visitRegularType(Node* node) {
    } else if(node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
       return alloc.new_object<ast::TypeNode>(visitReferenceType(node->child(0)));
    }
+   unreachable();
 }
 
 ast::ExprNode* ptv::visitArrayType(Node* node) {
@@ -318,6 +321,8 @@ ast::LiteralNode* ptv::visitLiteral(Node* node) {
          case parsetree::Literal::Type::Null:
             return alloc.new_object<ast::LiteralNode>(
                   lit->get_value(), ast::LiteralNode::Type::Null);
+         default:
+            throw std::runtime_error("Invalid literal type");
       }
    }
    unreachable();
