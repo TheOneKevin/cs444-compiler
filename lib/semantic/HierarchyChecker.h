@@ -14,42 +14,24 @@ public:
    HierarchyChecker(diagnostics::DiagnosticEngine& diag, ast::LinkingUnit* lu)
          : diag{diag}, lu_{lu} {
       checkInheritance();
-      checkMethodReplacement();
    }
 
 private:
    diagnostics::DiagnosticEngine& diag;
    ast::LinkingUnit* lu_;
-   std::pmr::map<ast::ClassDecl*, std::pmr::set<ast::ClassDecl*>> superClassMap_;
-   std::pmr::map<ast::Decl*, std::pmr::set<ast::InterfaceDecl*>>
-         superInterfaceMap_;
+   std::pmr::map<ast::Decl*, std::pmr::set<ast::Decl*>> inheritanceMap_;
    void checkInheritance();
 
-   // Check functinos for method
+   // Check functions for method
    void checkClassConstructors(ast::ClassDecl* classDecl);
-   void checkClassMethod(ast::ClassDecl* classDecl);
-   void checkInterfaceMethod(ast::InterfaceDecl* interfaceDecl);
-   void checkMethodReplacement();
+   void checkClassMethod(ast::ClassDecl* classDecl, std::pmr::vector<ast::MethodDecl*>& inheritedMethods);
+   void checkInterfaceMethod(ast::InterfaceDecl* interfaceDecl, std::pmr::vector<ast::MethodDecl*>& inheritedMethods);
 
-   // Flattening map functions
-   void flattenClassMap(
-         std::pmr::map<ast::ClassDecl*, std::pmr::vector<ast::ClassDecl*>>&
-               unflattenedMap);
-   void flattenClassMapHelper(
-         ast::ClassDecl* node,
-         std::pmr::map<ast::ClassDecl*, std::pmr::vector<ast::ClassDecl*>>&
-               unflattenedMap,
-         std::pmr::set<ast::ClassDecl*>& visited,
-         std::pmr::set<ast::ClassDecl*>& currentPath);
-   void flattenInterfaceMap(
-         std::pmr::map<ast::Decl*, std::pmr::vector<ast::InterfaceDecl*>>&
-               unflattenedMap);
-   void flattenInterfaceMapHelper(
-         ast::Decl* node,
-         std::pmr::map<ast::Decl*, std::pmr::vector<ast::InterfaceDecl*>>&
-               unflattenedMap,
-         std::pmr::set<ast::Decl*>& visited,
-         std::pmr::set<ast::InterfaceDecl*>& currentPath);
+   // Check method inheritance
+   void checkMethodInheritance();
+   void checkMethodInheritanceHelper(
+      ast::Decl* node,
+      std::pmr::set<ast::Decl*>& visited);
 };
 
 } // namespace semantic

@@ -209,7 +209,7 @@ InterfaceDecl* Semantic::BuildInterfaceDecl(Modifiers modifiers, SourceRange loc
    }
    // Create the AST node
    return alloc.new_object<InterfaceDecl>(
-         alloc, modifiers, loc, name, extends, interfaceBodyDecls);
+         alloc, modifiers, loc, name, extends, objectType, interfaceBodyDecls);
 }
 
 MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers, SourceRange loc,

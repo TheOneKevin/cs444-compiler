@@ -201,13 +201,14 @@ void ClassDecl::setParent(DeclContext* parent) {
 
 InterfaceDecl::InterfaceDecl(BumpAllocator& alloc, Modifiers modifiers,
                              SourceRange location, string_view name,
-                             array_ref<ReferenceType*> extends,
+                             array_ref<ReferenceType*> extends, ReferenceType* objectSuperclass,
                              array_ref<Decl*> interfaceBodyDecls) throw()
       : Decl{alloc, name},
         modifiers_{modifiers},
         extends_{alloc},
         methods_{alloc},
-        location_{location} {
+        location_{location},
+        objectSuperclass_{objectSuperclass} {
    for(auto bodyDecl : interfaceBodyDecls) {
       utils::move_vector<ReferenceType*>(extends, extends_);
       if(auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {

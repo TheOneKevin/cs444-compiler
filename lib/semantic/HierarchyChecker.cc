@@ -18,126 +18,66 @@ static bool isSameMethodSignature(ast::MethodDecl* method1,
    return true;
 }
 
-void HierarchyChecker::flattenClassMapHelper(
-      ast::ClassDecl* node,
-      std::pmr::map<ast::ClassDecl*, std::pmr::vector<ast::ClassDecl*>>&
-            unflattenedMap,
-      std::pmr::set<ast::ClassDecl*>& visited,
-      std::pmr::set<ast::ClassDecl*>& currentPath) {
+void HierarchyChecker::checkMethodInheritanceHelper(
+      ast::Decl* node, std::pmr::set<ast::Decl*>& visited) {
    // Mark the node as visited
    visited.insert(node);
+   std::pmr::vector<ast::MethodDecl*> inheritedMethods;
 
-   for(auto& superClass : unflattenedMap[node]) {
-      currentPath.insert(superClass);
-      // If the super class has been visited, we simply add the path to the current
-      // path
-      if(visited.find(superClass) != visited.end()) {
-         currentPath.insert(superClassMap_[superClass].begin(),
-                            superClassMap_[superClass].end());
-         continue;
-      }
-
-      // visit the super class
-      std::pmr::set<ast::ClassDecl*> superPath;
-      flattenClassMapHelper(superClass, unflattenedMap, visited, superPath);
-      // Add the child path to the current path
-      currentPath.insert(superPath.begin(), superPath.end());
-   }
-
-   if(currentPath.find(node) != currentPath.end()) {
-      // Cycle detected
-      diag.ReportError(node->location())
-            << "Cycle detected in class hierarchy." << node->name();
-      return;
-   }
-
-   // Add the node to the flattened map
-   superClassMap_[node] = currentPath;
-}
-
-void HierarchyChecker::flattenClassMap(
-      std::pmr::map<ast::ClassDecl*, std::pmr::vector<ast::ClassDecl*>>&
-            unflattenedMap) {
-   std::pmr::set<ast::ClassDecl*> visited;
-   for(auto& entry : unflattenedMap) {
-      if(visited.count(entry.first)) continue;
-      std::pmr::set<ast::ClassDecl*> currentPath;
-      flattenClassMapHelper(entry.first, unflattenedMap, visited, currentPath);
-   }
-}
-
-void HierarchyChecker::flattenInterfaceMapHelper(
-      ast::Decl* node,
-      std::pmr::map<ast::Decl*, std::pmr::vector<ast::InterfaceDecl*>>&
-            unflattenedMap,
-      std::pmr::set<ast::Decl*>& visited,
-      std::pmr::set<ast::InterfaceDecl*>& currentPath) {
-   // Mark the node as visited
-   visited.insert(node);
-
-   for(auto& superInterface : unflattenedMap[node]) {
-      currentPath.insert(superInterface);
-      // If the super interface has been visited, we simply add the path to the
-      // current path
-      if(visited.find(superInterface) != visited.end()) {
-         currentPath.insert(superInterfaceMap_[superInterface].begin(),
-                            superInterfaceMap_[superInterface].end());
-         continue;
-      }
-
-      // visit the super interface
-      std::pmr::set<ast::InterfaceDecl*> superPath;
-      flattenInterfaceMapHelper(
-            superInterface, unflattenedMap, visited, superPath);
-      // Add the child path to the current path
-      currentPath.insert(superPath.begin(), superPath.end());
-   }
-
-   if(auto classDecl = dynamic_cast<ast::ClassDecl*>(node)) {
-      // The superinterfaces of the super class is also the superinterfaces of the
-      // derived class
-      for(auto superClass : superClassMap_[classDecl]) {
-         // If the super class has been visited, we simply add the path to the
-         // current path
-         if(visited.count(superClass)) {
-            currentPath.insert(superInterfaceMap_[superClass].begin(),
-                               superInterfaceMap_[superClass].end());
+   for(auto super : inheritanceMap_[node]) {
+      if(auto superClass = dynamic_cast<ast::ClassDecl*>(super)) {
+         if(!visited.count(superClass)) {
+            checkMethodInheritanceHelper(superClass, visited);
+         } else if(!superClass->isInheritedSet()) {
+            diag.ReportError(superClass->location())
+                  << "Cycle is detected in the inheritance graph. "
+                  << superClass->name();
             continue;
          }
-         std::pmr::set<ast::InterfaceDecl*> superPath;
-         flattenInterfaceMapHelper(superClass, unflattenedMap, visited, superPath);
-         // Add the super path to the current path
-         currentPath.insert(superPath.begin(), superPath.end());
-      }
-   } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(node)) {
-      // Cycle detected
-      if(currentPath.find(interfaceDecl) != currentPath.end()) {
-         diag.ReportError(interfaceDecl->location())
-               << "Cycle detected in interface hierarchy." << node->name();
-         return;
+         for(auto method : superClass->inheritedMethods()) {
+            inheritedMethods.emplace_back(method);
+         }
+      } else if(auto superInterface = dynamic_cast<ast::InterfaceDecl*>(super)) {
+         if(!visited.count(superInterface)) {
+            checkMethodInheritanceHelper(superInterface, visited);
+         } else if(!superInterface->isInheritedSet()) {
+            diag.ReportError(superInterface->location())
+                  << "Cycle is detected in the inheritance graph. "
+                  << superInterface->name();
+            continue;
+         }
+         for(auto method : superInterface->inheritedMethods()) {
+            inheritedMethods.emplace_back(method);
+         }
+      } else {
+         assert(false && "Unreachable");
       }
    }
-
-   // Add the node to the flattened map
-   superInterfaceMap_[node] = currentPath;
+   if(auto classDecl = dynamic_cast<ast::ClassDecl*>(node)) {
+      checkClassMethod(classDecl, inheritedMethods);
+      checkClassConstructors(classDecl);
+   } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(node)) {
+      checkInterfaceMethod(interfaceDecl, inheritedMethods);
+   }
 }
 
-void HierarchyChecker::flattenInterfaceMap(
-      std::pmr::map<ast::Decl*, std::pmr::vector<ast::InterfaceDecl*>>&
-            unflattenedMap) {
+void HierarchyChecker::checkMethodInheritance() {
    std::pmr::set<ast::Decl*> visited;
-   for(auto& entry : unflattenedMap) {
-      if(visited.count(entry.first)) continue;
-      std::pmr::set<ast::InterfaceDecl*> currentPath;
-      flattenInterfaceMapHelper(entry.first, unflattenedMap, visited, currentPath);
+   for(auto cu : lu_->compliationUnits()) {
+      auto body = cu->body();
+      // if the body is null, continue to the next iteration
+      if(!body) continue;
+      if(auto classDecl = dynamic_cast<ast::ClassDecl*>(body)) {
+         if(visited.count(classDecl)) continue;
+         checkMethodInheritanceHelper(classDecl, visited);
+      } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(body)) {
+         if(visited.count(interfaceDecl)) continue;
+         checkMethodInheritanceHelper(interfaceDecl, visited);
+      }
    }
 }
 
 void HierarchyChecker::checkInheritance() {
-   std::pmr::map<ast::ClassDecl*, std::pmr::vector<ast::ClassDecl*>>
-         unflattenedClassMap;
-   std::pmr::map<ast::Decl*, std::pmr::vector<ast::InterfaceDecl*>>
-         unflattenedInterfaceMap;
    for(auto cu : lu_->compliationUnits()) {
       auto body = cu->body();
       // if the body is null, continue to the next iteration
@@ -161,7 +101,11 @@ void HierarchyChecker::checkInheritance() {
                      << "A class must not extend a final class"
                      << classDecl->name();
             }
-            unflattenedClassMap[classDecl].emplace_back(superClassDecl);
+            inheritanceMap_[classDecl].insert(superClassDecl);
+         } else if(auto objectClass = classDecl->superClasses()[1]) {
+            // if the class does not extend any class, it extends the object class
+            inheritanceMap_[classDecl].insert(
+                  dynamic_cast<ast::ClassDecl*>(objectClass->decl()));
          }
 
          // check if interfaces are valid
@@ -183,13 +127,8 @@ void HierarchyChecker::checkInheritance() {
                diag.ReportError(classDecl->location())
                      << "A class must not implement a class" << classDecl->name();
             }
-            unflattenedInterfaceMap[classDecl].emplace_back(interfaceDecl);
+            inheritanceMap_[classDecl].insert(interfaceDecl);
          }
-
-         // Check for duplicate methods
-
-         checkClassMethod(classDecl);
-         checkClassConstructors(classDecl);
       } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(body)) {
          // no duplicate interfaces
          for(auto extends : interfaceDecl->extends()) {
@@ -202,38 +141,130 @@ void HierarchyChecker::checkInheritance() {
                }
             }
             // check that the interface is not a class
-            auto inferfaceDecl =
+            auto superInterface =
                   dynamic_cast<ast::InterfaceDecl*>(extends->decl());
-            if(!interfaceDecl) {
-               diag.ReportError(interfaceDecl->location())
+            if(!superInterface) {
+               diag.ReportError(superInterface->location())
                      << "A interface must not extend a class"
-                     << interfaceDecl->name();
+                     << superInterface->name();
             }
-            unflattenedInterfaceMap[interfaceDecl].emplace_back(inferfaceDecl);
+            inheritanceMap_[interfaceDecl].insert(superInterface);
+            std::cout << "Interface: " << interfaceDecl->name() << " extends "
+                      << superInterface->name() << "\n";
          }
-
-         // Check for duplicate methods
-         checkInterfaceMethod(interfaceDecl);
       }
    }
-   // Flatten the hierarchy maps so we can perform cycle detection and check for
-   // correct method overriding
-   flattenClassMap(unflattenedClassMap);
-   flattenInterfaceMap(unflattenedInterfaceMap);
+   checkMethodInheritance();
 }
 
-void HierarchyChecker::checkClassMethod(ast::ClassDecl* classDecl) {
-   for(auto methods : classDecl->methods()) {
+void HierarchyChecker::checkClassMethod(
+      ast::ClassDecl* classDecl,
+      std::pmr::vector<ast::MethodDecl*>& inheritedMethods) {
+   std::pmr::vector<ast::MethodDecl*> allMethods;
+   std::pmr::vector<ast::MethodDecl*> inheritedNotOverriden;
+   // check for duplicate methods
+   for(auto method : classDecl->methods()) {
+      allMethods.emplace_back(method);
       for(auto other : classDecl->methods()) {
-         if(methods == other) continue;
-         if(isSameMethodSignature(methods, other)) {
-            diag.ReportError(methods->location())
+         if(method == other) continue;
+         if(isSameMethodSignature(method, other)) {
+            diag.ReportError(method->location())
                   << "A class must not declare two methods with the same "
                      "signature. "
-                  << methods->name();
+                  << method->name();
          }
       }
    }
+
+   // check for abstract declaration
+   for(auto method : classDecl->methods()) {
+      if(method->modifiers().isAbstract() &&
+         !classDecl->modifiers().isAbstract()) {
+         diag.ReportError(classDecl->location())
+               << "A class that contains (declares or inherits) any "
+                  "abstract methods must be abstract. "
+               << classDecl->name();
+         break;
+      }
+   }
+
+   // check for method replacement
+   for(auto* other : inheritedMethods) {
+      bool isOverriden = false;
+      for(auto* method : classDecl->methods()) {
+         if(!isSameMethodSignature(method, other)) continue;
+         isOverriden = true;
+         if(method->returnTy() != other->returnTy()) {
+            diag.ReportError(classDecl->location())
+                  << "A method must not replace a method with a "
+                     "different return type. "
+                  << other->name();
+         }
+         if(!method->modifiers().isStatic() && other->modifiers().isStatic()) {
+            diag.ReportError(classDecl->location())
+                  << "A nonstatic method must not replace a static "
+                     "method. "
+                  << other->name();
+         }
+         if(method->modifiers().isStatic() && !other->modifiers().isStatic()) {
+            diag.ReportError(classDecl->location())
+                  << "A static method must not replace a nonstatic "
+                     "method. "
+                  << other->name();
+         }
+         if(method->modifiers().isProtected() && other->modifiers().isPublic()) {
+            diag.ReportError(classDecl->location())
+                  << "A protected method must not replace a public "
+                     "method. "
+                  << other->name();
+         }
+         if(other->modifiers().isFinal()) {
+            diag.ReportError(classDecl->location())
+                  << "A method must not replace a final method. " << other->name();
+         }
+      }
+      if(!isOverriden) inheritedNotOverriden.emplace_back(other);
+   }
+
+   // check for abstract method implementation
+   for(auto method : inheritedNotOverriden) {
+      bool isImplemented = !method->modifiers().isAbstract();
+      for(auto other : inheritedNotOverriden) {
+         if(isSameMethodSignature(method, other)) {
+            if(method->returnTy() != other->returnTy()) {
+               diag.ReportError(other->location())
+                     << "A method must not replace a method with a "
+                        "different return type. "
+                     << other->name();
+            } else if(!other->modifiers().isAbstract()) {
+               if(other->modifiers().isProtected() &&
+                  method->modifiers().isPublic()) {
+                  diag.ReportError(other->location())
+                        << "A protected method must not replace a public "
+                           "method. "
+                        << other->name();
+               }
+               isImplemented = true;
+            }
+         }
+      }
+      if(!isImplemented && !classDecl->modifiers().isAbstract()) {
+         diag.ReportError(classDecl->location())
+               << "An abstract method must be implemented in an "
+                  "non-abstract class "
+               << method->name();
+      } else if(isImplemented == !method->modifiers().isAbstract()) {
+         allMethods.emplace_back(method);
+      }
+   }
+   // record the inherited methods
+   classDecl->setInheritedMethods(allMethods);
+   std::cout << "Class: " << classDecl->name() << "\n";
+   std::cout << "Inherited methods: ";
+   for(auto method : allMethods) {
+      std::cout << method->name() << " ";
+   }
+   std::cout << "\n";
 }
 
 void HierarchyChecker::checkClassConstructors(ast::ClassDecl* classDecl) {
@@ -250,129 +281,87 @@ void HierarchyChecker::checkClassConstructors(ast::ClassDecl* classDecl) {
    }
 }
 
-void HierarchyChecker::checkInterfaceMethod(ast::InterfaceDecl* interfaceDecl) {
-   for(auto methods : interfaceDecl->methods()) {
+void HierarchyChecker::checkInterfaceMethod(
+      ast::InterfaceDecl* interfaceDecl,
+      std::pmr::vector<ast::MethodDecl*>& inheritedMethods) {
+   std::pmr::vector<ast::MethodDecl*> allMethods;
+
+   for(auto method : interfaceDecl->methods()) {
+      allMethods.emplace_back(method);
       for(auto other : interfaceDecl->methods()) {
-         if(methods == other) continue;
-         if(isSameMethodSignature(methods, other)) {
-            if(methods->name() == other->name()) {
-               diag.ReportError(methods->location())
-                     << "An interface must not declare two methods with the same "
-                        "signature. "
-                     << methods->name();
-            }
+         if(method == other) continue;
+         if(isSameMethodSignature(method, other)) {
+            diag.ReportError(method->location())
+                  << "An interface must not declare two methods with the same "
+                     "signature. "
+                  << method->name();
          }
       }
    }
-}
 
-void HierarchyChecker::checkMethodReplacement() {
-   for(auto cu : lu_->compliationUnits()) {
-      auto body = cu->body();
-      // if the body is null, continue to the next iteration
-      if(!body) continue;
+   // for some reason we have to check against the object class
+   auto objectClass =
+         dynamic_cast<ast::ClassDecl*>(interfaceDecl->objectSuperclass()->decl());
+   for(auto method : interfaceDecl->methods()) {
+      for(auto other : objectClass->methods()) {
+         if(!isSameMethodSignature(method, other)) continue;
+         if(method->returnTy() != other->returnTy()) {
+            diag.ReportError(interfaceDecl->location())
+                  << "A method must not replace a method with a "
+                     "different return type. "
+                  << other->name();
+         }
+         if(method->modifiers().isProtected() && other->modifiers().isPublic()) {
+            diag.ReportError(interfaceDecl->location())
+                  << "A protected method must not replace a public "
+                     "method. "
+                  << other->name();
+         }
+         if(other->modifiers().isFinal()) {
+            diag.ReportError(interfaceDecl->location())
+                  << "A method must not replace a final method. " << other->name();
+         }
+      }
+   }
 
-      if(auto classDecl = dynamic_cast<ast::ClassDecl*>(body)) {
-         std::set<ast::MethodDecl*> inheritedMethods;
-         for(auto method : classDecl->methods()) {
-            inheritedMethods.insert(method);
-         }
-         for(auto superClass : superClassMap_[classDecl]) {
-            for(auto method : superClass->methods()) {
-               inheritedMethods.insert(method);
-            }
-         }
-         for(auto superInterface : superInterfaceMap_[classDecl]) {
-            for(auto method : superInterface->methods()) {
-               inheritedMethods.insert(method);
-            }
-         }
-         for(auto* method : inheritedMethods) {
-            for(auto* other : inheritedMethods) {
-               if(method == other) continue;
-               if(!isSameMethodSignature(method, other)) continue;
-               if(method->returnTy() != other->returnTy()) {
-                  diag.ReportError(other->location())
-                        << "A method must not replace a method with a "
-                           "different return type. "
-                        << other->name();
-               }
-               if(!method->modifiers().isStatic() &&
-                  other->modifiers().isStatic()) {
-                  diag.ReportError(other->location())
-                        << "A nonstatic method must not replace a static "
-                           "method. "
-                        << other->name();
-               }
-               if(!method->modifiers().isStatic() &&
-                  other->modifiers().isStatic()) {
-                  diag.ReportError(other->location())
-                        << "A static method must not replace a nonstatic "
-                           "method. "
-                        << other->name();
-               }
-               if(other->modifiers().isProtected() &&
-                  method->modifiers().isPublic()) {
-                  diag.ReportError(other->location())
-                        << "A protected method must not replace a public "
-                           "method. "
-                        << other->name();
-               }
-               if(method->modifiers().isFinal()) {
-                  diag.ReportError(other->location())
-                        << "A method must not replace a final method. "
-                        << other->name();
-               }
-            }
-         }
-         for(auto method : classDecl->methods()) {
-            if(method->modifiers().isAbstract() &&
-               !classDecl->modifiers().isAbstract()) {
-               diag.ReportError(classDecl->location())
-                     << "A class that contains (declares or inherits) any "
-                        "abstract methods must be abstract. "
-                     << classDecl->name();
-               break;
-            }
-         }
-         for(auto method : inheritedMethods) {
-            bool isImplemented = !method->modifiers().isAbstract();
-            for(auto other : classDecl->methods()) {
-               if(isSameMethodSignature(method, other)) {
-                  if(method->returnTy() != other->returnTy()) {
-                     diag.ReportError(other->location())
-                           << "A method must not replace a method with a "
-                              "different return type. "
-                           << other->name();
-                  } else if (!other->modifiers().isAbstract()){
-                     isImplemented = true;
-                  }
-               }
-            }
-            if(!isImplemented && !classDecl->modifiers().isAbstract()) {
+   for(auto method : inheritedMethods) {
+      bool isOverriden = false;
+      for(auto other : interfaceDecl->methods()) {
+         if(isSameMethodSignature(method, other)) {
+            if(method->returnTy() != other->returnTy()) {
                diag.ReportError(method->location())
-                     << "An abstract method must be implemented in an "
-                        "non-abstract class "
+                     << "An interface must not contain two methods with the same "
+                        "signature. "
                      << method->name();
-            }
-         }
-      } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(body)) {
-         for(auto superInterface : superInterfaceMap_[interfaceDecl]) {
-            for(auto method : superInterface->methods()) {
-               for(auto other : interfaceDecl->methods()) {
-                  if(!isSameMethodSignature(method, other)) continue;
-
-                  if(method->returnTy() != other->returnTy()) {
-                     diag.ReportError(other->location())
-                           << "A method must not replace a method with a "
-                              "different return type. "
-                           << other->name();
-                  }
-               }
+            } else {
+               isOverriden = true;
             }
          }
       }
+      if(!isOverriden) allMethods.emplace_back(method);
    }
+
+   for(auto method : allMethods) {
+      for(auto other : allMethods) {
+         if(method == other) continue;
+         if(isSameMethodSignature(method, other) &&
+            method->returnTy() != other->returnTy()) {
+            diag.ReportError(method->location())
+                  << "An interface must not contain two methods with the same "
+                     "signature. "
+                  << method->name();
+         }
+      }
+   }
+
+   // record the inherited methods
+   interfaceDecl->setInheritedMethods(allMethods);
+   std::cout << "Interface: " << interfaceDecl->name() << "\n";
+   std::cout << "Inherited methods: ";
+   for(auto method : allMethods) {
+      std::cout << method->name() << " ";
+   }
+   std::cout << "\n";
 }
 
 } // namespace semantic

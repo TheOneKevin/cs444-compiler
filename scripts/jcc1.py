@@ -49,6 +49,9 @@ stdlib_files = grab_all_java(stdlib_dir)
 files = [test] if os.path.isfile(test) else grab_all_java(test)
 files += stdlib_files
 ret = subprocess.run([joosc, *files], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+
+print("Command:")
+print(subprocess.list2cmdline([joosc, *files]))
 print("return code:")
 print(ret.returncode)
 print("stdout:")
