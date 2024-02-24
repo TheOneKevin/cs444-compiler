@@ -243,8 +243,10 @@ ast::MethodDecl* ptv::visitAbstractMethodDeclaration(Node* node) {
    // Set as abstract
    modifiers.set(ast::Modifiers::Type::Abstract);
    // Return the constructed AST node
-   return sem.BuildMethodDecl(
+   auto ast = sem.BuildMethodDecl(
          modifiers, nameNode->location(), name, type, params, false, nullptr);
+   ast->addDecls(sem.getAllLexicalDecls());
+   return ast;
 }
 
 } // namespace parsetree

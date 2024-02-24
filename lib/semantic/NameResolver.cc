@@ -318,6 +318,7 @@ void NameResolver::resolveClass(ast::ClassDecl* decl) {
    }
    for(auto field : decl->mut_fields()) field->mut_type()->resolve(*this);
    for(auto method : decl->mut_methods()) resolveMethod(method);
+   for(auto ctor : decl->mut_constructors()) resolveMethod(ctor);
 }
 
 std::ostream& NameResolver::Pkg::print(std::ostream& os, int indent) const {
