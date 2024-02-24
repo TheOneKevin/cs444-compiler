@@ -16,7 +16,6 @@ class InterfaceDecl;
 class BuiltInType final : public Type {
 public:
 #define BASIC_TYPE_LIST(F) \
-   F(Void)                 \
    F(Byte)                 \
    F(Short)                \
    F(Int)                  \
@@ -180,7 +179,7 @@ public:
    void resolve(semantic::NameResolver& x) override {
       // Resolve only if the element type is an unresolved type.
       if(auto unresTy = dynamic_cast<UnresolvedType*>(elementType)) {
-         if(elementType->isResolved()) unresTy->resolve(x);
+         if(!elementType->isResolved()) unresTy->resolve(x);
       }
    }
    bool operator==(const Type& other) const override {

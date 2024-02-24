@@ -63,10 +63,6 @@ void HierarchyChecker::flattenClassMap(
       if(visited.count(entry.first)) continue;
       std::pmr::set<ast::ClassDecl*> currentPath;
       flattenClassMapHelper(entry.first, unflattenedMap, visited, currentPath);
-      // Adds object class to the superclasses
-      // auto objectClass =
-      //       dynamic_cast<ast::ClassDecl*>(entry.first->superClasses()[1]->decl());
-      // superClassMap_[entry.first].insert(objectClass);
    }
 }
 
@@ -294,7 +290,7 @@ void HierarchyChecker::checkMethodReplacement() {
          for(auto* method : inheritedMethods) {
             for(auto* other : inheritedMethods) {
                if(!isSameMethodSignature(method, other)) continue;
-               if(method->mut_returnType() != other->mut_returnType()) {
+               if(method->returnTy() != other->returnTy()) {
                   diag.ReportError(other->location())
                         << "A method must not replace a method with a "
                            "different return type. "
@@ -343,7 +339,7 @@ void HierarchyChecker::checkMethodReplacement() {
             bool isImplemented = false;
             for(auto other : classDecl->methods()) {
                if(isSameMethodSignature(method, other)) {
-                  if(*method->mut_returnType() != *other->mut_returnType()) {
+                  if(method->returnTy() != other->returnTy()) {
                      diag.ReportError(other->location())
                            << "A method must not replace a method with a "
                               "different return type. "
@@ -355,7 +351,7 @@ void HierarchyChecker::checkMethodReplacement() {
             }
             for(auto other : inheritedMethods) {
                if(isSameMethodSignature(method, other)) {
-                  if(*method->mut_returnType() != *other->mut_returnType()) {
+                  if(method->returnTy() != other->returnTy()) {
                      diag.ReportError(other->location())
                            << "A method must not replace a method with a "
                               "different return type. "
@@ -378,7 +374,7 @@ void HierarchyChecker::checkMethodReplacement() {
                for(auto other : interfaceDecl->methods()) {
                   if(!isSameMethodSignature(method, other)) continue;
 
-                  if(*method->mut_returnType() != *other->mut_returnType()) {
+                  if(method->returnTy() != other->returnTy()) {
                      diag.ReportError(other->location())
                            << "A method must not replace a method with a "
                               "different return type. "
