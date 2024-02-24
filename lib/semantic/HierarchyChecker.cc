@@ -291,10 +291,10 @@ void HierarchyChecker::checkMethodReplacement() {
                inheritedMethods.insert(method);
             }
          }
-         for(auto method : inheritedMethods) {
-            for(auto other : inheritedMethods) {
+         for(auto* method : inheritedMethods) {
+            for(auto* other : inheritedMethods) {
                if(!isSameMethodSignature(method, other)) continue;
-               if(*method->mut_returnType() != *other->mut_returnType()) {
+               if(method->mut_returnType() != other->mut_returnType()) {
                   diag.ReportError(other->location())
                         << "A method must not replace a method with a "
                            "different return type. "
@@ -339,7 +339,7 @@ void HierarchyChecker::checkMethodReplacement() {
             }
          }
          for(auto method : inheritedMethods) {
-            if (!method->modifiers().isAbstract()) continue;
+            if(!method->modifiers().isAbstract()) continue;
             bool isImplemented = false;
             for(auto other : classDecl->methods()) {
                if(isSameMethodSignature(method, other)) {
