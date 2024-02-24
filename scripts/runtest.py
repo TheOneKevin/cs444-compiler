@@ -55,29 +55,22 @@ valid_files = [x for x in test_names if x not in invalid_files]
 failures = 0
 
 for test in valid_files:
-    test = os.path.join(test_dir, test)
-    files = get_files(test)
+    test_path = os.path.join(test_dir, test)
+    files = get_files(test_path)
     ret, x, y = run_on_files(files)
     if ret != 0:
-        print(f"Running test on: {test}")
-        print("Test failed")
-        print(f"Return code: {ret}")
+        print(f"{test} failed with return code {ret}")
         failures += 1
-        print(f"Command: {joosc} {' '.join(files)}")
-        print("\n===========================================================\n")
 
 for test in invalid_files:
-    test = os.path.join(test_dir, test)
-    files = get_files(test)
+    test_path = os.path.join(test_dir, test)
+    files = get_files(test_path)
     ret, x, y = run_on_files(files)
     if ret == 0:
-        print(f"Running test on: {test}")
-        print("Test failed")
-        print(f"Return code: {ret}")
+        print(f"{test} failed with return code {ret}")
         failures += 1
-        print(f"Command: {joosc} {' '.join(files)}")
-        print("\n===========================================================\n")
 
+print("---")
 print(
     f"Total failures: {failures}/{len(test_names)} or {len(test_names) - failures}/{len(test_names)} passing"
 )
