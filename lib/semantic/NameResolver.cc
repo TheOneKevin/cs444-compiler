@@ -288,10 +288,34 @@ void NameResolver::resolveInterface(ast::InterfaceDecl* decl) {
    for(auto method : decl->mut_methods()) resolveMethod(method);
 }
 
+ast::Decl const* NameResolver::findObjectClass() {
+   if(objectClass_) return objectClass_;
+   auto pkg = rootPkg_->children.find("java");
+   if(pkg == rootPkg_->children.end()) return nullptr;
+   if(!std::holds_alternative<Pkg*>(pkg->second)) return nullptr;
+   auto javaPkg = std::get<Pkg*>(pkg->second);
+   auto langPkg = javaPkg->children.find("lang");
+   if(langPkg == javaPkg->children.end()) return nullptr;
+   if(!std::holds_alternative<Pkg*>(langPkg->second)) return nullptr;
+   auto langPkg2 = std::get<Pkg*>(langPkg->second);
+   auto objClass = langPkg2->children.find("Object");
+   if(objClass == langPkg2->children.end()) return nullptr;
+   if(!std::holds_alternative<ast::Decl*>(objClass->second)) return nullptr;
+   return objectClass_ = std::get<ast::Decl*>(objClass->second);
+}
+
 void NameResolver::resolveClass(ast::ClassDecl* decl) {
    for(auto ty : decl->mut_interfaces()) ty->resolve(*this);
-   for(auto super : decl->mut_superClasses())
-      if(super && !super->isResolved())  super->resolve(*this);
+   for(int i = 0; i < 2; i++) {
+      auto super = decl->mut_superClasses()[i];
+      if(!super) continue;
+      if(!super->isResolved()) super->resolve(*this);
+      assert(super->decl() && "Superclass is not resolved");
+      assert(findObjectClass() && "java.lang.Object class can not be resolved");
+      // Do not allow Object to extend Object
+      if(decl == findObjectClass() && super->decl() == findObjectClass())
+         decl->mut_superClasses()[i] = nullptr;
+   }
    for(auto field : decl->mut_fields()) field->mut_type()->resolve(*this);
    for(auto method : decl->mut_methods()) resolveMethod(method);
 }

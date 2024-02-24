@@ -71,6 +71,8 @@ private:
    void resolveInterface(ast::InterfaceDecl* decl);
    void resolveClass(ast::ClassDecl* decl);
    void resolveMethod(ast::MethodDecl* decl);
+   // Find the Decl* for java.lang.Object class
+   ast::Decl const* findObjectClass();
 
 private:
    using ChildOpt = std::optional<Pkg::Child>;
@@ -93,6 +95,8 @@ private:
    std::pmr::unordered_map<std::pmr::string, Pkg::Child> importsMap_;
    /// @brief The root of the symbol table (more of a tree than table).
    Pkg* rootPkg_;
+   /// @brief A cache of the java.lang.Object class.
+   ast::Decl const* objectClass_ = nullptr;
 };
 
 } // namespace semantic
