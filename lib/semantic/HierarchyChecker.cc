@@ -289,6 +289,7 @@ void HierarchyChecker::checkMethodReplacement() {
          }
          for(auto* method : inheritedMethods) {
             for(auto* other : inheritedMethods) {
+               if(method == other) continue;
                if(!isSameMethodSignature(method, other)) continue;
                if(method->returnTy() != other->returnTy()) {
                   diag.ReportError(other->location())
