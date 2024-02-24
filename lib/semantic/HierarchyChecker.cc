@@ -336,8 +336,7 @@ void HierarchyChecker::checkMethodReplacement() {
             }
          }
          for(auto method : inheritedMethods) {
-            if(!method->modifiers().isAbstract()) continue;
-            bool isImplemented = false;
+            bool isImplemented = !method->modifiers().isAbstract();
             for(auto other : classDecl->methods()) {
                if(isSameMethodSignature(method, other)) {
                   if(method->returnTy() != other->returnTy()) {
@@ -345,19 +344,7 @@ void HierarchyChecker::checkMethodReplacement() {
                            << "A method must not replace a method with a "
                               "different return type. "
                            << other->name();
-                  } else {
-                     isImplemented = true;
-                  }
-               }
-            }
-            for(auto other : inheritedMethods) {
-               if(isSameMethodSignature(method, other)) {
-                  if(method->returnTy() != other->returnTy()) {
-                     diag.ReportError(other->location())
-                           << "A method must not replace a method with a "
-                              "different return type. "
-                           << other->name();
-                  } else {
+                  } else if (!other->modifiers().isAbstract()){
                      isImplemented = true;
                   }
                }
