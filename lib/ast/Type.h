@@ -96,11 +96,12 @@ public:
       decl_ = decl;
    }
 
-   bool operator==(const Type& other) const override {
+   bool operator==(const Type& other) const override final {
       if(auto otherType = dynamic_cast<const ReferenceType*>(&other)) {
+         assert(decl_ && otherType->decl_ &&
+                "Reference types are not resolved during comparison");
          return decl_ == otherType->decl_;
       }
-
       return false;
    }
 
@@ -160,13 +161,6 @@ public:
    void resolve(semantic::NameResolver& x) override { x.ResolveType(this); }
 
    std::ostream& operator<<(std::ostream& os) const { return os << toString(); }
-
-   bool operator==(const Type& other) const override {
-      (void)other;
-      // FIXME(Larry): Temporary fix for comparing unresolved types.
-      return this->toString() == other.toString();
-      // throw std::runtime_error("Should not be comparing unresolved types");
-   }
 };
 
 /// @brief Represents an (unsized) array type.
