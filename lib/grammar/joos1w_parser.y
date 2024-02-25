@@ -172,7 +172,7 @@ ClassMemberDeclaration
     ;
 
 FieldDeclaration
-    : MemberModifiersOpt Type VariableDeclarator ';'                        { $$ = jl.make_node(@$, pty::FieldDeclaration, $1, $2, $3); }
+    : MemberModifiersOpt Type VariableDeclarator ';'                            { $$ = jl.make_node(@$, pty::FieldDeclaration, $1, $2, $3); }
     ;
 
 MemberModifiersOpt
