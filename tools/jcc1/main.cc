@@ -15,8 +15,16 @@
 #include "utils/CLI11.h"
 
 diagnostics::DiagnosticEngine gDiag{};
+static bool optVerbose = false;
 
 void checkAndPrintErrors() {
+   // If verbose, print out the diagnostic debug messages
+   if(optVerbose) {
+      for(auto m : gDiag.debugs()) {
+         m.emit(std::cerr);
+         std::cerr << std::endl;
+      }
+   }
    if(gDiag.hasErrors()) {
       for(auto m : gDiag.errors()) {
          m.emit(std::cerr);
@@ -29,7 +37,6 @@ void checkAndPrintErrors() {
 int main(int argc, char** argv) {
    std::string optASTGraphFile, optPTGraphFile;
    bool optASTDump = false;
-   bool optVerbose = false;
    InputMode optInputMode = InputMode::Stdin;
 
    utils::CustomBufferResource CbResource{};
@@ -132,14 +139,6 @@ int main(int argc, char** argv) {
    // Print the AST to stdout at the end only
    if(optASTGraphFile.empty() && optASTDump) {
       linking_unit->print(std::cout);
-   }
-
-   // If verbose, print out the diagnostic debug messages
-   if(optVerbose) {
-      for(auto m : gDiag.debugs()) {
-         m.emit(std::cerr);
-         std::cerr << std::endl;
-      }
    }
 
    return 0;

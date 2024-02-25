@@ -259,12 +259,11 @@ void HierarchyChecker::checkClassMethod(
    }
    // record the inherited methods
    classDecl->setInheritedMethods(allMethods);
-   diag.ReportDebug() << "Class: " << classDecl->name() << "\n";
+
+   // print debug information
+   diag.ReportDebug() << "Class: " << classDecl->name();
    diag.ReportDebug() << "Inherited methods: ";
-   for(auto method : allMethods) {
-      diag.ReportDebug() << method->name() << " ";
-   }
-   diag.ReportDebug() << "\n";
+   for(auto method : allMethods) diag.ReportDebug() << "\t" << method->name();
 }
 
 void HierarchyChecker::checkClassConstructors(ast::ClassDecl* classDecl) {
@@ -356,12 +355,9 @@ void HierarchyChecker::checkInterfaceMethod(
 
    // record the inherited methods
    interfaceDecl->setInheritedMethods(allMethods);
-   diag.ReportDebug() << "Interface: " << interfaceDecl->name() << "\n";
-   diag.ReportDebug() << "Inherited methods: ";
-   for(auto method : allMethods) {
-      diag.ReportDebug() << method->name() << " ";
-   }
-   diag.ReportDebug() << "\n";
+   diag.ReportDebug() << "Interface: " << interfaceDecl->name();
+   diag.ReportDebug() << "Inherited methods:";
+   for(auto method : allMethods) diag.ReportDebug() << "\t" << method->name();
 }
 
 } // namespace semantic

@@ -3,14 +3,16 @@
 import os
 import subprocess
 import sys
+import argparse
 
-# Grab the assignment number from the command line
-if len(sys.argv) != 3:
-    print(f"Usage: python3 {sys.argv[0]} <assignment> <test>")
-    print("Where <test> is the name of the .java file **OR** the directory")
-    print(f"Example: python3 {sys.argv[0]} a2 J2_hierachyCheck25")
-    sys.exit(1)
-
+parser = argparse.ArgumentParser(description="Run the joosc compiler on a test case")
+parser.add_argument("assignment", help="The assignment number (a1, a2, etc)")
+parser.add_argument("test", help="The test case to run")
+parser.add_argument("args", nargs="*", help="Additional arguments to pass to joosc")
+parser.epilog = \
+    "Where <test> is the name of the .java file **OR** the directory" \
+    "Example: python3 {sys.argv[0]} a2 J2_hierachyCheck25"
+args = parser.parse_args()
 
 # Recursively grab all java files subroutine
 def grab_all_java(dir):
@@ -24,8 +26,8 @@ def grab_all_java(dir):
 
 # Get the directory of this script
 script_dir = os.path.dirname(os.path.realpath(__file__))
-assignment = sys.argv[1]
-test = sys.argv[2]
+assignment = args.assignment
+test = args.test
 assignment_number = assignment[1:]
 
 # Set up the test directories
@@ -48,10 +50,11 @@ stdlib_files = grab_all_java(stdlib_dir)
 
 files = [test] if os.path.isfile(test) else grab_all_java(test)
 files += stdlib_files
-ret = subprocess.run([joosc, *files], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+arglist = [joosc, *files, *args.args]
+ret = subprocess.run(arglist, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 
 print("Command:")
-print(subprocess.list2cmdline([joosc, *files]))
+print(subprocess.list2cmdline(arglist))
 print("return code:")
 print(ret.returncode)
 print("stdout:")
