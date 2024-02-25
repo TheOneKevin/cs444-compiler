@@ -151,8 +151,11 @@ void HierarchyChecker::checkInheritance() {
                      << superInterface->name();
             }
             inheritanceMap_[interfaceDecl].insert(superInterface);
-            diag.ReportDebug() << "Interface: " << interfaceDecl->name()
-                               << " extends " << superInterface->name() << "\n";
+            // print debug information
+            if(diag.Verbose) {
+               diag.ReportDebug() << "Interface: " << interfaceDecl->name()
+                                  << " extends " << superInterface->name() << "\n";
+            }
          }
       }
    }
@@ -263,9 +266,11 @@ void HierarchyChecker::checkClassMethod(
    classDecl->setInheritedMethods(allMethods);
 
    // print debug information
-   diag.ReportDebug() << "Class: " << classDecl->name();
-   diag.ReportDebug() << "Inherited methods: ";
-   for(auto method : allMethods) diag.ReportDebug() << "\t" << method->name();
+   if(diag.Verbose) {
+      diag.ReportDebug() << "Class: " << classDecl->name();
+      diag.ReportDebug() << "Inherited methods: ";
+      for(auto method : allMethods) diag.ReportDebug() << "\t" << method->name();
+   }
 }
 
 void HierarchyChecker::checkClassConstructors(ast::ClassDecl* classDecl) {
@@ -357,9 +362,13 @@ void HierarchyChecker::checkInterfaceMethod(
 
    // record the inherited methods
    interfaceDecl->setInheritedMethods(allMethods);
-   diag.ReportDebug() << "Interface: " << interfaceDecl->name();
-   diag.ReportDebug() << "Inherited methods:";
-   for(auto method : allMethods) diag.ReportDebug() << "\t" << method->name();
+
+   // print debug information
+   if(diag.Verbose) {
+      diag.ReportDebug() << "Interface: " << interfaceDecl->name();
+      diag.ReportDebug() << "Inherited methods:";
+      for(auto method : allMethods) diag.ReportDebug() << "\t" << method->name();
+   }
 }
 
 } // namespace semantic

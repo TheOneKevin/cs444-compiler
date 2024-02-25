@@ -92,6 +92,8 @@ public:
       return DiagnosticBuilder{errors_.front()};
    }
    DiagnosticBuilder ReportDebug() {
+      assert(Verbose &&
+             "Debug messages not available. Did you forget to check for Verbose?");
       debugs_.emplace_after(debugs_.before_begin(), SourceRange{});
       return DiagnosticBuilder{debugs_.front()};
    }
