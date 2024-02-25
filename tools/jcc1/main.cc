@@ -18,7 +18,7 @@ diagnostics::DiagnosticEngine gDiag{};
 
 void checkAndPrintErrors() {
    if(gDiag.hasErrors()) {
-      for(auto m : gDiag.messages()) {
+      for(auto m : gDiag.errors()) {
          m.emit(std::cerr);
          std::cerr << std::endl;
       }
@@ -28,7 +28,8 @@ void checkAndPrintErrors() {
 
 int main(int argc, char** argv) {
    std::string optASTGraphFile, optPTGraphFile;
-   bool optSilent = false;
+   bool optASTDump = false;
+   bool optVerbose = false;
    InputMode optInputMode = InputMode::Stdin;
 
    utils::CustomBufferResource CbResource{};
@@ -38,16 +39,14 @@ int main(int argc, char** argv) {
 
    CLI::App app{"Joos1W AST Printer"};
    app.add_option(
-         "-a,--ast-dot", optASTGraphFile, "File to print the AST in DOT format");
-   app.add_option("-p,--pt-dot",
-                  optPTGraphFile,
-                  "File to print the parse tree in DOT format");
-   app.add_flag("-s,--silent",
-                optSilent,
-                "Only indicate if the input is valid or not and print any errors");
+         "--dot-ast", optASTGraphFile, "File to print the AST in DOT format");
+   app.add_option(
+         "--dot-pt", optPTGraphFile, "File to print the parse tree in DOT format");
+   app.add_flag("--dump-ast", optASTDump, "Dump the AST to standard output");
    app.add_flag("-x,--split",
                 "Split the input file, contents delimited by ---, into multiple "
                 "compilation units");
+   app.add_flag("-v,--verbose", optVerbose, "Enable verbose output");
    app.allow_extras();
    CLI11_PARSE(app, argc, argv);
 
@@ -131,9 +130,17 @@ int main(int argc, char** argv) {
    checkAndPrintErrors();
 
    // Print the AST to stdout at the end only
-   // if(optASTGraphFile.empty() && !optSilent) {
-   //    linking_unit->print(std::cout);
-   // }
+   if(optASTGraphFile.empty() && optASTDump) {
+      linking_unit->print(std::cout);
+   }
+
+   // If verbose, print out the diagnostic debug messages
+   if(optVerbose) {
+      for(auto m : gDiag.debugs()) {
+         m.emit(std::cerr);
+         std::cerr << std::endl;
+      }
+   }
 
    return 0;
 }

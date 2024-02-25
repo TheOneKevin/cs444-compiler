@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
       }
 
       if(diag.hasErrors()) {
-         for(auto& msg : diag.messages()) {
+         for(auto& msg : diag.errors()) {
             msg.emit(std::cerr) << std::endl;
          }
          return 42;
@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
       }
 
       if(diag.hasErrors()) {
-         for(auto& msg : diag.messages()) {
+         for(auto& msg : diag.errors()) {
             msg.emit(std::cerr) << std::endl;
          }
          return 42;
@@ -142,7 +142,7 @@ int main(int argc, char** argv) {
    ast::LinkingUnit* linkingUnit = sem.BuildLinkingUnit(asts);
 
    if(diag.hasErrors()) {
-      for(auto& msg : diag.messages()) {
+      for(auto& msg : diag.errors()) {
          msg.emit(std::cerr) << std::endl;
       }
       return 42;
@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
    resolver.Resolve();
 
    if(diag.hasErrors()) {
-      for(auto& msg : diag.messages()) {
+      for(auto& msg : diag.errors()) {
          msg.emit(std::cerr) << std::endl;
       }
       return 42;
@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
    semantic::HierarchyChecker hierarchy{diag, linkingUnit};
 
    if(diag.hasErrors()) {
-      for(auto& msg : diag.messages()) {
+      for(auto& msg : diag.errors()) {
          msg.emit(std::cerr) << std::endl;
       }
       return 42;

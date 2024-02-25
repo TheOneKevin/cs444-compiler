@@ -88,14 +88,20 @@ class DiagnosticEngine {
 public:
    DiagnosticEngine() = default;
    DiagnosticBuilder ReportError(SourceRange loc) {
-      diagnostics_.emplace_after(diagnostics_.before_begin(), loc);
-      return DiagnosticBuilder{diagnostics_.front()};
+      errors_.emplace_after(errors_.before_begin(), loc);
+      return DiagnosticBuilder{errors_.front()};
    }
-   bool hasErrors() const { return !diagnostics_.empty(); }
-   auto messages() const { return std::views::all(diagnostics_); }
+   DiagnosticBuilder ReportDebug() {
+      debugs_.emplace_after(debugs_.before_begin(), SourceRange{});
+      return DiagnosticBuilder{debugs_.front()};
+   }
+   bool hasErrors() const { return !errors_.empty(); }
+   auto errors() const { return std::views::all(errors_); }
+   auto debugs() const { return std::views::all(debugs_); }
 
 private:
-   std::forward_list<DiagnosticStorage> diagnostics_;
+   std::forward_list<DiagnosticStorage> errors_;
+   std::forward_list<DiagnosticStorage> debugs_;
 };
 
 /* ===--------------------------------------------------------------------=== */

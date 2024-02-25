@@ -149,8 +149,8 @@ void HierarchyChecker::checkInheritance() {
                      << superInterface->name();
             }
             inheritanceMap_[interfaceDecl].insert(superInterface);
-            std::cout << "Interface: " << interfaceDecl->name() << " extends "
-                      << superInterface->name() << "\n";
+            diag.ReportDebug() << "Interface: " << interfaceDecl->name()
+                               << " extends " << superInterface->name() << "\n";
          }
       }
    }
@@ -259,12 +259,12 @@ void HierarchyChecker::checkClassMethod(
    }
    // record the inherited methods
    classDecl->setInheritedMethods(allMethods);
-   std::cout << "Class: " << classDecl->name() << "\n";
-   std::cout << "Inherited methods: ";
+   diag.ReportDebug() << "Class: " << classDecl->name() << "\n";
+   diag.ReportDebug() << "Inherited methods: ";
    for(auto method : allMethods) {
-      std::cout << method->name() << " ";
+      diag.ReportDebug() << method->name() << " ";
    }
-   std::cout << "\n";
+   diag.ReportDebug() << "\n";
 }
 
 void HierarchyChecker::checkClassConstructors(ast::ClassDecl* classDecl) {
@@ -356,12 +356,12 @@ void HierarchyChecker::checkInterfaceMethod(
 
    // record the inherited methods
    interfaceDecl->setInheritedMethods(allMethods);
-   std::cout << "Interface: " << interfaceDecl->name() << "\n";
-   std::cout << "Inherited methods: ";
+   diag.ReportDebug() << "Interface: " << interfaceDecl->name() << "\n";
+   diag.ReportDebug() << "Inherited methods: ";
    for(auto method : allMethods) {
-      std::cout << method->name() << " ";
+      diag.ReportDebug() << method->name() << " ";
    }
-   std::cout << "\n";
+   diag.ReportDebug() << "\n";
 }
 
 } // namespace semantic

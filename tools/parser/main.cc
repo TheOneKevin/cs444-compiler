@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
       }
 
       if(diag.hasErrors()) {
-         for(auto& msg : diag.messages()) {
+         for(auto& msg : diag.errors()) {
             msg.emit(std::cerr) << std::endl;
          }
       }
