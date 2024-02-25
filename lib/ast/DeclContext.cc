@@ -209,8 +209,8 @@ InterfaceDecl::InterfaceDecl(BumpAllocator& alloc, Modifiers modifiers,
         methods_{alloc},
         location_{location},
         objectSuperclass_{objectSuperclass} {
+   utils::move_vector<ReferenceType*>(extends, extends_);
    for(auto bodyDecl : interfaceBodyDecls) {
-      utils::move_vector<ReferenceType*>(extends, extends_);
       if(auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {
          methods_.push_back(methodDecl);
       } else {
