@@ -68,9 +68,10 @@ public:
    void dump() const { rootPkg_->dump(); }
 
 private:
-   void resolveInterface(ast::InterfaceDecl* decl);
-   void resolveClass(ast::ClassDecl* decl);
-   void resolveMethod(ast::MethodDecl* decl);
+   /// @brief Resolves the AST recursively
+   void resolveRecursive(ast::AstNode* node);
+   /// @brief Disallows java.lang.Object from extending itself
+   void replaceObjectClass(ast::AstNode* node);
    // Find the Decl* for java.lang.Object class
    ast::Decl const* findObjectClass();
 

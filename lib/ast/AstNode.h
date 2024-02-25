@@ -8,6 +8,7 @@
 
 #include "parsetree/ParseTree.h"
 #include "utils/DotPrinter.h"
+#include "utils/Generator.h"
 
 namespace semantic {
 class NameResolver;
@@ -58,6 +59,12 @@ public:
    virtual ~AstNode() = default;
    virtual int printDotNode(DotPrinter& dp) const = 0;
    void dump() const;
+   /// @brief Returns a generator for the children of this node.
+   virtual utils::Generator<AstNode const*> children() const = 0;
+   /// @brief Returns a generator for the mutable children of this node.
+   utils::Generator<AstNode*> mut_children() {
+      for(auto const* child : children()) co_yield const_cast<AstNode*>(child);
+   }
 
 protected:
    /**
@@ -132,6 +139,12 @@ public:
    virtual bool isResolved() const = 0;
    virtual bool operator==(const Type&) const = 0;
    virtual bool operator!=(const Type& other) { return !(*this == other); }
+   /// @brief Since there is no child, this returns an empty generator.
+   /// Note: We don't count the cross-reference to the declaration as a child
+   ///       as that would violate the "tree" part of AST.
+   utils::Generator<AstNode const*> children() const override final {
+      co_yield nullptr;
+   }
 
 private:
    SourceRange loc_;
@@ -140,6 +153,10 @@ private:
 /// @brief Base class for all statements.
 class Stmt : public AstNode {
 public:
+   /// @brief By default, returns an empty generator for the statement.
+   virtual utils::Generator<AstNode const*> children() const override {
+      co_yield nullptr;
+   }
 };
 
 /// @brief Overload the << operator for AstNode to print the node

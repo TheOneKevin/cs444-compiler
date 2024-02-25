@@ -9,7 +9,10 @@ namespace ast {
 using std::ostream;
 using std::string;
 
-void AstNode::dump() const { print(std::cout, 0); }
+void AstNode::dump() const {
+   print(std::cerr, 0);
+   std::cerr << std::endl;
+}
 
 // VarDecl /////////////////////////////////////////////////////////////////////
 

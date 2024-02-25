@@ -4,6 +4,7 @@
 
 #include "ast/AstNode.h"
 #include "ast/Type.h"
+#include "utils/Generator.h"
 #include "utils/Utils.h"
 
 namespace ast {
@@ -28,8 +29,9 @@ public:
    CompilationUnit(BumpAllocator& alloc, ReferenceType* package,
                    array_ref<ImportDeclaration> imports, SourceRange location,
                    DeclContext* body) noexcept;
-   auto body() const { return body_; }
-   auto bodyAsDecl() const { return dynamic_cast<Decl*>(body_); }
+   auto const* body() const { return body_; }
+   auto const* bodyAsDecl() const { return dynamic_cast<Decl const*>(body_); }
+   auto mut_bodyAsDecl() { return dynamic_cast<Decl*>(body_); }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
    string_view getPackageName() const {
@@ -39,13 +41,19 @@ public:
       return "unnamed package";
    }
    SourceRange location() const { return location_; }
-   auto package() const { return package_; }
+   auto const* package() const { return package_; }
    auto imports() const { return std::views::all(imports_); }
    auto isDefaultPackage() const {
       auto unresTy = dynamic_cast<UnresolvedType*>(package_);
       assert(unresTy && "Package must be unresolved type");
       return unresTy->parts().size() == 0;
    }
+   utils::Generator<ast::AstNode const*> children() const override {
+      co_yield package_;
+      for(auto import : imports_) co_yield import.type;
+      co_yield body_;
+   }
+   auto mut_body() { return body_; }
 
 private:
    ReferenceType* package_;
@@ -61,6 +69,9 @@ public:
    auto compliationUnits() const { return std::views::all(compilationUnits_); }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
+   utils::Generator<ast::AstNode const*> children() const override {
+      for(auto cu : compilationUnits_) co_yield cu;
+   }
 
 private:
    pmr_vector<CompilationUnit*> compilationUnits_;
@@ -80,6 +91,7 @@ public:
    /// @brief Grabs a view of the super classes.
    /// Warning: the super classes may be null.
    auto superClasses() const { return std::views::all(superClasses_); }
+   auto& mut_superClasses() { return superClasses_; }
    auto modifiers() const { return modifiers_; }
    bool hasCanonicalName() const override { return true; }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
@@ -89,22 +101,25 @@ public:
    SourceRange location() const override { return location_; }
 
    /// @brief Set the inherited methods. It should only be called once.
-   void setInheritedMethods(std::pmr::vector<MethodDecl*> &inheritedMethods) {
+   void setInheritedMethods(std::pmr::vector<MethodDecl*>& inheritedMethods) {
       assert(!inheritedSet_ && "Inherited methods already set");
       inheritedMethods_ = inheritedMethods;
       inheritedSet_ = true;
    }
    bool isInheritedSet() const { return inheritedSet_; }
 
-   auto mut_fields() { return std::views::all(fields_); }
-   auto mut_methods() { return std::views::all(methods_); }
-   auto mut_constructors() { return std::views::all(constructors_); }
-   auto mut_interfaces() { return std::views::all(interfaces_); }
-   auto mut_superClasses() { return std::views::all(superClasses_); }
+   utils::Generator<ast::AstNode const*> children() const override {
+      for(auto field : fields_) co_yield field;
+      for(auto method : methods_) co_yield reinterpret_cast<Decl*>(method);
+      for(auto constructor : constructors_)
+         co_yield reinterpret_cast<Decl*>(constructor);
+      for(auto interface : interfaces_) co_yield interface;
+      for(auto superClass : superClasses_) co_yield superClass;
+   }
 
 private:
    Modifiers modifiers_;
-   ReferenceType* superClasses_[2];
+   std::array<ReferenceType*, 2> superClasses_;
    pmr_vector<ReferenceType*> interfaces_;
    pmr_vector<FieldDecl*> fields_;
    pmr_vector<MethodDecl*> methods_;
@@ -117,28 +132,32 @@ private:
 class InterfaceDecl final : public DeclContext, public Decl {
 public:
    InterfaceDecl(BumpAllocator& alloc, Modifiers modifiers, SourceRange location,
-                 string_view name, array_ref<ReferenceType*> extends, ReferenceType* objectSuperclass,
+                 string_view name, array_ref<ReferenceType*> extends,
+                 ReferenceType* objectSuperclass,
                  array_ref<Decl*> interfaceBodyDecls) throw();
    auto extends() const { return std::views::all(extends_); }
    auto methods() const { return std::views::all(methods_); }
    auto inheritedMethods() const { return std::views::all(inheritedMethods_); }
    auto modifiers() const { return modifiers_; }
-   auto objectSuperclass() const { return objectSuperclass_; }
+   auto const* objectSuperclass() const { return objectSuperclass_; }
    bool hasCanonicalName() const override { return true; }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
    /// @brief Overrides the setParent to construct canonical name.
    void setParent(DeclContext* parent) override;
    /// @brief Set the inherited methods. It should only be called once.
-   void setInheritedMethods(std::pmr::vector<MethodDecl*> &inheritedMethods) {
+   void setInheritedMethods(std::pmr::vector<MethodDecl*>& inheritedMethods) {
       assert(!inheritedSet_ && "Inherited methods already set");
       inheritedMethods_ = inheritedMethods;
       inheritedSet_ = true;
    }
    bool isInheritedSet() const { return inheritedSet_; }
    SourceRange location() const override { return location_; }
-   auto mut_extends() { return std::views::all(extends_); }
-   auto mut_methods() { return std::views::all(methods_); }
+
+   utils::Generator<ast::AstNode const*> children() const override {
+      for(auto method : methods_) co_yield reinterpret_cast<Decl*>(method);
+      for(auto superClass : extends_) co_yield superClass;
+   }
 
 private:
    Modifiers modifiers_;
@@ -199,9 +218,12 @@ public:
    SourceRange location() const override { return location_; }
    ReturnType returnTy() const { return ReturnType{returnType_}; }
 
-   auto mut_parameters() { return std::views::all(parameters_); }
-   auto mut_locals() const { return std::views::all(locals_); }
-   auto mut_returnType() const { return returnType_; }
+   utils::Generator<ast::AstNode const*> children() const override {
+      co_yield returnType_;
+      for(auto param : parameters_) co_yield param;
+      for(auto local : locals_) co_yield local;
+      co_yield body_;
+   }
 
 private:
    Modifiers modifiers_;

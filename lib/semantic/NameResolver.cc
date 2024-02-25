@@ -14,6 +14,8 @@
 #include "ast/Type.h"
 #include "diagnostics/Location.h"
 
+using ast::Decl;
+using ast::UnresolvedType;
 using std::string_view;
 using std::pmr::string;
 using std::pmr::unordered_map;
@@ -30,7 +32,7 @@ void NameResolver::buildSymbolTable() {
    // Grab the package type from the compilation unit.
    for(auto cu : lu_->compliationUnits()) {
       // Grab the CU's package and mark it as immutable
-      auto pkg = dynamic_cast<ast::UnresolvedType*>(cu->package());
+      auto pkg = dynamic_cast<UnresolvedType const*>(cu->package());
       assert(pkg && "Package should be an unresolved type");
       pkg->lock();
       // Traverse the package name to find the leaf package.
@@ -48,8 +50,8 @@ void NameResolver::buildSymbolTable() {
          // a decl with the same name as the package. This is an error.
          // cf. JLS 6.4.1.
          Pkg::Child const& child = subPkg->children[id];
-         if(std::holds_alternative<ast::Decl*>(child)) {
-            auto decl = std::get<ast::Decl*>(child);
+         if(std::holds_alternative<Decl*>(child)) {
+            auto decl = std::get<Decl*>(child);
             assert(decl && "Package node holds empty decl");
             diag.ReportError(cu->location())
                   << "subpackage name cannot be the same as a declaration: " << id;
@@ -70,17 +72,20 @@ void NameResolver::buildSymbolTable() {
                << "declaration name is not unique in the subpackage.";
       }
       // Now add the CU's declaration to the subpackage.
-      subPkg->children[cu->bodyAsDecl()->name().data()] = cu->bodyAsDecl();
+      subPkg->children[cu->bodyAsDecl()->name().data()] = cu->mut_bodyAsDecl();
+   }
+   if(diag.Verbose) {
+      std::ostringstream ss;
+      rootPkg_->print(ss, 0);
+      diag.ReportDebug() << "Symbol table built!\n" << ss.str();
    }
 }
 
 void NameResolver::BeginContext(ast::CompilationUnit* cu) {
-   using ast::UnresolvedType, ast::Decl;
-
    // Set the current compilation unit and clear the imports map
    cu_ = cu;
    importsMap_.clear();
-   auto curPkg = dynamic_cast<UnresolvedType*>(cu->package());
+   auto curPkg = dynamic_cast<UnresolvedType const*>(cu->package());
    assert(curPkg && "Package should be an unresolved type");
 
    // We can populate the imports map by order of shadowing cf. JLS 6.3.1.
@@ -179,11 +184,10 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
    }
    // 5. All declarations in the current CU. This may also shadow anything.
    if(cu->body())
-      importsMap_[cu_->bodyAsDecl()->name().data()] = cu_->bodyAsDecl();
+      importsMap_[cu_->bodyAsDecl()->name().data()] = cu_->mut_bodyAsDecl();
 }
 
-NameResolver::ChildOpt NameResolver::resolveImport(
-      ast::UnresolvedType const* t) const {
+NameResolver::ChildOpt NameResolver::resolveImport(UnresolvedType const* t) const {
    assert(t && "Type should not be null");
    assert(!t->isResolved() && "Type should not be resolved");
    if(t->parts().empty()) {
@@ -192,7 +196,7 @@ NameResolver::ChildOpt NameResolver::resolveImport(
    Pkg::Child subPkg = rootPkg_;
    for(auto const& id : t->parts()) {
       // If the subpackage is a declaration, then the import is invalid.
-      if(std::holds_alternative<ast::Decl*>(subPkg)) {
+      if(std::holds_alternative<Decl*>(subPkg)) {
          diag.ReportError(t->location())
                << "failed to resolve import as subpackage is a declaration: \""
                << id << "\"";
@@ -214,10 +218,10 @@ NameResolver::ChildOpt NameResolver::resolveImport(
    return subPkg;
 }
 
-void NameResolver::ResolveType(ast::UnresolvedType* ty) {
-   // assert(type && "Type should not be null");
-   if(!ty) return;
+void NameResolver::ResolveType(UnresolvedType* ty) {
+   assert(ty && "Type should not be null");
    assert(!ty->isResolved() && "Type should not be resolved");
+   if(ty->parts().empty()) return;
    Pkg::Child subTy;
    auto it = ty->parts().begin();
    // Resolve the first level of the type against importMaps_
@@ -233,7 +237,7 @@ void NameResolver::ResolveType(ast::UnresolvedType* ty) {
    it = std::next(it);
    for(; it != ty->parts().end(); it++) {
       // If the subpackage is a declaration, then the import is invalid.
-      if(std::holds_alternative<ast::Decl*>(subTy)) {
+      if(std::holds_alternative<Decl*>(subTy)) {
          diag.ReportError(ty->location())
                << "failed to resolve type as subpackage is a declaration: \""
                << *it << "\"";
@@ -252,43 +256,63 @@ void NameResolver::ResolveType(ast::UnresolvedType* ty) {
       subTy = pkg->children[*it];
    }
    // The final type should be a declaration.
-   if(!std::holds_alternative<ast::Decl*>(subTy)) {
+   if(!std::holds_alternative<Decl*>(subTy)) {
       diag.ReportError(ty->location())
             << "failed to resolve type, is not a declaration: \"" << ty->toString()
             << "\"";
       return;
    }
    // Now we can create a reference type to the declaration.
-   ty->resolveInternal(std::get<ast::Decl*>(subTy));
+   ty->resolveInternal(std::get<Decl*>(subTy));
    // After, the type should be resolved
    assert(ty->isResolved() && "Type should be resolved");
 }
 
-void NameResolver::Resolve() {
-   for(auto cu : lu_->compliationUnits()) {
-      BeginContext(cu);
-      if(!cu->body()) continue;
-      if(auto ast = dynamic_cast<ast::ClassDecl*>(cu->body())) {
-         resolveClass(ast);
-      } else if(auto ast = dynamic_cast<ast::InterfaceDecl*>(cu->body())) {
-         resolveInterface(ast);
+void NameResolver::Resolve() { resolveRecursive(lu_); }
+
+void NameResolver::replaceObjectClass(ast::AstNode* node) {
+   auto decl = dynamic_cast<ast::ClassDecl*>(node);
+   if(!decl) return;
+   // Check that java.lang.Object exists
+   assert(findObjectClass() && "java.lang.Object class can not be resolved");
+   // Check if the class is Object
+   if(decl != findObjectClass()) return;
+   // Go through the superclasses and replace Object with nullptr
+   for(int i = 0; i < 2; i++) {
+      auto super = decl->superClasses()[i];
+      if(!super) continue;
+      // If the superclass is not resolved, then we should just bail out
+      if(!diag.hasErrors())
+         assert(super->isResolved() && "Superclass should be resolved");
+      else
+         continue;
+      // Do not allow Object to extend Object
+      if(super->decl() == findObjectClass()) decl->mut_superClasses()[i] = nullptr;
+   }
+}
+
+void NameResolver::resolveRecursive(ast::AstNode* node) {
+   assert(node && "Node must not be null here!");
+   for(auto child : node->mut_children()) {
+      if(!child) continue;
+      if(auto cu = dynamic_cast<ast::CompilationUnit*>(child)) {
+         // If the CU has no body, then we can skip to the next CU :)
+         if(!cu->body()) return;
+         // Resolve the current compilation unit's body
+         BeginContext(cu);
+         resolveRecursive(cu->mut_body());
+         replaceObjectClass(cu->mut_body());
+      } else if(auto ty = dynamic_cast<ast::Type*>(child)) {
+         // If the type is not resolved, then we should resolve it
+         if(!ty->isResolved()) ty->resolve(*this);
       } else {
-         assert(false && "Unimplemented");
+         // This is a generic node, just resolve its children
+         resolveRecursive(child);
       }
    }
 }
 
-void NameResolver::resolveMethod(ast::MethodDecl* decl) {
-   for(auto local : decl->mut_locals()) local->mut_type()->resolve(*this);
-   if(decl->mut_returnType()) decl->mut_returnType()->resolve(*this);
-}
-
-void NameResolver::resolveInterface(ast::InterfaceDecl* decl) {
-   for(auto ty : decl->mut_extends()) ty->resolve(*this);
-   for(auto method : decl->mut_methods()) resolveMethod(method);
-}
-
-ast::Decl const* NameResolver::findObjectClass() {
+Decl const* NameResolver::findObjectClass() {
    if(objectClass_) return objectClass_;
    auto pkg = rootPkg_->children.find("java");
    if(pkg == rootPkg_->children.end()) return nullptr;
@@ -300,31 +324,14 @@ ast::Decl const* NameResolver::findObjectClass() {
    auto langPkg2 = std::get<Pkg*>(langPkg->second);
    auto objClass = langPkg2->children.find("Object");
    if(objClass == langPkg2->children.end()) return nullptr;
-   if(!std::holds_alternative<ast::Decl*>(objClass->second)) return nullptr;
-   return objectClass_ = std::get<ast::Decl*>(objClass->second);
-}
-
-void NameResolver::resolveClass(ast::ClassDecl* decl) {
-   for(auto ty : decl->mut_interfaces()) ty->resolve(*this);
-   for(int i = 0; i < 2; i++) {
-      auto super = decl->mut_superClasses()[i];
-      if(!super) continue;
-      if(!super->isResolved()) super->resolve(*this);
-      assert(super->decl() && "Superclass is not resolved");
-      assert(findObjectClass() && "java.lang.Object class can not be resolved");
-      // Do not allow Object to extend Object
-      if(decl == findObjectClass() && super->decl() == findObjectClass())
-         decl->mut_superClasses()[i] = nullptr;
-   }
-   for(auto field : decl->mut_fields()) field->mut_type()->resolve(*this);
-   for(auto method : decl->mut_methods()) resolveMethod(method);
-   for(auto ctor : decl->mut_constructors()) resolveMethod(ctor);
+   if(!std::holds_alternative<Decl*>(objClass->second)) return nullptr;
+   return objectClass_ = std::get<Decl*>(objClass->second);
 }
 
 std::ostream& NameResolver::Pkg::print(std::ostream& os, int indent) const {
    for(auto const& [name, child] : children) {
       for(int i = 0; i < indent; i++) os << "  ";
-      if(std::holds_alternative<ast::Decl*>(child)) {
+      if(std::holds_alternative<Decl*>(child)) {
          os << name << std::endl;
       } else {
          os << name << " ->" << std::endl;

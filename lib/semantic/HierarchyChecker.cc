@@ -64,7 +64,8 @@ void HierarchyChecker::checkMethodInheritanceHelper(
 void HierarchyChecker::checkMethodInheritance() {
    std::pmr::set<ast::Decl*> visited;
    for(auto cu : lu_->compliationUnits()) {
-      auto body = cu->body();
+      // FIXME(kevin, larry): Do we really need mutable here?
+      auto body = cu->mut_body();
       // if the body is null, continue to the next iteration
       if(!body) continue;
       if(auto classDecl = dynamic_cast<ast::ClassDecl*>(body)) {
@@ -79,7 +80,8 @@ void HierarchyChecker::checkMethodInheritance() {
 
 void HierarchyChecker::checkInheritance() {
    for(auto cu : lu_->compliationUnits()) {
-      auto body = cu->body();
+      // FIXME(kevin, larry): Do we really need mutable here?
+      auto body = cu->mut_body();
       // if the body is null, continue to the next iteration
       if(!body) continue;
 

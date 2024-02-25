@@ -86,7 +86,7 @@ public:
 
 class DiagnosticEngine {
 public:
-   DiagnosticEngine() = default;
+   explicit DiagnosticEngine(bool verbose = false) : Verbose{verbose} {}
    DiagnosticBuilder ReportError(SourceRange loc) {
       errors_.emplace_after(errors_.before_begin(), loc);
       return DiagnosticBuilder{errors_.front()};
@@ -98,6 +98,9 @@ public:
    bool hasErrors() const { return !errors_.empty(); }
    auto errors() const { return std::views::all(errors_); }
    auto debugs() const { return std::views::all(debugs_); }
+
+public:
+   const bool Verbose = false;
 
 private:
    std::forward_list<DiagnosticStorage> errors_;

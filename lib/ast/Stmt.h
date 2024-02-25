@@ -21,6 +21,10 @@ public:
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
 
+   utils::Generator<ast::AstNode const*> children() const override {
+      for(auto stmt : stmts_) co_yield stmt;
+   }
+
 private:
    pmr_vector<Stmt*> stmts_;
 };
@@ -33,6 +37,10 @@ public:
    int printDotNode(DotPrinter& dp) const override;
 
    auto decl() const { return decl_; }
+
+   utils::Generator<ast::AstNode const*> children() const override {
+      co_yield decl_;
+   }
 
 private:
    VarDecl* decl_;
@@ -63,6 +71,11 @@ public:
    auto thenStmt() const { return thenStmt_; }
    auto elseStmt() const { return elseStmt_; }
 
+   utils::Generator<ast::AstNode const*> children() const override {
+      co_yield thenStmt_;
+      if(elseStmt_) co_yield elseStmt_;
+   }
+
 private:
    Expr* condition_;
    Stmt* thenStmt_;
@@ -77,6 +90,10 @@ public:
 
    auto condition() const { return condition_; }
    auto body() const { return body_; }
+
+   utils::Generator<ast::AstNode const*> children() const override {
+      co_yield body_;
+   }
 
 private:
    Expr* condition_;
@@ -95,6 +112,11 @@ public:
    auto condition() const { return condition_; }
    auto update() const { return update_; }
    auto body() const { return body_; }
+
+   utils::Generator<ast::AstNode const*> children() const override {
+      co_yield init_;
+      co_yield body_;
+   }
 
 private:
    Stmt* init_;

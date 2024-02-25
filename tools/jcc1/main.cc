@@ -14,19 +14,16 @@
 #include "utils/BumpAllocator.h"
 #include "utils/CLI11.h"
 
-diagnostics::DiagnosticEngine gDiag{};
-static bool optVerbose = false;
-
-void checkAndPrintErrors() {
+void checkAndPrintErrors(diagnostics::DiagnosticEngine& d) {
    // If verbose, print out the diagnostic debug messages
-   if(optVerbose) {
-      for(auto m : gDiag.debugs()) {
+   if(d.Verbose) {
+      for(auto m : d.debugs()) {
          m.emit(std::cerr);
          std::cerr << std::endl;
       }
    }
-   if(gDiag.hasErrors()) {
-      for(auto m : gDiag.errors()) {
+   if(d.hasErrors()) {
+      for(auto m : d.errors()) {
          m.emit(std::cerr);
          std::cerr << std::endl;
       }
@@ -35,15 +32,13 @@ void checkAndPrintErrors() {
 }
 
 int main(int argc, char** argv) {
+   // Command line option variables
    std::string optASTGraphFile, optPTGraphFile;
    bool optASTDump = false;
    InputMode optInputMode = InputMode::Stdin;
+   bool optVerbose = false;
 
-   utils::CustomBufferResource CbResource{};
-   BumpAllocator Alloc{&CbResource};
-   ast::Semantic Sema{Alloc, gDiag};
-   SourceManager SrcMgr{};
-
+   // Parse command line options
    CLI::App app{"Joos1W AST Printer"};
    app.add_option(
          "--dot-ast", optASTGraphFile, "File to print the AST in DOT format");
@@ -56,6 +51,13 @@ int main(int argc, char** argv) {
    app.add_flag("-v,--verbose", optVerbose, "Enable verbose output");
    app.allow_extras();
    CLI11_PARSE(app, argc, argv);
+
+   // Persistent parser objects
+   diagnostics::DiagnosticEngine diag{optVerbose};
+   utils::CustomBufferResource CbResource{};
+   BumpAllocator Alloc{&CbResource};
+   ast::Semantic Sema{Alloc, diag};
+   SourceManager SrcMgr{};
 
    // Ensure the remaining arguments are all valid paths
    auto files{app.remaining()};
@@ -91,14 +93,14 @@ int main(int argc, char** argv) {
    std::pmr::vector<ast::CompilationUnit*> compilation_units{Alloc};
    for(auto const& file : SrcMgr.files()) {
       // 1. Parse the input into a parse tree
-      Joos1WParser parser{file, Alloc, &gDiag};
+      Joos1WParser parser{file, Alloc, &diag};
       parsetree::Node* pt = nullptr;
       int parseResult = parser.parse(pt);
       if(parseResult != 0 || pt == nullptr) {
          std::cerr << "Parsing failed with code: " << parseResult << " in file ";
          SrcMgr.print(std::cerr, file);
          std::cerr << std::endl;
-         checkAndPrintErrors();
+         checkAndPrintErrors(diag);
          return 42;
       }
       // 2. Run the AST visitor on the parse tree
@@ -115,7 +117,7 @@ int main(int argc, char** argv) {
          return 1;
       }
       // 3. Check for errors
-      checkAndPrintErrors();
+      checkAndPrintErrors(diag);
       compilation_units.push_back(ast);
    }
 
@@ -125,16 +127,16 @@ int main(int argc, char** argv) {
       std::ofstream ast_file{optASTGraphFile};
       linking_unit->printDot(ast_file);
    }
-   checkAndPrintErrors();
+   checkAndPrintErrors(diag);
 
    // Run the name resolution pass
-   semantic::NameResolver nameResolverPass{Alloc, gDiag, linking_unit};
+   semantic::NameResolver nameResolverPass{Alloc, diag, linking_unit};
    nameResolverPass.Resolve();
-   checkAndPrintErrors();
+   checkAndPrintErrors(diag);
 
    // Run the hierarchy checking pass
-   semantic::HierarchyChecker hierarchyCheckerPass{gDiag, linking_unit};
-   checkAndPrintErrors();
+   semantic::HierarchyChecker hierarchyCheckerPass{diag, linking_unit};
+   checkAndPrintErrors(diag);
 
    // Print the AST to stdout at the end only
    if(optASTGraphFile.empty() && optASTDump) {

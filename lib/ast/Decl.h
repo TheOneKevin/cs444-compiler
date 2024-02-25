@@ -12,6 +12,9 @@ public:
 
    Type* type() const { return type_; }
    Type* mut_type() const { return type_; }
+   utils::Generator<ast::AstNode const*> children() const override final {
+      co_yield type_;
+   }
 
 private:
    Type* type_;
