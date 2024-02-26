@@ -52,7 +52,7 @@ stdlib_files = grab_all_java(stdlib_dir)
 
 files = [test] if os.path.isfile(test) else grab_all_java(test)
 files += stdlib_files
-arglist = [joosc, *files, *args.args]
+arglist = [joosc, *args.args, *files]
 ret = subprocess.run(arglist, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 
 print("Command:")

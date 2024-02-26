@@ -1,3 +1,6 @@
+#include <filesystem>
+
+#include "diagnostics/Location.h"
 #include "grammar/Joos1WGrammar.h"
 #include "parsetree/ParseTreeVisitor.h"
 #include "semantic/HierarchyChecker.h"
@@ -15,9 +18,9 @@ using utils::PassManager;
 
 class Joos1WParserPass final : public Pass {
 public:
-   Joos1WParserPass(PassManager& pm, SourceFile file, Pass* prev) noexcept
-         : Pass(pm), file_{file}, prev_{prev} {}
-   string_view Name() const override { return "Joos1W Lexing and Parsing"; }
+   Joos1WParserPass(PassManager& PM, SourceFile file, Pass* prev) noexcept
+         : Pass(PM), file_{file}, prev_{prev} {}
+   string_view Desc() const override { return "Joos1W Lexing and Parsing"; }
    void Run() override {
       // Print the file being parsed if verbose
       if(PM().Diag().Verbose()) {
@@ -56,9 +59,9 @@ Pass& NewJoos1WParserPass(PassManager& PM, SourceFile file, Pass* prev) {
 
 class AstContextPass final : public Pass {
 public:
-   AstContextPass(PassManager& pm) noexcept
-         : Pass(pm), alloc_{NewHeap()}, sema_{alloc_, PM().Diag()} {}
-   string_view Name() const override { return "AST Context Lifetime"; }
+   AstContextPass(PassManager& PM) noexcept
+         : Pass(PM), alloc_{NewHeap()}, sema_{alloc_, PM.Diag()} {}
+   string_view Desc() const override { return "AST Context Lifetime"; }
    void Run() override {}
    ast::Semantic& Sema() { return sema_; }
 
@@ -97,9 +100,9 @@ private:
    }
 
 public:
-   AstBuilderPass(PassManager& pm, Joos1WParserPass& dep) noexcept
-         : Pass(pm), dep{dep} {}
-   string_view Name() const override { return "ParseTree -> AST Building"; }
+   AstBuilderPass(PassManager& PM, Joos1WParserPass& dep) noexcept
+         : Pass(PM), dep{dep} {}
+   string_view Desc() const override { return "ParseTree -> AST Building"; }
    void Run() override {
       // Get the parse tree and the semantic analysis
       auto& sema = GetPass<AstContextPass>().Sema();
@@ -144,8 +147,8 @@ Pass& NewAstBuilderPass(PassManager& PM, Pass* depends) {
 
 class LinkerPass final : public Pass {
 public:
-   LinkerPass(PassManager& pm) noexcept : Pass(pm) {}
-   string_view Name() const override { return "AST Linking"; }
+   LinkerPass(PassManager& PM) noexcept : Pass(PM) {}
+   string_view Desc() const override { return "AST Linking"; }
    void Run() override {
       // Grab a temporary heap
       BumpAllocator alloc{NewHeap()};
@@ -175,8 +178,9 @@ Pass& NewLinkerPass(PassManager& PM) { return PM.AddPass<LinkerPass>(); }
 
 class NameResolverPass final : public Pass {
 public:
-   NameResolverPass(PassManager& pm) noexcept : Pass(pm) {}
-   string_view Name() const override { return "Name Resolution"; }
+   NameResolverPass(PassManager& PM) noexcept : Pass(PM) {}
+   string_view Name() const override { return "sema-name"; }
+   string_view Desc() const override { return "Name Resolution"; }
    void Run() override {
       auto lu = GetPass<LinkerPass>().LinkingUnit();
       BumpAllocator alloc{NewHeap()};
@@ -201,8 +205,9 @@ Pass& NewNameResolverPass(PassManager& PM) {
 
 class HierarchyCheckerPass final : public Pass {
 public:
-   HierarchyCheckerPass(PassManager& pm) noexcept : Pass(pm) {}
-   string_view Name() const override { return "Hierarchy Checking"; }
+   HierarchyCheckerPass(PassManager& PM) noexcept : Pass(PM) {}
+   string_view Name() const override { return "sema-hier"; }
+   string_view Desc() const override { return "Hierarchy Checking"; }
    void Run() override {
       auto lu = GetPass<LinkerPass>().LinkingUnit();
       semantic::HierarchyChecker checker{PM().Diag(), lu};
@@ -226,37 +231,71 @@ Pass& NewHierarchyCheckerPass(PassManager& PM) {
 
 class PrintASTPass final : public Pass {
 public:
-   PrintASTPass(PassManager& pm, Pass* depends, std::ostream& os,
-                bool dot) noexcept
-         : Pass(pm), depends_{depends}, os{os}, dot{dot} {}
-   string_view Name() const override { return "Print AST"; }
+   PrintASTPass(PassManager& PM) noexcept : Pass(PM) {
+      optDot = PM.PO().GetExistingOption("--print-dot");
+      optOutput = PM.PO().GetExistingOption("--print-output");
+      optSplit = PM.PO().GetExistingOption("--print-split");
+   }
+   string_view Name() const override { return "print-ast"; }
+   string_view Desc() const override { return "Print AST"; }
+
    void Run() override {
-      ast::AstNode* node = nullptr;
-      if(auto* pass = dynamic_cast<AstBuilderPass*>(depends_)) {
-         node = pass->CompilationUnit();
-      } else if(auto* pass = dynamic_cast<LinkerPass*>(depends_)) {
-         node = pass->LinkingUnit();
-      }
-      if(!node) {
-         return;
-      }
-      if(dot) {
-         node->printDot(os);
+      // 1. Grab the AST node
+      auto& pass = GetPass<LinkerPass>();
+      auto* node = pass.LinkingUnit();
+      if(!node) return;
+      // 2. Interpret the command line options
+      bool printDot = optDot && optDot->count();
+      bool printSplit = optSplit && optSplit->count();
+      std::string outputPath = optOutput ? optOutput->as<std::string>() : "";
+      // 3. Print the AST depending on the options
+      if(!printSplit) {
+         // 1. Now we try to open the output file if exists
+         std::ofstream file{};
+         if(!outputPath.empty()) {
+            file = std::ofstream{outputPath};
+            if(!file.is_open()) {
+               PM().Diag().ReportError(SourceRange{})
+                     << "failed to open output file " << outputPath;
+               return;
+            }
+         }
+         // 2. Set the output stream
+         std::ostream& os = file.is_open() ? file : std::cout;
+         // 3. Now we can print the AST
+         if(printDot)
+            node->printDot(os);
+         else
+            node->print(os);
       } else {
-         node->print(os);
+         namespace fs = std::filesystem;
+         // 1. Create the output directory if it doesn't exist
+         fs::create_directories(outputPath);
+         // 2. Create a new file for each compilation unit
+         for(auto const& cu : node->compliationUnits()) {
+            if(!cu->body() || !cu->bodyAsDecl()->hasCanonicalName()) continue;
+            std::string canonName{cu->bodyAsDecl()->getCanonicalName()};
+            auto filepath = fs::path{outputPath} / fs::path{canonName + ".dot"};
+            std::ofstream file{filepath};
+            if(!file.is_open()) {
+               PM().Diag().ReportError(SourceRange{})
+                     << "failed to open output file " << filepath.string();
+               return;
+            }
+            // 3. Set the output stream
+            std::ostream& os = file;
+            // 4. Now we can print the AST
+            cu->printDot(os);
+         }
       }
    }
 
 private:
    void computeDependencies() override {
-      ComputeDependency(*depends_);
+      ComputeDependency(GetPass<LinkerPass>());
       ComputeDependency(GetPass<AstContextPass>());
    }
-   Pass* depends_;
-   std::ostream& os;
-   bool dot;
+   CLI::Option *optDot, *optOutput, *optSplit;
 };
 
-Pass& NewPrintASTPass(PassManager& PM, Pass* depends, std::ostream& os, bool dot) {
-   return PM.AddPass<PrintASTPass>(depends, os, dot);
-}
+Pass& NewPrintASTPass(PassManager& PM) { return PM.AddPass<PrintASTPass>(); }

@@ -1,28 +1,97 @@
-#include "utils/PassManager.h"
+#include <utils/CLI11.h>
+#include <utils/PassManager.h>
+
+#include <sstream>
 
 namespace utils {
+
+/* ===--------------------------------------------------------------------=== */
+// PassOptions
+/* ===--------------------------------------------------------------------=== */
+
+bool PassOptions::IsPassDisabled(Pass* p) {
+   auto it = pass_enabled_.find(std::string{p->Name()});
+   if(it == pass_enabled_.end()) return false;
+   return !it->second.enabled;
+}
+
+void PassOptions::setPassEnabled(Pass* p, bool enabled) {
+   pass_enabled_[std::string{p->Name()}].enabled = enabled;
+}
+
+void PassOptions::parseOptions() {
+   // Iterate over the string, split by commas
+   std::string_view str = passes_;
+   while(!str.empty()) {
+      auto pos = str.find(',');
+      std::string_view pass = str.substr(0, pos);
+      if(auto it = pass_enabled_.find(std::string{pass});
+         it != pass_enabled_.end()) {
+         it->second.enabled = true;
+      }
+      if(pos == std::string_view::npos) break;
+      str.remove_prefix(pos + 1);
+   }
+}
+
+void PassOptions::AddAllOptions() {
+   std::ostringstream oss;
+   oss << "A comma separated list of passes to run. The list of passes is: \n";
+   // Find the longest name
+   size_t max_len = 0;
+   for(auto& [key, _] : pass_enabled_) max_len = std::max(max_len, key.size());
+   // Now add the list of passes
+   for(auto& [key, val] : pass_enabled_) {
+      oss << "  " << key;
+      for(size_t i = 0; i < max_len - key.size(); i++) oss << " ";
+      oss << " : " << val.desc << "\n";
+   }
+   app_.add_option("-p,--passes", passes_, oss.str());
+}
 
 /* ===--------------------------------------------------------------------=== */
 // Pass
 /* ===--------------------------------------------------------------------=== */
 
 void Pass::ComputeDependency(Pass& pass) {
-   // Request any non-temporary heaps from the pass
+   // This function serves a many purposes depending on the state
+   // 1. PropagateEnabled: Recursively propagate the enabled state
+   // 2. RegisterDependencies: We register the dependency with PM
+   //    and acquire any heap resources
+   // 3. Cleanup: We only free the heap resources
+
+   if(state == PropagateEnabled) {
+      // If we're disabled, then we don't need to do anything
+      if(PM().PO().IsPassDisabled(this)) return;
+      // Otherwise, we propagate the enabled state
+      PM().PO().setPassEnabled(&pass, true);
+      pass.state = PropagateEnabled;
+      pass.computeDependencies();
+      return;
+   }
+
    for(auto& heap : PM().heaps_) {
       if(heap.owner == &pass) {
-         if(!running_) {
+         if(state == RegisterDependencies) {
             heap.refCount++;
-         } else {
+         } else if(state == Cleanup) {
             PM().freeHeap(heap);
          }
       }
    }
-   if(!running_) {
+
+   if(state == RegisterDependencies) {
       PM().addDependency(*this, pass);
    }
 }
 
 CustomBufferResource* Pass::NewHeap() { return PM().newHeap(*this); }
+
+void Pass::RegisterCLI() {
+   auto& PO = PM().PO();
+   PO.pass_enabled_[std::string{Name()}] =
+         PassOptions::PassDesc{false, std::string{Desc()}};
+}
 
 /* ===--------------------------------------------------------------------=== */
 // PassManager
@@ -59,14 +128,26 @@ void PassManager::freeHeap(Heap& h) {
 bool PassManager::Run() {
    std::vector<Pass*> S;
    std::vector<Pass*> L;
-   // First, calculate the order of the passes
+   PO().parseOptions();
+   // 1. Propagate the enabled state
    for(auto& pass : passes_) {
-      passDeps_[pass.get()] = 0;
-      // Compute dependencies will also request any heaps
+      pass->state = Pass::PropagateEnabled;
       pass->computeDependencies();
+   }
+   // 2. Build the dependency graph of passes
+   size_t NumEnabledPasses = 0;
+   for(auto& pass : passes_) {
+      // If the pass is disabled, then we skip it
+      if(PO().IsPassDisabled(pass.get())) continue;
+      // Compute dependencies will also request any heaps
+      NumEnabledPasses++;
+      pass->state = Pass::RegisterDependencies;
+      passDeps_[pass.get()] = 0;
+      pass->computeDependencies();
+      // Mark the pass in the graph
       if(passDeps_[pass.get()] == 0) S.push_back(pass.get());
    }
-   // Then, run the topological sort
+   // 3. Run topological sort on the dependency graph
    while(!S.empty()) {
       auto* n = *S.begin();
       S.erase(S.begin());
@@ -76,29 +157,28 @@ bool PassManager::Run() {
       }
       depgraph_[n].clear();
    }
-   // Check for cycles
-   if(L.size() != passes_.size())
+   // 4. Check for cycles
+   if(L.size() != NumEnabledPasses)
       throw std::runtime_error("Cyclic pass dependency detected");
-   // Then, run the passes in order
+   // 5. Run the passes in topological order
    for(auto& pass : L) {
-      assert(!pass->valid_ && "Pass already run");
-      pass->running_ = true;
+      assert(pass->state != Pass::Valid && "Pass already run");
+      pass->state = Pass::Running;
       if(Diag().Verbose()) {
-         Diag().ReportDebug() << "[=>] Running " << pass->Name() << " Pass";
+         Diag().ReportDebug() << "[=>] Running " << pass->Desc() << " Pass";
       }
       pass->Run();
       lastRun_ = pass;
       if(Diag().hasErrors()) {
-         pass->running_ = false;
-         pass->valid_ = false;
+         pass->state = Pass::Invalid;
          return false;
       }
       // If the pass is running, we can free the heaps by calling
       // computeDependencies again
+      pass->state = Pass::Cleanup;
       pass->computeDependencies();
       // Update the pass state
-      pass->running_ = false;
-      pass->valid_ = true;
+      pass->state = Pass::Valid;
    }
    return true;
 }

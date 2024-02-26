@@ -1,30 +1,119 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "diagnostics/Diagnostics.h"
 #include "utils/BumpAllocator.h"
+#include "utils/CLI11.h"
 #include "utils/Generator.h"
 
 namespace utils {
 
 class PassManager;
 class Pass;
+class PassOptions;
 
 template <typename T>
 concept PassType = std::is_base_of_v<Pass, T>;
+
+class PassOptions {
+public:
+   PassOptions(CLI::App& app) : app_{app} {}
+   PassOptions(PassOptions const&) = delete;
+   PassOptions(PassOptions&&) = delete;
+   PassOptions& operator=(PassOptions const&) = delete;
+   PassOptions& operator=(PassOptions&&) = delete;
+   ~PassOptions() = default;
+
+   CLI::Option* FindOption(std::string_view name) {
+      std::string test_name = "--" + get_single_name(name);
+      if(test_name.size() == 3) test_name.erase(0, 1);
+      return app_.get_option_no_throw(test_name);
+   }
+
+   CLI::Option* AddOption(std::string name, std::string desc) {
+      if(auto opt = FindOption(name)) return opt;
+      return app_.add_option(name, CLI::callback_t(), desc);
+   }
+
+   CLI::Option* AddFlag(std::string name, std::string desc) {
+      if(auto opt = FindOption(name)) return opt;
+      return app_.add_flag(
+            name, [](int64_t) {}, desc);
+   }
+
+   CLI::Option* GetExistingOption(std::string name) {
+      auto opt = FindOption(name);
+      if(opt == nullptr)
+         throw std::runtime_error("pass requested nonexistent option: " + name);
+      return opt;
+   }
+
+   /// @brief Adds all the pass options to the command line
+   void AddAllOptions();
+
+   /// @return True if the pass is disabled
+   bool IsPassDisabled(Pass* p);
+
+   /// @brief Enables or disables a pass given the pass name
+   void EnablePass(std::string_view name, bool enabled = true) {
+      if(auto it = pass_enabled_.find(std::string{name});
+         it != pass_enabled_.end()) {
+         it->second.enabled = enabled;
+      }
+   }
+
+private:
+   /**
+    * @brief Get the single name of a command line option
+    * @param name The option name to get the single name of (ie., "-o,--option")
+    * @return std::string The single name (ie., "option")
+    */
+   static std::string get_single_name(std::string_view name) {
+      std::vector<std::string> s, l;
+      std::string p;
+      std::tie(s, l, p) =
+            CLI::detail::get_names(CLI::detail::split_names(std::string{name}));
+      if(!l.empty()) return l[0];
+      if(!s.empty()) return s[0];
+      if(!p.empty()) return p;
+      return std::string{name};
+   }
+
+   /// @brief Sets the pass to be enabled or disabled
+   /// @param p The pass to set
+   /// @param enabled If true, the pass is enabled
+   void setPassEnabled(Pass* p, bool enabled);
+
+   /// @brief Called by PM to parse the command line options
+   void parseOptions();
+
+private:
+   friend class Pass;
+   friend class PassManager;
+
+   CLI::App& app_;
+   // A list of passes parsed from the command line
+   std::string passes_;
+   /// @brief A map of pass names to descriptions and whether they are enabled
+   struct PassDesc {
+      bool enabled;
+      std::string desc;
+   };
+   std::unordered_map<std::string, PassDesc> pass_enabled_;
+};
 
 /* ===--------------------------------------------------------------------=== */
 // Pass
 /* ===--------------------------------------------------------------------=== */
 
 class Pass {
-public:
+private:
    // Deleted copy and move constructor and assignment operator
    Pass(Pass const&) = delete;
    Pass(Pass&&) = delete;
@@ -33,12 +122,12 @@ public:
 
 public:
    virtual ~Pass() = default;
-
    /// @brief Function to override to run the pass
    virtual void Run() = 0;
-
-   /// @brief Function to override to get the name of the pass
-   virtual std::string_view Name() const = 0;
+   /// @brief Function to override to get the name (id) of the pass
+   virtual std::string_view Name() const { return ""; }
+   /// @brief Function to override to get the description of the pass
+   virtual std::string_view Desc() const = 0;
 
 protected:
    /// @brief Gets the pass manager that owns the pass
@@ -59,10 +148,10 @@ protected:
       requires PassType<T>
    Generator<T*> GetPasses();
 
-protected:
    /// @brief Computes a dependency between this and another pass
    /// @param pass The pass to add as a dependency
    void ComputeDependency(Pass& pass);
+
    /// @brief Requests a new heap from the pass manager
    /// @return CustomBufferResource* The new heap
    CustomBufferResource* NewHeap();
@@ -76,9 +165,21 @@ protected:
    explicit Pass(PassManager& pm) noexcept : pm_(pm) {}
 
 private:
+   /// @brief Adds a switch to enable the pass
+   void RegisterCLI();
+
+private:
    PassManager& pm_;
-   bool valid_ = false;
-   bool running_ = false;
+   enum State {
+      Uninitialized,
+      PropagateEnabled,
+      RegisterDependencies,
+      Running,
+      Cleanup,
+      Valid,
+      Invalid
+   };
+   State state = State::Uninitialized;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -101,8 +202,19 @@ private:
    };
 
 public:
+   PassManager(CLI::App& app) : options_{app} {}
+   /// @brief Runs all the passes in the pass manager
+   /// @return True if all passes ran successfully
    bool Run();
+   /// @return The last pass that was run by the pass manager
    Pass const* LastRun() const { return lastRun_; }
+
+private:
+   // Deleted copy and move constructor and assignment operator
+   PassManager(PassManager const&) = delete;
+   PassManager(PassManager&&) = delete;
+   PassManager& operator=(PassManager const&) = delete;
+   PassManager& operator=(PassManager&&) = delete;
 
 public:
    /// @brief Adds a pass to the pass manager
@@ -110,14 +222,19 @@ public:
    /// @param ...args The remaining arguments to pass to the pass constructor.
    /// The pass manager will be passed to the pass as the first argument.
    template <typename T, typename... Args>
-   // requires PassType<T>
+      requires PassType<T>
    T& AddPass(Args&&... args) {
       passes_.emplace_back(new T(*this, std::forward<Args>(args)...));
-      return *dynamic_cast<T*>(passes_.back().get());
+      T& result = *dynamic_cast<T*>(passes_.back().get());
+      // If the pass has a name, register it as constructible from the command
+      // line options
+      if(!result.Name().empty()) result.RegisterCLI();
+      return result;
    }
-
-   /// @brief Gets a reference to the diagnostic engineF
+   /// @brief Gets a reference to the diagnostic engine
    diagnostics::DiagnosticEngine& Diag() { return diag_; }
+   /// @brief Gets the pass options
+   PassOptions& PO() { return options_; }
 
 private:
    template <typename T>
@@ -137,7 +254,7 @@ private:
                                   std::string(typeid(T).name()));
       }
       // If the requester is running, the result must be valid
-      if(pass.running_ && !result->valid_) {
+      if(pass.state == Pass::Running && result->state != Pass::Valid) {
          throw std::runtime_error("Pass not valid: " +
                                   std::string(typeid(T).name()));
       }
@@ -151,7 +268,7 @@ private:
       for(auto& pass : passes_) {
          if(auto* p = dynamic_cast<T*>(pass.get())) {
             // If the requester is running, the result must be valid
-            if(p->running_ && !p->valid_) {
+            if(p->state == Pass::Running && p->state != Pass::Valid) {
                throw std::runtime_error("Pass not valid: " +
                                         std::string(typeid(T).name()));
             }
@@ -181,6 +298,7 @@ private:
    diagnostics::DiagnosticEngine diag_;
    Pass* lastRun_ = nullptr;
    std::unordered_map<Pass*, int> passDeps_;
+   PassOptions options_;
 };
 
 template <typename T>

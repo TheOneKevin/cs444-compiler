@@ -3,8 +3,6 @@
   "git.enableCommitSigning": false,
   "yash.YYTYPE": "struct parsetree::Node*",
   "editor.rulers": [80, 160],
-  "C_Cpp.default.compilerPath": "/usr/bin/clang++",
-  "C_Cpp.autoAddFileAssociations": false,
   "cmake.sourceDirectory": "${workspaceFolder}",
   "editor.indentSize": "tabSize",
   "editor.tabSize": 4,
@@ -17,5 +15,19 @@
     "editor.tabSize": 8
   },
   "cmake.buildDirectory": "${workspaceFolder}/build",
-  "todo-tree.filtering.excludeGlobs": ["**/node_modules/*/**", "**/build/*/**"]
+  "todo-tree.filtering.excludeGlobs": [
+    "**/node_modules/*/**",
+    "**/build/*/**"
+  ],
+  "C_Cpp.default.compilerPath": "/usr/bin/clang++",
+  "C_Cpp.autoAddFileAssociations": false,
+  "C_Cpp.autocomplete": "disabled",
+  "C_Cpp.intelliSenseEngine": "default",
+  "clangd.detectExtensionConflicts": false,
+  "clangd.restartAfterCrash": true,
+  "C_Cpp.hover": "disabled",
+  "C_Cpp.suggestSnippets": false,
+  "C_Cpp.formatting": "clangFormat",
+  "C_Cpp.codeAnalysis.runAutomatically": false,
+  "C_Cpp.errorSquiggles": "disabled"
 }

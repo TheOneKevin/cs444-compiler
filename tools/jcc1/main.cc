@@ -10,7 +10,6 @@
 #include <utils/CLI11.h>
 #include <utils/PassManager.h>
 
-#include <fstream>
 #include <iostream>
 #include <iterator>
 #include <string>
@@ -18,30 +17,55 @@
 enum class InputMode { File, Stdin };
 
 int main(int argc, char** argv) {
-   // Command line option variables
-   std::string optASTGraphFile, optPTGraphFile;
-   bool optASTDump = false;
    InputMode optInputMode = InputMode::Stdin;
 
-   // Parse command line options
-   CLI::App app{"Joos1W AST Printer"};
-   app.add_option(
-         "--dot-ast", optASTGraphFile, "File to print the AST in DOT format");
-   app.add_option(
-         "--dot-pt", optPTGraphFile, "File to print the parse tree in DOT format");
-   app.add_flag("--dump-ast", optASTDump, "Dump the AST to standard output");
-   app.add_flag("-x,--split",
-                "Split the input file, contents delimited by ---, into multiple "
-                "compilation units");
+   // Create the pass manager and source manager
+   CLI::App app{"Joos1W Compiler Frontend", "jcc1"};
+   utils::PassManager PM{app};
+   SourceManager SM{};
+
+   // clang-format off
+   // 1. Build the pass-specific global command line options
+   app.add_flag("--print-dot", "If a printing pass is run, print any trees in DOT format");
+   app.add_option("--print-output", "If a printing pass is run, will write the output to this file or directory");
+   app.add_flag("--print-split", "If a printing pass is run, split the output into multiple files");
+   // 2. Build the jcc1-specific command line options
+   app.add_flag("-x,--split", "Split the input file whose contents are delimited\nby \"---\" into multiple compilation units");
    auto optVerboseLevel = app.add_flag("-v", "Set the verbosity level")
-                                ->expected(0, 1)
-                                ->check(CLI::Range(0, 3));
+      ->expected(0, 1)
+      ->check(CLI::Range(0, 3));
    app.allow_extras();
+   // clang-format on
+
+   // Build pass pipeline that requires command line options
+   {
+      NewAstContextPass(PM);
+      NewLinkerPass(PM);
+      NewPrintASTPass(PM);
+      NewNameResolverPass(PM);
+      NewHierarchyCheckerPass(PM);
+      PM.PO().AddAllOptions();
+      PM.PO().EnablePass("sema-hier");
+   }
+
+   // Parse the command line options
    CLI11_PARSE(app, argc, argv);
 
-   // Persistent parser objects
-   utils::PassManager PM{};
-   SourceManager SM{};
+   // Validate the command line options
+   {
+      auto split = app.count("--print-split");
+      auto output = app.get_option("--print-output")->reduced_results();
+      // If print-split is set, the print-output must be set
+      if(split && output.empty()) {
+         std::cerr << "Error: --print-split requires --print-output" << std::endl;
+         return 1;
+      }
+      // If print-split is set, the print-dot must be set
+      if(split && !app.count("--print-dot")) {
+         std::cerr << "Error: --print-split requires --print-dot" << std::endl;
+         return 1;
+      }
+   }
 
    // Set the verbosity of the diagnostic engine
    for(auto r : optVerboseLevel->results()) {
@@ -89,13 +113,7 @@ int main(int argc, char** argv) {
       }
    }
 
-   // Open the output file if requested
-   std::ofstream astGraphFile;
-   if(!optASTGraphFile.empty()) {
-      astGraphFile.open(optASTGraphFile);
-   }
-
-   // Build the passes
+   // Build the remaining pass pipeline that will input the source manager
    {
       using utils::Pass;
       Pass* p2 = nullptr;
@@ -103,20 +121,11 @@ int main(int argc, char** argv) {
          auto* p1 = &NewJoos1WParserPass(PM, file, p2);
          p2 = &NewAstBuilderPass(PM, p1);
       }
-      NewAstContextPass(PM);
-      auto* p3 = &NewLinkerPass(PM);
-      if(astGraphFile.is_open()) {
-         NewPrintASTPass(PM, p3, astGraphFile, true);
-      } else if(optASTDump) {
-         NewPrintASTPass(PM, p3, std::cout, false);
-      }
-      NewNameResolverPass(PM);
-      NewHierarchyCheckerPass(PM);
    }
 
    // Run the passes
    if(!PM.Run()) {
-      std::cerr << "Error running pass: " << PM.LastRun()->Name() << std::endl;
+      std::cerr << "Error running pass: " << PM.LastRun()->Desc() << std::endl;
       if(PM.Diag().hasErrors()) {
          for(auto m : PM.Diag().errors()) {
             m.emit(std::cerr);

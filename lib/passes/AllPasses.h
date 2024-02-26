@@ -12,5 +12,4 @@ utils::Pass& NewAstBuilderPass(utils::PassManager& PM, utils::Pass* depends);
 utils::Pass& NewLinkerPass(utils::PassManager& PM);
 utils::Pass& NewNameResolverPass(utils::PassManager& PM);
 utils::Pass& NewHierarchyCheckerPass(utils::PassManager& PM);
-utils::Pass& NewPrintASTPass(utils::PassManager& PM, utils::Pass* depends,
-                             std::ostream& os, bool dot);
+utils::Pass& NewPrintASTPass(utils::PassManager& PM);
