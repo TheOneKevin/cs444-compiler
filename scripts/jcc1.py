@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import subprocess
 import sys
-import argparse
 
 parser = argparse.ArgumentParser(description="Run the joosc compiler on a test case")
 parser.add_argument("assignment", help="The assignment number (a1, a2, etc)")
 parser.add_argument("test", help="The test case to run")
 parser.add_argument("args", nargs="*", help="Additional arguments to pass to joosc")
-parser.epilog = \
-    "Where <test> is the name of the .java file **OR** the directory" \
+parser.epilog = (
+    "Where <test> is the name of the .java file **OR** the directory"
     "Example: python3 {sys.argv[0]} a2 J2_hierachyCheck25"
+)
 args = parser.parse_args()
+
 
 # Recursively grab all java files subroutine
 def grab_all_java(dir):
@@ -58,7 +60,7 @@ print(subprocess.list2cmdline(arglist))
 print("return code:")
 print(ret.returncode)
 print("stdout:")
-print(ret.stdout.decode("utf-8"))
+print(ret.stdout.decode("utf-8", errors="ignore"))
 print("stderr:")
-print(ret.stderr.decode("utf-8"))
+print(ret.stderr.decode("utf-8", errors="ignore"))
 sys.exit(ret.returncode)

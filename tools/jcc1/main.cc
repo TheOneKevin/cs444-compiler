@@ -15,13 +15,6 @@
 #include "utils/CLI11.h"
 
 void checkAndPrintErrors(diagnostics::DiagnosticEngine& d) {
-   // If verbose, print out the diagnostic debug messages
-   if(d.Verbose) {
-      for(auto m : d.debugs()) {
-         m.emit(std::cerr);
-         std::cerr << std::endl;
-      }
-   }
    if(d.hasErrors()) {
       for(auto m : d.errors()) {
          m.emit(std::cerr);

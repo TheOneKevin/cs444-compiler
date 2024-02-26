@@ -75,9 +75,9 @@ void NameResolver::buildSymbolTable() {
       subPkg->children[cu->bodyAsDecl()->name().data()] = cu->mut_bodyAsDecl();
    }
    if(diag.Verbose) {
-      std::ostringstream ss;
-      rootPkg_->print(ss, 0);
-      diag.ReportDebug() << "Symbol table built!\n" << ss.str();
+      // Put the string on the heap so we can print it out.
+      diag.ReportDebug() << "Symbol table built!";
+      rootPkg_->print(diag.ReportDebug().get(), 0);
    }
 }
 
@@ -334,7 +334,11 @@ std::ostream& NameResolver::Pkg::print(std::ostream& os, int indent) const {
       if(std::holds_alternative<Decl*>(child)) {
          os << name << std::endl;
       } else {
-         os << name << " ->" << std::endl;
+         if(name != UNNAMED_PACKAGE)
+            os << name;
+         else
+            os << "(default package)";
+         os << " ->" << std::endl;
          std::get<Pkg*>(child)->print(os, indent + 1);
       }
    }
