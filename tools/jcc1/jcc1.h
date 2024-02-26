@@ -4,7 +4,7 @@
 
 #include "parsetree/ParseTree.h"
 
-namespace {
+namespace jcc1 {
 
 enum class InputMode { File, Stdin };
 

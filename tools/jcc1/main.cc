@@ -1,18 +1,21 @@
+#include <ast/AST.h>
+#include <ast/AstNode.h>
+#include <ast/DeclContext.h>
+#include <grammar/Joos1WGrammar.h>
+#include <parsetree/ParseTreeVisitor.h>
+#include <passes/AllPasses.h>
+#include <semantic/HierarchyChecker.h>
+#include <semantic/NameResolver.h>
+#include <utils/BumpAllocator.h>
+#include <utils/CLI11.h>
+#include <utils/PassManager.h>
+
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <string>
 
-#include "ast/AST.h"
-#include "ast/AstNode.h"
-#include "ast/DeclContext.h"
-#include "grammar/Joos1WGrammar.h"
 #include "jcc1.h"
-#include "parsetree/ParseTreeVisitor.h"
-#include "semantic/HierarchyChecker.h"
-#include "semantic/NameResolver.h"
-#include "utils/BumpAllocator.h"
-#include "utils/CLI11.h"
 
 void checkAndPrintErrors(diagnostics::DiagnosticEngine& d) {
    if(d.hasErrors()) {
@@ -28,7 +31,7 @@ int main(int argc, char** argv) {
    // Command line option variables
    std::string optASTGraphFile, optPTGraphFile;
    bool optASTDump = false;
-   InputMode optInputMode = InputMode::Stdin;
+   jcc1::InputMode optInputMode = jcc1::InputMode::Stdin;
    bool optVerbose = false;
 
    // Parse command line options
@@ -46,11 +49,11 @@ int main(int argc, char** argv) {
    CLI11_PARSE(app, argc, argv);
 
    // Persistent parser objects
-   diagnostics::DiagnosticEngine diag{optVerbose};
-   utils::CustomBufferResource CbResource{};
-   BumpAllocator Alloc{&CbResource};
-   ast::Semantic Sema{Alloc, diag};
-   SourceManager SrcMgr{};
+   utils::PassManager PM{};
+   SourceManager SM{};
+
+   // Set the verbosity of the diagnostic engine
+   PM.Diag().setVerbose(optVerbose);
 
    // Ensure the remaining arguments are all valid paths
    auto files{app.remaining()};
@@ -59,82 +62,64 @@ int main(int argc, char** argv) {
          std::cerr << "File " << path << " does not exist" << std::endl;
          return 1;
       }
-      optInputMode = InputMode::File;
+      optInputMode = jcc1::InputMode::File;
    }
 
    // Read the input into the source manager (either from file or stdin)
-   if(optInputMode == InputMode::File) {
+   if(optInputMode == jcc1::InputMode::File) {
       for(auto const& path : files) {
-         SrcMgr.addFile(path);
+         SM.addFile(path);
       }
    } else {
       // Read std cin input until EOF
       std::string buffer_{std::istreambuf_iterator<char>(std::cin),
                           std::istreambuf_iterator<char>()};
-      SrcMgr.emplaceBuffer();
+      SM.emplaceBuffer();
       for(auto it = buffer_.begin(); it != buffer_.end(); ++it) {
          // If we encounter "---" in the input, split the input into multiple bufs
          if(*it == '-' && *(it + 1) == '-' && *(it + 2) == '-') {
-            SrcMgr.emplaceBuffer(), it += 2;
+            SM.emplaceBuffer(), it += 2;
          } else {
-            SrcMgr.currentBuffer().push_back(*it);
+            SM.currentBuffer().push_back(*it);
          }
       }
    }
 
-   // Work on each input buffer
-   std::pmr::vector<ast::CompilationUnit*> compilation_units{Alloc};
-   for(auto const& file : SrcMgr.files()) {
-      // 1. Parse the input into a parse tree
-      Joos1WParser parser{file, Alloc, &diag};
-      parsetree::Node* pt = nullptr;
-      int parseResult = parser.parse(pt);
-      if(parseResult != 0 || pt == nullptr) {
-         std::cerr << "Parsing failed with code: " << parseResult << " in file ";
-         SrcMgr.print(std::cerr, file);
-         std::cerr << std::endl;
-         checkAndPrintErrors(diag);
-         return 42;
-      }
-      // 2. Run the AST visitor on the parse tree
-      parsetree::ParseTreeVisitor visitor{Sema};
-      ast::CompilationUnit* ast = nullptr;
-      try {
-         ast = visitor.visitCompilationUnit(pt);
-      } catch(const parsetree::ParseTreeException& e) {
-         std::cerr << "ParseTreeException: " << e.what() << " in file ";
-         SrcMgr.print(std::cerr, file);
-         std::cerr << std::endl;
-         std::cerr << "Parse tree trace:" << std::endl;
-         trace_node(e.get_where());
-         return 1;
-      }
-      // 3. Check for errors
-      checkAndPrintErrors(diag);
-      compilation_units.push_back(ast);
-   }
-
-   // Link the compilation units
-   auto linking_unit = Sema.BuildLinkingUnit(compilation_units);
+   // Open the output file if requested
+   std::ofstream astGraphFile;
    if(!optASTGraphFile.empty()) {
-      std::ofstream ast_file{optASTGraphFile};
-      linking_unit->printDot(ast_file);
-   }
-   checkAndPrintErrors(diag);
-
-   // Run the name resolution pass
-   semantic::NameResolver nameResolverPass{Alloc, diag, linking_unit};
-   nameResolverPass.Resolve();
-   checkAndPrintErrors(diag);
-
-   // Run the hierarchy checking pass
-   semantic::HierarchyChecker hierarchyCheckerPass{diag, linking_unit};
-   checkAndPrintErrors(diag);
-
-   // Print the AST to stdout at the end only
-   if(optASTGraphFile.empty() && optASTDump) {
-      linking_unit->print(std::cout);
+      astGraphFile.open(optASTGraphFile);
    }
 
+   // Build the passes
+   {
+      using utils::Pass;
+      Pass* p2 = nullptr;
+      for(auto file : SM.files()) {
+         auto* p1 = &NewJoos1WParserPass(PM, file, p2);
+         p2 = &NewAstBuilderPass(PM, p1);
+      }
+      NewAstContextPass(PM);
+      auto* p3 = &NewLinkerPass(PM);
+      if(astGraphFile.is_open()) {
+         NewPrintASTPass(PM, p3, astGraphFile, true);
+      } else if(optASTDump) {
+         NewPrintASTPass(PM, p3, std::cout, false);
+      }
+      NewNameResolverPass(PM);
+      NewHierarchyCheckerPass(PM);
+   }
+
+   // Run the passes
+   if(!PM.Run()) {
+      std::cerr << "Error running pass: " << PM.LastRun()->Name() << std::endl;
+      if(PM.Diag().hasErrors()) {
+         for(auto m : PM.Diag().errors()) {
+            m.emit(std::cerr);
+            std::cerr << std::endl;
+         }
+      }
+      return 42;
+   }
    return 0;
 }

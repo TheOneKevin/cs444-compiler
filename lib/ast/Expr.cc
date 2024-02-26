@@ -7,6 +7,8 @@
 namespace ast {
 
 std::ostream& Expr::print(std::ostream& os, int indentation) const {
+   // FIXME(kevin): Re-enable when expressions work again
+   return os;
    if(indentation >= 0) {
       os << AstNode::indent(indentation);
       os << "Expr {\n";

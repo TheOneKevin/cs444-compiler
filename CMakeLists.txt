@@ -98,6 +98,9 @@ add_library(OLKCompilerLib
     # utils
     "lib/utils/FragmentGenerator.cc"
     "lib/utils/DotPrinter.cc"
+    "lib/utils/PassManager.cc"
+    # Passes
+    "lib/passes/CompilerPasses.cc"
 )
 target_include_directories(
     OLKCompilerLib
