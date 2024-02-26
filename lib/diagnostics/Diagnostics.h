@@ -87,11 +87,12 @@ public:
 class DiagnosticStream : public std::ostream {
 public:
    explicit DiagnosticStream(std::ostream& stream) : stream_{stream} {}
-   std::ostream& get() { return stream_; }
-   ~DiagnosticStream() { stream_ << std::endl; }
+   std::ostream& get() { return buffer; }
+   ~DiagnosticStream() { stream_ << buffer.str() << std::endl; }
 
 private:
    std::ostream& stream_;
+   std::ostringstream buffer;
 };
 
 template <typename T>
@@ -106,28 +107,27 @@ DiagnosticStream& operator<<(DiagnosticStream& str, T&& value) {
 
 class DiagnosticEngine {
 public:
-   explicit DiagnosticEngine(bool verbose = false) : Verbose{verbose} {}
+   explicit DiagnosticEngine(bool verbose = false) : verbose_{verbose} {}
    DiagnosticBuilder ReportError(SourceRange loc) {
       errors_.emplace_after(errors_.before_begin(), loc);
       return DiagnosticBuilder{errors_.front()};
    }
    DiagnosticStream ReportDebug() {
-      assert(Verbose &&
+      assert(Verbose() &&
              "Debug messages not available. Did you forget to check for Verbose?");
       // FIXME(kevin): In the future, allow for custom streams
       return DiagnosticStream{std::cerr};
    }
+   void setVerbose(bool verbose) { verbose_ = verbose; }
    bool hasErrors() const { return !errors_.empty(); }
    auto errors() const { return std::views::all(errors_); }
-   auto debugs() const { return std::views::all(debugs_); }
-   auto clearDebugs() { debugs_.clear(); }
 
 public:
-   const bool Verbose = false;
+   bool Verbose() const { return verbose_; }
 
 private:
+   bool verbose_ = false;
    std::forward_list<DiagnosticStorage> errors_;
-   std::forward_list<DiagnosticStorage> debugs_;
 };
 
 /* ===--------------------------------------------------------------------=== */

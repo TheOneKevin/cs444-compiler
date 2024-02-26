@@ -5,10 +5,15 @@
 #include <ranges>
 #include <string>
 #include <string_view>
+#include <fstream>
 
 class SourceManager;
 class SourceLocation;
 class SourceRange;
+
+/* ===--------------------------------------------------------------------=== */
+// SourceFile
+/* ===--------------------------------------------------------------------=== */
 
 /// @brief An opaque identifier representing a source file.
 class SourceFile {
@@ -30,6 +35,10 @@ private:
    /// This is used to index into the SourceManager's file list.
    void const* id_;
 };
+
+/* ===--------------------------------------------------------------------=== */
+// SourceManager
+/* ===--------------------------------------------------------------------=== */
 
 class SourceManager {
 public:

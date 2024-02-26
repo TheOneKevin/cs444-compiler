@@ -10,6 +10,10 @@
 class SourceLocation;
 class SourceRange;
 
+/* ===--------------------------------------------------------------------=== */
+// SourceLocation
+/* ===--------------------------------------------------------------------=== */
+
 /// @brief A specific location (line, column) in a source file.
 class SourceLocation {
    friend class SourceRange;
@@ -38,11 +42,16 @@ private:
    int column_;
 };
 
+/* ===--------------------------------------------------------------------=== */
+// SourceRange
+/* ===--------------------------------------------------------------------=== */
+
 /// @brief A range of locations in a source file.
 class SourceRange {
 public:
    /// @brief Construct a new SourceRange with no associated file.
    SourceRange() : begin_{}, end_{} {}
+   SourceRange(SourceFile file) : begin_{file, 0, 0}, end_{file, 0, 0} {}
 
    /// @brief Construct a new SourceRange with the given begin and end
    /// locations.

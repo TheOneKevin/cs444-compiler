@@ -152,7 +152,7 @@ void HierarchyChecker::checkInheritance() {
             }
             inheritanceMap_[interfaceDecl].insert(superInterface);
             // print debug information
-            if(diag.Verbose) {
+            if(diag.Verbose()) {
                diag.ReportDebug() << "Interface: " << interfaceDecl->name()
                                   << " extends " << superInterface->name() << "\n";
             }
@@ -266,7 +266,7 @@ void HierarchyChecker::checkClassMethod(
    classDecl->setInheritedMethods(allMethods);
 
    // print debug information
-   if(diag.Verbose) {
+   if(diag.Verbose()) {
       diag.ReportDebug() << "Class: " << classDecl->name();
       diag.ReportDebug() << "Inherited methods: ";
       for(auto method : allMethods) diag.ReportDebug() << "\t" << method->name();
@@ -364,7 +364,7 @@ void HierarchyChecker::checkInterfaceMethod(
    interfaceDecl->setInheritedMethods(allMethods);
 
    // print debug information
-   if(diag.Verbose) {
+   if(diag.Verbose()) {
       diag.ReportDebug() << "Interface: " << interfaceDecl->name();
       diag.ReportDebug() << "Inherited methods:";
       for(auto method : allMethods) diag.ReportDebug() << "\t" << method->name();

@@ -74,7 +74,7 @@ void NameResolver::buildSymbolTable() {
       // Now add the CU's declaration to the subpackage.
       subPkg->children[cu->bodyAsDecl()->name().data()] = cu->mut_bodyAsDecl();
    }
-   if(diag.Verbose) {
+   if(diag.Verbose()) {
       // Put the string on the heap so we can print it out.
       diag.ReportDebug() << "Symbol table built!";
       rootPkg_->print(diag.ReportDebug().get(), 0);
