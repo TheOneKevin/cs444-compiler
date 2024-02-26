@@ -2,8 +2,8 @@ import os
 import shutil
 
 # Get the directory of this file
-dir_path = os.path.dirname(os.path.realpath(__file__))
-gen_path = os.path.join(dir_path, "..", "tests", "generated")
+dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "tests")
+gen_path = os.path.join(dir_path, "generated")
 
 # Does gen_path exist? If so, remove it
 if os.path.exists(gen_path):
