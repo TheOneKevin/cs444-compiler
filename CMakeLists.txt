@@ -96,7 +96,6 @@ add_library(OLKCompilerLib
     "lib/parsetree/VisitLeaf.cc"
     "lib/parsetree/VisitStatement.cc"
     # utils
-    "lib/utils/FragmentGenerator.cc"
     "lib/utils/DotPrinter.cc"
     "lib/utils/PassManager.cc"
     # Passes
@@ -154,6 +153,7 @@ add_my_test(
     "tools/genfrags/basic_fragments.cc"
     "tools/genfrags/class_fragments.cc"
     "tools/genfrags/method_fragments.cc"
+    "tools/genfrags/FragmentGenerator.cc"
     ${GENERATED_TEST_SRCS}
 )
 
@@ -163,6 +163,7 @@ add_tool(
     "tools/genfrags/basic_fragments.cc"
     "tools/genfrags/class_fragments.cc"
     "tools/genfrags/method_fragments.cc"
+    "tools/genfrags/FragmentGenerator.cc"
 )
 
 add_tool(

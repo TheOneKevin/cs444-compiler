@@ -5,7 +5,7 @@
 #include "basic_fragments.h"
 #include "class_fragments.h"
 #include "method_fragments.h"
-#include "utils/FragmentGenerator.h"
+#include "FragmentGenerator.h"
 
 int main(int argc, char** argv) {
    // Grab the first command line argument
