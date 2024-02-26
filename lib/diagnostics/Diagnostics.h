@@ -107,26 +107,26 @@ DiagnosticStream& operator<<(DiagnosticStream& str, T&& value) {
 
 class DiagnosticEngine {
 public:
-   explicit DiagnosticEngine(bool verbose = false) : verbose_{verbose} {}
+   explicit DiagnosticEngine(int verbose = 0) : verbose_{verbose} {}
    DiagnosticBuilder ReportError(SourceRange loc) {
       errors_.emplace_after(errors_.before_begin(), loc);
       return DiagnosticBuilder{errors_.front()};
    }
-   DiagnosticStream ReportDebug() {
-      assert(Verbose() &&
+   DiagnosticStream ReportDebug(int level = 1) {
+      assert(Verbose(level) &&
              "Debug messages not available. Did you forget to check for Verbose?");
       // FIXME(kevin): In the future, allow for custom streams
       return DiagnosticStream{std::cerr};
    }
-   void setVerbose(bool verbose) { verbose_ = verbose; }
+   void setVerbose(int verbose) { verbose_ = verbose; }
    bool hasErrors() const { return !errors_.empty(); }
    auto errors() const { return std::views::all(errors_); }
 
 public:
-   bool Verbose() const { return verbose_; }
+   bool Verbose(int level = 1) const { return verbose_ >= level; }
 
 private:
-   bool verbose_ = false;
+   int verbose_ = 0;
    std::forward_list<DiagnosticStorage> errors_;
 };
 

@@ -84,9 +84,7 @@ bool PassManager::Run() {
       assert(!pass->valid_ && "Pass already run");
       pass->running_ = true;
       if(Diag().Verbose()) {
-         Diag().ReportDebug() << "====================================";
-         Diag().ReportDebug() << "Running " << pass->Name() << " Pass";
-         Diag().ReportDebug() << "====================================";
+         Diag().ReportDebug() << "[=>] Running " << pass->Name() << " Pass";
       }
       pass->Run();
       lastRun_ = pass;

@@ -19,16 +19,23 @@ public:
          : Pass(pm), file_{file}, prev_{prev} {}
    string_view Name() const override { return "Joos1W Lexing and Parsing"; }
    void Run() override {
+      // Print the file being parsed if verbose
+      if(PM().Diag().Verbose()) {
+         auto os = PM().Diag().ReportDebug();
+         os << "Parsing file ";
+         SourceManager::print(os.get(), file_);
+      }
       // Parse the file
       BumpAllocator alloc{NewHeap()};
       Joos1WParser parser{file_, alloc, &PM().Diag()};
-      parser.parse(tree_);
+      int result = parser.parse(tree_);
       // If no parse tree was generated, report error if not already reported
-      if(!tree_ && !PM().Diag().hasErrors()) {
+      if((result != 0 || !tree_) && !PM().Diag().hasErrors()) {
          PM().Diag().ReportError(SourceRange{file_}) << "failed to parse file";
       }
    }
    parsetree::Node* Tree() { return tree_; }
+   SourceFile File() { return file_; }
 
 private:
    void computeDependencies() override {
@@ -70,6 +77,25 @@ AstContextPass& NewAstContextPass(PassManager& PM) {
 /* ===--------------------------------------------------------------------=== */
 
 class AstBuilderPass final : public Pass {
+private:
+   /// @brief Prints the parse tree back to the parent node
+   /// @param node Node to trace back to the parent
+   inline void trace_node(parsetree::Node const* node, std::ostream& os) {
+      if(node->parent() != nullptr) {
+         trace_node(node->parent(), os);
+         os << " -> ";
+      }
+      os << node->type_string() << std::endl;
+   }
+
+   /// @brief Marks a node and all its parents
+   /// @param node The node to mark
+   inline void mark_node(parsetree::Node* node) {
+      if(!node) return;
+      mark_node(node->parent());
+      node->mark();
+   }
+
 public:
    AstBuilderPass(PassManager& pm, Joos1WParserPass& dep) noexcept
          : Pass(pm), dep{dep} {}
@@ -77,14 +103,22 @@ public:
    void Run() override {
       // Get the parse tree and the semantic analysis
       auto& sema = GetPass<AstContextPass>().Sema();
-      auto* ptree = dep.Tree();
+      auto* PT = dep.Tree();
       // Create a new heap just for creating the AST
       BumpAllocator alloc{NewHeap()};
       parsetree::ParseTreeVisitor visitor{sema, alloc};
       // Store the result in the pass
-      cu_ = visitor.visitCompilationUnit(ptree);
+      try {
+         cu_ = visitor.visitCompilationUnit(PT);
+      } catch(const parsetree::ParseTreeException& e) {
+         std::cerr << "ParseTreeException: " << e.what() << " in file ";
+         SourceManager::print(std::cerr, dep.File());
+         std::cerr << std::endl;
+         std::cerr << "Parse tree trace:" << std::endl;
+         trace_node(e.get_where(), std::cerr);
+      }
       if(cu_ == nullptr && !PM().Diag().hasErrors()) {
-         PM().Diag().ReportError(ptree->location()) << "failed to build AST";
+         PM().Diag().ReportError(PT->location()) << "failed to build AST";
       }
    }
    ast::CompilationUnit* CompilationUnit() { return cu_; }

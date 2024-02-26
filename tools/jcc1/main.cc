@@ -15,24 +15,13 @@
 #include <iterator>
 #include <string>
 
-#include "jcc1.h"
-
-void checkAndPrintErrors(diagnostics::DiagnosticEngine& d) {
-   if(d.hasErrors()) {
-      for(auto m : d.errors()) {
-         m.emit(std::cerr);
-         std::cerr << std::endl;
-      }
-      exit(1);
-   }
-}
+enum class InputMode { File, Stdin };
 
 int main(int argc, char** argv) {
    // Command line option variables
    std::string optASTGraphFile, optPTGraphFile;
    bool optASTDump = false;
-   jcc1::InputMode optInputMode = jcc1::InputMode::Stdin;
-   bool optVerbose = false;
+   InputMode optInputMode = InputMode::Stdin;
 
    // Parse command line options
    CLI::App app{"Joos1W AST Printer"};
@@ -44,7 +33,9 @@ int main(int argc, char** argv) {
    app.add_flag("-x,--split",
                 "Split the input file, contents delimited by ---, into multiple "
                 "compilation units");
-   app.add_flag("-v,--verbose", optVerbose, "Enable verbose output");
+   auto optVerboseLevel = app.add_flag("-v", "Set the verbosity level")
+                                ->expected(0, 1)
+                                ->check(CLI::Range(0, 3));
    app.allow_extras();
    CLI11_PARSE(app, argc, argv);
 
@@ -53,7 +44,20 @@ int main(int argc, char** argv) {
    SourceManager SM{};
 
    // Set the verbosity of the diagnostic engine
-   PM.Diag().setVerbose(optVerbose);
+   for(auto r : optVerboseLevel->results()) {
+      int level = 0;
+      if(r == "true") {
+         level = 1;
+      } else {
+         try {
+            level = std::stoi(r);
+         } catch(std::invalid_argument const& e) {
+            std::cerr << "Invalid verbosity level: " << r << std::endl;
+            return 1;
+         }
+      }
+      PM.Diag().setVerbose(level);
+   }
 
    // Ensure the remaining arguments are all valid paths
    auto files{app.remaining()};
@@ -62,11 +66,11 @@ int main(int argc, char** argv) {
          std::cerr << "File " << path << " does not exist" << std::endl;
          return 1;
       }
-      optInputMode = jcc1::InputMode::File;
+      optInputMode = InputMode::File;
    }
 
    // Read the input into the source manager (either from file or stdin)
-   if(optInputMode == jcc1::InputMode::File) {
+   if(optInputMode == InputMode::File) {
       for(auto const& path : files) {
          SM.addFile(path);
       }
