@@ -75,7 +75,10 @@ public:
 
    /// @brief Get the name of a file
    static std::string getFileName(SourceFile file) {
-      return static_cast<File const*>(file.id_)->name;
+      auto* f = static_cast<File const*>(file.id_);
+      if(f == nullptr || !f->isFile)
+         return "";
+      return f->name;
    }
 
    /// @brief Print the name of the file to the output stream.
@@ -100,10 +103,11 @@ private:
    struct File {
       std::string name;
       std::string buffer;
+      bool isFile = false;
       SourceManager* parent;
       File(std::string_view name, std::istreambuf_iterator<char> begin,
            SourceManager* parent)
-            : name{name}, buffer{begin, {}}, parent{parent} {}
+            : name{name}, buffer{begin, {}}, isFile{true}, parent{parent} {}
       File(std::string_view name, SourceManager* parent)
             : name{name}, buffer{}, parent{parent} {}
    };

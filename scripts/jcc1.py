@@ -33,7 +33,7 @@ def grab_all_java(dir):
 script_dir = os.path.dirname(os.path.realpath(__file__))
 assignment = args.assignment
 test = args.test
-assignment_number = assignment[1:]
+assignment_number = max(2, int(assignment[1:]))
 
 # Set up the test directories
 test = f"/u/cs444/pub/assignment_testcases/{assignment}/{test}"

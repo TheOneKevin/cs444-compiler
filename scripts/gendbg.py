@@ -7,6 +7,10 @@ import argparse
 
 
 def build_json(name, args):
+    # Grab JOOSC from the environment
+    path = "${workspaceFolder}/build/jcc1"
+    if "JOOSC" in os.environ:
+        path = os.environ["JOOSC"]
     return json.dumps(
         {
             "version": "0.2.0",
@@ -15,7 +19,7 @@ def build_json(name, args):
                     "type": "lldb",
                     "request": "launch",
                     "name": name,
-                    "program": "${workspaceFolder}/build/jcc1",
+                    "program": path,
                     "args": args,
                     "cwd": "${workspaceFolder}",
                 }
@@ -53,6 +57,7 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 assignment = sys.argv[1]
 test = sys.argv[2]
 assignment_number = assignment[1:]
+assignment_number = max(2, int(assignment_number))
 
 # Grab the STDLIB
 stdlib_dir = f"/u/cs444/pub/stdlib/{assignment_number}.0"

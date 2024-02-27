@@ -262,6 +262,15 @@ void NameResolver::ResolveType(UnresolvedType* ty) {
             << "\"";
       return;
    }
+   // If subTy is nullptr, then an ambiguous import-on-demand has shadowed the
+   // declaration. This is an error.
+   if(!std::get<Decl*>(subTy)) {
+      ty->invalidate();
+      diag.ReportError(ty->location())
+            << "failed to resolve type, ambiguous import-on-demand: \""
+            << ty->toString() << "\"";
+      return;
+   }
    // Now we can create a reference type to the declaration.
    ty->resolveInternal(std::get<Decl*>(subTy));
    // After, the type should be resolved
@@ -303,6 +312,7 @@ void NameResolver::resolveRecursive(ast::AstNode* node) {
          resolveRecursive(cu->mut_body());
          replaceObjectClass(cu->mut_body());
       } else if(auto ty = dynamic_cast<ast::Type*>(child)) {
+         if(ty->isInvalid()) continue;
          // If the type is not resolved, then we should resolve it
          if(!ty->isResolved()) ty->resolve(*this);
       } else {
@@ -346,5 +356,36 @@ std::ostream& NameResolver::Pkg::print(std::ostream& os, int indent) const {
 }
 
 void NameResolver::Pkg::dump() const { print(std::cout, 0); }
+
+void NameResolver::dump() const {
+   std::cout << "Symbol table:" << std::endl;
+   rootPkg_->dump();
+   std::cout << "Import table:" << std::endl;
+   dumpImports();
+}
+
+void NameResolver::dumpImports() const {
+   if(cu_ && cu_->bodyAsDecl() && cu_->bodyAsDecl()->hasCanonicalName())
+      std::cout << "Current CU: " << cu_->bodyAsDecl()->getCanonicalName() << std::endl;
+   else
+      return;
+   for(auto const& [name, child] : importsMap_) {
+      if(name == UNNAMED_PACKAGE)
+         std::cout << "(default package) -> ";
+      else
+         std::cout << name << " -> ";
+      if(std::holds_alternative<Decl*>(child)) {
+         auto* decl = std::get<Decl*>(child);
+         std::cout << "(Decl) ";
+         if(decl)
+            std::cout << decl->name();
+         else
+            std::cout << "<null>";
+      } else {
+         std::cout << "(subpackage)";
+      }
+      std::cout << std::endl;
+   }
+}
 
 } // namespace semantic

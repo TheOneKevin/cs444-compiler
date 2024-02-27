@@ -122,6 +122,8 @@ private:
 
 public:
    virtual ~Pass() = default;
+   /// @brief Function to override when you want to acquire resources
+   virtual void Init() {}
    /// @brief Function to override to run the pass
    virtual void Run() = 0;
    /// @brief Function to override to get the name (id) of the pass
@@ -173,6 +175,7 @@ private:
    enum State {
       Uninitialized,
       PropagateEnabled,
+      AcquireResources,
       RegisterDependencies,
       Running,
       Cleanup,
@@ -202,7 +205,8 @@ private:
    };
 
 public:
-   PassManager(CLI::App& app) : options_{app} {}
+   PassManager(CLI::App& app, bool reuseHeaps = true)
+         : options_{app}, reuseHeaps_{reuseHeaps} {}
    /// @brief Runs all the passes in the pass manager
    /// @return True if all passes ran successfully
    bool Run();
@@ -215,6 +219,13 @@ private:
    PassManager(PassManager&&) = delete;
    PassManager& operator=(PassManager const&) = delete;
    PassManager& operator=(PassManager&&) = delete;
+
+public:
+   ~PassManager() {
+      // Clean up passes, and then heaps
+      passes_.clear();
+      heaps_.clear();
+   }
 
 public:
    /// @brief Adds a pass to the pass manager
@@ -299,6 +310,7 @@ private:
    Pass* lastRun_ = nullptr;
    std::unordered_map<Pass*, int> passDeps_;
    PassOptions options_;
+   bool reuseHeaps_;
 };
 
 template <typename T>

@@ -37,14 +37,32 @@ private:
       void dump() const;
    };
 
+private:
+   // Delete copy and move constructors and assignment operators
+   NameResolver(NameResolver const&) = delete;
+   NameResolver(NameResolver&&) = delete;
+   NameResolver& operator=(NameResolver const&) = delete;
+   NameResolver& operator=(NameResolver&&) = delete;
+
 public:
    /**
-    * @brief Construct a new Name Resolver object given the entire linking
-    * unit (and all its symbols).
+    * @brief Construct a new Name Resolver object.
+    *
+    * @param alloc The bump allocator to use for all allocations.
+    * @param diag The diagnostic engine to use for all diagnostics.
     */
-   NameResolver(BumpAllocator& alloc, diagnostics::DiagnosticEngine& diag,
-                ast::LinkingUnit* lu)
-         : alloc{alloc}, diag{diag}, lu_{lu}, importsMap_{alloc} {
+   NameResolver(BumpAllocator& alloc, diagnostics::DiagnosticEngine& diag)
+         : alloc{alloc}, diag{diag}, lu_{nullptr}, importsMap_{alloc} {}
+
+   /**
+    * @brief Initializes a new Name Resolver object given the entire linking
+    * unit (and all its symbols). After this, call Resolve() to resolve all
+    * types in the linking unit.
+    *
+    * @param lu The linking unit to resolve.
+    */
+   void Init(ast::LinkingUnit* lu) {
+      lu_ = lu;
       buildSymbolTable();
    }
 
@@ -64,8 +82,11 @@ public:
    /// @param type The unresolved type to resolve.
    void ResolveType(ast::UnresolvedType* type);
 
-   /// @brief Dumps the symbol table to the output stream.
-   void dump() const { rootPkg_->dump(); }
+   /// @brief Dumps the symbol and import tables to the output stream.
+   void dump() const;
+
+   /// @brief Dumps the import table to the output stream.
+   void dumpImports() const;
 
 private:
    /// @brief Resolves the AST recursively
