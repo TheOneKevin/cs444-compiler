@@ -393,15 +393,15 @@ public:
    string_view Desc() const override { return "Type Checking"; }
    void Run() override {
       auto lu = GetPass<LinkerPass>().LinkingUnit();
-      // TODO(kevin):
-      // semantic::TypeChecker typeChecker{PM().Diag(), lu};
-      // typeChecker.Resolve();
+      semantic::TypeChecker typeChecker{PM().Diag()};
+      typeChecker.check(lu);
    }
 
 private:
    void computeDependencies() override {
       ComputeDependency(GetPass<AstContextPass>());
       ComputeDependency(GetPass<ExprResolverPass>());
+      ComputeDependency(GetPass<LinkerPass>());
    }
 };
 
