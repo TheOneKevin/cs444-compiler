@@ -36,6 +36,9 @@ assignment_number = assignment[1:]
 test = f"/u/cs444/pub/assignment_testcases/{assignment}/{test}"
 stdlib_dir = f"/u/cs444/pub/stdlib/{assignment_number}.0"
 joosc = os.path.join(script_dir, "..", "build", "jcc1")
+# Grab the joosc binary from the environment
+if "JOOSC" in os.environ:
+    joosc = os.environ["JOOSC"]
 
 # Check that both the stdlib directory exist and is a directory
 if not os.path.exists(stdlib_dir) or not os.path.isdir(stdlib_dir):

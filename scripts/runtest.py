@@ -43,6 +43,9 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 test_dir = f"/u/cs444/pub/assignment_testcases/{assignment}/"
 stdlib_dir = "/u/cs444/pub/stdlib/2.0"
 joosc = os.path.join(script_dir, "..", "build", "jcc1")
+# Grab the joosc binary from the environment
+if "JOOSC" in os.environ:
+    joosc = os.environ["JOOSC"]
 
 # List test cases files
 test_names = os.listdir(test_dir)
