@@ -49,7 +49,7 @@ void HierarchyChecker::checkMethodInheritanceHelper(
          for(auto method : superInterface->inheritedMethods()) {
             inheritedMethods.emplace_back(method);
          }
-      } else {
+      } else if(super != nullptr) {
          assert(false && "Unreachable");
       }
    }

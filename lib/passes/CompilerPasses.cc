@@ -1,6 +1,9 @@
 #include <filesystem>
+#include <memory>
+#include <string_view>
 
 #include "diagnostics/Location.h"
+#include "diagnostics/SourceManager.h"
 #include "grammar/Joos1WGrammar.h"
 #include "parsetree/ParseTreeVisitor.h"
 #include "semantic/ExprResolver.h"
@@ -8,6 +11,7 @@
 #include "semantic/NameResolver.h"
 #include "semantic/Semantic.h"
 #include "semantic/TypeChecker.h"
+#include "utils/BumpAllocator.h"
 #include "utils/CLI11.h"
 #include "utils/PassManager.h"
 
@@ -32,30 +36,25 @@ public:
          SourceManager::print(os.get(), file_);
       }
       // Check for non-ASCII characters
-      // FIXME(kevin):
-      /*for(unsigned i = 0; i < str.length(); i++) {
-         if(static_cast<unsigned char>(str[i]) > 127) {
-            std::cerr << "Parse error: non-ASCII character in input" << std::endl;
-            return 42;
-         }
-      }*/
+      checkNonAscii(SourceManager::getBuffer(file_));
       // Parse the file
       BumpAllocator alloc{NewHeap()};
       Joos1WParser parser{file_, alloc, &PM().Diag()};
       int result = parser.parse(tree_);
       // If no parse tree was generated, report error if not already reported
-      if((result != 0 || !tree_) && !PM().Diag().hasErrors()) {
+      if((result != 0 || !tree_) && !PM().Diag().hasErrors())
          PM().Diag().ReportError(SourceRange{file_}) << "failed to parse file";
-      }
+      if(result != 0 || !tree_) return;
       // If the parse tree is poisoned, report error
       if(tree_->is_poisoned()) {
-         PM().Diag().ReportError(SourceRange{file_})
-               << "parse tree is poisoned";
+         PM().Diag().ReportError(SourceRange{file_}) << "parse tree is poisoned";
+         return;
       }
       // If the parse tree has invalid literal types, report error
       if(!isLiteralTypeValid(tree_)) {
          PM().Diag().ReportError(SourceRange{file_})
                << "invalid literal types in parse tree";
+         return;
       }
    }
    parsetree::Node* Tree() { return tree_; }
@@ -71,6 +70,15 @@ private:
          if(!isLiteralTypeValid(node->child(i))) return false;
       }
       return true;
+   }
+   void checkNonAscii(std::string_view str) {
+      for(unsigned i = 0; i < str.length(); i++) {
+         if(static_cast<unsigned char>(str[i]) > 127) {
+            PM().Diag().ReportError(SourceRange{file_})
+                  << "non-ASCII character in file";
+            return;
+         }
+      }
    }
 
 private:
@@ -92,16 +100,23 @@ Pass& NewJoos1WParserPass(PassManager& PM, SourceFile file, Pass* prev) {
 
 class AstContextPass final : public Pass {
 public:
-   AstContextPass(PassManager& PM) noexcept
-         : Pass(PM), alloc_{NewHeap()}, sema_{alloc_, PM.Diag()} {}
+   AstContextPass(PassManager& PM) noexcept : Pass(PM) {}
    string_view Desc() const override { return "AST Context Lifetime"; }
-   void Run() override {}
-   ast::Semantic& Sema() { return sema_; }
+   void Init() override { alloc = std::make_unique<BumpAllocator>(NewHeap()); }
+   void Run() override {
+      sema = std::make_unique<ast::Semantic>(*alloc, PM().Diag());
+   }
+   ast::Semantic& Sema() { return *sema; }
+   ~AstContextPass() override {
+      // FIXME(kevin): This is a really bad bug that occurs in many places
+      sema.reset();
+      alloc.reset();
+   }
 
 private:
    void computeDependencies() override {}
-   BumpAllocator alloc_;
-   ast::Semantic sema_;
+   std::unique_ptr<ast::Semantic> sema;
+   std::unique_ptr<BumpAllocator> alloc;
 };
 
 AstContextPass& NewAstContextPass(PassManager& PM) {
@@ -135,9 +150,9 @@ private:
 public:
    AstBuilderPass(PassManager& PM, Joos1WParserPass& dep) noexcept
          : Pass(PM), dep{dep} {
-      /*optCheckName =
+      optCheckName =
             PM.PO().AddFlag("--check-file-name",
-                            "Check if the file name matches the class name");*/
+                            "Check if the file name matches the class name");
    }
    string_view Desc() const override { return "ParseTree -> AST Building"; }
    void Run() override {
@@ -161,10 +176,10 @@ public:
          PM().Diag().ReportError(PT->location()) << "failed to build AST";
       }
       // Check if the file name matches the class name
-      // FIXME(kevin): optCheckName && optCheckName->as<bool>()
-      if(true) {
+      bool shouldCheck = optCheckName && optCheckName->as<bool>();
+      auto fileName = SourceManager::getFileName(dep.File());
+      if(!fileName.empty() && shouldCheck) {
          auto cuBody = cu_->bodyAsDecl();
-         auto fileName = SourceManager::getFileName(dep.File());
          // Grab the file without the path and the extension
          fileName = fileName.substr(0, fileName.find_last_of('.'));
          fileName = fileName.substr(fileName.find_last_of('/') + 1);
@@ -203,9 +218,7 @@ public:
    LinkerPass(PassManager& PM) noexcept : Pass(PM) {}
    string_view Desc() const override { return "AST Linking"; }
    void Run() override {
-      // Grab a temporary heap
-      BumpAllocator alloc{NewHeap()};
-      std::pmr::vector<ast::CompilationUnit*> cus{alloc};
+      std::pmr::vector<ast::CompilationUnit*> cus{};
       // Get the semantic analysis
       auto& sema = GetPass<AstContextPass>().Sema();
       // Create the linking unit
@@ -231,14 +244,21 @@ Pass& NewLinkerPass(PassManager& PM) { return PM.AddPass<LinkerPass>(); }
 
 class NameResolverPass final : public Pass {
 public:
-   NameResolverPass(PassManager& PM) noexcept : Pass(PM) {}
+   NameResolverPass(PassManager& PM) noexcept : Pass{PM} {}
    string_view Name() const override { return "sema-name"; }
    string_view Desc() const override { return "Name Resolution"; }
+   void Init() override { alloc = std::make_unique<BumpAllocator>(NewHeap()); }
    void Run() override {
       auto lu = GetPass<LinkerPass>().LinkingUnit();
-      BumpAllocator alloc{NewHeap()};
-      semantic::NameResolver resolver{alloc, PM().Diag(), lu};
-      resolver.Resolve();
+      resolver = std::make_unique<semantic::NameResolver>(*alloc, PM().Diag());
+      resolver->Init(lu);
+      if(!PM().Diag().hasErrors()) resolver->Resolve();
+   }
+   semantic::NameResolver& Resolver() { return *resolver; }
+   ~NameResolverPass() override {
+      // FIXME(kevin): This is a really bad bug that occurs in many places
+      resolver.reset();
+      alloc.reset();
    }
 
 private:
@@ -246,6 +266,8 @@ private:
       ComputeDependency(GetPass<AstContextPass>());
       ComputeDependency(GetPass<LinkerPass>());
    }
+   std::unique_ptr<BumpAllocator> alloc;
+   std::unique_ptr<semantic::NameResolver> resolver;
 };
 
 Pass& NewNameResolverPass(PassManager& PM) {

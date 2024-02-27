@@ -119,6 +119,7 @@ class UnresolvedType final : public ReferenceType {
    pmr_vector<std::pmr::string> identifiers;
    mutable std::pmr::string canonicalName;
    mutable bool locked_ = false;
+   bool valid_ = true;
 
 public:
    explicit UnresolvedType(BumpAllocator& alloc, SourceRange loc)
@@ -157,7 +158,14 @@ public:
    void lock() const { locked_ = true; }
 
    /// @brief Resolves the underlying reference type to a declaration.
-   void resolve(semantic::NameResolver& x) override { x.ResolveType(this); }
+   void resolve(semantic::NameResolver& x) override {
+      assert(!isInvalid() && "Attempted to resolve invalid type");
+      x.ResolveType(this);
+   }
+
+   /// @brief Returns if the type is invalid now
+   bool isInvalid() const override { return !valid_; }
+   void invalidate() { valid_ = false; }
 
    std::ostream& operator<<(std::ostream& os) const { return os << toString(); }
 };

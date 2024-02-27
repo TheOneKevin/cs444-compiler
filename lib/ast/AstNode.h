@@ -145,6 +145,7 @@ public:
    utils::Generator<AstNode const*> children() const override final {
       co_yield nullptr;
    }
+   virtual bool isInvalid() const { return false; }
 
 private:
    SourceRange loc_;

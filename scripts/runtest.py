@@ -24,7 +24,7 @@ def grab_all_java(dir):
 # Run joosc and get return code subroutine
 def run_on_files(files):
     ret = subprocess.run(
-        [joosc, *files], stderr=subprocess.PIPE, stdout=subprocess.PIPE
+        [joosc, '-c', *files], stderr=subprocess.PIPE, stdout=subprocess.PIPE
     )
     return ret.returncode, ret.stdout, ret.stderr
 

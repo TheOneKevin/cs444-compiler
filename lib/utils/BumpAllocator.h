@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory_resource>
+#include <cassert>
 
 using BumpAllocator = std::pmr::polymorphic_allocator<std::byte>;
 
@@ -17,6 +18,8 @@ public:
    }
 
    void* do_allocate(std::size_t bytes, std::size_t alignment) override {
+      assert((!invalid) && "attempt to allocate when CustomBufferResource is invalid");
+
       // Do not return the same pointer twice, so set min size to 1
       if(bytes == 0) bytes = 1;
 
@@ -51,6 +54,10 @@ public:
       cur_buf_ = buffers_.begin();
    }
 
+   void destroy() {
+      invalid = true;
+   }
+
    ~CustomBufferResource() {
       for(auto& buf : buffers_) {
          std::free(buf.buf);
@@ -81,6 +88,7 @@ private:
    size_t avail_;
    std::vector<Buffer>::iterator cur_buf_;
    std::vector<Buffer> buffers_;
+   bool invalid = false;
 };
 
 } // namespace utils

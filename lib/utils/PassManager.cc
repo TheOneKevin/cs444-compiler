@@ -56,9 +56,9 @@ void PassOptions::AddAllOptions() {
 void Pass::ComputeDependency(Pass& pass) {
    // This function serves a many purposes depending on the state
    // 1. PropagateEnabled: Recursively propagate the enabled state
-   // 2. RegisterDependencies: We register the dependency with PM
-   //    and acquire any heap resources
-   // 3. Cleanup: We only free the heap resources
+   // 2. AcquireResources: We acquire any heap resources
+   // 3. RegisterDependencies: Register the dep with PM to build the depgraph
+   // 4. Cleanup: We only free the heap resources
 
    if(state == PropagateEnabled) {
       // If we're disabled, then we don't need to do anything
@@ -71,12 +71,11 @@ void Pass::ComputeDependency(Pass& pass) {
    }
 
    for(auto& heap : PM().heaps_) {
-      if(heap.owner == &pass) {
-         if(state == RegisterDependencies) {
-            heap.refCount++;
-         } else if(state == Cleanup) {
-            PM().freeHeap(heap);
-         }
+      if(heap.owner != &pass) continue;
+      if(state == AcquireResources) {
+         heap.refCount++;
+      } else if(state == Cleanup) {
+         PM().freeHeap(heap);
       }
    }
 
@@ -98,9 +97,13 @@ void Pass::RegisterCLI() {
 /* ===--------------------------------------------------------------------=== */
 
 CustomBufferResource* PassManager::newHeap(Pass& pass) {
+   // Check the pass is running
+   if(pass.state != Pass::Running && pass.state != Pass::AcquireResources) {
+      throw std::runtime_error("Pass requesting a heap is not running");
+   }
    // First, find a free heap
    for(auto& heap : heaps_) {
-      if(heap.refCount != 0) continue;
+      if(heap.owner != nullptr) continue;
       // We found a free heap, so we can use it
       heap.refCount = 1;
       heap.owner = &pass;
@@ -119,8 +122,15 @@ void PassManager::freeHeap(Heap& h) {
    }
    // If the ref count is 0, then we can destroy the heap
    if(h.refCount == 0) {
-      h.owner = nullptr;
-      h.heap->reset();
+      if(Diag().Verbose(2)) {
+         Diag().ReportDebug() << "[=>] Freeing heap for " << h.owner->Desc();
+      }
+      if(reuseHeaps_) {
+         h.owner = nullptr;
+         h.heap->reset();
+      } else {
+         h.heap->destroy();
+      }
    }
    return;
 }
@@ -129,20 +139,36 @@ bool PassManager::Run() {
    std::vector<Pass*> S;
    std::vector<Pass*> L;
    PO().parseOptions();
-   // 1. Propagate the enabled state
+   // 1a Propagate the enabled state
    for(auto& pass : passes_) {
       pass->state = Pass::PropagateEnabled;
       pass->computeDependencies();
    }
-   // 2. Build the dependency graph of passes
-   size_t NumEnabledPasses = 0;
+   // 1b Acquire resources for the passes
    for(auto& pass : passes_) {
       // If the pass is disabled, then we skip it
       if(PO().IsPassDisabled(pass.get())) continue;
-      // Compute dependencies will also request any heaps
+      pass->state = Pass::AcquireResources;
+      pass->Init();
+   }
+   // 1c Propagate the heap refcounts
+   for(auto& pass : passes_) {
+      if(PO().IsPassDisabled(pass.get())) continue;
+      pass->computeDependencies();
+   }
+   if(Diag().Verbose(2)) {
+      for(auto& heap : heaps_) {
+         Diag().ReportDebug(2) << "[=>] Heap Owner: \"" << heap.owner->Desc()
+                               << "\" RefCount: " << heap.refCount;
+      }
+   }
+   // 2. Build the dependency graph of passes
+   size_t NumEnabledPasses = 0;
+   for(auto& pass : passes_) {
+      if(PO().IsPassDisabled(pass.get())) continue;
       NumEnabledPasses++;
-      pass->state = Pass::RegisterDependencies;
       passDeps_[pass.get()] = 0;
+      pass->state = Pass::RegisterDependencies;
       pass->computeDependencies();
       // Mark the pass in the graph
       if(passDeps_[pass.get()] == 0) S.push_back(pass.get());

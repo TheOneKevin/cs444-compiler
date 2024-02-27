@@ -16,12 +16,20 @@
 #include <utils/PassManager.h>
 
 int main(int argc, char** argv) {
+   bool verbose = false;
    // Create the pass manager and source manager
    CLI::App app{"Joos1W Compiler for Marmoset", "joosc"};
    utils::PassManager PM{app};
    SourceManager SM{};
+   app.add_flag("-c", "Dummy flag for compatibility with ./runtest.py");
+   app.add_flag("-v", verbose, "Verbose");
+   app.add_flag("--check-file-name", "Dummy flag that's always true")->default_val(true);
    app.allow_extras();
    CLI11_PARSE(app, argc, argv);
+
+   if(verbose) {
+      PM.Diag().setVerbose(100);
+   }
 
    // Read the input into the source manager
    auto files{app.remaining()};
