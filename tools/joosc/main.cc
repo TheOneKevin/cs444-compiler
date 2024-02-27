@@ -20,6 +20,7 @@ int main(int argc, char** argv) {
    CLI::App app{"Joos1W Compiler for Marmoset", "joosc"};
    utils::PassManager PM{app};
    SourceManager SM{};
+   app.add_flag("-c", "Dummy flag for compatibility with ./runtest.py");
    app.allow_extras();
    CLI11_PARSE(app, argc, argv);
 

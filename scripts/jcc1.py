@@ -15,6 +15,9 @@ parser.epilog = (
 )
 args = parser.parse_args()
 
+# If args is not set, set it to [-c]
+if not args.args:
+    args.args = ["-c"]
 
 # Recursively grab all java files subroutine
 def grab_all_java(dir):

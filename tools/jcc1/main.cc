@@ -18,6 +18,8 @@ enum class InputMode { File, Stdin };
 
 int main(int argc, char** argv) {
    InputMode optInputMode = InputMode::Stdin;
+   bool optSplit = false;
+   bool optCompile = false;
 
    // Create the pass manager and source manager
    CLI::App app{"Joos1W Compiler Frontend", "jcc1"};
@@ -30,10 +32,11 @@ int main(int argc, char** argv) {
    app.add_option("--print-output", "If a printing pass is run, will write the output to this file or directory");
    app.add_flag("--print-split", "If a printing pass is run, split the output into multiple files");
    // 2. Build the jcc1-specific command line options
-   app.add_flag("-x,--split", "Split the input file whose contents are delimited\nby \"---\" into multiple compilation units");
+   app.add_flag("-x,--split", optSplit, "Split the input file whose contents are delimited\nby \"---\" into multiple compilation units");
    auto optVerboseLevel = app.add_flag("-v", "Set the verbosity level")
       ->expected(0, 1)
       ->check(CLI::Range(0, 3));
+   app.add_flag("-c", optCompile, "Add the passes to compile the input file(s) to an executable");
    app.allow_extras();
    // clang-format on
 
@@ -45,7 +48,6 @@ int main(int argc, char** argv) {
       NewNameResolverPass(PM);
       NewHierarchyCheckerPass(PM);
       PM.PO().AddAllOptions();
-      PM.PO().EnablePass("sema-hier");
    }
 
    // Parse the command line options
@@ -103,13 +105,19 @@ int main(int argc, char** argv) {
       std::string buffer_{std::istreambuf_iterator<char>(std::cin),
                           std::istreambuf_iterator<char>()};
       SM.emplaceBuffer();
-      for(auto it = buffer_.begin(); it != buffer_.end(); ++it) {
-         // If we encounter "---" in the input, split the input into multiple bufs
-         if(*it == '-' && *(it + 1) == '-' && *(it + 2) == '-') {
-            SM.emplaceBuffer(), it += 2;
-         } else {
-            SM.currentBuffer().push_back(*it);
+      // If we choose to split the input or not
+      if(optSplit) {
+         for(auto it = buffer_.begin(); it != buffer_.end(); ++it) {
+            // If we see "---" in the input, split the input into multiple bufs
+            if(*it == '-' && *(it + 1) == '-' && *(it + 2) == '-') {
+               SM.emplaceBuffer(), it += 2;
+            } else {
+               SM.currentBuffer().push_back(*it);
+            }
          }
+      } else {
+         SM.currentBuffer().insert(
+               SM.currentBuffer().end(), buffer_.begin(), buffer_.end());
       }
    }
 
@@ -121,6 +129,11 @@ int main(int argc, char** argv) {
          auto* p1 = &NewJoos1WParserPass(PM, file, p2);
          p2 = &NewAstBuilderPass(PM, p1);
       }
+   }
+
+   // If we are compiling, enable the appropriate passes
+   if(optCompile) {
+      PM.PO().EnablePass("sema-hier");
    }
 
    // Run the passes
