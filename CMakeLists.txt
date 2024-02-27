@@ -176,10 +176,10 @@ add_tool(
     "tools/parser/main.cc"
 )
 
-# add_tool(
-#     joosc
-#     "tools/joosc/main.cc"
-# )
+add_tool(
+    joosc
+    "tools/joosc/main.cc"
+)
 
 add_tool(
     jcc1

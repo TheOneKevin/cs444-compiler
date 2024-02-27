@@ -11,8 +11,10 @@ namespace semantic {
 
 class HierarchyChecker {
 public:
-   HierarchyChecker(diagnostics::DiagnosticEngine& diag, ast::LinkingUnit* lu)
-         : diag{diag}, lu_{lu} {
+   HierarchyChecker(diagnostics::DiagnosticEngine& diag): diag{diag} {}
+
+   void Check(ast::LinkingUnit* lu) {
+      lu_ = lu;
       checkInheritance();
    }
 

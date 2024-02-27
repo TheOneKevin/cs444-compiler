@@ -73,6 +73,11 @@ public:
              });
    }
 
+   /// @brief Get the name of a file
+   static std::string getFileName(SourceFile file) {
+      return static_cast<File const*>(file.id_)->name;
+   }
+
    /// @brief Print the name of the file to the output stream.
    /// @param os The output stream to print to
    /// @param file The SourceFile to print

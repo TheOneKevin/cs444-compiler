@@ -4,8 +4,6 @@ tests/generated/
 .joosc_build/
 docs/
 .cache/
-./joosc
 out.dot
-joosc
 .trunk/
 .vscode/launch.json

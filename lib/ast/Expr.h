@@ -22,31 +22,62 @@ public:
    int printDotNode(DotPrinter& dp) const;
 };
 
-class MemberName : public ExprNode {
+class ExprValue : public ExprNode {
+public:
+   virtual bool isResolved() const = 0;
+   /// @brief If the value is a method, returns true
+   bool isMethod() {
+      // TODO(Kevin)
+      return false;
+   }
+   /// @brief If the value is a method, gets the parent context of the method
+   DeclContext* getMethodContext() {
+      assert(isMethod() && "Value is not a method");
+      return nullptr;
+   }
+   /// @brief If the value is a method, gets the method's name
+   std::string_view getMethodName() {
+      assert(isMethod() && "Value is not a method");
+      return "";
+   }
+   /// @brief If the value is not a method, gets the Decl* of the value
+   Decl* getDecl() {
+      assert(!isMethod() && "Value is a method");
+      return nullptr;
+   }
+
+private:
+
+};
+
+class MemberName : public ExprValue {
    std::pmr::string name;
 
 public:
    MemberName(std::string_view name) : name{name} {}
+   bool isResolved() const override { return false; }
    std::ostream& print(std::ostream& os) const override {
       return os << "(Member name:" << name << ")";
    }
 };
 
-class ThisNode : public ExprNode {
+class ThisNode : public ExprValue {
    std::ostream& print(std::ostream& os) const override { return os << "(THIS)"; }
+   bool isResolved() const override { return false; }
 };
 
-class TypeNode : public ExprNode {
+class TypeNode : public ExprValue {
    Type* type;
 
 public:
    TypeNode(Type* type) : type{type} {}
+   bool isResolved() const override { return false; }
    std::ostream& print(std::ostream& os) const override {
       return os << "(Type: " << type->toString() << ")";
    }
 };
 
-class LiteralNode : public ExprNode {
+class LiteralNode : public ExprValue {
 #define LITERAL_TYPE_LIST(F) \
    F(Integer)                \
    F(Character)              \
@@ -66,6 +97,7 @@ private:
 
 public:
    LiteralNode(std::string_view value, Type type) : value{value}, type{type} {}
+   bool isResolved() const override { return true; }
    std::ostream& print(std::ostream& os) const override {
       return os << "(" << Type_to_string(type, "unknown literal type") << " "
                 << value << ")";

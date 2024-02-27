@@ -3,9 +3,12 @@
 #include "diagnostics/Location.h"
 #include "grammar/Joos1WGrammar.h"
 #include "parsetree/ParseTreeVisitor.h"
+#include "semantic/ExprResolver.h"
 #include "semantic/HierarchyChecker.h"
 #include "semantic/NameResolver.h"
 #include "semantic/Semantic.h"
+#include "semantic/TypeChecker.h"
+#include "utils/CLI11.h"
 #include "utils/PassManager.h"
 
 using std::string_view;
@@ -28,6 +31,14 @@ public:
          os << "Parsing file ";
          SourceManager::print(os.get(), file_);
       }
+      // Check for non-ASCII characters
+      // FIXME(kevin):
+      /*for(unsigned i = 0; i < str.length(); i++) {
+         if(static_cast<unsigned char>(str[i]) > 127) {
+            std::cerr << "Parse error: non-ASCII character in input" << std::endl;
+            return 42;
+         }
+      }*/
       // Parse the file
       BumpAllocator alloc{NewHeap()};
       Joos1WParser parser{file_, alloc, &PM().Diag()};
@@ -36,9 +47,31 @@ public:
       if((result != 0 || !tree_) && !PM().Diag().hasErrors()) {
          PM().Diag().ReportError(SourceRange{file_}) << "failed to parse file";
       }
+      // If the parse tree is poisoned, report error
+      if(tree_->is_poisoned()) {
+         PM().Diag().ReportError(SourceRange{file_})
+               << "parse tree is poisoned";
+      }
+      // If the parse tree has invalid literal types, report error
+      if(!isLiteralTypeValid(tree_)) {
+         PM().Diag().ReportError(SourceRange{file_})
+               << "invalid literal types in parse tree";
+      }
    }
    parsetree::Node* Tree() { return tree_; }
    SourceFile File() { return file_; }
+
+private:
+   /// @brief Checks if the literal type is valid recursively
+   bool isLiteralTypeValid(parsetree::Node* node) {
+      if(node == nullptr) return true;
+      if(node->get_node_type() == parsetree::Node::Type::Literal)
+         return static_cast<parsetree::Literal*>(node)->isValid();
+      for(size_t i = 0; i < node->num_children(); i++) {
+         if(!isLiteralTypeValid(node->child(i))) return false;
+      }
+      return true;
+   }
 
 private:
    void computeDependencies() override {
@@ -101,7 +134,11 @@ private:
 
 public:
    AstBuilderPass(PassManager& PM, Joos1WParserPass& dep) noexcept
-         : Pass(PM), dep{dep} {}
+         : Pass(PM), dep{dep} {
+      /*optCheckName =
+            PM.PO().AddFlag("--check-file-name",
+                            "Check if the file name matches the class name");*/
+   }
    string_view Desc() const override { return "ParseTree -> AST Building"; }
    void Run() override {
       // Get the parse tree and the semantic analysis
@@ -123,6 +160,21 @@ public:
       if(cu_ == nullptr && !PM().Diag().hasErrors()) {
          PM().Diag().ReportError(PT->location()) << "failed to build AST";
       }
+      // Check if the file name matches the class name
+      // FIXME(kevin): optCheckName && optCheckName->as<bool>()
+      if(true) {
+         auto cuBody = cu_->bodyAsDecl();
+         auto fileName = SourceManager::getFileName(dep.File());
+         // Grab the file without the path and the extension
+         fileName = fileName.substr(0, fileName.find_last_of('.'));
+         fileName = fileName.substr(fileName.find_last_of('/') + 1);
+         if(cuBody->name() != fileName) {
+            PM().Diag().ReportError(cuBody->location())
+                  << "class/interface name does not match file name: "
+                  << cuBody->name() << " != " << fileName;
+            return;
+         }
+      }
    }
    ast::CompilationUnit* CompilationUnit() { return cu_; }
 
@@ -133,6 +185,7 @@ private:
    }
    ast::CompilationUnit* cu_;
    Joos1WParserPass& dep;
+   CLI::Option* optCheckName;
 };
 
 Pass& NewAstBuilderPass(PassManager& PM, Pass* depends) {
@@ -205,12 +258,13 @@ Pass& NewNameResolverPass(PassManager& PM) {
 
 class HierarchyCheckerPass final : public Pass {
 public:
-   HierarchyCheckerPass(PassManager& PM) noexcept : Pass(PM) {}
+   HierarchyCheckerPass(PassManager& PM) noexcept
+         : Pass(PM), checker{semantic::HierarchyChecker(PM.Diag())} {}
    string_view Name() const override { return "sema-hier"; }
    string_view Desc() const override { return "Hierarchy Checking"; }
    void Run() override {
       auto lu = GetPass<LinkerPass>().LinkingUnit();
-      semantic::HierarchyChecker checker{PM().Diag(), lu};
+      checker.Check(lu);
    }
 
 private:
@@ -219,6 +273,7 @@ private:
       ComputeDependency(GetPass<LinkerPass>());
       ComputeDependency(GetPass<NameResolverPass>());
    }
+   semantic::HierarchyChecker checker;
 };
 
 Pass& NewHierarchyCheckerPass(PassManager& PM) {
@@ -299,3 +354,55 @@ private:
 };
 
 Pass& NewPrintASTPass(PassManager& PM) { return PM.AddPass<PrintASTPass>(); }
+
+/* ===--------------------------------------------------------------------=== */
+// ExprResolverPass
+/* ===--------------------------------------------------------------------=== */
+
+class ExprResolverPass final : public Pass {
+public:
+   ExprResolverPass(PassManager& PM) noexcept : Pass(PM) {}
+   string_view Name() const override { return "sema-expr"; }
+   string_view Desc() const override { return "Expression Resolution"; }
+   void Run() override {
+      auto lu = GetPass<LinkerPass>().LinkingUnit();
+      // TODO(kevin):
+      // semantic::ExprResolver resolver{PM().Diag(), lu};
+      // resolver.Resolve();
+   }
+
+private:
+   void computeDependencies() override {
+      ComputeDependency(GetPass<AstContextPass>());
+      ComputeDependency(GetPass<NameResolverPass>());
+   }
+};
+
+Pass& NewExprResolverPass(PassManager& PM) {
+   return PM.AddPass<ExprResolverPass>();
+}
+
+/* ===--------------------------------------------------------------------=== */
+// TypeCheckerPass
+/* ===--------------------------------------------------------------------=== */
+
+class TypeCheckerPass final : public Pass {
+public:
+   TypeCheckerPass(PassManager& PM) noexcept : Pass(PM) {}
+   string_view Name() const override { return "sema-type"; }
+   string_view Desc() const override { return "Type Checking"; }
+   void Run() override {
+      auto lu = GetPass<LinkerPass>().LinkingUnit();
+      // TODO(kevin):
+      // semantic::TypeChecker typeChecker{PM().Diag(), lu};
+      // typeChecker.Resolve();
+   }
+
+private:
+   void computeDependencies() override {
+      ComputeDependency(GetPass<AstContextPass>());
+      ComputeDependency(GetPass<ExprResolverPass>());
+   }
+};
+
+Pass& NewTypeCheckerPass(PassManager& PM) { return PM.AddPass<TypeCheckerPass>(); }
