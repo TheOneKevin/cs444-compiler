@@ -4,7 +4,6 @@ import sys
 import argparse
 import subprocess
 
-
 # Build the json file for debugging from exec path, test name and prog args
 def build_json(name, args):
     return json.dumps(
@@ -15,9 +14,9 @@ def build_json(name, args):
                     "type": "lldb",
                     "request": "launch",
                     "name": name,
-                    "program": args[0],
+                    "program": os.path.abspath(args[0]),
                     "args": args[1:],
-                    "cwd": "${workspaceFolder}",
+                    "cwd": os.getcwd(),
                 }
             ],
         },
@@ -39,7 +38,7 @@ def grab_all_java(dir):
 def get_directories(anum: int):
     assignment = f"a{anum}"
     test_dir = f"/u/cs444/pub/assignment_testcases/{assignment}"
-    stdlib_dir = f"/u/cs444/pub/stdlib/{str(min(2, anum))}.0"
+    stdlib_dir = f"/u/cs444/pub/stdlib/{str(max(2, anum))}.0"
     # Check that both the stdlib directory exist and is a directory
     if not os.path.exists(stdlib_dir) or not os.path.isdir(stdlib_dir):
         print(f"Error: stdlib directory {stdlib_dir} does not exist")
@@ -56,7 +55,7 @@ def get_testcase(test_dir: str, test: str):
     ret = os.path.join(test_dir, test)
     # Check that the test directory exist (or is a file)
     if not os.path.exists(ret):
-        print(f"Error: test directory {ret} does not exist")
+        print(f"Error: test case path {ret} does not exist")
         sys.exit(1)
     return ret
 
@@ -69,7 +68,7 @@ def get_joosc_command(args: list[str], test_case: str, stdlib_dir: str):
     custom_args = [*args]
     if "JOOSC" in os.environ:
         files += grab_all_java(stdlib_dir)
-        binary = os.environ["JOOSC"]
+        binary = os.path.abspath(os.environ["JOOSC"])
     else:
         custom_args += ["--stdlib", stdlib_dir]
     return [binary, *custom_args, *files]
@@ -82,7 +81,7 @@ def run_test_case(args: list[str]):
 
 
 # Parse the command line arguments
-def get_argparse(desc: str, single_test: bool):
+def get_argparse(desc: str, single_test: bool, fn_more_args: callable = lambda x: None):
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument("assignment", help="The assignment number (a1, a2, etc)")
     if single_test:
@@ -92,6 +91,7 @@ def get_argparse(desc: str, single_test: bool):
         )
         parser.add_argument("test", help="The test case to run")
     parser.add_argument("args", nargs="*", help="Additional arguments to pass to jcc1")
+    fn_more_args(parser)
     args = parser.parse_args()
     # If custom args is not set, set it to [-c]
     if not args.args:

@@ -23,6 +23,7 @@ int main(int argc, char** argv) {
    bool optSplit = false;
    bool optCompile = false;
    bool optFreestanding = false;
+   bool optHeapReuse = true;
 
    // Create the pass manager and source manager
    CLI::App app{"Joos1W Compiler Frontend", "jcc1"};
@@ -34,6 +35,7 @@ int main(int argc, char** argv) {
    app.add_flag("--print-dot", "If a printing pass is run, print any trees in DOT format");
    app.add_option("--print-output", "If a printing pass is run, will write the output to this file or directory");
    app.add_flag("--print-split", "If a printing pass is run, split the output into multiple files");
+   app.add_flag("--check-file-name", "Check if the file name matches the class name");
    // 2. Build the jcc1-specific command line options
    app.add_flag("-x,--split", optSplit, "Split the input file whose contents are delimited\nby \"---\" into multiple compilation units");
    auto optVerboseLevel = app.add_flag("-v", "Set the verbosity level")
@@ -45,6 +47,7 @@ int main(int argc, char** argv) {
       ->expected(0, 1)
       ->capture_default_str();
    app.add_flag("--freestanding", optFreestanding, "Compile the input file(s) to a freestanding executable, without the standard library");
+   app.add_flag("--no-heap-reuse", optHeapReuse, "Do not reuse heap memory between passes (for debugging heap GC issues)");
    app.allow_extras();
    // clang-format on
 
@@ -60,6 +63,10 @@ int main(int argc, char** argv) {
 
    // Parse the command line options
    CLI11_PARSE(app, argc, argv);
+
+   // Disable heap reuse if requested
+   if(optHeapReuse)
+      PM.setHeapReuse(false);
 
    // Validate the command line options
    {

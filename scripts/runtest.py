@@ -3,6 +3,7 @@
 from functools import reduce
 import sys
 import os
+import argparse
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "common.py"))
 
@@ -20,13 +21,18 @@ def run_test(test, exp_rc):
         return 1
     return 0
 
+def fn_more_args(parser: argparse.ArgumentParser):
+    parser.add_argument("-l", action='store_true', help="List all the test cases and exit")
 
 # Parse the arguments
-args = get_argparse("Runs all the marmoset tests for an assignment", False)
+args = get_argparse("Runs all the marmoset tests for an assignment", False, fn_more_args)
 test_dir, stdlib_dir = get_directories(args.assignment)
 
 # Deliniate the valid and invalid files
 test_names = os.listdir(test_dir)
+if args.l:
+    print("\n".join(test_names))
+    sys.exit(0)
 invalid_files = [x for x in test_names if x.startswith("Je_")]
 valid_files = [x for x in test_names if x not in invalid_files]
 

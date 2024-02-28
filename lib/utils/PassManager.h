@@ -205,13 +205,14 @@ private:
    };
 
 public:
-   PassManager(CLI::App& app, bool reuseHeaps = true)
-         : options_{app}, reuseHeaps_{reuseHeaps} {}
+   PassManager(CLI::App& app)
+         : options_{app}, reuseHeaps_{true} {}
    /// @brief Runs all the passes in the pass manager
    /// @return True if all passes ran successfully
    bool Run();
    /// @return The last pass that was run by the pass manager
    Pass const* LastRun() const { return lastRun_; }
+   void setHeapReuse(bool reuse) { reuseHeaps_ = reuse; }
 
 private:
    // Deleted copy and move constructor and assignment operator

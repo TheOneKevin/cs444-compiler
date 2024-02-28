@@ -151,8 +151,7 @@ public:
    AstBuilderPass(PassManager& PM, Joos1WParserPass& dep) noexcept
          : Pass(PM), dep{dep} {
       optCheckName =
-            PM.PO().AddFlag("--check-file-name",
-                            "Check if the file name matches the class name");
+            PM.PO().GetExistingOption("--check-file-name");
    }
    string_view Desc() const override { return "ParseTree -> AST Building"; }
    void Run() override {
