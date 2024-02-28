@@ -150,8 +150,7 @@ private:
 public:
    AstBuilderPass(PassManager& PM, Joos1WParserPass& dep) noexcept
          : Pass(PM), dep{dep} {
-      optCheckName =
-            PM.PO().GetExistingOption("--check-file-name");
+      optCheckName = PM.PO().GetExistingOption("--check-file-name");
    }
    string_view Desc() const override { return "ParseTree -> AST Building"; }
    void Run() override {
@@ -311,15 +310,25 @@ public:
       optDot = PM.PO().GetExistingOption("--print-dot");
       optOutput = PM.PO().GetExistingOption("--print-output");
       optSplit = PM.PO().GetExistingOption("--print-split");
+      optIgnoreStd = PM.PO().GetExistingOption("--print-ignore-std");
    }
    string_view Name() const override { return "print-ast"; }
    string_view Desc() const override { return "Print AST"; }
 
    void Run() override {
-      // 1. Grab the AST node
+      // 1a. Grab the AST node
       auto& pass = GetPass<LinkerPass>();
       auto* node = pass.LinkingUnit();
       if(!node) return;
+      // 1b. Create a new heap to build a new AST if we're ignoring stdlib
+      BumpAllocator alloc{NewHeap()};
+      ast::Semantic newSema{alloc, PM().Diag()};
+      if(optIgnoreStd && optIgnoreStd->count()) {
+         std::pmr::vector<ast::CompilationUnit*> cus{alloc};
+         for(auto* cu : node->compliationUnits())
+            if(!cu->isStdLib()) cus.push_back(cu);
+         node = newSema.BuildLinkingUnit(cus);
+      }
       // 2. Interpret the command line options
       bool printDot = optDot && optDot->count();
       bool printSplit = optSplit && optSplit->count();
@@ -371,7 +380,7 @@ private:
       ComputeDependency(GetPass<LinkerPass>());
       ComputeDependency(GetPass<AstContextPass>());
    }
-   CLI::Option *optDot, *optOutput, *optSplit;
+   CLI::Option *optDot, *optOutput, *optSplit, *optIgnoreStd;
 };
 
 Pass& NewPrintASTPass(PassManager& PM) { return PM.AddPass<PrintASTPass>(); }

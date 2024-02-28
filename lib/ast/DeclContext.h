@@ -55,6 +55,11 @@ public:
       co_yield body_;
    }
    auto mut_body() { return body_; }
+   bool isStdLib() const {
+      auto package = dynamic_cast<UnresolvedType*>(package_);
+      assert(package_ && "Package must be unresolved type");
+      return package->parts().size() >= 1 && package->parts().front() == "java";
+   }
 
 private:
    ReferenceType* package_;
