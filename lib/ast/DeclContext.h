@@ -3,6 +3,7 @@
 #include <ranges>
 
 #include "ast/AstNode.h"
+#include "ast/Decl.h"
 #include "ast/Type.h"
 #include "utils/Generator.h"
 #include "utils/Utils.h"

@@ -1,8 +1,8 @@
-#include "ast/Expr.h"
+#include <ast/AST.h>
+#include <ast/Expr.h>
 
+#include <concepts>
 #include <ostream>
-
-#include "ast/AST.h"
 
 namespace ast {
 
@@ -47,6 +47,62 @@ int Expr::printDotNode(DotPrinter& dp) const {
    }
    dp.sanitize(os.str());
    return -1;
+}
+
+template <typename T>
+   requires std::movable<T>
+void ExprEvaluator<T>::Evaluate(Expr* expr) {
+   using namespace ast::exprnode;
+   // Evaluate the RPN expression
+   for(auto const* nodes : expr->nodes()) {
+      if(auto* value = dynamic_cast<ExprValue const*>(nodes)) {
+         op_stack_.push(mapValue(*value));
+      } else if(auto* unary = dynamic_cast<UnaryOp const*>(nodes)) {
+         auto rhs = op_stack_.top();
+         op_stack_.pop();
+         op_stack_.push(evalUnaryOp(*unary, rhs));
+      } else if(auto* binary = dynamic_cast<BinaryOp const*>(nodes)) {
+         auto rhs = op_stack_.top();
+         op_stack_.pop();
+         auto lhs = op_stack_.top();
+         op_stack_.pop();
+         op_stack_.push(evalBinaryOp(*binary, lhs, rhs));
+      } else if(auto* member = dynamic_cast<MemberAccess const*>(nodes)) {
+         auto field = op_stack_.top();
+         op_stack_.pop();
+         auto lhs = op_stack_.top();
+         op_stack_.pop();
+         op_stack_.push(evalMemberAccess(lhs, field));
+      } else if(auto* method = dynamic_cast<MethodInvocation const*>(nodes)) {
+         auto args = op_stack_.top();
+         op_stack_.pop();
+         op_stack_.push(evalMethodCall(args));
+      } else if(auto* new_object =
+                      dynamic_cast<ClassInstanceCreation const*>(nodes)) {
+         auto args = op_stack_.top();
+         op_stack_.pop();
+         op_stack_.push(evalNewObject(args));
+      } else if(auto* new_array =
+                      dynamic_cast<ArrayInstanceCreation const*>(nodes)) {
+         auto size = op_stack_.top();
+         op_stack_.pop();
+         auto type = op_stack_.top();
+         op_stack_.pop();
+         op_stack_.push(evalNewArray(type, size));
+      } else if(auto* array_access = dynamic_cast<ArrayAccess const*>(nodes)) {
+         auto index = op_stack_.top();
+         op_stack_.pop();
+         auto array = op_stack_.top();
+         op_stack_.pop();
+         op_stack_.push(evalArrayAccess(array, index));
+      } else if(auto* cast = dynamic_cast<Cast const*>(nodes)) {
+         auto value = op_stack_.top();
+         op_stack_.pop();
+         auto type = op_stack_.top();
+         op_stack_.pop();
+         op_stack_.push(evalCast(type, value));
+      }
+   }
 }
 
 } // namespace ast

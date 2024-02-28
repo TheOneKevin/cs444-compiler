@@ -7,15 +7,16 @@ namespace semantic {
 
 class TypeChecker {
 public:
-   TypeChecker(diagnostics::DiagnosticEngine& diag): diag{diag} {}
+   TypeChecker(diagnostics::DiagnosticEngine& diag) : diag{diag} {}
 
    void check(ast::LinkingUnit* lu);
 
-private: 
+private:
+   void validateExpr(ast::Expr* expr);
+
+private:
    diagnostics::DiagnosticEngine& diag;
    ast::LinkingUnit* lu_;
-
-   void validateExpr(ast::Expr* expr);
 };
 
 } // namespace semantic

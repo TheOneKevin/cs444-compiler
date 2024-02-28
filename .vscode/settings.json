@@ -2,7 +2,10 @@
   "cmake.configureOnOpen": true,
   "git.enableCommitSigning": false,
   "yash.YYTYPE": "struct parsetree::Node*",
-  "editor.rulers": [80, 160],
+  "editor.rulers": [
+    80,
+    160
+  ],
   "cmake.sourceDirectory": "${workspaceFolder}",
   "editor.indentSize": "tabSize",
   "editor.tabSize": 4,
@@ -29,5 +32,10 @@
   "C_Cpp.suggestSnippets": false,
   "C_Cpp.formatting": "clangFormat",
   "C_Cpp.codeAnalysis.runAutomatically": false,
-  "C_Cpp.errorSquiggles": "disabled"
+  "C_Cpp.errorSquiggles": "disabled",
+  "clangd.arguments": [
+    "-pretty",
+    "--background-index",
+    "--compile-commands-dir=${workspaceFolder}/build",
+  ]
 }

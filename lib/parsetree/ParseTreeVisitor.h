@@ -169,10 +169,10 @@ public:
    ast::ExprNode* visitRegularType(Node* node);
    ast::ExprNode* visitArrayType(Node* node);
 
-   ast::LiteralNode* visitLiteral(Node* node);
+   ast::exprnode::LiteralNode* visitLiteral(Node* node);
 
-   ast::UnaryOp* convertToUnaryOp(Operator::Type type);
-   ast::BinaryOp* convertToBinaryOp(Operator::Type type);
+   ast::exprnode::UnaryOp* convertToUnaryOp(Operator::Type type);
+   ast::exprnode::BinaryOp* convertToBinaryOp(Operator::Type type);
    void visitArgumentList(Node* node, ast::ExprNodeList& ops);
 
    template <>
