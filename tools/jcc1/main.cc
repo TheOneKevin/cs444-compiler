@@ -10,6 +10,7 @@
 #include <utils/CLI11.h>
 #include <utils/PassManager.h>
 
+#include <filesystem>
 #include <iostream>
 #include <iterator>
 #include <string>
@@ -18,8 +19,10 @@ enum class InputMode { File, Stdin };
 
 int main(int argc, char** argv) {
    InputMode optInputMode = InputMode::Stdin;
+   std::string optStdlibPath = "/u/cs444/pub/stdlib/6.1/";
    bool optSplit = false;
    bool optCompile = false;
+   bool optFreestanding = false;
 
    // Create the pass manager and source manager
    CLI::App app{"Joos1W Compiler Frontend", "jcc1"};
@@ -37,6 +40,11 @@ int main(int argc, char** argv) {
       ->expected(0, 1)
       ->check(CLI::Range(0, 3));
    app.add_flag("-c", optCompile, "Add the passes to compile the input file(s) to an executable");
+   app.add_option("--stdlib", optStdlibPath, "The path to the standard library to use for compilation")
+      ->check(CLI::ExistingDirectory)
+      ->expected(0, 1)
+      ->capture_default_str();
+   app.add_flag("--freestanding", optFreestanding, "Compile the input file(s) to a freestanding executable, without the standard library");
    app.allow_extras();
    // clang-format on
 
@@ -118,6 +126,19 @@ int main(int argc, char** argv) {
       } else {
          SM.currentBuffer().insert(
                SM.currentBuffer().end(), buffer_.begin(), buffer_.end());
+      }
+   }
+
+   // Add the standard library to the source manager by recursively searching
+   // for .java files in the stdlib path
+   if(!optFreestanding) {
+      namespace fs = std::filesystem;
+      fs::recursive_directory_iterator it{optStdlibPath};
+      fs::recursive_directory_iterator end;
+      for(; it != end; ++it) {
+         if(it->is_regular_file() && it->path().extension() == ".java") {
+            SM.addFile(it->path().string());
+         }
       }
    }
 

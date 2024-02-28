@@ -1,77 +1,41 @@
 #!/usr/bin/env python3
 
-import os
-import subprocess
+from functools import reduce
 import sys
+import os
 
-# Grab the assignment number from the command line
-if len(sys.argv) != 2:
-    print(f"Usage: python3 {sys.argv[0]} <assignment>")
-    sys.exit(1)
-assignment = sys.argv[1]
+sys.path.append(os.path.join(os.path.dirname(__file__), "common.py"))
 
-
-# Recursively grab all java files subroutine
-def grab_all_java(dir):
-    java_files = []
-    for root, _, files in os.walk(dir):
-        for file in files:
-            if file.endswith(".java"):
-                java_files.append(os.path.join(root, file))
-    return java_files
+from common import *
 
 
-# Run joosc and get return code subroutine
-def run_on_files(files):
-    ret = subprocess.run(
-        [joosc, '-c', *files], stderr=subprocess.PIPE, stdout=subprocess.PIPE
-    )
-    return ret.returncode, ret.stdout, ret.stderr
+# Run the tests
+def run_test(test, exp_rc):
+    global failures
+    test_path = os.path.join(test_dir, test)
+    cmd = get_joosc_command(args.args, test_path, stdlib_dir)
+    ret, _, _ = run_test_case(cmd)
+    if ret != exp_rc:
+        print(f"{test} failed with return code {ret}, expected {exp_rc}")
+        return 1
+    return 0
 
 
-# Get the files subroutine
-def get_files(test):
-    files = [test] if os.path.isfile(test) else grab_all_java(test)
-    files += stdlib_files
-    return files
-
-
-# Get the directory of this script
-script_dir = os.path.dirname(os.path.realpath(__file__))
-
-# Set up the test directories
-test_dir = f"/u/cs444/pub/assignment_testcases/{assignment}/"
-stdlib_dir = "/u/cs444/pub/stdlib/2.0"
-joosc = os.path.join(script_dir, "..", "build", "jcc1")
-# Grab the joosc binary from the environment
-if "JOOSC" in os.environ:
-    joosc = os.environ["JOOSC"]
-
-# List test cases files
-test_names = os.listdir(test_dir)
-stdlib_files = grab_all_java(stdlib_dir)
+# Parse the arguments
+args = get_argparse("Runs all the marmoset tests for an assignment", False)
+test_dir, stdlib_dir = get_directories(args.assignment)
 
 # Deliniate the valid and invalid files
+test_names = os.listdir(test_dir)
 invalid_files = [x for x in test_names if x.startswith("Je_")]
 valid_files = [x for x in test_names if x not in invalid_files]
 
-failures = 0
-
-for test in valid_files:
-    test_path = os.path.join(test_dir, test)
-    files = get_files(test_path)
-    ret, x, y = run_on_files(files)
-    if ret != 0:
-        print(f"{test} failed with return code {ret}")
-        failures += 1
-
-for test in invalid_files:
-    test_path = os.path.join(test_dir, test)
-    files = get_files(test_path)
-    ret, x, y = run_on_files(files)
-    if ret != 42:
-        print(f"{test} failed with return code {ret}")
-        failures += 1
+# Count the failures by running the tests
+failures = reduce(
+    lambda x, y: x + y,
+    [run_test(test, 0) for test in valid_files]
+    + [run_test(test, 42) for test in invalid_files],
+)
 
 print("---")
 print(

@@ -1,72 +1,30 @@
 #!/usr/bin/env python3
 
-import argparse
-import os
-import subprocess
 import sys
+import os
 
-parser = argparse.ArgumentParser(description="Run the joosc compiler on a test case")
-parser.add_argument("assignment", help="The assignment number (a1, a2, etc)")
-parser.add_argument("test", help="The test case to run")
-parser.add_argument("args", nargs="*", help="Additional arguments to pass to joosc")
-parser.epilog = (
-    "Where <test> is the name of the .java file **OR** the directory"
-    "Example: python3 {sys.argv[0]} a2 J2_hierachyCheck25"
-)
-args = parser.parse_args()
+sys.path.append(os.path.join(os.path.dirname(__file__), "common.py"))
 
-# If args is not set, set it to [-c]
-if not args.args:
-    args.args = ["-c"]
+from common import *
 
-# Recursively grab all java files subroutine
-def grab_all_java(dir):
-    java_files = []
-    for root, _, files in os.walk(dir):
-        for file in files:
-            if file.endswith(".java"):
-                java_files.append(os.path.join(root, file))
-    return java_files
+# Parse the arguments
+args = get_argparse("Runs jcc1 on a specific testcase", True)
+test_dir, stdlib_dir = get_directories(args.assignment)
+test_case = get_testcase(test_dir, args.test)
+command = get_joosc_command(args.args, test_case, stdlib_dir)
 
-
-# Get the directory of this script
-script_dir = os.path.dirname(os.path.realpath(__file__))
-assignment = args.assignment
-test = args.test
-assignment_number = max(2, int(assignment[1:]))
-
-# Set up the test directories
-test = f"/u/cs444/pub/assignment_testcases/{assignment}/{test}"
-stdlib_dir = f"/u/cs444/pub/stdlib/{assignment_number}.0"
-joosc = os.path.join(script_dir, "..", "build", "jcc1")
-# Grab the joosc binary from the environment
-if "JOOSC" in os.environ:
-    joosc = os.environ["JOOSC"]
-
-# Check that both the stdlib directory exist and is a directory
-if not os.path.exists(stdlib_dir) or not os.path.isdir(stdlib_dir):
-    print(f"Error: stdlib directory {stdlib_dir} does not exist")
-    sys.exit(1)
-
-# Check that the test directory exist (or is a file)
-if not os.path.exists(test):
-    print(f"Error: test directory {test} does not exist")
-    sys.exit(1)
-
-# List test cases files
-stdlib_files = grab_all_java(stdlib_dir)
-
-files = [test] if os.path.isfile(test) else grab_all_java(test)
-files += stdlib_files
-arglist = [joosc, *args.args, *files]
-ret = subprocess.run(arglist, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+# Run the command
+rc, out, err = run_test_case(command)
 
 print("Command:")
-print(subprocess.list2cmdline(arglist))
+print(subprocess.list2cmdline(command))
 print("return code:")
-print(ret.returncode)
+print(rc)
 print("stdout:")
-print(ret.stdout.decode("utf-8", errors="ignore"))
+if out:
+    print(out.decode("utf-8", errors="ignore"))
+print(out.decode("utf-8", errors="ignore"))
 print("stderr:")
-print(ret.stderr.decode("utf-8", errors="ignore"))
-sys.exit(ret.returncode)
+if err:
+    print(err.decode("utf-8", errors="ignore"))
+sys.exit(rc)
