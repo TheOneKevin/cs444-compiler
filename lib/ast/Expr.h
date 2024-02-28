@@ -25,29 +25,31 @@ public:
 class ExprValue : public ExprNode {
 public:
    virtual bool isResolved() const = 0;
-   /// @brief If the value is a method, returns true
-   bool isMethod() {
-      // TODO(Kevin)
-      return false;
-   }
-   /// @brief If the value is a method, gets the parent context of the method
-   DeclContext* getMethodContext() {
-      assert(isMethod() && "Value is not a method");
-      return nullptr;
-   }
-   /// @brief If the value is a method, gets the method's name
-   std::string_view getMethodName() {
-      assert(isMethod() && "Value is not a method");
-      return "";
-   }
-   /// @brief If the value is not a method, gets the Decl* of the value
-   Decl* getDecl() {
-      assert(!isMethod() && "Value is a method");
-      return nullptr;
-   }
 
 private:
 
+};
+
+class MethodName : public ExprValue {
+   std::pmr::string name;
+
+public:
+   MethodName(std::string_view name) : name{name} {}
+   bool isResolved() const override { return false; }
+   std::ostream& print(std::ostream& os) const override {
+      return os << "(Method name:" << name << ")";
+   }
+};
+
+class FieldName : public ExprValue {
+   std::pmr::string name;
+
+public:
+   FieldName(std::string_view name) : name{name} {}
+   bool isResolved() const override { return false; }
+   std::ostream& print(std::ostream& os) const override {
+      return os << "(Field name:" << name << ")";
+   }
 };
 
 class MemberName : public ExprValue {

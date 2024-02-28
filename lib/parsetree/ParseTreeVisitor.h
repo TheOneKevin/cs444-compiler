@@ -162,7 +162,7 @@ public:
    std::list<ast::ExprNode*> visitExprChild(Node* node);
    std::list<ast::ExprNode*> visitExprNode(Node* node);
    std::list<ast::ExprNode*> visitMethodInvocation(Node* node);
-   std::list<ast::ExprNode*> visitQualifiedIdentifierInExpr(Node* node);
+   std::list<ast::ExprNode*> visitQualifiedIdentifierInExpr(Node* node, bool isMethodInvocation = false);
    std::list<ast::ExprNode*> visitArgumentList(Node* node);
    std::list<ast::ExprNode*> visitFieldAccess(Node* node);
    std::list<ast::ExprNode*> visitClassCreation(Node* node);

@@ -154,17 +154,28 @@ std::list<ast::ExprNode*> ptv::visitExprChild(Node* node) {
    unreachable();
 }
 
-std::list<ast::ExprNode*> ptv::visitQualifiedIdentifierInExpr(Node* node) {
+std::list<ast::ExprNode*> ptv::visitQualifiedIdentifierInExpr(Node* node, bool isMethodInvocation) {
    check_node_type(node, pty::QualifiedIdentifier);
    check_num_children(node, 1, 2);
    std::list<ast::ExprNode*> ops;
    if(node->num_children() == 1) {
-      ops.push_back(
+      if (isMethodInvocation) {
+         ops.push_back(
+            alloc.new_object<ast::MethodName>(visitIdentifier(node->child(0))));
+      } else {
+         ops.push_back(
             alloc.new_object<ast::MemberName>(visitIdentifier(node->child(0))));
+      }
+      
    } else if(node->num_children() == 2) {
       ops = visitQualifiedIdentifierInExpr(node->child(0));
-      ops.push_back(
+      if (isMethodInvocation) {
+         ops.push_back(
+            alloc.new_object<ast::MethodName>(visitIdentifier(node->child(1))));
+      } else {
+         ops.push_back(
             alloc.new_object<ast::MemberName>(visitIdentifier(node->child(1))));
+      }
       ops.push_back(alloc.new_object<ast::MemberAccess>());
    }
    return ops;
@@ -175,7 +186,7 @@ std::list<ast::ExprNode*> ptv::visitMethodInvocation(Node* node) {
    check_num_children(node, 2, 3);
    std::list<ast::ExprNode*> ops;
    if(node->num_children() == 2) {
-      ops.splice(ops.end(), visitQualifiedIdentifierInExpr(node->child(0)));
+      ops.splice(ops.end(), visitQualifiedIdentifierInExpr(node->child(0), true));
 
       std::list<ast::ExprNode*> args;
       visitArgumentList(node->child(1), args);
@@ -186,7 +197,7 @@ std::list<ast::ExprNode*> ptv::visitMethodInvocation(Node* node) {
    } else if(node->num_children() == 3) {
       ops.splice(ops.end(), visitExprChild(node->child(0)));
       ops.push_back(
-            alloc.new_object<ast::MemberName>(visitIdentifier(node->child(1))));
+            alloc.new_object<ast::MethodName>(visitIdentifier(node->child(1))));
       ops.push_back(alloc.new_object<ast::MemberAccess>());
 
       std::list<ast::ExprNode*> args;
