@@ -79,6 +79,7 @@ void HierarchyChecker::checkMethodInheritance() {
 }
 
 void HierarchyChecker::checkInheritance() {
+   inheritanceMap_.clear();
    for(auto cu : lu_->compliationUnits()) {
       // FIXME(kevin, larry): Do we really need mutable here?
       auto body = cu->mut_body();

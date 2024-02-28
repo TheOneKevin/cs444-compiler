@@ -186,7 +186,7 @@ public:
 
 class MemberAccess : public ExprOp {
 public:
-   MemberAccess() : ExprOp(1) {}
+   MemberAccess() : ExprOp(2) {}
    std::ostream& print(std::ostream& os) const override {
       return os << "MemberAccess";
    }
@@ -252,6 +252,7 @@ public:
    std::ostream& print(std::ostream& os) const override {
       return os << OpType_to_string(type, "(Unknown unary op)");
    }
+   OpType getType() const { return type; }
 };
 
 class BinaryOp : public ExprOp {

@@ -18,6 +18,8 @@ public:
       checkInheritance();
    }
 
+   bool isSubtype(ast::Type* sub, ast::Type* super);
+
 private:
    diagnostics::DiagnosticEngine& diag;
    ast::LinkingUnit* lu_;
