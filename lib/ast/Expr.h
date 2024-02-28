@@ -1,23 +1,93 @@
 #pragma once
 
-#include <list>
-
 #include "ast/AstNode.h"
 #include "utils/EnumMacros.h"
+#include "utils/Generator.h"
 
 namespace ast {
+
+class ExprNodeList;
 
 class ExprNode {
 public:
    virtual std::ostream& print(std::ostream& os) const { return os << "ExprNode"; }
    virtual ~ExprNode() = default;
+
+private:
+   friend class ExprNodeList;
+   ExprNode* next_;
+};
+
+/// @brief A list of ExprNodes* that can be iterated and concatenated
+class ExprNodeList {
+public:
+   explicit ExprNodeList(ExprNode* node) : head_{node}, tail_{node}, size_{1} {}
+   ExprNodeList() : head_{nullptr}, tail_{nullptr}, size_{0} {}
+
+   /**
+    * @brief Pushes a node to the back of the list
+    * @param node The node to push
+    */
+   void push_back(ExprNode* node) {
+      if(node == nullptr) return;
+      if(head_ == nullptr) {
+         head_ = node;
+         tail_ = node;
+      } else {
+         tail_->next_ = node;
+         tail_ = node;
+      }
+      size_ += 1;
+   }
+
+   /**
+    * @brief Concatenates another list to the end of this list.
+    * @param other The list to concatenate (rvalue reference)
+    */
+   void concat(ExprNodeList&& other) { concat(other); }
+
+   /**
+    * @brief Concatenates another list to the end of this list. The other list
+    * will be invalidated and empty after this operation.
+    * @param other The list to concatenate
+    */
+   void concat(ExprNodeList& other) {
+      if(other.size_ == 0) return;
+      if(head_ == nullptr) {
+         head_ = other.head_;
+         tail_ = other.tail_;
+      } else {
+         tail_->next_ = other.head_;
+         tail_ = other.tail_;
+      }
+      size_ += other.size_;
+      other.head_ = nullptr;
+      other.tail_ = nullptr;
+      other.size_ = 0;
+   }
+
+   /// @brief Returns the number of nodes in the list
+   [[nodiscard]]
+   auto size() const { return size_; }
+
+   /// @brief Returns a generator that yields each node in the list
+   utils::Generator<ExprNode const*> nodes() const {
+      for(ExprNode* node = head_; node != nullptr; node = node->next_) {
+         co_yield node;
+      }
+   }
+
+private:
+   ExprNode* head_;
+   ExprNode* tail_;
+   size_t size_;
 };
 
 class Expr {
-   std::list<ExprNode*> rpn_ops;
+   ExprNodeList rpn_ops;
 
 public:
-   Expr(std::list<ExprNode*> rpn_ops) : rpn_ops{rpn_ops} {}
+   Expr(ExprNodeList rpn_ops) : rpn_ops{rpn_ops} {}
    std::ostream& print(std::ostream& os, int indentation) const;
    int printDotNode(DotPrinter& dp) const;
 };
@@ -27,7 +97,6 @@ public:
    virtual bool isResolved() const = 0;
 
 private:
-
 };
 
 class MethodName : public ExprValue {

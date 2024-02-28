@@ -1,8 +1,5 @@
 #pragma once
 
-#include <list>
-
-#include "ast/AST.h"
 #include "parsetree/ParseTree.h"
 #include "semantic/Semantic.h"
 
@@ -159,16 +156,15 @@ public:
    // Expression visitors //////////////////////////////////////////////////////
 
    ast::Expr* visitExpr(Node* node);
-   std::list<ast::ExprNode*> visitExprChild(Node* node);
-   std::list<ast::ExprNode*> visitExprNode(Node* node);
-   std::list<ast::ExprNode*> visitMethodInvocation(Node* node);
-   std::list<ast::ExprNode*> visitQualifiedIdentifierInExpr(Node* node, bool isMethodInvocation = false);
-   std::list<ast::ExprNode*> visitArgumentList(Node* node);
-   std::list<ast::ExprNode*> visitFieldAccess(Node* node);
-   std::list<ast::ExprNode*> visitClassCreation(Node* node);
-   std::list<ast::ExprNode*> visitArrayAccess(Node* node);
-   std::list<ast::ExprNode*> visitArrayCreation(Node* node);
-   std::list<ast::ExprNode*> visitCastExpression(Node* node);
+   ast::ExprNodeList visitExprChild(Node* node);
+   ast::ExprNodeList visitExprNode(Node* node);
+   ast::ExprNodeList visitMethodInvocation(Node* node);
+   ast::ExprNodeList visitQualifiedIdentifierInExpr(Node* node, bool isMethodInvocation = false);
+   ast::ExprNodeList visitFieldAccess(Node* node);
+   ast::ExprNodeList visitClassCreation(Node* node);
+   ast::ExprNodeList visitArrayAccess(Node* node);
+   ast::ExprNodeList visitArrayCreation(Node* node);
+   ast::ExprNodeList visitCastExpression(Node* node);
    ast::ExprNode* visitArrayTypeInExpr(Node* node);
    ast::ExprNode* visitRegularType(Node* node);
    ast::ExprNode* visitArrayType(Node* node);
@@ -177,7 +173,7 @@ public:
 
    ast::UnaryOp* convertToUnaryOp(Operator::Type type);
    ast::BinaryOp* convertToBinaryOp(Operator::Type type);
-   void visitArgumentList(Node* node, std::list<ast::ExprNode*>& ops);
+   void visitArgumentList(Node* node, ast::ExprNodeList& ops);
 
    template <>
    ast::Stmt* visit<pty::BlockStatementList>(Node* node);

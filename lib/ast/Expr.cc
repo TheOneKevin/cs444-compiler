@@ -13,7 +13,7 @@ std::ostream& Expr::print(std::ostream& os, int indentation) const {
    }
    os << AstNode::indent(indentation + 1);
    char state = '(';
-   for(const auto& op : rpn_ops) {
+   for(const auto op : rpn_ops.nodes()) {
       if(indentation >= 0) {
          std::ostringstream oss;
          op->print(oss);
@@ -37,7 +37,7 @@ std::ostream& Expr::print(std::ostream& os, int indentation) const {
 
 int Expr::printDotNode(DotPrinter& dp) const {
    std::ostringstream os;
-   for(const auto& op : rpn_ops) {
+   for(const auto op : rpn_ops.nodes()) {
       op->print(os);
       if(os.str().ends_with(")")) {
          os << "\n";
