@@ -10,7 +10,7 @@
 #include "semantic/HierarchyChecker.h"
 #include "semantic/NameResolver.h"
 #include "semantic/Semantic.h"
-#include "semantic/TypeChecker.h"
+#include "semantic/TypeResolver.h"
 #include "utils/BumpAllocator.h"
 #include "utils/CLI11.h"
 #include "utils/PassManager.h"
@@ -415,8 +415,7 @@ public:
    string_view Desc() const override { return "Type Checking"; }
    void Run() override {
       auto lu = GetPass<LinkerPass>().LinkingUnit();
-      semantic::TypeChecker typeChecker{PM().Diag()};
-      typeChecker.check(lu);
+      // TODO(kevin):
    }
 
 private:

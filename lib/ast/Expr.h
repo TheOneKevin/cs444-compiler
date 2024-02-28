@@ -22,7 +22,7 @@ public:
 template <typename T>
    requires std::movable<T>
 class ExprEvaluator {
-public:
+protected:
    using op_array = std::pmr::vector<T>;
 
    virtual T mapValue(exprnode::ExprValue const& node) const = 0;
