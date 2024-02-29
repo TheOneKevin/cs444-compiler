@@ -2,7 +2,9 @@
 
 #include <string>
 #include <string_view>
+
 #include "ast/AstNode.h"
+#include "ast/Type.h"
 #include "utils/EnumMacros.h"
 #include "utils/Generator.h"
 
@@ -115,9 +117,12 @@ namespace ast::exprnode {
 
 class ExprValue : public ExprNode {
 public:
-   virtual bool isResolved() const = 0;
+   ExprValue() : decl_{nullptr} {}
+   ast::Decl const* decl() { return decl_; }
+   virtual bool isResolved() const { return decl_ != nullptr; }
 
 private:
+   ast::Decl const* decl_;
 };
 
 class MethodName : public ExprValue {
@@ -125,20 +130,8 @@ class MethodName : public ExprValue {
 
 public:
    MethodName(std::string_view name) : name{name} {}
-   bool isResolved() const override { return false; }
    std::ostream& print(std::ostream& os) const override {
       return os << "(Method name:" << name << ")";
-   }
-};
-
-class FieldName : public ExprValue {
-   std::pmr::string name;
-
-public:
-   FieldName(std::string_view name) : name{name} {}
-   bool isResolved() const override { return false; }
-   std::ostream& print(std::ostream& os) const override {
-      return os << "(Field name:" << name << ")";
    }
 };
 
@@ -147,54 +140,42 @@ class MemberName : public ExprValue {
 
 public:
    MemberName(std::string_view name) : name_{name} {}
-   bool isResolved() const override { return false; }
    std::ostream& print(std::ostream& os) const override {
       return os << "(Member name:" << name_ << ")";
    }
    std::string_view name() const { return name_; }
 };
 
-class ThisNode : public ExprValue {
+class ThisNode final : public ExprValue {
+   // FIXME(kevin): ThisNode requires decl which points to the class decl
    std::ostream& print(std::ostream& os) const override { return os << "(THIS)"; }
-   bool isResolved() const override { return false; }
 };
 
-class TypeNode : public ExprValue {
-   Type* type;
+class TypeNode final : public ExprValue {
+   Type const* type_;
 
 public:
-   TypeNode(Type* type) : type{type} {}
-   bool isResolved() const override { return false; }
+   TypeNode(Type const* type) : type_{type} {}
+   bool isResolved() const override { return true; }
+   ast::Type const* type() { return type_; }
    std::ostream& print(std::ostream& os) const override {
-      return os << "(Type: " << type->toString() << ")";
+      return os << "(Type: " << type_->toString() << ")";
    }
 };
 
-class LiteralNode : public ExprValue {
-#define LITERAL_TYPE_LIST(F) \
-   F(Integer)                \
-   F(Character)              \
-   F(String)                 \
-   F(Boolean)                \
-   F(Null)
+class LiteralNode final : public ExprValue {
 public:
-   /// @brief The enum for each literal type
-   DECLARE_ENUM(Type, LITERAL_TYPE_LIST)
-private:
-   DECLARE_STRING_TABLE(Type, literal_strings, LITERAL_TYPE_LIST)
-#undef LITERAL_TYPE_LIST
-
-private:
-   std::pmr::string value;
-   Type type;
-
-public:
-   LiteralNode(std::string_view value, Type type) : value{value}, type{type} {}
+   LiteralNode(std::string_view value, ast::BuiltInType const* type)
+         : value_{value}, type_{type} {}
    bool isResolved() const override { return true; }
    std::ostream& print(std::ostream& os) const override {
-      return os << "(" << Type_to_string(type, "unknown literal type") << " "
-                << value << ")";
+      // TODO(kevin): re-implement this
+      return os;
    }
+
+private:
+   std::pmr::string value_;
+   ast::BuiltInType const* type_;
 };
 
 /* ===--------------------------------------------------------------------=== */

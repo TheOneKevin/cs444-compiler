@@ -5,6 +5,7 @@
 
 #include "ast/AstNode.h"
 #include "diagnostics/Location.h"
+#include "parsetree/ParseTree.h"
 
 namespace ast {
 
@@ -36,6 +37,10 @@ ArrayType* Semantic::BuildArrayType(Type* elementType, SourceRange loc) {
 BuiltInType* Semantic::BuildBuiltInType(parsetree::BasicType::Type type,
                                         SourceRange loc) {
    return alloc.new_object<BuiltInType>(type, loc);
+}
+
+BuiltInType* Semantic::BuildBuiltInType(parsetree::Literal::Type type) {
+   return alloc.new_object<BuiltInType>(type);
 }
 
 /* ===--------------------------------------------------------------------=== */

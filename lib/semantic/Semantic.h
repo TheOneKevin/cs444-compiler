@@ -23,6 +23,7 @@ public:
    UnresolvedType* BuildUnresolvedType(SourceRange loc);
    ArrayType* BuildArrayType(Type* elementType, SourceRange loc);
    BuiltInType* BuildBuiltInType(parsetree::BasicType::Type type, SourceRange loc);
+   BuiltInType* BuildBuiltInType(parsetree::Literal::Type type);
 
    /* ===-----------------------------------------------------------------=== */
    // ast/Decl.h
