@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <memory_resource>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -24,15 +25,21 @@ class MethodDecl;
 namespace semantic {
 
 class NameResolver {
-private:
+public:
    /// @brief Represents a tree of packages. The leaf nodes are declarations.
    struct Pkg {
+   private:
+      friend class NameResolver;
       using Child = std::variant<ast::Decl*, Pkg*>;
       std::string_view name;
       std::pmr::unordered_map<std::pmr::string, Child> children;
+   
+   public:
       Pkg(BumpAllocator& alloc) : name{}, children{alloc} {}
       Pkg(BumpAllocator& alloc, std::string_view name)
             : name{name}, children{alloc} {}
+
+   public:
       std::ostream& print(std::ostream& os, int indentation = 0) const;
       void dump() const;
    };
@@ -45,6 +52,9 @@ private:
    NameResolver& operator=(NameResolver&&) = delete;
 
 public:
+   using ConstImport = std::variant<ast::Decl const*, Pkg const*>;
+   using ConstImportOpt = std::optional<ConstImport>;
+
    /**
     * @brief Construct a new Name Resolver object.
     *
@@ -67,23 +77,39 @@ public:
    }
 
    /**
-    * @brief Called to begin the resolution of a compilation unit.
-    * This will build the import table (and any other data structures) to help
-    * resolve types within the compilation unit.
-    *
-    * @param cu The compilation unit to begin resolution for.
+    * @brief Resolves all types in the current linking unit.
     */
-   void BeginContext(ast::CompilationUnit* cu);
-
-   /// @brief Resolves all types in the current linking unit.
    void Resolve();
 
-   /// @brief Resolves the type in-place (does not return anything)
-   /// @param type The unresolved type to resolve.
+   /**
+    * @brief Resolves the type in-place (does not return anything)
+    *
+    * @param type The unresolved type to resolve.
+    */
    void ResolveType(ast::UnresolvedType* type);
 
+   /**
+    * @brief Get an import object from the import table of the given
+    * compilation unit. This object can either be a package or a declaration.
+    *
+    * @param cu The compilation unit to get the import from.
+    * @param name The name of the import to get.
+    * @param r An optional memory resource to use for allocations.
+    * @return ConstImport Returns nullopt if the import is not found. Otheriwse,
+    * returns the import object from the import table. Note, the package object
+    * will never be null. However, a declaration object can be null if the
+    * import-on-demand results in an unresolvable declaration.
+    */
+   ConstImportOpt GetImport(
+         ast::CompilationUnit const* cu, std::string_view name,
+         std::pmr::memory_resource* r = std::pmr::get_default_resource()) const;
+
+public:
    /// @brief Dumps the symbol and import tables to the output stream.
    void dump() const;
+
+   /// @brief Dumps the import table to the output stream.
+   void dumpImports(ast::CompilationUnit const* cu) const;
 
    /// @brief Dumps the import table to the output stream.
    void dumpImports() const;
@@ -95,6 +121,14 @@ private:
    void replaceObjectClass(ast::AstNode* node);
    // Find the Decl* for java.lang.Object class
    ast::Decl const* findObjectClass();
+   /**
+    * @brief Called to begin the resolution of a compilation unit.
+    * This will build the import table (and any other data structures) to help
+    * resolve types within the compilation unit.
+    *
+    * @param cu The compilation unit to begin resolution for.
+    */
+   void beginContext(ast::CompilationUnit* cu);
 
 private:
    using ChildOpt = std::optional<Pkg::Child>;
@@ -111,10 +145,12 @@ private:
    BumpAllocator& alloc;
    diagnostics::DiagnosticEngine& diag;
    ast::LinkingUnit* lu_;
-   /// @brief The current compilation unit being resolved.
-   ast::CompilationUnit* cu_;
-   /// @brief The import map for the current compilation unit.
-   std::pmr::unordered_map<std::pmr::string, Pkg::Child> importsMap_;
+   /// @brief The current compilation unit being resolved
+   ast::CompilationUnit* currentCU_;
+   /// @brief The import map for all the compilation units
+   std::pmr::unordered_map<ast::CompilationUnit const*,
+                           std::pmr::unordered_map<std::pmr::string, Pkg::Child>>
+         importsMap_;
    /// @brief The root of the symbol table (more of a tree than table).
    Pkg* rootPkg_;
    /// @brief A cache of the java.lang.Object class.

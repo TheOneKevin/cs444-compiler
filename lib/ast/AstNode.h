@@ -29,6 +29,7 @@ class BuiltInType;
 class Decl;
 class DeclContext;
 class Stmt;
+class ClassDecl;
 
 class Expr;
 
@@ -192,6 +193,14 @@ public:
    virtual bool isNumeric() const = 0;
    virtual bool isBoolean() const = 0;
    virtual bool isString() const = 0;
+
+   /**
+    * @brief Get the type as a class representation. i.e., char -> java.lang.Char
+    * and int[] -> java.lang.Array.
+    * 
+    * @return ast::Decl* Returns nullptr if the type has no class representation.
+    */
+   virtual ast::ClassDecl* getAsClass() const = 0;
 
 private:
    SourceRange loc_;

@@ -4,8 +4,8 @@
 
 #include "ast/AstNode.h"
 #include "parsetree/ParseTree.h"
-#include "semantic/NameResolver.h"
 #include "utils/EnumMacros.h"
+#include "semantic/NameResolver.h"
 
 namespace ast {
 
@@ -61,14 +61,12 @@ public:
       }
       return false;
    }
-   bool isNumeric() const override {
-      return kind != BuiltInType::Kind::Boolean;
-   }
-   bool isBoolean() const override {
-      return kind == BuiltInType::Kind::Boolean;
-   }
-   bool isString() const override {
-      return false;
+   bool isNumeric() const override { return kind != BuiltInType::Kind::Boolean; }
+   bool isBoolean() const override { return kind == BuiltInType::Kind::Boolean; }
+   bool isString() const override { return false; }
+   ast::ClassDecl* getAsClass() const override {
+      // TODO: Implement this.
+      return nullptr;
    }
 };
 
@@ -112,15 +110,26 @@ public:
       }
       return false;
    }
-   bool isNumeric() const override final {
-      return false;
-   }
-   bool isBoolean() const override final {
-      return false;
-   }
+   bool isNumeric() const override final { return false; }
+   bool isBoolean() const override final { return false; }
    bool isString() const override final {
       return decl_->getCanonicalName() == "java.lang.String";
    }
+   ast::ClassDecl* getAsClass() const override { return nullptr; }
+
+   /**
+    * @brief If the current reference type is a built-in type, then returns
+    * the built-in type. For ex. if the reference type is java.lang.Integer,
+    * this will return the "int" built-in type (ast::Node).
+    * 
+    * @return ast::BuiltInType* Returns the built-in type if the reference type
+    * is a built-in type. Otherwise, returns nullptr.
+    */
+   ast::BuiltInType* getAsBuiltIn() const {
+      // FIXME(everyone): Should this be part of the operator==?
+      return nullptr;
+   }
+
 protected:
    Decl* decl_;
 };
@@ -214,15 +223,10 @@ public:
       return false;
    }
    Type* getElementType() const { return elementType; }
-   bool isNumeric() const override {
-      return false;
-   }
-   bool isBoolean() const override {
-      return false;
-   }
-   bool isString() const override {
-      return false;
-   }
+   bool isNumeric() const override { return false; }
+   bool isBoolean() const override { return false; }
+   bool isString() const override { return false; }
+   ast::ClassDecl* getAsClass() const override { return nullptr; }
 };
 
 } // namespace ast

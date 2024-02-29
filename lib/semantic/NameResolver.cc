@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <memory_resource>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -13,6 +14,7 @@
 #include "ast/DeclContext.h"
 #include "ast/Type.h"
 #include "diagnostics/Location.h"
+#include "utils/BumpAllocator.h"
 
 using ast::Decl;
 using ast::UnresolvedType;
@@ -81,10 +83,10 @@ void NameResolver::buildSymbolTable() {
    }
 }
 
-void NameResolver::BeginContext(ast::CompilationUnit* cu) {
+void NameResolver::beginContext(ast::CompilationUnit* cu) {
    // Set the current compilation unit and clear the imports map
-   cu_ = cu;
-   importsMap_.clear();
+   auto& importsMap = importsMap_[cu];
+   currentCU_ = cu;
    auto curPkg = dynamic_cast<UnresolvedType const*>(cu->package());
    assert(curPkg && "Package should be an unresolved type");
 
@@ -125,17 +127,17 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
       for(auto& kv : pkg->children) {
          if(!std::holds_alternative<Decl*>(kv.second)) continue;
          auto decl = std::get<Decl*>(kv.second);
-         if(importsMap_.find(kv.first) != importsMap_.end()) {
-            auto imported = importsMap_[kv.first];
+         if(importsMap.find(kv.first) != importsMap.end()) {
+            auto imported = importsMap[kv.first];
             if(std::holds_alternative<Decl*>(imported) &&
                std::get<Decl*>(imported) == decl)
                continue; // Same declaration, no error
             // FIXME(kevin): The import-on-demand shadows another
             // import-on-demand, so we mark the declaration as a null pointer.
-            importsMap_[kv.first] = static_cast<Decl*>(nullptr);
+            importsMap[kv.first] = static_cast<Decl*>(nullptr);
             continue;
          }
-         importsMap_[kv.first] = Pkg::Child{decl};
+         importsMap[kv.first] = Pkg::Child{decl};
       }
    }
    // 2. Package declarations. We can ignore any duplicate names as they are
@@ -143,9 +145,9 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
    for(auto& kv : rootPkg_->children) {
       if(!std::holds_alternative<Pkg*>(kv.second))
          continue; // We only care about subpackages
-      if(importsMap_.find(kv.first) != importsMap_.end())
+      if(importsMap.find(kv.first) != importsMap.end())
          continue; // This package is shadowed by an import-on-demand
-      importsMap_[kv.first] = Pkg::Child{std::get<Pkg*>(kv.second)};
+      importsMap[kv.first] = Pkg::Child{std::get<Pkg*>(kv.second)};
    }
    // 3. All declarations in the same package (different CUs). We can shadow
    //    any declarations already existing.
@@ -155,7 +157,7 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
       assert(std::holds_alternative<Pkg*>(curTree.value()));
       for(auto& kv : std::get<Pkg*>(curTree.value())->children)
          if(std::holds_alternative<Decl*>(kv.second))
-            importsMap_[kv.first] = Pkg::Child{std::get<Decl*>(kv.second)};
+            importsMap[kv.first] = Pkg::Child{std::get<Decl*>(kv.second)};
    }
    // 4. Single-type-import declarations. This may also shadow anything existing.
    for(auto const& imp : cu->imports()) {
@@ -180,11 +182,11 @@ void NameResolver::BeginContext(ast::CompilationUnit* cu) {
                                           << decl->name();
          continue;
       }
-      importsMap_[imp.simpleName()] = decl;
+      importsMap[imp.simpleName()] = decl;
    }
    // 5. All declarations in the current CU. This may also shadow anything.
    if(cu->body())
-      importsMap_[cu_->bodyAsDecl()->name().data()] = cu_->mut_bodyAsDecl();
+      importsMap[cu->bodyAsDecl()->name().data()] = cu->mut_bodyAsDecl();
 }
 
 NameResolver::ChildOpt NameResolver::resolveImport(UnresolvedType const* t) const {
@@ -225,7 +227,8 @@ void NameResolver::ResolveType(UnresolvedType* ty) {
    Pkg::Child subTy;
    auto it = ty->parts().begin();
    // Resolve the first level of the type against importMaps_
-   if(auto it2 = importsMap_.find(*it); it2 != importsMap_.end()) {
+   auto& importsMap = importsMap_[currentCU_];
+   if(auto it2 = importsMap.find(*it); it2 != importsMap.end()) {
       subTy = it2->second;
    } else {
       diag.ReportError(ty->location())
@@ -277,7 +280,11 @@ void NameResolver::ResolveType(UnresolvedType* ty) {
    assert(ty->isResolved() && "Type should be resolved");
 }
 
-void NameResolver::Resolve() { resolveRecursive(lu_); }
+void NameResolver::Resolve() {
+   resolveRecursive(lu_);
+   // Clear the current compilation unit to avoid any bugs
+   currentCU_ = nullptr;
+}
 
 void NameResolver::replaceObjectClass(ast::AstNode* node) {
    auto decl = dynamic_cast<ast::ClassDecl*>(node);
@@ -308,7 +315,7 @@ void NameResolver::resolveRecursive(ast::AstNode* node) {
          // If the CU has no body, then we can skip to the next CU :)
          if(!cu->body()) return;
          // Resolve the current compilation unit's body
-         BeginContext(cu);
+         beginContext(cu);
          resolveRecursive(cu->mut_body());
          replaceObjectClass(cu->mut_body());
       } else if(auto ty = dynamic_cast<ast::Type*>(child)) {
@@ -365,11 +372,27 @@ void NameResolver::dump() const {
 }
 
 void NameResolver::dumpImports() const {
-   if(cu_ && cu_->bodyAsDecl() && cu_->bodyAsDecl()->hasCanonicalName())
-      std::cout << "Current CU: " << cu_->bodyAsDecl()->getCanonicalName() << std::endl;
-   else
+   for(auto const* cu : lu_->compliationUnits()) dumpImports(cu);
+}
+
+void NameResolver::dumpImports(ast::CompilationUnit const* cu) const {
+   if(cu && cu->bodyAsDecl() && cu->bodyAsDecl()->hasCanonicalName()) {
+      std::cout << "Current CU: " << cu->bodyAsDecl()->getCanonicalName()
+                << std::endl;
+   } else {
       return;
-   for(auto const& [name, child] : importsMap_) {
+   }
+
+   auto it = importsMap_.find(cu);
+   assert(it != importsMap_.end() && "Compilation unit not found in import map");
+   auto const& importsMap = it->second;
+
+   if(importsMap.empty()) {
+      std::cout << "No imports" << std::endl;
+      return;
+   }
+
+   for(auto const& [name, child] : importsMap) {
       if(name == UNNAMED_PACKAGE)
          std::cout << "(default package) -> ";
       else
@@ -385,6 +408,30 @@ void NameResolver::dumpImports() const {
          std::cout << "(subpackage)";
       }
       std::cout << std::endl;
+   }
+}
+
+NameResolver::ConstImportOpt NameResolver::GetImport(
+      ast::CompilationUnit const* cu, std::string_view name,
+      std::pmr::memory_resource* r) const {
+   // Grab the import map
+   auto it = importsMap_.find(cu);
+   assert(it != importsMap_.end() && "Compilation unit not found in import map");
+   auto const& importsMap = it->second;
+
+   // Grab the import from the map
+   BumpAllocator alloc1{r};
+   std::pmr::string str{name, alloc1};
+   auto it2 = importsMap.find(str);
+
+   // If the import is not found, then we can return a null optional
+   if(it2 == importsMap.end()) return std::nullopt;
+
+   // If the import is found, then we can return it
+   if(std::holds_alternative<Decl*>(it2->second)) {
+      return static_cast<Decl const*>(std::get<Decl*>(it2->second));
+   } else {
+      return static_cast<Pkg const*>(std::get<Pkg*>(it2->second));
    }
 }
 
