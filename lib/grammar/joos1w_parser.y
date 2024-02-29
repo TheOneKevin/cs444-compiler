@@ -391,15 +391,15 @@ UnaryExpressionNotPlusMinus
     ;
 
 CastExpression
-    : '(' BasicType Dims ')' UnaryExpression                                    { $$ = jl.make_node(@$, pty::CastExpression, $2, $3, $5); }
+    : '(' BasicType Dims ')' UnaryExpression                                    { $$ = jl.make_node(@$, pty::CastExpression, jl.make_node(@2, pty::Type, $2), $3, $5); }
     | '(' Expression ')' UnaryExpressionNotPlusMinus {
         // Cast is valid iff:
         // 1. $2 is a qualified identifier
         // 2. $2 is an array type and has only one child
         bool isType = $2->get_node_type() == pty::QualifiedIdentifier;
-        bool isArrType = $2->get_node_type() == pty::ArrayCastType;
+        bool isArrType = $2->get_node_type() == pty::ArrayType;
         if(isType) {
-            $$ = jl.make_node(@$, pty::CastExpression, $2, $4);
+            $$ = jl.make_node(@$, pty::CastExpression, jl.make_node(@2, pty::Type, $2), $4);
         } else if (isArrType) {
             $$ = jl.make_node(@$, pty::CastExpression, $2, $4);
         }
@@ -445,7 +445,7 @@ ArrayAccess
     ;
 
 ArrayCastType
-    : QualifiedIdentifier '[' ']'                                               { $$ = jl.make_node(@$, pty::ArrayCastType, $1); }
+    : QualifiedIdentifier '[' ']'                                               { $$ = jl.make_node(@$, pty::ArrayType, $1); }
     ;
 MethodInvocation
     : QualifiedIdentifier '(' ArgumentListOpt ')'                               { $$ = jl.make_node(@$, pty::MethodInvocation, $1, $3); }
@@ -453,8 +453,8 @@ MethodInvocation
     ;
 
 ArrayCreationExpression
-    : NEW BasicType '[' Expression ']'                                          { $$ = jl.make_node(@$, pty::ArrayCreationExpression, $2, $4); }
-    | NEW QualifiedIdentifier '[' Expression ']'                                { $$ = jl.make_node(@$, pty::ArrayCreationExpression, $2, $4); }
+    : NEW BasicType '[' Expression ']'                                          { $$ = jl.make_node(@$, pty::ArrayCreationExpression, jl.make_node(@2, pty::ArrayType, $2), $4); }
+    | NEW QualifiedIdentifier '[' Expression ']'                                { $$ = jl.make_node(@$, pty::ArrayCreationExpression, jl.make_node(@2, pty::ArrayType, $2), $4); }
     ;
 
 ClassInstanceCreationExpression

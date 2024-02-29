@@ -165,7 +165,6 @@ public:
    ast::ExprNodeList visitArrayAccess(Node* node);
    ast::ExprNodeList visitArrayCreation(Node* node);
    ast::ExprNodeList visitCastExpression(Node* node);
-   ast::ExprNode* visitArrayTypeInExpr(Node* node);
    ast::ExprNode* visitRegularType(Node* node);
    ast::ExprNode* visitArrayType(Node* node);
 
