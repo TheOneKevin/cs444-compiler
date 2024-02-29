@@ -47,7 +47,7 @@ int VarDecl::printDotNode(DotPrinter& dp) const {
 ostream& FieldDecl::print(ostream& os, int indentation) const {
    auto i1 = indent(indentation);
    os << i1 << "FieldDecl {\n"
-      << i1 << "  modifiers: " << modifiers.toString() << "\n"
+      << i1 << "  modifiers: " << modifiers().toString() << "\n"
       << i1 << "  type: " << type()->toString() << "\n"
       << i1 << "  name: " << name() << "\n";
    if(hasInit()) {
@@ -61,7 +61,7 @@ int FieldDecl::printDotNode(DotPrinter& dp) const {
    int id = dp.id(this);
    dp.startTLabel(id);
    dp.printTableSingleRow("FieldDecl", {"bgcolor", "lightblue"});
-   dp.printTableDoubleRow("modifiers", modifiers.toString());
+   dp.printTableDoubleRow("modifiers", modifiers().toString());
    dp.printTableDoubleRow("type", type()->toString());
    dp.printTableDoubleRow("name", name());
    std::ostringstream expr;

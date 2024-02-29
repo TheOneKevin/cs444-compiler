@@ -16,13 +16,15 @@ class InterfaceDecl;
 class BuiltInType final : public Type {
 public:
 #define BASIC_TYPE_LIST(F) \
+   F(NoneType)             \
    F(Byte)                 \
    F(Short)                \
    F(Int)                  \
    F(Char)                 \
    F(Boolean)              \
    F(String)               \
-   F(Null)
+   F(Null)              \
+   F(String)
    DECLARE_ENUM(Kind, BASIC_TYPE_LIST)
 private:
    DECLARE_STRING_TABLE(Kind, kind_strings, BASIC_TYPE_LIST)
@@ -51,7 +53,28 @@ public:
             kind = Kind::Boolean;
             break;
          default:
+            assert(false && "Invalid basic type");
+      }
+   }
+   BuiltInType(parsetree::Literal::Type type) : Type{SourceRange{}} {
+      switch(type) {
+         case parsetree::Literal::Type::Integer:
+            kind = Kind::Int;
             break;
+         case parsetree::Literal::Type::Character:
+            kind = Kind::Char;
+            break;
+         case parsetree::Literal::Type::String:
+            kind = Kind::String;
+            break;
+         case parsetree::Literal::Type::Boolean:
+            kind = Kind::Boolean;
+            break;
+         case parsetree::Literal::Type::Null:
+            kind = Kind::NoneType;
+            break;
+         default:
+            assert(false && "Invalid literal type");
       }
    }
    Kind getKind() const { return kind; }

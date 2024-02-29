@@ -44,14 +44,11 @@ BinaryOp* ptv::convertToBinaryOp(Operator::Type type) {
          return alloc.new_object<BinaryOp>(BinaryOp::OpType::LessThan);
          break;
       case oty::LessThanOrEqual:
-         return alloc.new_object<BinaryOp>(
-               BinaryOp::OpType::LessThanOrEqual);
+         return alloc.new_object<BinaryOp>(BinaryOp::OpType::LessThanOrEqual);
       case oty::GreaterThan:
-         return alloc.new_object<BinaryOp>(
-               BinaryOp::OpType::GreaterThan);
+         return alloc.new_object<BinaryOp>(BinaryOp::OpType::GreaterThan);
       case oty::GreaterThanOrEqual:
-         return alloc.new_object<BinaryOp>(
-               BinaryOp::OpType::GreaterThanOrEqual);
+         return alloc.new_object<BinaryOp>(BinaryOp::OpType::GreaterThanOrEqual);
       case oty::InstanceOf:
          return alloc.new_object<BinaryOp>(BinaryOp::OpType::InstanceOf);
       case oty::Plus:
@@ -65,8 +62,9 @@ BinaryOp* ptv::convertToBinaryOp(Operator::Type type) {
       case oty::Modulo:
          return alloc.new_object<BinaryOp>(BinaryOp::OpType::Modulo);
       default:
-         throw std::runtime_error("Invalid operator type");
+         assert(false && "Invalid operator type");
    }
+   unreachable();
 }
 
 Expr* ptv::visitExpr(Node* node) {
@@ -112,71 +110,64 @@ ExprNodeList ptv::visitExprNode(parsetree::Node* node) {
 //                  arrayAccess, fieldAccess, castExpression,
 //                  ArrayCreationExpression ClassInstanceCreationExpression
 ExprNodeList ptv::visitExprChild(Node* node) {
-   if(node->get_node_type() == pty::Expression) {
-      return visitExprNode(node);
-   }
-   if(node->get_node_type() == pty::Literal) {
-      return ExprNodeList(visitLiteral(node));
-   }
-   if(node->get_node_type() == pty::Type) {
-      return ExprNodeList(visitRegularType(node));
-   }
-   if(node->get_node_type() == pty::ArrayType ||
-      node->get_node_type() == pty::ArrayCastType) {
-      return ExprNodeList(visitArrayType(node));
-   }
-   if(node->get_node_type() == pty::Identifier) {
-      auto name = visitIdentifier(node);
-      if(name == "this") {
-         return ExprNodeList(alloc.new_object<ThisNode>());
+   switch (node->get_node_type()) {
+      case pty::Expression:
+         return visitExprNode(node);
+      case pty::Literal:
+         return ExprNodeList(visitLiteral(node));
+      case pty::Type:
+         return ExprNodeList(visitRegularType(node));
+      case pty::ArrayType:
+         return ExprNodeList(visitArrayType(node));
+      case pty::Identifier: {
+         auto name = visitIdentifier(node);
+         if (name == "this") {
+            return ExprNodeList(alloc.new_object<ThisNode>());
+         }
+         return ExprNodeList(alloc.new_object<MemberName>(name));
       }
-      return ExprNodeList(alloc.new_object<MemberName>(name));
-   }
-   if(node->get_node_type() == pty::QualifiedIdentifier) {
-      return visitQualifiedIdentifierInExpr(node);
-   }
-   if(node->get_node_type() == pty::MethodInvocation) {
-      return visitMethodInvocation(node);
-   }
-   if(node->get_node_type() == pty::ArrayAccess) {
-      return visitArrayAccess(node);
-   }
-   if(node->get_node_type() == pty::FieldAccess) {
-      return visitFieldAccess(node);
-   }
-   if(node->get_node_type() == pty::CastExpression) {
-      return visitCastExpression(node);
-   }
-   if(node->get_node_type() == pty::ArrayCreationExpression) {
-      return visitArrayCreation(node);
-   }
-   if(node->get_node_type() == pty::ClassInstanceCreationExpression) {
-      return visitClassCreation(node);
+      case pty::QualifiedIdentifier:
+         return visitQualifiedIdentifierInExpr(node);
+      case pty::MethodInvocation:
+         return visitMethodInvocation(node);
+      case pty::ArrayAccess:
+         return visitArrayAccess(node);
+      case pty::FieldAccess:
+         return visitFieldAccess(node);
+      case pty::CastExpression:
+         return visitCastExpression(node);
+      case pty::ArrayCreationExpression:
+         return visitArrayCreation(node);
+      case pty::ClassInstanceCreationExpression:
+         return visitClassCreation(node);
+      default:
+         assert(false && "Invalid node type");
    }
    unreachable();
 }
 
-ExprNodeList ptv::visitQualifiedIdentifierInExpr(Node* node, bool isMethodInvocation) {
+ExprNodeList ptv::visitQualifiedIdentifierInExpr(Node* node,
+                                                 bool isMethodInvocation) {
    check_node_type(node, pty::QualifiedIdentifier);
    check_num_children(node, 1, 2);
    ExprNodeList ops;
    if(node->num_children() == 1) {
-      if (isMethodInvocation) {
+      if(isMethodInvocation) {
          ops.push_back(
-            alloc.new_object<MethodName>(visitIdentifier(node->child(0))));
+               alloc.new_object<MethodName>(visitIdentifier(node->child(0))));
       } else {
          ops.push_back(
-            alloc.new_object<MemberName>(visitIdentifier(node->child(0))));
+               alloc.new_object<MemberName>(visitIdentifier(node->child(0))));
       }
-      
+
    } else if(node->num_children() == 2) {
       ops = visitQualifiedIdentifierInExpr(node->child(0));
-      if (isMethodInvocation) {
+      if(isMethodInvocation) {
          ops.push_back(
-            alloc.new_object<MethodName>(visitIdentifier(node->child(1))));
+               alloc.new_object<MethodName>(visitIdentifier(node->child(1))));
       } else {
          ops.push_back(
-            alloc.new_object<MemberName>(visitIdentifier(node->child(1))));
+               alloc.new_object<MemberName>(visitIdentifier(node->child(1))));
       }
       ops.push_back(alloc.new_object<MemberAccess>());
    }
@@ -198,8 +189,7 @@ ExprNodeList ptv::visitMethodInvocation(Node* node) {
       return ops;
    } else if(node->num_children() == 3) {
       ops.concat(visitExprChild(node->child(0)));
-      ops.push_back(
-            alloc.new_object<MethodName>(visitIdentifier(node->child(1))));
+      ops.push_back(alloc.new_object<MethodName>(visitIdentifier(node->child(1))));
       ops.push_back(alloc.new_object<MemberAccess>());
 
       ExprNodeList args;
@@ -217,8 +207,7 @@ ExprNodeList ptv::visitFieldAccess(Node* node) {
    check_num_children(node, 2, 2);
    ExprNodeList ops;
    ops.concat(visitExprChild(node->child(0)));
-   ops.push_back(
-         alloc.new_object<MemberName>(visitIdentifier(node->child(1))));
+   ops.push_back(alloc.new_object<MemberName>(visitIdentifier(node->child(1))));
    ops.push_back(alloc.new_object<MemberAccess>());
    return ops;
 }
@@ -249,21 +238,23 @@ ExprNodeList ptv::visitCastExpression(Node* node) {
    check_node_type(node, pty::CastExpression);
    check_num_children(node, 2, 3);
    ExprNodeList ops;
-   if(auto basicType = dynamic_cast<parsetree::BasicType*>(node->child(0))) {
-      auto type = alloc.new_object<BuiltInType>(basicType->get_type());
-      if(node->num_children() == 3 && node->child(1) != nullptr) {
-         ops.push_back(alloc.new_object<TypeNode>(
-               alloc.new_object<ArrayType>(alloc, type)));
-      } else {
-         ops.push_back(alloc.new_object<TypeNode>(type));
+   Node* expr;
+   // If there are 3 children, the expr is (type, dims, expr)
+   // Otherwise, the expr is (type, expr)
+   if(node->num_children() == 3) {
+      auto type = visitType(node->child(0));
+      auto dims = node->child(1);
+      if(dims) {
+         type = sem.BuildArrayType(type, type->location());
       }
-   } else if(node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
-      auto type = visitReferenceType(node->child(0));
       ops.push_back(alloc.new_object<TypeNode>(type));
+      expr = node->child(2);
    } else {
-      ops.push_back(visitArrayType(node->child(0)));
+      auto type = visitType(node->child(0));
+      ops.push_back(alloc.new_object<TypeNode>(type));
+      expr = node->child(1);
    }
-   ops.concat(visitExprChild(node->child(node->num_children() - 1)));
+   ops.concat(visitExprChild(expr));
    ops.push_back(alloc.new_object<Cast>());
    return ops;
 }
@@ -271,72 +262,27 @@ ExprNodeList ptv::visitCastExpression(Node* node) {
 ExprNodeList ptv::visitArrayCreation(Node* node) {
    check_node_type(node, pty::ArrayCreationExpression);
    check_num_children(node, 2, 2);
-   ExprNodeList ops(visitArrayTypeInExpr(node->child(0)));
+   ExprNodeList ops(visitArrayType(node->child(0)));
    ops.concat(visitExprChild(node->child(1)));
    ops.push_back(alloc.new_object<ArrayInstanceCreation>());
    return ops;
    unreachable();
 }
 
-ExprNode* ptv::visitArrayTypeInExpr(Node* node) {
-   if(auto basicType = dynamic_cast<parsetree::BasicType*>(node)) {
-      auto type = alloc.new_object<BuiltInType>(basicType->get_type());
-      return alloc.new_object<TypeNode>(
-            alloc.new_object<ArrayType>(alloc, type));
-   } else if(node->get_node_type() == pty::QualifiedIdentifier) {
-      auto type = visitReferenceType(node);
-      return alloc.new_object<TypeNode>(
-            alloc.new_object<ArrayType>(alloc, type));
-   }
-   unreachable();
-}
-
 ExprNode* ptv::visitRegularType(Node* node) {
-   check_node_type(node, pty::Type);
-   if(auto basicType = dynamic_cast<parsetree::BasicType*>(node->child(0))) {
-      return alloc.new_object<TypeNode>(
-            alloc.new_object<BuiltInType>(basicType->get_type()));
-   } else if(node->child(0)->get_node_type() == pty::QualifiedIdentifier) {
-      return alloc.new_object<TypeNode>(visitReferenceType(node->child(0)));
-   }
-   unreachable();
+   return alloc.new_object<TypeNode>(visitType(node));
 }
 
 ExprNode* ptv::visitArrayType(Node* node) {
-   if(node->get_node_type() != pty::ArrayType &&
-      node->get_node_type() != pty::ArrayCastType) {
-      throw ParseTreeException(node,
-                               "Called on a node that is not the correct type!"
-                               " Expected: " +
-                                     node->type_string() +
-                                     " Actual: " + node->type_string());
-   }
-   check_num_children(node, 1, 1);
-   return visitArrayTypeInExpr(node->child(0));
+   check_node_type(node, pty::ArrayType);
+   return alloc.new_object<TypeNode>(visitType(node));
 }
 
 LiteralNode* ptv::visitLiteral(Node* node) {
    check_node_type(node, pty::Literal);
    if(auto lit = dynamic_cast<parsetree::Literal*>(node)) {
-      switch(lit->get_type()) {
-         case parsetree::Literal::Type::Integer:
-            return alloc.new_object<LiteralNode>(
-                  lit->get_value(), alloc.new_object<ast::BuiltInType>(ast::BuiltInType::Kind::Int, node->location()));
-         case parsetree::Literal::Type::Character:
-            return alloc.new_object<LiteralNode>(
-                  lit->get_value(), alloc.new_object<ast::BuiltInType>(ast::BuiltInType::Kind::Char, node->location()));
-         case parsetree::Literal::Type::String:
-            return alloc.new_object<LiteralNode>(
-                  lit->get_value(), alloc.new_object<ast::BuiltInType>(ast::BuiltInType::Kind::String, node->location()));
-         case parsetree::Literal::Type::Boolean:
-            return alloc.new_object<LiteralNode>(
-                  lit->get_value(), alloc.new_object<ast::BuiltInType>(ast::BuiltInType::Kind::Boolean, node->location()));
-         case parsetree::Literal::Type::Null:
-            return alloc.new_object<LiteralNode>(
-                  lit->get_value(), alloc.new_object<ast::BuiltInType>(ast::BuiltInType::Kind::Null, node->location()));
-         default:
-            throw std::runtime_error("Invalid literal type");
-      }
+      return alloc.new_object<LiteralNode>(lit->get_value(),
+                                           sem.BuildBuiltInType(lit->get_type()));
    }
    unreachable();
 }

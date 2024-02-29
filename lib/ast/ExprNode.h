@@ -2,12 +2,18 @@
 
 #include <string>
 #include <string_view>
+
 #include "ast/AstNode.h"
+#include "ast/Type.h"
 #include "utils/EnumMacros.h"
 #include "utils/Generator.h"
 
 namespace ast {
 class ExprNodeList;
+
+template <typename T>
+   requires std::movable<T>
+class ExprEvaluator;
 
 /* ===--------------------------------------------------------------------=== */
 // ExprNode and ExprNodeList
@@ -18,16 +24,37 @@ public:
    virtual std::ostream& print(std::ostream& os) const { return os << "ExprNode"; }
    virtual ~ExprNode() = default;
 
+public:
+   void setNext(ExprNode* new_next_) {
+      assert(!locked_ && "Attempt to mutate locked node");
+      next_ = new_next_;
+   }
+   const ExprNode* next() const { return next_; }
+   ExprNode* mut_next() const { return next_; }
+
 private:
-   friend class ExprNodeList;
+   template <typename T>
+      requires std::movable<T>
+   friend class ExprEvaluator;
+
+   void const_lock() { locked_ = true; }
+   void const_unlock() { locked_ = false; }
+
+private:
+   // The next node is mutable because it can be modified on-the-fly during
+   // evaluation. That being said, it's the responsibility of the evaluator
+   // to ensure the correct order of unlocking nodes.
    ExprNode* next_;
+
+   // The lock for the previous node.
+   bool locked_ = false;
 };
 
 /// @brief A list of ExprNodes* that can be iterated and concatenated
 class ExprNodeList {
 public:
    explicit ExprNodeList(ExprNode* node) : head_{node}, tail_{node}, size_{1} {
-      node->next_ = nullptr;
+      node->setNext(nullptr);
    }
    ExprNodeList() : head_{nullptr}, tail_{nullptr}, size_{0} {}
 
@@ -41,10 +68,10 @@ public:
          head_ = node;
          tail_ = node;
       } else {
-         tail_->next_ = node;
+         tail_->setNext(node);
          tail_ = node;
       }
-      node->next_ = nullptr;
+      node->setNext(nullptr);
       size_ += 1;
       check_invariants();
    }
@@ -59,7 +86,7 @@ public:
          head_ = other.head_;
          tail_ = other.tail_;
       } else {
-         tail_->next_ = other.head_;
+         tail_->setNext(other.head_);
          tail_ = other.tail_;
       }
       size_ += other.size_;
@@ -84,14 +111,22 @@ public:
    /// @brief Returns a generator that yields each node in the list
    utils::Generator<ExprNode const*> nodes() const {
       size_t i = 0;
-      for(auto node = head_; i < size_; node = node->next_, i++) {
+      for(auto const* node = head_; i < size_; node = node->next(), i++) {
+         co_yield node;
+      }
+   }
+
+   /// @brief Non-const version of nodes()
+   utils::Generator<ExprNode*> mut_nodes() const {
+      size_t i = 0;
+      for(auto node = head_; i < size_; node = node->mut_next(), i++) {
          co_yield node;
       }
    }
 
 private:
    inline void check_invariants() const {
-      assert((!tail_ || tail_->next_ == nullptr) &&
+      assert((!tail_ || tail_->next() == nullptr) &&
              "Tail node should not have a next node");
       assert(((head_ != nullptr) == (tail_ != nullptr)) &&
              "Head is null if and only if tail is null");
@@ -115,9 +150,13 @@ namespace ast::exprnode {
 
 class ExprValue : public ExprNode {
 public:
-   virtual bool isResolved() const = 0;
+   ExprValue() : decl_{nullptr} {}
+   ast::Decl const* decl() { return decl_; }
+   virtual bool isResolved() const { return decl_ != nullptr; }
+   void resolve(ast::Decl const* decl) { decl_ = decl; }
 
 private:
+   ast::Decl const* decl_;
 };
 
 class MethodName : public ExprValue {
@@ -125,20 +164,8 @@ class MethodName : public ExprValue {
 
 public:
    MethodName(std::string_view name) : name{name} {}
-   bool isResolved() const override { return false; }
    std::ostream& print(std::ostream& os) const override {
       return os << "(Method name:" << name << ")";
-   }
-};
-
-class FieldName : public ExprValue {
-   std::pmr::string name;
-
-public:
-   FieldName(std::string_view name) : name{name} {}
-   bool isResolved() const override { return false; }
-   std::ostream& print(std::ostream& os) const override {
-      return os << "(Field name:" << name << ")";
    }
 };
 
@@ -147,44 +174,42 @@ class MemberName : public ExprValue {
 
 public:
    MemberName(std::string_view name) : name_{name} {}
-   bool isResolved() const override { return false; }
    std::ostream& print(std::ostream& os) const override {
       return os << "(Member name:" << name_ << ")";
    }
    std::string_view name() const { return name_; }
 };
 
-class ThisNode : public ExprValue {
+class ThisNode final : public ExprValue {
+   // FIXME(kevin): ThisNode requires decl which points to the class decl
    std::ostream& print(std::ostream& os) const override { return os << "(THIS)"; }
-   bool isResolved() const override { return false; }
 };
 
-class TypeNode : public ExprValue {
-   Type* type;
+class TypeNode final : public ExprValue {
+   Type const* type_;
 
 public:
-   TypeNode(Type* type) : type{type} {}
-   bool isResolved() const override { return false; }
+   TypeNode(Type const* type) : type_{type} {}
+   bool isResolved() const override { return true; }
+   ast::Type const* type() { return type_; }
    std::ostream& print(std::ostream& os) const override {
-      return os << "(Type: " << type->toString() << ")";
+      return os << "(Type: " << type_->toString() << ")";
    }
 };
 
-class LiteralNode : public ExprValue {
-
-private:
-   std::pmr::string value;
-   Type *type;
-
+class LiteralNode final : public ExprValue {
 public:
-   LiteralNode(std::string_view value, Type *type) : value{value}, type{type} {}
+   LiteralNode(std::string_view value, ast::BuiltInType const* type)
+         : value_{value}, type_{type} {}
    bool isResolved() const override { return true; }
    std::ostream& print(std::ostream& os) const override {
-      os << "("<< ": ";
-      type->print(os);
-      os << value << ")";
-      return os;
+      // TODO(kevin): re-implement this
+      return os << "(Literal)";
    }
+
+private:
+   std::pmr::string value_;
+   ast::BuiltInType const* type_;
 };
 
 /* ===--------------------------------------------------------------------=== */

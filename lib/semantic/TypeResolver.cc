@@ -16,9 +16,12 @@ void ExprTypeResolver::resolve(ast::Expr *expr) {
 
 Type* ExprTypeResolver::mapValue(ExprValue const& node) const {
    
+Type* ExprTypeResolver::mapValue(ExprValue& node) const {
+   // Implementation goes here
+   // ...
 }
 
-Type* ExprTypeResolver::evalBinaryOp(const BinaryOp op, const Type* lhs, const Type* rhs) const {
+Type* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs, const Type* rhs) const {
    switch(op.getType()) {
       case BinaryOp::OpType::Assignment: {
          // fixme(Owen): TODO
@@ -102,7 +105,7 @@ Type* ExprTypeResolver::evalBinaryOp(const BinaryOp op, const Type* lhs, const T
    }
 }
 
-Type* ExprTypeResolver::evalUnaryOp(const UnaryOp op, const Type* rhs) const {
+Type* ExprTypeResolver::evalUnaryOp(UnaryOp& op, const Type* rhs) const {
    switch(op.getType()) {
       case UnaryOp::OpType::Plus:
       case UnaryOp::OpType::Minus:

@@ -42,14 +42,15 @@ class FieldDecl final : public VarDecl {
 public:
    FieldDecl(BumpAllocator& alloc, SourceRange location, Modifiers modifiers,
              Type* type, string_view name, Expr* init) noexcept
-         : VarDecl{alloc, location, type, name, init}, modifiers{modifiers} {};
+         : VarDecl{alloc, location, type, name, init}, modifiers_{modifiers} {};
 
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
    bool hasCanonicalName() const override { return true; }
+   auto modifiers() const { return modifiers_; }
 
 private:
-   Modifiers modifiers;
+   Modifiers modifiers_;
 };
 
 } // namespace ast

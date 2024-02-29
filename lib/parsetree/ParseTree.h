@@ -82,7 +82,6 @@ struct Node {
    F(ArgumentList)                      \
    F(FieldAccess)                       \
    F(ArrayAccess)                       \
-   F(ArrayCastType)                     \
    F(CastExpression)                    \
    F(MethodInvocation)                  \
    F(ArrayCreationExpression)           \
