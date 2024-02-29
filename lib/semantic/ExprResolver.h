@@ -3,9 +3,11 @@
 #include <variant>
 
 #include "ast/AstNode.h"
+#include "ast/DeclContext.h"
 #include "ast/Expr.h"
 #include "ast/ExprNode.h"
 #include "diagnostics/Diagnostics.h"
+#include "utils/BumpAllocator.h"
 
 namespace semantic {
 
@@ -22,20 +24,31 @@ struct ExprNameWrapper {
    };
 
    ExprNameWrapper(Type type, ast::exprnode::MemberName const* node)
-         : type{type}, node{node}, resolution{nullptr} {}
+         : type{type}, node{node}, resolution{std::nullopt} {}
 
    void reclassify(Type type, ast::Decl const* resolution) {
       this->resolution = resolution;
       this->type = type;
    }
 
-public:
+   void reclassify(Type type, NameResolver::Pkg const* resolution) {
+      this->resolution = resolution;
+      this->type = type;
+   }
+
+   void resolve(ast::Decl const* resolution) {
+      this->resolution = resolution;
+   }
+
+   void verifyInvariants(Type expectedTy) const;
+
    Type type;
    ast::exprnode::MemberName const* node;
-   ast::Decl const* resolution;
+   NameResolver::ConstImportOpt resolution;
+   ExprNameWrapper* prev = nullptr;
 };
 
-using ExprResolverT = std::variant<ExprNameWrapper, ast::ExprNode const*>;
+using ExprResolverT = std::variant<ExprNameWrapper*, ast::ExprNode const*>;
 
 } // namespace internal
 
@@ -43,7 +56,8 @@ class ExprResolver : ast::ExprEvaluator<internal::ExprResolverT> {
    using ETy = internal::ExprResolverT;
 
 public:
-   ExprResolver(diagnostics::DiagnosticEngine& diag) : diag{diag} {}
+   ExprResolver(diagnostics::DiagnosticEngine& diag, BumpAllocator& alloc)
+         : diag{diag}, alloc{alloc} {}
 
 protected:
    using Type = ast::Type;
@@ -63,11 +77,19 @@ protected:
    ETy evalCast(const ETy type, const ETy value) const override;
 
 private:
-   ETy reclassifySingleAmbiguousName(ETy const& node) const;
+   ETy reclassifySingleAmbiguousName(internal::ExprNameWrapper* data) const;
+   bool tryReclassifyDecl(internal::ExprNameWrapper& data,
+                          ast::DeclContext const* ctx) const;
+   bool tryReclassifyImport(internal::ExprNameWrapper& data,
+                            NameResolver::ConstImportOpt import) const;
+   void validateFieldAccess(internal::ExprNameWrapper* access) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;
-   ast::DeclContext* localContext;
+   ast::CompilationUnit* cu_;
+   ast::DeclContext* lctx_;
+   semantic::NameResolver* NR;
+   BumpAllocator& alloc;
 };
 
 } // namespace semantic
