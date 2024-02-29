@@ -23,10 +23,10 @@ protected:
    using UnaryOp = ast::exprnode::UnaryOp;
    using ExprValue = ast::exprnode::ExprValue;
 
-   Type* mapValue(ExprValue const& node) const override;
-   Type* evalBinaryOp(const BinaryOp op, const Type* lhs,
+   Type* mapValue(ExprValue& node) const override;
+   Type* evalBinaryOp(BinaryOp& op, const Type* lhs,
                       const Type* rhs) const override;
-   Type* evalUnaryOp(const UnaryOp op, const Type* rhs) const override;
+   Type* evalUnaryOp(UnaryOp& op, const Type* rhs) const override;
    Type* evalMemberAccess(const Type* lhs, const Type* field) const override;
    Type* evalMethodCall(const Type* method, const op_array& args) const override;
    Type* evalNewObject(const Type* object, const op_array& args) const override;

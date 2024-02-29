@@ -11,6 +11,10 @@
 namespace ast {
 class ExprNodeList;
 
+template <typename T>
+   requires std::movable<T>
+class ExprEvaluator;
+
 /* ===--------------------------------------------------------------------=== */
 // ExprNode and ExprNodeList
 /* ===--------------------------------------------------------------------=== */
@@ -20,16 +24,37 @@ public:
    virtual std::ostream& print(std::ostream& os) const { return os << "ExprNode"; }
    virtual ~ExprNode() = default;
 
+public:
+   void setNext(ExprNode* new_next_) {
+      assert(!locked_ && "Attempt to mutate locked node");
+      next_ = new_next_;
+   }
+   const ExprNode* next() const { return next_; }
+   ExprNode* mut_next() const { return next_; }
+
 private:
-   friend class ExprNodeList;
+   template <typename T>
+      requires std::movable<T>
+   friend class ExprEvaluator;
+
+   void const_lock() { locked_ = true; }
+   void const_unlock() { locked_ = false; }
+
+private:
+   // The next node is mutable because it can be modified on-the-fly during
+   // evaluation. That being said, it's the responsibility of the evaluator
+   // to ensure the correct order of unlocking nodes.
    ExprNode* next_;
+
+   // The lock for the previous node.
+   bool locked_ = false;
 };
 
 /// @brief A list of ExprNodes* that can be iterated and concatenated
 class ExprNodeList {
 public:
    explicit ExprNodeList(ExprNode* node) : head_{node}, tail_{node}, size_{1} {
-      node->next_ = nullptr;
+      node->setNext(nullptr);
    }
    ExprNodeList() : head_{nullptr}, tail_{nullptr}, size_{0} {}
 
@@ -43,10 +68,10 @@ public:
          head_ = node;
          tail_ = node;
       } else {
-         tail_->next_ = node;
+         tail_->setNext(node);
          tail_ = node;
       }
-      node->next_ = nullptr;
+      node->setNext(nullptr);
       size_ += 1;
       check_invariants();
    }
@@ -61,7 +86,7 @@ public:
          head_ = other.head_;
          tail_ = other.tail_;
       } else {
-         tail_->next_ = other.head_;
+         tail_->setNext(other.head_);
          tail_ = other.tail_;
       }
       size_ += other.size_;
@@ -86,14 +111,22 @@ public:
    /// @brief Returns a generator that yields each node in the list
    utils::Generator<ExprNode const*> nodes() const {
       size_t i = 0;
-      for(auto node = head_; i < size_; node = node->next_, i++) {
+      for(auto const* node = head_; i < size_; node = node->next(), i++) {
+         co_yield node;
+      }
+   }
+
+   /// @brief Non-const version of nodes()
+   utils::Generator<ExprNode*> mut_nodes() const {
+      size_t i = 0;
+      for(auto node = head_; i < size_; node = node->mut_next(), i++) {
          co_yield node;
       }
    }
 
 private:
    inline void check_invariants() const {
-      assert((!tail_ || tail_->next_ == nullptr) &&
+      assert((!tail_ || tail_->next() == nullptr) &&
              "Tail node should not have a next node");
       assert(((head_ != nullptr) == (tail_ != nullptr)) &&
              "Head is null if and only if tail is null");
@@ -120,6 +153,7 @@ public:
    ExprValue() : decl_{nullptr} {}
    ast::Decl const* decl() { return decl_; }
    virtual bool isResolved() const { return decl_ != nullptr; }
+   void resolve(ast::Decl const* decl) { decl_ = decl; }
 
 private:
    ast::Decl const* decl_;
@@ -170,7 +204,7 @@ public:
    bool isResolved() const override { return true; }
    std::ostream& print(std::ostream& os) const override {
       // TODO(kevin): re-implement this
-      return os;
+      return os << "(Literal)";
    }
 
 private:

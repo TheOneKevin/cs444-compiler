@@ -38,6 +38,21 @@ public:
       Pkg(BumpAllocator& alloc) : name{}, children{alloc} {}
       Pkg(BumpAllocator& alloc, std::string_view name)
             : name{name}, children{alloc} {}
+      
+      /**
+       * @brief Gets a child package by name. If the child is not found, then
+       * nullptr is returned.
+       * @param name The name of the child package to get.
+       * @param alloc The allocator to use for the string.
+       * @return Pkg const* The child package if found, otherwise nullptr.
+       */
+      Pkg const* lookupPkg(std::string_view name, BumpAllocator& alloc) const {
+         auto it = children.find(std::pmr::string{name, alloc});
+         if(it == children.end()) return nullptr;
+         if(std::holds_alternative<Pkg*>(it->second))
+            return std::get<Pkg*>(it->second);
+         return nullptr;
+      }
 
    public:
       std::ostream& print(std::ostream& os, int indentation = 0) const;
