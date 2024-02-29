@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+#include <string_view>
 #include "ast/AstNode.h"
 #include "utils/EnumMacros.h"
 #include "utils/Generator.h"
@@ -24,7 +26,9 @@ private:
 /// @brief A list of ExprNodes* that can be iterated and concatenated
 class ExprNodeList {
 public:
-   explicit ExprNodeList(ExprNode* node) : head_{node}, tail_{node}, size_{1} {}
+   explicit ExprNodeList(ExprNode* node) : head_{node}, tail_{node}, size_{1} {
+      node->next_ = nullptr;
+   }
    ExprNodeList() : head_{nullptr}, tail_{nullptr}, size_{0} {}
 
    /**
@@ -40,21 +44,16 @@ public:
          tail_->next_ = node;
          tail_ = node;
       }
+      node->next_ = nullptr;
       size_ += 1;
+      check_invariants();
    }
 
    /**
     * @brief Concatenates another list to the end of this list.
     * @param other The list to concatenate (rvalue reference)
     */
-   void concat(ExprNodeList&& other) { concat(other); }
-
-   /**
-    * @brief Concatenates another list to the end of this list. The other list
-    * will be invalidated and empty after this operation.
-    * @param other The list to concatenate
-    */
-   void concat(ExprNodeList& other) {
+   void concat(ExprNodeList&& other) {
       if(other.size_ == 0) return;
       if(head_ == nullptr) {
          head_ = other.head_;
@@ -64,6 +63,16 @@ public:
          tail_ = other.tail_;
       }
       size_ += other.size_;
+      check_invariants();
+   }
+
+   /**
+    * @brief Concatenates another list to the end of this list. The other list
+    * will be invalidated and empty after this operation.
+    * @param other The list to concatenate
+    */
+   void concat(ExprNodeList& other) {
+      concat(std::move(other));
       other.head_ = nullptr;
       other.tail_ = nullptr;
       other.size_ = 0;
@@ -74,9 +83,20 @@ public:
 
    /// @brief Returns a generator that yields each node in the list
    utils::Generator<ExprNode const*> nodes() const {
-      for(ExprNode* node = head_; node != nullptr; node = node->next_) {
+      size_t i = 0;
+      for(auto node = head_; i < size_; node = node->next_, i++) {
          co_yield node;
       }
+   }
+
+private:
+   inline void check_invariants() const {
+      assert((!tail_ || tail_->next_ == nullptr) &&
+             "Tail node should not have a next node");
+      assert(((head_ != nullptr) == (tail_ != nullptr)) &&
+             "Head is null if and only if tail is null");
+      assert(((head_ == nullptr) == (size_ == 0)) &&
+             "Size should be 0 if and only if head is null");
    }
 
 private:
@@ -123,14 +143,15 @@ public:
 };
 
 class MemberName : public ExprValue {
-   std::pmr::string name;
+   std::pmr::string name_;
 
 public:
-   MemberName(std::string_view name) : name{name} {}
+   MemberName(std::string_view name) : name_{name} {}
    bool isResolved() const override { return false; }
    std::ostream& print(std::ostream& os) const override {
-      return os << "(Member name:" << name << ")";
+      return os << "(Member name:" << name_ << ")";
    }
+   std::string_view name() const { return name_; }
 };
 
 class ThisNode : public ExprValue {
@@ -182,10 +203,11 @@ public:
 
 class ExprOp : public ExprNode {
 protected:
-   ExprOp(int num_args) : num_args{num_args} {}
-   int num_args;
+   ExprOp(int num_args) : num_args_{num_args} {}
+   int num_args_;
 
 public:
+   auto nargs() const { return num_args_; }
    std::ostream& print(std::ostream& os) const override { return os << "ExprOp"; }
 };
 
@@ -209,7 +231,7 @@ class ClassInstanceCreation : public ExprOp {
 public:
    ClassInstanceCreation(int num_args) : ExprOp(num_args) {}
    std::ostream& print(std::ostream& os) const override {
-      return os << "(ClassInstanceCreation args: " << std::to_string(num_args)
+      return os << "(ClassInstanceCreation args: " << std::to_string(nargs())
                 << ")";
    }
 };
@@ -295,4 +317,4 @@ public:
    }
 };
 
-} // namespace ast::expr
+} // namespace ast::exprnode

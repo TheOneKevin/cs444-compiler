@@ -49,6 +49,10 @@ public:
    /// @brief Add a file and its contents to the SourceManager.
    /// @param path The path to the file
    void addFile(std::string_view path) {
+      // Check the path ends in ".java"
+      if(path.size() < 5 || path.substr(path.size() - 5) != ".java") {
+         throw std::runtime_error{"File " + std::string{path} + " is not a .java file"};
+      }
       std::ifstream file{std::string{path}};
       if(!file) {
          throw std::runtime_error{"File " + std::string{path} + " does not exist"};

@@ -24,8 +24,6 @@ template <typename T>
 using array_ref = std::pmr::vector<T>&;
 using std::string_view;
 
-// Base class for all AST nodes ////////////////////////////////////////////////
-
 class Type;
 class BuiltInType;
 class Decl;
@@ -33,6 +31,10 @@ class DeclContext;
 class Stmt;
 
 class Expr;
+
+/* ===--------------------------------------------------------------------=== */
+// AstNode
+/* ===--------------------------------------------------------------------=== */
 
 /// @brief Base class for all AST nodes. Helps unify printing and dot printing.
 class AstNode {
@@ -78,6 +80,10 @@ protected:
    }
 };
 
+/* ===--------------------------------------------------------------------=== */
+// Decl
+/* ===--------------------------------------------------------------------=== */
+
 /// @brief Base class for all declarations.
 class Decl : public AstNode {
 public:
@@ -114,10 +120,47 @@ private:
    DeclContext* parent_;
 };
 
+/* ===--------------------------------------------------------------------=== */
+// DeclContext
+/* ===--------------------------------------------------------------------=== */
+
 /// @brief Base class for all declaration contexts (i.e., methods).
 class DeclContext : public AstNode {
 public:
+   /// @brief Generator to yield all children decls of the context.
+   virtual utils::Generator<ast::Decl const*> decls() const {
+      for(auto child : children()) {
+         if(auto decl = dynamic_cast<Decl const*>(child)) {
+            assert(decl->parent() == this &&
+                   "child declaration of this context has wrong the parent!");
+            co_yield decl;
+         }
+      }
+   }
+
+   /**
+    * @brief If a unique declaration exists with the given name in the
+    * immediate context, then it is returned. Otherwise, nullptr is returned.
+    * 
+    * @param name The name of the declaration to look up.
+    * @return Decl const* The declaration with the given name or nullptr.
+    */
+   Decl const* lookupDecl(std::string_view name) const {
+      Decl const* ret = nullptr;
+      for(auto decl : decls()) {
+         if(decl->name() == name) {
+            if(ret != nullptr)
+               return nullptr; // Ambiguous, cannot resolve
+            ret = decl;
+         }
+      }
+      return ret;
+   }
 };
+
+/* ===--------------------------------------------------------------------=== */
+// Type
+/* ===--------------------------------------------------------------------=== */
 
 /// @brief Base class for all types.
 class Type : public AstNode {
@@ -151,6 +194,10 @@ private:
    SourceRange loc_;
 };
 
+/* ===--------------------------------------------------------------------=== */
+// Stmt
+/* ===--------------------------------------------------------------------=== */
+
 /// @brief Base class for all statements.
 class Stmt : public AstNode {
 public:
@@ -159,6 +206,10 @@ public:
       co_yield nullptr;
    }
 };
+
+/* ===--------------------------------------------------------------------=== */
+// Misc functions
+/* ===--------------------------------------------------------------------=== */
 
 /// @brief Overload the << operator for AstNode to print the node
 std::ostream& operator<<(std::ostream& os, const AstNode& astNode);
@@ -200,7 +251,9 @@ int printDotNodeList(DotPrinter& dp, Range&& range) {
  */
 std::pair<int, int> printStmtSubgraph(utils::DotPrinter& dp, ast::Stmt* stmt);
 
-// Other classes ///////////////////////////////////////////////////////////////
+/* ===--------------------------------------------------------------------=== */
+// Modifiers
+/* ===--------------------------------------------------------------------=== */
 
 class Modifiers {
 public:

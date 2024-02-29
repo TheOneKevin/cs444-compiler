@@ -4,6 +4,8 @@
 #include <concepts>
 #include <ostream>
 
+#include "ast/ExprNode.h"
+
 namespace ast {
 
 std::ostream& Expr::print(std::ostream& os, int indentation) const {
@@ -53,6 +55,16 @@ template <typename T>
    requires std::movable<T>
 void ExprEvaluator<T>::Evaluate(Expr* expr) {
    using namespace ast::exprnode;
+
+   std::pmr::vector<T> op_args;
+   const auto getArgs = [&op_args, this](ExprOp* args) {
+      op_args.clear();
+      for(int i = 0; i < args->nargs(); ++i) {
+         op_args.push_back(op_stack_.top());
+         op_stack_.pop();
+      }
+   };
+
    // Evaluate the RPN expression
    for(auto const* nodes : expr->nodes()) {
       if(auto* value = dynamic_cast<ExprValue const*>(nodes)) {
@@ -74,14 +86,12 @@ void ExprEvaluator<T>::Evaluate(Expr* expr) {
          op_stack_.pop();
          op_stack_.push(evalMemberAccess(lhs, field));
       } else if(auto* method = dynamic_cast<MethodInvocation const*>(nodes)) {
-         auto args = op_stack_.top();
-         op_stack_.pop();
-         op_stack_.push(evalMethodCall(args));
+         getArgs(method);
+         op_stack_.push(evalMethodCall(op_args));
       } else if(auto* new_object =
                       dynamic_cast<ClassInstanceCreation const*>(nodes)) {
-         auto args = op_stack_.top();
-         op_stack_.pop();
-         op_stack_.push(evalNewObject(args));
+         getArgs(new_object);
+         op_stack_.push(evalNewObject(op_args));
       } else if(auto* new_array =
                       dynamic_cast<ArrayInstanceCreation const*>(nodes)) {
          auto size = op_stack_.top();
