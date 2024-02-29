@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ast/AST.h"
 #include "ast/AstNode.h"
 #include "ast/Expr.h"
+#include "ast/ExprEvaluator.h"
 #include "diagnostics/Diagnostics.h"
 #include "diagnostics/Location.h"
 

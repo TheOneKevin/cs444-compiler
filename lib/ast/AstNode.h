@@ -142,7 +142,7 @@ public:
    /**
     * @brief If a unique declaration exists with the given name in the
     * immediate context, then it is returned. Otherwise, nullptr is returned.
-    * 
+    *
     * @param name The name of the declaration to look up.
     * @return Decl const* The declaration with the given name or nullptr.
     */
@@ -150,8 +150,7 @@ public:
       Decl const* ret = nullptr;
       for(auto decl : decls()) {
          if(decl->name() == name) {
-            if(ret != nullptr)
-               return nullptr; // Ambiguous, cannot resolve
+            if(ret != nullptr) return nullptr; // Ambiguous, cannot resolve
             ret = decl;
          }
       }
@@ -198,7 +197,7 @@ public:
    /**
     * @brief Get the type as a class representation. i.e., char -> java.lang.Char
     * and int[] -> java.lang.Array.
-    * 
+    *
     * @return ast::Decl* Returns nullptr if the type has no class representation.
     */
    virtual ast::ClassDecl* getAsClass() const = 0;
@@ -217,6 +216,11 @@ public:
    /// @brief By default, returns an empty generator for the statement.
    virtual utils::Generator<AstNode const*> children() const override {
       co_yield nullptr;
+   }
+   /// @brief Returns all the expressions in the statement.
+   virtual utils::Generator<Expr const*> exprs() const = 0;
+   utils::Generator<Expr*> mut_exprs() {
+      for(auto const* expr : exprs()) co_yield const_cast<Expr*>(expr);
    }
 };
 

@@ -31,14 +31,15 @@ public:
    }
    const ExprNode* next() const { return next_; }
    ExprNode* mut_next() const { return next_; }
+   void dump() const;
 
 private:
    template <typename T>
       requires std::movable<T>
    friend class ExprEvaluator;
 
-   void const_lock() { locked_ = true; }
-   void const_unlock() { locked_ = false; }
+   void const_lock() const { locked_ = true; }
+   void const_unlock() const { locked_ = false; }
 
 private:
    // The next node is mutable because it can be modified on-the-fly during
@@ -47,7 +48,7 @@ private:
    ExprNode* next_;
 
    // The lock for the previous node.
-   bool locked_ = false;
+   mutable bool locked_ = false;
 };
 
 /// @brief A list of ExprNodes* that can be iterated and concatenated

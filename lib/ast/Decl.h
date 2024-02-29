@@ -27,7 +27,8 @@ public:
          : TypedDecl{alloc, type, name}, init_{init}, location_{location} {}
 
    bool hasInit() const { return init_ != nullptr; }
-   Expr* init() const { return init_; }
+   Expr const* init() const { return init_; }
+   Expr* mut_init() { return init_; }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
    virtual bool hasCanonicalName() const override { return false; }

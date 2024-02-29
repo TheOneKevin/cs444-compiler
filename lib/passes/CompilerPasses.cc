@@ -1,7 +1,9 @@
 #include <filesystem>
 #include <memory>
+#include <stdexcept>
 #include <string_view>
 
+#include "diagnostics/Diagnostics.h"
 #include "diagnostics/Location.h"
 #include "diagnostics/SourceManager.h"
 #include "grammar/Joos1WGrammar.h"
@@ -396,9 +398,15 @@ public:
    string_view Desc() const override { return "Expression Resolution"; }
    void Run() override {
       auto lu = GetPass<LinkerPass>().LinkingUnit();
-      // TODO(kevin):
-      // semantic::ExprResolver resolver{PM().Diag(), lu};
-      // resolver.Resolve();
+      auto& nr = GetPass<NameResolverPass>().Resolver();
+      BumpAllocator alloc{NewHeap()};
+      semantic::ExprResolver resolver{PM().Diag(), alloc};
+      resolver.Init(&nr);
+      try {
+         resolver.Resolve(lu);
+      } catch(const diagnostics::DiagnosticBuilder&) {
+         // Print the errors from diag in the next step
+      }
    }
 
 private:
@@ -422,7 +430,7 @@ public:
    string_view Name() const override { return "sema-type"; }
    string_view Desc() const override { return "Type Checking"; }
    void Run() override {
-      auto lu = GetPass<LinkerPass>().LinkingUnit();
+      // auto lu = GetPass<LinkerPass>().LinkingUnit();
       // TODO(kevin):
    }
 

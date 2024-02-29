@@ -6,6 +6,7 @@
 
 #include "ast/AST.h"
 #include "ast/AstNode.h"
+#include "ast/Decl.h"
 #include "ast/DeclContext.h"
 #include "ast/ExprNode.h"
 #include "diagnostics/Location.h"
@@ -45,22 +46,26 @@ bool ER::tryReclassifyDecl(ExprNameWrapper& data,
 
 bool ER::tryReclassifyImport(ExprNameWrapper& data,
                              NameResolver::ConstImportOpt import) const {
-   if(!import.has_value()) return false;
+   if(!import.has_value()) {
+      throw diag.ReportError(SourceRange{})
+            << "cannot resolve name: " << data.node->name();
+   }
    if(std::holds_alternative<const ast::Decl*>(import.value())) {
       auto decl = std::get<const ast::Decl*>(import.value());
       // If declaration is null, then there is an import-on-demand conflict
       if(!decl) {
          throw diag.ReportError(SourceRange{})
-               << "Ambiguous import-on-demand conflict";
+               << "ambiguous import-on-demand conflict";
       }
       data.reclassify(ExprNameWrapper::Type::TypeName, decl);
       return true;
    } else if(std::holds_alternative<const Pkg*>(import.value())) {
       auto pkg = std::get<const Pkg*>(import.value());
-      assert(pkg && "Expected non-null package here");
+      assert(pkg && "expected non-null package here");
       data.reclassify(ExprNameWrapper::Type::PackageName, pkg);
       return true;
    }
+   return false;
 }
 
 ETy ER::reclassifySingleAmbiguousName(ExprNameWrapper* data) const {
@@ -164,13 +169,19 @@ void ER::resolvePackageAccess(internal::ExprNameWrapper* access) const {
    auto name = access->node->name();
    assert(pkg && "Expected non-null package here");
    // Now we check if "name" is a package of "pkg"
-   auto subpkg = pkg->lookupPkg(name, alloc);
-   if(!subpkg) {
+   auto subpkg = pkg->lookup(name, alloc);
+   if(!subpkg.has_value()) {
       throw diag.ReportError(SourceRange{})
-            << "package access to undeclared package: " << name;
+            << "package access to undeclared member: " << name;
    }
-   // Now we can reclassify the access node
-   access->reclassify(ExprNameWrapper::Type::PackageName, subpkg);
+   // Now we can reclassify the access node depending on what we found
+   if(std::holds_alternative<ast::Decl const*>(subpkg.value())) {
+      access->reclassify(ExprNameWrapper::Type::TypeName,
+                         std::get<ast::Decl const*>(subpkg.value()));
+   } else {
+      access->reclassify(ExprNameWrapper::Type::PackageName,
+                         std::get<Pkg const*>(subpkg.value()));
+   }
    access->prev = nullptr;
 }
 
@@ -197,7 +208,7 @@ ast::ExprNodeList recursiveReduce(ExprNameWrapper* node) {
    return list;
 }
 
-ast::ExprNodeList resolveExprNode(const ETy node) {
+ast::ExprNodeList ER::resolveExprNode(const ETy node) const {
    // If node is an ExprNode, then no resolution is needed
    if(std::holds_alternative<ast::ExprNode*>(node))
       return ast::ExprNodeList{std::get<ast::ExprNode*>(node)};
@@ -230,7 +241,8 @@ ETy ER::evalMemberAccess(const ETy lhs, const ETy id) const {
    } else if(std::holds_alternative<ExprNameWrapper*>(lhs)) {
       Q = std::get<ExprNameWrapper*>(lhs);
    } else {
-      assert(false && "Not implemented. Cannot access field of complex expressions.");
+      assert(false &&
+             "Not implemented. Cannot access field of complex expressions.");
    }
    // The LHS must be an ExpressionName, TypeName or PackageName
    assert(
@@ -239,8 +251,7 @@ ETy ER::evalMemberAccess(const ETy lhs, const ETy id) const {
           Q->type == ExprNameWrapper::Type::PackageName) &&
          "Malformed node. Expected ExpressionName, TypeName or PackageName here.");
    // Now grab the id and cast it to the appropriate type
-   auto const* fieldNode =
-         dynamic_cast<ex::MemberName*>(std::get<ast::ExprNode*>(id));
+   auto fieldNode = dynamic_cast<ex::MemberName*>(std::get<ast::ExprNode*>(id));
    assert(fieldNode && "Malformed node. Expected MemberName here.");
    // Allocate a new node as the member access to represent "Id" in Lhs . Id
    auto newQ = alloc.new_object<ExprNameWrapper>(
@@ -311,6 +322,33 @@ ETy ER::evalCast(const ETy type, const ETy value) const {
    list.concat(resolveExprNode(type));
    list.concat(resolveExprNode(value));
    return list;
+}
+
+void ER::Resolve(ast::LinkingUnit* lu) { resolveRecursive(lu); }
+
+void ER::resolveRecursive(ast::AstNode* node) {
+   // Set the CU
+   if(auto* cu = dynamic_cast<ast::CompilationUnit*>(node)) {
+      cu_ = cu;
+   }
+   // Set the CTX
+   if(auto* ctx = dynamic_cast<ast::DeclContext*>(node)) {
+      lctx_ = ctx;
+   }
+   // Visit the expression nodes
+   if(auto* decl = dynamic_cast<ast::VarDecl*>(node)) {
+      if(auto* init = decl->mut_init()) {
+         Evaluate(init);
+      }
+   } else if(auto* stmt = dynamic_cast<ast::Stmt*>(node)) {
+      for(auto* expr : stmt->mut_exprs()) {
+         if(expr) Evaluate(expr);
+      }
+   }
+   // Visit the children recursively
+   for(auto* child : node->mut_children()) {
+      if(child) resolveRecursive(child);
+   }
 }
 
 } // namespace semantic

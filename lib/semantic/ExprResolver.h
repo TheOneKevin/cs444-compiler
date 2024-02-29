@@ -4,7 +4,7 @@
 
 #include "ast/AstNode.h"
 #include "ast/DeclContext.h"
-#include "ast/Expr.h"
+#include "ast/ExprEvaluator.h"
 #include "ast/ExprNode.h"
 #include "diagnostics/Diagnostics.h"
 #include "utils/BumpAllocator.h"
@@ -57,6 +57,13 @@ class ExprResolver : ast::ExprEvaluator<internal::ExprResolverT> {
 public:
    ExprResolver(diagnostics::DiagnosticEngine& diag, BumpAllocator& alloc)
          : diag{diag}, alloc{alloc} {}
+   void Init(NameResolver* NR) {
+      this->NR = NR;
+   }
+   void Resolve(ast::LinkingUnit* lu);
+
+private:
+   void resolveRecursive(ast::AstNode* node);
 
 protected:
    using Type = ast::Type;
@@ -75,7 +82,7 @@ protected:
    ETy evalArrayAccess(const ETy array, const ETy index) const override;
    ETy evalCast(const ETy type, const ETy value) const override;
 
-public:
+private:
    // Given a single ambiguous name, reclassify it into a package or type name
    ETy reclassifySingleAmbiguousName(internal::ExprNameWrapper* data) const;
    // Try to reclassify "data" into a declaration against "ctx"
@@ -93,8 +100,8 @@ public:
 
 private:
    diagnostics::DiagnosticEngine& diag;
-   ast::CompilationUnit* cu_;
-   ast::DeclContext* lctx_;
+   ast::CompilationUnit const* cu_;
+   ast::DeclContext const* lctx_;
    semantic::NameResolver* NR;
    BumpAllocator& alloc;
 };

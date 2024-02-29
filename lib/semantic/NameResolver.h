@@ -26,11 +26,15 @@ namespace semantic {
 
 class NameResolver {
 public:
+   struct Pkg;
+   using ConstImport = std::variant<ast::Decl const*, Pkg const*>;
+   using ConstImportOpt = std::optional<ConstImport>;
+
    /// @brief Represents a tree of packages. The leaf nodes are declarations.
    struct Pkg {
    private:
-      friend class NameResolver;
       using Child = std::variant<ast::Decl*, Pkg*>;
+      friend class NameResolver;
       std::string_view name;
       std::pmr::unordered_map<std::pmr::string, Child> children;
 
@@ -46,12 +50,11 @@ public:
        * @param alloc The allocator to use for the string.
        * @return Pkg const* The child package if found, otherwise nullptr.
        */
-      Pkg const* lookupPkg(std::string_view name, BumpAllocator& alloc) const {
+      ConstImportOpt lookup(std::string_view name, BumpAllocator& alloc) const {
          auto it = children.find(std::pmr::string{name, alloc});
-         if(it == children.end()) return nullptr;
-         if(std::holds_alternative<Pkg*>(it->second))
-            return std::get<Pkg*>(it->second);
-         return nullptr;
+         if(it == children.end()) return std::nullopt;
+         if(auto* pkg = std::get_if<Pkg*>(&it->second)) return *pkg;
+         return std::get<ast::Decl*>(it->second);
       }
 
    public:
@@ -67,9 +70,6 @@ private:
    NameResolver& operator=(NameResolver&&) = delete;
 
 public:
-   using ConstImport = std::variant<ast::Decl const*, Pkg const*>;
-   using ConstImportOpt = std::optional<ConstImport>;
-
    /**
     * @brief Construct a new Name Resolver object.
     *
