@@ -13,8 +13,6 @@ void ExprTypeResolver::resolve(ast::Expr *expr) {
    loc_ = expr->location();
    this->Evaluate(expr);
 }
-
-Type* ExprTypeResolver::mapValue(ExprValue const& node) const {
    
 Type* ExprTypeResolver::mapValue(ExprValue& node) const {
    // Implementation goes here

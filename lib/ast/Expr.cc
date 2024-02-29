@@ -69,9 +69,10 @@ void ExprEvaluator<T>::Evaluate(ExprNodeList subexpr) {
    while(!op_stack_.empty()) op_stack_.pop();
 
    // Lock all the nodes
-   for(auto const* nodes : subexpr.nodes()) {
-      nodes->const_lock();
-   }
+   // fixme(Kevin): this is not compiling
+   // for(auto const* nodes : subexpr.nodes()) {
+   //    nodes->const_lock();
+   // }
 
    // Evaluate the RPN expression
    ExprNode* prev = nullptr;

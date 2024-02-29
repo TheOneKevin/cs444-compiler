@@ -22,9 +22,7 @@ public:
    F(Int)                  \
    F(Char)                 \
    F(Boolean)              \
-   F(String)               \
-   F(Null)              \
-   F(String)
+   F(String)               
    DECLARE_ENUM(Kind, BASIC_TYPE_LIST)
 private:
    DECLARE_STRING_TABLE(Kind, kind_strings, BASIC_TYPE_LIST)
@@ -90,7 +88,7 @@ public:
       return kind != BuiltInType::Kind::Boolean; 
    }
    bool isBoolean() const override { return kind == BuiltInType::Kind::Boolean; }
-   bool isNull() const override { return kind == BuiltInType::Kind::Null; }
+   bool isNull() const override { return kind == BuiltInType::Kind::NoneType; }
    bool isString() const override { return kind == BuiltInType::Kind::String; }
    ast::ClassDecl* getAsClass() const override {
       // TODO: Implement this.
