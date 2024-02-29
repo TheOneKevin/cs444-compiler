@@ -83,6 +83,37 @@ void NameResolver::buildSymbolTable() {
    }
 }
 
+void NameResolver::populateJavaLangCache() {
+   // Resolve java.lang. into Pkg*
+   auto javaPkg = std::get<Pkg*>(rootPkg_->children["java"]);
+   auto langPkg = std::get<Pkg*>(javaPkg->children["lang"]);
+   // Now we can populate the java.lang.* cache
+   // FIXME(kevin): Implement better error handling here?
+   java_lang_.Boolean = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Boolean"]));
+   java_lang_.Byte = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Byte"]));
+   java_lang_.Character = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Character"]));
+   java_lang_.Class = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Class"]));
+   java_lang_.Cloneable = dynamic_cast<ast::InterfaceDecl*>(std::get<Decl*>(langPkg->children["Cloneable"]));
+   java_lang_.Integer = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Integer"]));
+   java_lang_.Number = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Number"]));
+   java_lang_.Object = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Object"]));
+   java_lang_.Short = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Short"]));
+   java_lang_.String = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["String"]));
+   java_lang_.System = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["System"]));
+   // Make sure they are all non-null
+   assert(java_lang_.Boolean && "java.lang.Boolean not valid (expected class)");
+   assert(java_lang_.Byte && "java.lang.Byte not valid (expected class)");
+   assert(java_lang_.Character && "java.lang.Character not valid (expected class)");
+   assert(java_lang_.Class && "java.lang.Class not valid (expected class)");
+   assert(java_lang_.Cloneable && "java.lang.Cloneable not valid (expected interface)");
+   assert(java_lang_.Integer && "java.lang.Integer not valid (expected class)");
+   assert(java_lang_.Number && "java.lang.Number not valid (expected class)");
+   assert(java_lang_.Object && "java.lang.Object not valid (expected class)");
+   assert(java_lang_.Short && "java.lang.Short not valid (expected class)");
+   assert(java_lang_.String && "java.lang.String not valid (expected class)");
+   assert(java_lang_.System && "java.lang.System not valid (expected class)");
+}
+
 void NameResolver::beginContext(ast::CompilationUnit* cu) {
    // Set the current compilation unit and clear the imports map
    auto& importsMap = importsMap_[cu];
@@ -289,10 +320,8 @@ void NameResolver::Resolve() {
 void NameResolver::replaceObjectClass(ast::AstNode* node) {
    auto decl = dynamic_cast<ast::ClassDecl*>(node);
    if(!decl) return;
-   // Check that java.lang.Object exists
-   assert(findObjectClass() && "java.lang.Object class can not be resolved");
    // Check if the class is Object
-   if(decl != findObjectClass()) return;
+   if(decl != GetJavaLang().Object) return;
    // Go through the superclasses and replace Object with nullptr
    for(int i = 0; i < 2; i++) {
       auto super = decl->superClasses()[i];
@@ -303,7 +332,8 @@ void NameResolver::replaceObjectClass(ast::AstNode* node) {
       else
          continue;
       // Do not allow Object to extend Object
-      if(super->decl() == findObjectClass()) decl->mut_superClasses()[i] = nullptr;
+      if(super->decl() == GetJavaLang().Object)
+         decl->mut_superClasses()[i] = nullptr;
    }
 }
 
@@ -327,22 +357,6 @@ void NameResolver::resolveRecursive(ast::AstNode* node) {
          resolveRecursive(child);
       }
    }
-}
-
-Decl const* NameResolver::findObjectClass() {
-   if(objectClass_) return objectClass_;
-   auto pkg = rootPkg_->children.find("java");
-   if(pkg == rootPkg_->children.end()) return nullptr;
-   if(!std::holds_alternative<Pkg*>(pkg->second)) return nullptr;
-   auto javaPkg = std::get<Pkg*>(pkg->second);
-   auto langPkg = javaPkg->children.find("lang");
-   if(langPkg == javaPkg->children.end()) return nullptr;
-   if(!std::holds_alternative<Pkg*>(langPkg->second)) return nullptr;
-   auto langPkg2 = std::get<Pkg*>(langPkg->second);
-   auto objClass = langPkg2->children.find("Object");
-   if(objClass == langPkg2->children.end()) return nullptr;
-   if(!std::holds_alternative<Decl*>(objClass->second)) return nullptr;
-   return objectClass_ = std::get<Decl*>(objClass->second);
 }
 
 std::ostream& NameResolver::Pkg::print(std::ostream& os, int indent) const {

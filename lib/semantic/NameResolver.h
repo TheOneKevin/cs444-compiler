@@ -33,7 +33,7 @@ public:
       using Child = std::variant<ast::Decl*, Pkg*>;
       std::string_view name;
       std::pmr::unordered_map<std::pmr::string, Child> children;
-   
+
    public:
       Pkg(BumpAllocator& alloc) : name{}, children{alloc} {}
       Pkg(BumpAllocator& alloc, std::string_view name)
@@ -74,6 +74,7 @@ public:
    void Init(ast::LinkingUnit* lu) {
       lu_ = lu;
       buildSymbolTable();
+      populateJavaLangCache();
    }
 
    /**
@@ -104,6 +105,12 @@ public:
          ast::CompilationUnit const* cu, std::string_view name,
          std::pmr::memory_resource* r = std::pmr::get_default_resource()) const;
 
+   /**
+    * @brief Get a struct with all the java.lang.* classes and interfaces.
+    * @return auto An anonymous struct with all the java.lang.* types.
+    */
+   auto GetJavaLang() const { return java_lang_; }
+
 public:
    /// @brief Dumps the symbol and import tables to the output stream.
    void dump() const;
@@ -115,12 +122,14 @@ public:
    void dumpImports() const;
 
 private:
+   using ChildOpt = std::optional<Pkg::Child>;
+
    /// @brief Resolves the AST recursively
    void resolveRecursive(ast::AstNode* node);
+   
    /// @brief Disallows java.lang.Object from extending itself
    void replaceObjectClass(ast::AstNode* node);
-   // Find the Decl* for java.lang.Object class
-   ast::Decl const* findObjectClass();
+
    /**
     * @brief Called to begin the resolution of a compilation unit.
     * This will build the import table (and any other data structures) to help
@@ -130,12 +139,16 @@ private:
     */
    void beginContext(ast::CompilationUnit* cu);
 
-private:
-   using ChildOpt = std::optional<Pkg::Child>;
-
    /// @brief Builds the symbol lookup tables and any other data structures
    /// or maps to facilitate name resolution.
    void buildSymbolTable();
+
+   /**
+    * @brief Populates the java.lang.* cache with all the classes and interfaces
+    * into the java_lang_ struct.
+    */
+   void populateJavaLangCache();
+
    /// @brief Resolves an unresolved type to a non-leaf node in the tree
    /// @param t The unresolved type to resolve.
    /// @return The package node that the unresolved type resolves to.
@@ -153,8 +166,20 @@ private:
          importsMap_;
    /// @brief The root of the symbol table (more of a tree than table).
    Pkg* rootPkg_;
-   /// @brief A cache of the java.lang.Object class.
-   ast::Decl const* objectClass_ = nullptr;
+   /// @brief A cache of the java.lang.* pkg
+   struct {
+      ast::ClassDecl* Boolean;
+      ast::ClassDecl* Byte;
+      ast::ClassDecl* Character;
+      ast::ClassDecl* Class;
+      ast::InterfaceDecl* Cloneable;
+      ast::ClassDecl* Integer;
+      ast::ClassDecl* Number;
+      ast::ClassDecl* Object;
+      ast::ClassDecl* Short;
+      ast::ClassDecl* String;
+      ast::ClassDecl* System;
+   } java_lang_;
 };
 
 } // namespace semantic
