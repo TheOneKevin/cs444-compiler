@@ -15,8 +15,7 @@ void ExprTypeResolver::resolve(ast::Expr *expr) {
 }
 
 Type* ExprTypeResolver::mapValue(ExprValue const& node) const {
-   // Implementation goes here
-   // ...
+   
 }
 
 Type* ExprTypeResolver::evalBinaryOp(const BinaryOp op, const Type* lhs, const Type* rhs) const {
@@ -32,8 +31,7 @@ Type* ExprTypeResolver::evalBinaryOp(const BinaryOp op, const Type* lhs, const T
          if (lhs->isNumeric() && rhs->isNumeric()) {
             return new ast::BuiltInType(ast::BuiltInType::Kind::Boolean, loc_);
          } else {
-            diag.ReportError(loc_) << "Invalid types for " << BinaryOp::OpType_to_string(op.getType(), "??") << " operation, operands are non-numeric";
-            return nullptr;
+            throw diag.ReportError(loc_) << "Invalid types for " << BinaryOp::OpType_to_string(op.getType(), "??") << " operation, operands are non-numeric";
          }
       }
 
@@ -48,22 +46,20 @@ Type* ExprTypeResolver::evalBinaryOp(const BinaryOp op, const Type* lhs, const T
          auto lhsType = dynamic_cast<const ast::ReferenceType*>(lhs);
          auto rhsType = dynamic_cast<const ast::ReferenceType*>(rhs);
       
-         if (lhsType && rhsType) { // fixme(Owen): Check that lhsType and rhsType can also be of null type
+         if ((lhs->isNull() || lhsType) && (rhs->isNull() || rhsType)) {
             return new ast::BuiltInType(ast::BuiltInType::Kind::Boolean, loc_);
          } else {
-            diag.ReportError(loc_) << "Invalid types for " << BinaryOp::OpType_to_string(op.getType(), "??") << " operation, operands are not of the same type";
-            return nullptr;
+            throw diag.ReportError(loc_) << "Invalid types for " << BinaryOp::OpType_to_string(op.getType(), "??") << " operation, operands are not of the same type";
          }
       }
 
       case BinaryOp::OpType::Add: {
-         if (lhs->isString() || rhs->isString()) { // fixme(Owen): String concatenation, what to return here?
-            // return new ast::ReferenceType(ast::BuiltInType::Kind::Int, loc_);
+         if (lhs->isString() || rhs->isString()) {
+            return new ast::BuiltInType(ast::BuiltInType::Kind::String, loc_);
          } else if (lhs->isNumeric() && rhs->isNumeric()) {
             return new ast::BuiltInType(ast::BuiltInType::Kind::Int, loc_);
          } else {
-            diag.ReportError(loc_) << "Invalid types for arithmetic " << BinaryOp::OpType_to_string(op.getType(), "??") << " operation";
-            return nullptr;
+            throw diag.ReportError(loc_) << "Invalid types for arithmetic " << BinaryOp::OpType_to_string(op.getType(), "??") << " operation";
          }
       }
 
@@ -75,8 +71,7 @@ Type* ExprTypeResolver::evalBinaryOp(const BinaryOp op, const Type* lhs, const T
          if (lhs->isBoolean() && rhs->isBoolean()) {
             return new ast::BuiltInType(ast::BuiltInType::Kind::Boolean, loc_);
          } else {
-            diag.ReportError(loc_) << "Invalid types for " << BinaryOp::OpType_to_string(op.getType(), "??") << " operation, operands are non-boolean";
-            return nullptr;
+            throw diag.ReportError(loc_) << "Invalid types for " << BinaryOp::OpType_to_string(op.getType(), "??") << " operation, operands are non-boolean";
          }
       }
 
@@ -87,8 +82,7 @@ Type* ExprTypeResolver::evalBinaryOp(const BinaryOp op, const Type* lhs, const T
          if (lhs->isNumeric() && rhs->isNumeric()) {
             return new ast::BuiltInType(ast::BuiltInType::Kind::Int, loc_);
          } else {
-            diag.ReportError(loc_) << "Invalid types for " << BinaryOp::OpType_to_string(op.getType(), "??") << " operation, operands are non-numeric";
-            return nullptr;
+            throw diag.ReportError(loc_) << "Invalid types for " << BinaryOp::OpType_to_string(op.getType(), "??") << " operation, operands are non-numeric";
          }
       }
 
@@ -96,11 +90,10 @@ Type* ExprTypeResolver::evalBinaryOp(const BinaryOp op, const Type* lhs, const T
          auto lhsType = dynamic_cast<const ast::ReferenceType*>(lhs);
          auto rhsType = dynamic_cast<const ast::ReferenceType*>(rhs);
       
-         if (lhsType && rhsType) { // fixme(Owen): Check that lhsType and rhsType can also be of null type
+         if ((lhs->isNull() || lhsType) && (rhs->isNull() || rhsType)) {
             return new ast::BuiltInType(ast::BuiltInType::Kind::Boolean, loc_);
          } else {
-            diag.ReportError(loc_) << "Invalid types for " << BinaryOp::OpType_to_string(op.getType(), "??") << " operation, operands are null or reference types";
-            return nullptr;
+            throw diag.ReportError(loc_) << "Invalid types for " << BinaryOp::OpType_to_string(op.getType(), "??") << " operation, operands are null or reference types";
          }
       }
 
@@ -117,15 +110,13 @@ Type* ExprTypeResolver::evalUnaryOp(const UnaryOp op, const Type* rhs) const {
          if (rhs->isNumeric()) {
             return new ast::BuiltInType(ast::BuiltInType::Kind::Int, loc_);
          } else {
-            diag.ReportError(loc_) << "Invalid type for unary " << UnaryOp::OpType_to_string(op.getType(), "??") << " non-numeric";
-            return nullptr;
+            throw diag.ReportError(loc_) << "Invalid type for unary " << UnaryOp::OpType_to_string(op.getType(), "??") << " non-numeric";
          }
       case UnaryOp::OpType::Not:
          if (rhs->isBoolean()) {
             return new ast::BuiltInType(ast::BuiltInType::Kind::Boolean, loc_);
          } else {
-            diag.ReportError(loc_) << "Invalid type for unary not, non-boolean";
-            return nullptr;
+            throw diag.ReportError(loc_) << "Invalid type for unary not, non-boolean";
          }
       default:
          return nullptr;
@@ -133,8 +124,9 @@ Type* ExprTypeResolver::evalUnaryOp(const UnaryOp op, const Type* rhs) const {
 }
 
 Type* ExprTypeResolver::evalMemberAccess(const Type* lhs, const Type* field) const {
-   // Implementation goes here
-   // ...
+   (void) lhs;
+   // Fixme(Larry): Look into this later
+   return const_cast<Type*>(field);
 }
 
 Type* ExprTypeResolver::evalMethodCall(const Type* method, const op_array& args) const {
@@ -148,20 +140,19 @@ Type* ExprTypeResolver::evalNewObject(const Type* object, const op_array& args) 
 }
 
 Type* ExprTypeResolver::evalNewArray(const Type* type, const Type* size) const {
-   // Implementation goes here
-   // ...
+   if (!size->isNumeric()) {
+      throw diag.ReportError(loc_) << "Invalid type for array size, non-numeric";
+   }
 }
 
 Type* ExprTypeResolver::evalArrayAccess(const Type* array, const Type* index) const {
    if (!index->isNumeric()) {
-      diag.ReportError(loc_) << "Invalid type for array index, non-numeric";
-      return nullptr;
+      throw diag.ReportError(loc_) << "Invalid type for array index, non-numeric";
    }
    if (auto arrayType = dynamic_cast<const ArrayType*>(array)) {
       return arrayType->getElementType();
    } else {
-      diag.ReportError(loc_) << "Invalid type for array access, non-array";
-      return nullptr;
+      throw diag.ReportError(loc_) << "Invalid type for array access, non-array";
    }
 }
 

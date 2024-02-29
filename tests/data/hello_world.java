@@ -6,7 +6,7 @@ public class HelloWorld {
   public int nullField = null;
   public void run() {}
   public static void main(String[] args) {
-    int a = id instanceof id.id2[];
+    int a = "hello";
     for(int i = 0; i < args.length; i=i+1) {
       x = x + Integer.parseInt(args[i]);
     }

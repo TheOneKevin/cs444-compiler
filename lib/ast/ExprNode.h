@@ -171,29 +171,19 @@ public:
 };
 
 class LiteralNode : public ExprValue {
-#define LITERAL_TYPE_LIST(F) \
-   F(Integer)                \
-   F(Character)              \
-   F(String)                 \
-   F(Boolean)                \
-   F(Null)
-public:
-   /// @brief The enum for each literal type
-   DECLARE_ENUM(Type, LITERAL_TYPE_LIST)
-private:
-   DECLARE_STRING_TABLE(Type, literal_strings, LITERAL_TYPE_LIST)
-#undef LITERAL_TYPE_LIST
 
 private:
    std::pmr::string value;
-   Type type;
+   Type *type;
 
 public:
-   LiteralNode(std::string_view value, Type type) : value{value}, type{type} {}
+   LiteralNode(std::string_view value, Type *type) : value{value}, type{type} {}
    bool isResolved() const override { return true; }
    std::ostream& print(std::ostream& os) const override {
-      return os << "(" << Type_to_string(type, "unknown literal type") << " "
-                << value << ")";
+      os << "("<< ": ";
+      type->print(os);
+      os << value << ")";
+      return os;
    }
 };
 

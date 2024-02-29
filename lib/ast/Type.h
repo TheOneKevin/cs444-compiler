@@ -20,7 +20,9 @@ public:
    F(Short)                \
    F(Int)                  \
    F(Char)                 \
-   F(Boolean)
+   F(Boolean)              \
+   F(String)               \
+   F(Null)
    DECLARE_ENUM(Kind, BASIC_TYPE_LIST)
 private:
    DECLARE_STRING_TABLE(Kind, kind_strings, BASIC_TYPE_LIST)
@@ -61,9 +63,12 @@ public:
       }
       return false;
    }
-   bool isNumeric() const override { return kind != BuiltInType::Kind::Boolean; }
+   bool isNumeric() const override { 
+      return kind != BuiltInType::Kind::Boolean; 
+   }
    bool isBoolean() const override { return kind == BuiltInType::Kind::Boolean; }
-   bool isString() const override { return false; }
+   bool isNull() const override { return kind == BuiltInType::Kind::Null; }
+   bool isString() const override { return kind == BuiltInType::Kind::String; }
    ast::ClassDecl* getAsClass() const override {
       // TODO: Implement this.
       return nullptr;
@@ -110,10 +115,19 @@ public:
       }
       return false;
    }
-   bool isNumeric() const override final { return false; }
+   bool isNumeric() const override final { 
+      if (auto builtIn = getAsBuiltIn()) {
+         return builtIn->isNumeric();
+      }
+      return false;
+   }
    bool isBoolean() const override final { return false; }
+   bool isNull() const override { return false; }
    bool isString() const override final {
-      return decl_->getCanonicalName() == "java.lang.String";
+      if (auto builtIn = getAsBuiltIn()) {
+         return builtIn->isString();
+      }
+      return false;
    }
    ast::ClassDecl* getAsClass() const override { return nullptr; }
 
@@ -225,6 +239,7 @@ public:
    Type* getElementType() const { return elementType; }
    bool isNumeric() const override { return false; }
    bool isBoolean() const override { return false; }
+   bool isNull() const override { return false; }
    bool isString() const override { return false; }
    ast::ClassDecl* getAsClass() const override { return nullptr; }
 };

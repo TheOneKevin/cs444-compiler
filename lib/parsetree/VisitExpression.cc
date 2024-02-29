@@ -1,4 +1,5 @@
 #include "ParseTreeVisitor.h"
+#include "ast/Type.h"
 
 namespace parsetree {
 
@@ -320,19 +321,19 @@ LiteralNode* ptv::visitLiteral(Node* node) {
       switch(lit->get_type()) {
          case parsetree::Literal::Type::Integer:
             return alloc.new_object<LiteralNode>(
-                  lit->get_value(), LiteralNode::Type::Integer);
+                  lit->get_value(), alloc.new_object<ast::BuiltInType>(ast::BuiltInType::Kind::Int, node->location()));
          case parsetree::Literal::Type::Character:
             return alloc.new_object<LiteralNode>(
-                  lit->get_value(), LiteralNode::Type::Character);
+                  lit->get_value(), alloc.new_object<ast::BuiltInType>(ast::BuiltInType::Kind::Char, node->location()));
          case parsetree::Literal::Type::String:
             return alloc.new_object<LiteralNode>(
-                  lit->get_value(), LiteralNode::Type::String);
+                  lit->get_value(), alloc.new_object<ast::BuiltInType>(ast::BuiltInType::Kind::String, node->location()));
          case parsetree::Literal::Type::Boolean:
             return alloc.new_object<LiteralNode>(
-                  lit->get_value(), LiteralNode::Type::Boolean);
+                  lit->get_value(), alloc.new_object<ast::BuiltInType>(ast::BuiltInType::Kind::Boolean, node->location()));
          case parsetree::Literal::Type::Null:
             return alloc.new_object<LiteralNode>(
-                  lit->get_value(), LiteralNode::Type::Null);
+                  lit->get_value(), alloc.new_object<ast::BuiltInType>(ast::BuiltInType::Kind::Null, node->location()));
          default:
             throw std::runtime_error("Invalid literal type");
       }
