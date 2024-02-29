@@ -69,7 +69,7 @@ BinaryOp* ptv::convertToBinaryOp(Operator::Type type) {
 }
 
 Expr* ptv::visitExpr(Node* node) {
-   return new Expr(visitExprChild(node));
+   return new Expr(visitExprChild(node), node->location());
 }
 
 ExprNodeList ptv::visitExprNode(parsetree::Node* node) {

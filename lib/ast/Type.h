@@ -61,6 +61,15 @@ public:
       }
       return false;
    }
+   bool isNumeric() const override {
+      return kind != BuiltInType::Kind::Boolean;
+   }
+   bool isBoolean() const override {
+      return kind == BuiltInType::Kind::Boolean;
+   }
+   bool isString() const override {
+      return false;
+   }
 };
 
 /**
@@ -103,7 +112,15 @@ public:
       }
       return false;
    }
-
+   bool isNumeric() const override final {
+      return false;
+   }
+   bool isBoolean() const override final {
+      return false;
+   }
+   bool isString() const override final {
+      return decl_->getCanonicalName() == "java.lang.String";
+   }
 protected:
    Decl* decl_;
 };
@@ -194,6 +211,16 @@ public:
       if(auto otherArrayType = dynamic_cast<const ArrayType*>(&other)) {
          return *elementType == *otherArrayType->elementType;
       }
+      return false;
+   }
+   Type* getElementType() const { return elementType; }
+   bool isNumeric() const override {
+      return false;
+   }
+   bool isBoolean() const override {
+      return false;
+   }
+   bool isString() const override {
       return false;
    }
 };

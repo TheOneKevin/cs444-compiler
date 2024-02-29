@@ -267,7 +267,6 @@ class UnaryOp : public ExprOp {
    F(Minus)
 public:
    DECLARE_ENUM(OpType, UNARY_OP_TYPE_LIST)
-private:
    DECLARE_STRING_TABLE(OpType, type_strings, UNARY_OP_TYPE_LIST)
 #undef UNARY_OP_TYPE_LIST
 
@@ -279,16 +278,17 @@ public:
    std::ostream& print(std::ostream& os) const override {
       return os << OpType_to_string(type, "(Unknown unary op)");
    }
+   OpType getType() const { return type; }
 };
 
 class BinaryOp : public ExprOp {
 #define BINARY_OP_TYPE_LIST(F) \
    F(Assignment)               \
    F(GreaterThan)              \
-   F(LessThan)                 \
-   F(Equal)                    \
-   F(LessThanOrEqual)          \
    F(GreaterThanOrEqual)       \
+   F(LessThan)                 \
+   F(LessThanOrEqual)          \
+   F(Equal)                    \
    F(NotEqual)                 \
    F(And)                      \
    F(Or)                       \
@@ -303,7 +303,6 @@ class BinaryOp : public ExprOp {
    F(InstanceOf)
 public:
    DECLARE_ENUM(OpType, BINARY_OP_TYPE_LIST)
-private:
    DECLARE_STRING_TABLE(OpType, type_strings, BINARY_OP_TYPE_LIST)
 #undef BINARY_OP_TYPE_LIST
 
@@ -315,6 +314,7 @@ public:
    std::ostream& print(std::ostream& os) const override {
       return os << OpType_to_string(type, "(Unknown binary op)");
    }
+   OpType getType() const { return type; }
 };
 
 } // namespace ast::exprnode

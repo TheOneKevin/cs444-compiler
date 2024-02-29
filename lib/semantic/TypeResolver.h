@@ -4,6 +4,7 @@
 #include "ast/AstNode.h"
 #include "ast/Expr.h"
 #include "diagnostics/Diagnostics.h"
+#include "diagnostics/Location.h"
 
 namespace semantic {
 
@@ -14,7 +15,7 @@ namespace semantic {
 class ExprTypeResolver final : public ast::ExprEvaluator<ast::Type const*> {
 public:
    ExprTypeResolver(diagnostics::DiagnosticEngine& diag) : diag{diag} {}
-   void resolve(/* Add any parameters you need here */);
+   void resolve(ast::Expr *expr);
 
 protected:
    using Type = ast::Type;
@@ -35,6 +36,7 @@ protected:
 
 private:
    diagnostics::DiagnosticEngine& diag;
+   SourceRange loc_;
 };
 
 } // namespace semantic

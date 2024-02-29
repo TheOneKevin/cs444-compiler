@@ -189,6 +189,9 @@ public:
       co_yield nullptr;
    }
    virtual bool isInvalid() const { return false; }
+   virtual bool isNumeric() const = 0;
+   virtual bool isBoolean() const = 0;
+   virtual bool isString() const = 0;
 
 private:
    SourceRange loc_;
