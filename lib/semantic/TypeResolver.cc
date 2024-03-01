@@ -17,6 +17,7 @@ void ExprTypeResolver::resolve(ast::Expr *expr) {
 Type* ExprTypeResolver::mapValue(ExprValue& node) const {
    // Implementation goes here
    // ...
+   return nullptr;
 }
 
 Type* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs, const Type* rhs) const {

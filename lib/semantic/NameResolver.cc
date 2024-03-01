@@ -501,6 +501,7 @@ NameResolver::ConstImportOpt NameResolver::GetImport(
 }
 
 ast::ClassDecl const* NameResolver::GetTypeAsClass(ast::Type const* ty) const {
+   assert(ty && "Type should not be null");
    assert(ty->isResolved() && "Type should be resolved");
    // If the type is a reference type, then we can grab the declaration
    if(auto refTy = dynamic_cast<ast::ReferenceType const*>(ty)) {

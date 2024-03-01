@@ -402,7 +402,8 @@ public:
       auto& nr = GetPass<NameResolverPass>().Resolver();
       BumpAllocator alloc{NewHeap()};
       semantic::ExprResolver resolver{PM().Diag(), alloc};
-      resolver.Init(&nr);
+      semantic::ExprTypeResolver tr{PM().Diag()};
+      resolver.Init(&tr, &nr);
       try {
          resolver.Resolve(lu);
       } catch(const diagnostics::DiagnosticBuilder&) {
