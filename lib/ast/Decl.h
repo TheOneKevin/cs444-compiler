@@ -47,8 +47,18 @@ public:
 
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
-   bool hasCanonicalName() const override { return true; }
+   bool hasCanonicalName() const override { return modifiers_.isStatic(); }
    auto modifiers() const { return modifiers_; }
+   void setParent(DeclContext* parent) override {
+      Decl::setParent(parent);
+      Decl* parentDecl = dynamic_cast<Decl*>(parent);
+      assert(parentDecl && "Parent must be a Decl");
+      if(modifiers_.isStatic()) {
+         canonicalName_ = parentDecl->getCanonicalName();
+         canonicalName_ += ".";
+         canonicalName_ += name();
+      }
+   }
 
 private:
    Modifiers modifiers_;

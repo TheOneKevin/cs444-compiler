@@ -3,6 +3,8 @@
 #include <unordered_set>
 
 #include "ast/AST.h"
+#include "ast/DeclContext.h"
+#include "ast/Type.h"
 #include "diagnostics/Diagnostics.h"
 #include "diagnostics/Location.h"
 #include "parsetree/ParseTree.h"
@@ -32,7 +34,8 @@ public:
    VarDecl* BuildVarDecl(Type* type, SourceRange location, string_view name,
                          Expr* init = nullptr);
    FieldDecl* BuildFieldDecl(Modifiers modifiers, SourceRange location, Type* type,
-                             string_view name, Expr* init = nullptr);
+                             string_view name, Expr* init = nullptr,
+                             bool allowFinal = false);
 
    /* ===-----------------------------------------------------------------=== */
    // ast/DeclContext.h
@@ -117,6 +120,9 @@ public:
       lexicalLocalDeclStack.resize(size);
    }
 
+   /**
+    * @brief Get all the lexical declarations in the current scope.
+    */
    auto getAllLexicalDecls() const { return std::views::all(lexicalLocalDecls); }
 
 private:
@@ -125,7 +131,8 @@ private:
    std::vector<VarDecl*> lexicalLocalDeclStack;
    std::vector<VarDecl*> lexicalLocalDecls;
    std::unordered_set<std::string> lexicalLocalScope;
-   ast::ReferenceType* objectType;
+   // java.lang.Object type
+   ast::ReferenceType* objectType_;
 };
 
 } // namespace ast

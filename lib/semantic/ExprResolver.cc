@@ -1,15 +1,12 @@
 #include "semantic/ExprResolver.h"
 
-#include <string>
 #include <string_view>
 #include <variant>
 
 #include "ast/AST.h"
-#include "ast/AstNode.h"
 #include "ast/Decl.h"
 #include "ast/DeclContext.h"
 #include "ast/ExprNode.h"
-#include "diagnostics/Location.h"
 
 namespace semantic {
 
@@ -47,14 +44,14 @@ bool ER::tryReclassifyDecl(ExprNameWrapper& data,
 bool ER::tryReclassifyImport(ExprNameWrapper& data,
                              NameResolver::ConstImportOpt import) const {
    if(!import.has_value()) {
-      throw diag.ReportError(SourceRange{})
+      throw diag.ReportError(cu_->location())
             << "cannot resolve name: " << data.node->name();
    }
    if(std::holds_alternative<const ast::Decl*>(import.value())) {
       auto decl = std::get<const ast::Decl*>(import.value());
       // If declaration is null, then there is an import-on-demand conflict
       if(!decl) {
-         throw diag.ReportError(SourceRange{})
+         throw diag.ReportError(cu_->location())
                << "ambiguous import-on-demand conflict";
       }
       data.reclassify(ExprNameWrapper::Type::TypeName, decl);
@@ -106,7 +103,7 @@ ETy ER::reclassifySingleAmbiguousName(ExprNameWrapper* data) const {
       return copy;
 
    // If all else fails, we probably hit criteria 6
-   throw diag.ReportError(SourceRange{})
+   throw diag.ReportError(cu_->location())
          << "Unknown error when attempting to resolve import type";
 }
 
@@ -117,18 +114,32 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
    access->verifyInvariants(ExprNameWrapper::Type::SingleAmbiguousName);
    prev->verifyInvariants(ExprNameWrapper::Type::ExpressionName);
    // Now we can get the "decl" and "name" to resolve against
-   auto decl = std::get<ast::Decl const*>(prev->resolution.value());
-   auto ctx = dynamic_cast<ast::ClassDecl const*>(decl);
    auto name = access->node->name();
-   // If "decl" isnt context, then we tried to resolve against something bad :(
-   if(!ctx) {
-      throw diag.ReportError(SourceRange{})
-            << "field access to non-class type: " << decl->getCanonicalName();
+   auto decl = std::get<ast::Decl const*>(prev->resolution.value());
+   auto typeddecl = dynamic_cast<ast::TypedDecl const*>(decl);
+   if(!typeddecl) {
+      throw diag.ReportError(cu_->location())
+            << "field access \"" << name
+            << "\" to non-typed declaration: " << decl->name();
+   }
+   auto type = typeddecl->type();
+   if(!type) {
+      throw diag.ReportError(cu_->location())
+            << "field access \"" << name
+            << "\" to void-typed declaration: " << decl->name();
+   }
+   // FIXME(kevin): What about interfaces here?
+   auto refty = NR->GetTypeAsClass(type);
+   if(!refty) {
+      throw diag.ReportError(cu_->location())
+            << "field access \"" << name << "\" to non-class type: "
+            << (decl->hasCanonicalName() ? decl->getCanonicalName()
+                                         : decl->name());
    }
    // Now we check if "name" is a field of "decl"
-   auto field = ctx->lookupDecl(name);
+   auto field = refty->lookupDecl(name);
    if(!field) {
-      throw diag.ReportError(SourceRange{})
+      throw diag.ReportError(cu_->location())
             << "field access to undeclared field: " << name;
    }
    // Field must be either a FieldDecl or a MethodDecl
@@ -139,10 +150,27 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
 }
 
 void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
-   // We'll try to resolve the type access as a field access
-   resolveFieldAccess(access);
+   // First, verify invariants if access is a type access
+   auto prev = access->prev;
+   assert(prev && "Expected non-null previous node");
+   access->verifyInvariants(ExprNameWrapper::Type::SingleAmbiguousName);
+   prev->verifyInvariants(ExprNameWrapper::Type::TypeName);
+   // Now we can get the "decl" and "name" to resolve against
+   auto name = access->node->name();
+   auto decl = std::get<ast::Decl const*>(prev->resolution.value());
+   auto type = dynamic_cast<ast::ClassDecl const*>(decl);
+   if(!type) {
+      throw diag.ReportError(cu_->location())
+            << "static member access \"" << name
+            << "\" to non-class type: " << decl->name();
+   }
+   // Now we check if "name" is a field of "decl".
+   auto field = type->lookupDecl(name);
+   if(!field) {
+      throw diag.ReportError(cu_->location())
+            << "static member access to undeclared field: " << name;
+   }
    // With the additional constraint that the field must be static
-   auto field = std::get<ast::Decl const*>(access->resolution.value());
    ast::Modifiers mods;
    if(auto fieldDecl = dynamic_cast<ast::FieldDecl const*>(field)) {
       mods = fieldDecl->modifiers();
@@ -150,11 +178,12 @@ void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
       mods = methodDecl->modifiers();
    }
    if(!mods.isStatic()) {
-      throw diag.ReportError(SourceRange{})
+      throw diag.ReportError(cu_->location())
             << "attempted to access non-static member: "
             << field->getCanonicalName();
    }
    // We've reached here which means the field access is valid
+   access->reclassify(ExprNameWrapper::Type::ExpressionName, field);
    access->prev = nullptr;
 }
 
@@ -171,7 +200,7 @@ void ER::resolvePackageAccess(internal::ExprNameWrapper* access) const {
    // Now we check if "name" is a package of "pkg"
    auto subpkg = pkg->lookup(name, alloc);
    if(!subpkg.has_value()) {
-      throw diag.ReportError(SourceRange{})
+      throw diag.ReportError(cu_->location())
             << "package access to undeclared member: " << name;
    }
    // Now we can reclassify the access node depending on what we found
@@ -219,6 +248,20 @@ ast::ExprNodeList ER::resolveExprNode(const ETy node) const {
    return recursiveReduce(std::get<ExprNameWrapper*>(node));
 }
 
+ast::ExprNodeList ER::resolveMethodNode(const ETy node) const {
+   // It could be a raw ExprNode, in which case is something like Fun()
+   if(std::holds_alternative<ast::ExprNode*>(node))
+      return ast::ExprNodeList{std::get<ast::ExprNode*>(node)};
+   if(std::holds_alternative<ExprNameWrapper*>(node)) {
+      // We assert that the node is an ExprNameWrapper here
+      // in which case is something like org.pkg.Class.Fun()
+      auto* wrapper = std::get<ExprNameWrapper*>(node);
+      wrapper->verifyInvariants(ExprNameWrapper::Type::MethodName);
+      return ast::ExprNodeList{wrapper->node};
+   }
+   assert(false && "Not reached");
+}
+
 /* ===--------------------------------------------------------------------=== */
 //
 /* ===--------------------------------------------------------------------=== */
@@ -250,8 +293,17 @@ ETy ER::evalMemberAccess(const ETy lhs, const ETy id) const {
           Q->type == ExprNameWrapper::Type::TypeName ||
           Q->type == ExprNameWrapper::Type::PackageName) &&
          "Malformed node. Expected ExpressionName, TypeName or PackageName here.");
+   // Grab the Id as an expr node
+   auto exprNode = std::get<ast::ExprNode*>(id);
+   // Special case: If "Id" in Q . Id is a method name, then defer resolution
+   if(auto methodNode = dynamic_cast<ex::MethodName*>(exprNode)) {
+      auto newQ = alloc.new_object<ExprNameWrapper>(
+            ExprNameWrapper::Type::MethodName, methodNode);
+      newQ->prev = Q;
+      return newQ;
+   }
    // Now grab the id and cast it to the appropriate type
-   auto fieldNode = dynamic_cast<ex::MemberName*>(std::get<ast::ExprNode*>(id));
+   auto fieldNode = dynamic_cast<ex::MemberName*>(exprNode);
    assert(fieldNode && "Malformed node. Expected MemberName here.");
    // Allocate a new node as the member access to represent "Id" in Lhs . Id
    auto newQ = alloc.new_object<ExprNameWrapper>(
@@ -291,7 +343,7 @@ ETy ER::evalUnaryOp(UnaryOp& op, const ETy rhs) const {
 
 ETy ER::evalMethodCall(const ETy method, const op_array& args) const {
    ast::ExprNodeList list{};
-   list.concat(resolveExprNode(method));
+   list.concat(resolveMethodNode(method));
    for(auto& arg : args) list.concat(resolveExprNode(arg));
    return list;
 }
@@ -330,6 +382,11 @@ void ER::resolveRecursive(ast::AstNode* node) {
    // Set the CU
    if(auto* cu = dynamic_cast<ast::CompilationUnit*>(node)) {
       cu_ = cu;
+      if(diag.Verbose(2)) {
+         auto dbg = diag.ReportDebug(2);
+         dbg << "[*] Resolving compilation unit in: " << cu->location().toString()
+             << "\n";
+      }
    }
    // Set the CTX
    if(auto* ctx = dynamic_cast<ast::DeclContext*>(node)) {
@@ -338,13 +395,29 @@ void ER::resolveRecursive(ast::AstNode* node) {
    // Visit the expression nodes
    if(auto* decl = dynamic_cast<ast::VarDecl*>(node)) {
       if(auto* init = decl->mut_init()) {
+         if(diag.Verbose(2)) {
+            auto dbg = diag.ReportDebug(2);
+            dbg << "[*] Resolving initializer for variable: " << decl->name()
+                << "\n";
+            init->print(dbg.get(), 1);
+         }
          Evaluate(init);
+         init->clear();
       }
    } else if(auto* stmt = dynamic_cast<ast::Stmt*>(node)) {
       for(auto* expr : stmt->mut_exprs()) {
-         if(expr) Evaluate(expr);
+         if(!expr) continue;
+         if(diag.Verbose(2)) {
+            auto dbg = diag.ReportDebug(2);
+            dbg << "[*] Resolving expression in statement:\n";
+            expr->print(dbg.get(), 1);
+         }
+         Evaluate(expr);
+         expr->clear();
       }
    }
+   // We want to avoid visiting nodes twice
+   if(dynamic_cast<ast::DeclStmt*>(node)) return;
    // Visit the children recursively
    for(auto* child : node->mut_children()) {
       if(child) resolveRecursive(child);

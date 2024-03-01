@@ -226,7 +226,6 @@ public:
 
    utils::Generator<ast::AstNode const*> children() const override {
       co_yield returnType_;
-      for(auto param : parameters_) co_yield param;
       for(auto local : locals_) co_yield local;
       co_yield body_;
    }

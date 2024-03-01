@@ -6,7 +6,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <variant>
-#include <vector>
 
 #include "ast/AstNode.h"
 #include "diagnostics/Diagnostics.h"
@@ -20,6 +19,8 @@ class UnresolvedType;
 class InterfaceDecl;
 class ClassDecl;
 class MethodDecl;
+class ReferenceType;
+class Semantic;
 } // namespace ast
 
 namespace semantic {
@@ -86,8 +87,9 @@ public:
     *
     * @param lu The linking unit to resolve.
     */
-   void Init(ast::LinkingUnit* lu) {
+   void Init(ast::LinkingUnit* lu, ast::Semantic* sema) {
       lu_ = lu;
+      sema_ = sema;
       buildSymbolTable();
       populateJavaLangCache();
    }
@@ -125,6 +127,17 @@ public:
     * @return auto An anonymous struct with all the java.lang.* types.
     */
    auto GetJavaLang() const { return java_lang_; }
+
+   /**
+    * @brief Get the type as a class representation. i.e., char -> java.lang.Char
+    * and int[] -> java.lang.Array. If the type is already a class, then it is
+    * returned as-is.
+    * 
+    * @param ty The type to get as a class.
+    * @return ast::ClassDecl const* The class representation of the type.
+    */
+   ast::ClassDecl const* GetTypeAsClass(ast::Type const* ty) const;
+   // FIXME(kevin): What about interfaces here?
 
 public:
    /// @brief Dumps the symbol and import tables to the output stream.
@@ -172,6 +185,7 @@ private:
 private:
    BumpAllocator& alloc;
    diagnostics::DiagnosticEngine& diag;
+   ast::Semantic* sema_;
    ast::LinkingUnit* lu_;
    /// @brief The current compilation unit being resolved
    ast::CompilationUnit* currentCU_;
@@ -195,6 +209,10 @@ private:
       ast::ClassDecl* String;
       ast::ClassDecl* System;
    } java_lang_;
+   // Array class prototype
+   ast::ClassDecl* arrayPrototype_;
+   // The type for the array prototype
+   ast::ReferenceType* arrayClassType_;
 };
 
 } // namespace semantic

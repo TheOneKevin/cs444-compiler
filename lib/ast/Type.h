@@ -90,10 +90,6 @@ public:
    bool isBoolean() const override { return kind == BuiltInType::Kind::Boolean; }
    bool isNull() const override { return kind == BuiltInType::Kind::NoneType; }
    bool isString() const override { return kind == BuiltInType::Kind::String; }
-   ast::ClassDecl* getAsClass() const override {
-      // TODO: Implement this.
-      return nullptr;
-   }
 };
 
 /**
@@ -150,7 +146,6 @@ public:
       }
       return false;
    }
-   ast::ClassDecl* getAsClass() const override { return nullptr; }
 
    /**
     * @brief If the current reference type is a built-in type, then returns
@@ -262,7 +257,6 @@ public:
    bool isBoolean() const override { return false; }
    bool isNull() const override { return false; }
    bool isString() const override { return false; }
-   ast::ClassDecl* getAsClass() const override { return nullptr; }
 };
 
 } // namespace ast

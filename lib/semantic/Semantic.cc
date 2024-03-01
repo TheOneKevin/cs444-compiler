@@ -14,12 +14,14 @@ using std::string;
 Semantic::Semantic(BumpAllocator& alloc, diagnostics::DiagnosticEngine& diag)
       : alloc{alloc}, diag{diag} {
    // Preallocate java.lang.Object type
-   auto ty = BuildUnresolvedType(SourceRange{});
-   ty->addIdentifier("java");
-   ty->addIdentifier("lang");
-   ty->addIdentifier("Object");
-   ty->lock();
-   objectType = ty;
+   {
+      auto ty = BuildUnresolvedType(SourceRange{});
+      ty->addIdentifier("java");
+      ty->addIdentifier("lang");
+      ty->addIdentifier("Object");
+      ty->lock();
+      objectType_ = ty;
+   }
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -58,8 +60,9 @@ VarDecl* Semantic::BuildVarDecl(Type* type, SourceRange loc, string_view name,
 }
 
 FieldDecl* Semantic::BuildFieldDecl(Modifiers modifiers, SourceRange loc,
-                                    Type* type, string_view name, Expr* init) {
-   if(modifiers.isFinal()) {
+                                    Type* type, string_view name, Expr* init,
+                                    bool allowFinal) {
+   if(!allowFinal && modifiers.isFinal()) {
       diag.ReportError(modifiers.getLocation(Modifiers::Type::Final))
             << "field declaration cannot be final.";
    }
@@ -157,7 +160,7 @@ ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers, SourceRange loc,
                                            loc,
                                            name,
                                            superClass,
-                                           objectType,
+                                           objectType_,
                                            interfaces,
                                            classBodyDecls);
    // Check if the class has at least one constructor
@@ -214,7 +217,7 @@ InterfaceDecl* Semantic::BuildInterfaceDecl(Modifiers modifiers, SourceRange loc
    }
    // Create the AST node
    return alloc.new_object<InterfaceDecl>(
-         alloc, modifiers, loc, name, extends, objectType, interfaceBodyDecls);
+         alloc, modifiers, loc, name, extends, objectType_, interfaceBodyDecls);
 }
 
 MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers, SourceRange loc,

@@ -78,7 +78,7 @@ ExprNodeList ptv::visitExprNode(parsetree::Node* node) {
       return visitExprChild(node->child(0));
    } else if(node->num_children() == 2) {
       // unary expression
-      ExprNodeList ops;
+      ExprNodeList ops{};
       auto right = visitExprChild(node->child(1));
       ops.concat(right);
       if(auto op = dynamic_cast<parsetree::Operator*>(node->child(0))) {
@@ -89,7 +89,7 @@ ExprNodeList ptv::visitExprNode(parsetree::Node* node) {
       }
    } else if(node->num_children() == 3) {
       // binary expression
-      ExprNodeList ops;
+      ExprNodeList ops{};
       auto left = visitExprChild(node->child(0));
       auto right = visitExprChild(node->child(2));
       ops.concat(left);
@@ -124,7 +124,7 @@ ExprNodeList ptv::visitExprChild(Node* node) {
          if (name == "this") {
             return ExprNodeList(alloc.new_object<ThisNode>());
          }
-         return ExprNodeList(alloc.new_object<MemberName>(name));
+         return ExprNodeList(alloc.new_object<MemberName>(alloc, name));
       }
       case pty::QualifiedIdentifier:
          return visitQualifiedIdentifierInExpr(node);
@@ -150,24 +150,24 @@ ExprNodeList ptv::visitQualifiedIdentifierInExpr(Node* node,
                                                  bool isMethodInvocation) {
    check_node_type(node, pty::QualifiedIdentifier);
    check_num_children(node, 1, 2);
-   ExprNodeList ops;
+   ExprNodeList ops{};
    if(node->num_children() == 1) {
       if(isMethodInvocation) {
          ops.push_back(
-               alloc.new_object<MethodName>(visitIdentifier(node->child(0))));
+               alloc.new_object<MethodName>(alloc, visitIdentifier(node->child(0))));
       } else {
          ops.push_back(
-               alloc.new_object<MemberName>(visitIdentifier(node->child(0))));
+               alloc.new_object<MemberName>(alloc, visitIdentifier(node->child(0))));
       }
 
    } else if(node->num_children() == 2) {
       ops = visitQualifiedIdentifierInExpr(node->child(0));
       if(isMethodInvocation) {
          ops.push_back(
-               alloc.new_object<MethodName>(visitIdentifier(node->child(1))));
+               alloc.new_object<MethodName>(alloc, visitIdentifier(node->child(1))));
       } else {
          ops.push_back(
-               alloc.new_object<MemberName>(visitIdentifier(node->child(1))));
+               alloc.new_object<MemberName>(alloc, visitIdentifier(node->child(1))));
       }
       ops.push_back(alloc.new_object<MemberAccess>());
    }
@@ -177,26 +177,26 @@ ExprNodeList ptv::visitQualifiedIdentifierInExpr(Node* node,
 ExprNodeList ptv::visitMethodInvocation(Node* node) {
    check_node_type(node, pty::MethodInvocation);
    check_num_children(node, 2, 3);
-   ExprNodeList ops;
+   ExprNodeList ops{};
    if(node->num_children() == 2) {
       ops.concat(visitQualifiedIdentifierInExpr(node->child(0), true));
 
-      ExprNodeList args;
-      visitArgumentList(node->child(1), args);
+      ExprNodeList args{};
+      auto size = visitArgumentList(node->child(1), args) + 1;
       ops.concat(args);
 
-      ops.push_back(alloc.new_object<MethodInvocation>(args.size() + 1));
+      ops.push_back(alloc.new_object<MethodInvocation>(size));
       return ops;
    } else if(node->num_children() == 3) {
       ops.concat(visitExprChild(node->child(0)));
-      ops.push_back(alloc.new_object<MethodName>(visitIdentifier(node->child(1))));
+      ops.push_back(alloc.new_object<MethodName>(alloc, visitIdentifier(node->child(1))));
       ops.push_back(alloc.new_object<MemberAccess>());
 
-      ExprNodeList args;
-      visitArgumentList(node->child(2), args);
+      ExprNodeList args{};
+      auto size = visitArgumentList(node->child(2), args) + 1;
       ops.concat(args);
 
-      ops.push_back(alloc.new_object<MethodInvocation>(args.size() + 1));
+      ops.push_back(alloc.new_object<MethodInvocation>(size));
       return ops;
    }
    unreachable();
@@ -205,9 +205,9 @@ ExprNodeList ptv::visitMethodInvocation(Node* node) {
 ExprNodeList ptv::visitFieldAccess(Node* node) {
    check_node_type(node, pty::FieldAccess);
    check_num_children(node, 2, 2);
-   ExprNodeList ops;
+   ExprNodeList ops{};
    ops.concat(visitExprChild(node->child(0)));
-   ops.push_back(alloc.new_object<MemberName>(visitIdentifier(node->child(1))));
+   ops.push_back(alloc.new_object<MemberName>(alloc, visitIdentifier(node->child(1))));
    ops.push_back(alloc.new_object<MemberAccess>());
    return ops;
 }
@@ -215,19 +215,19 @@ ExprNodeList ptv::visitFieldAccess(Node* node) {
 ExprNodeList ptv::visitClassCreation(Node* node) {
    check_node_type(node, pty::ClassInstanceCreationExpression);
    check_num_children(node, 2, 2);
-   ExprNodeList ops;
+   ExprNodeList ops{};
    ops.concat(visitQualifiedIdentifierInExpr(node->child(0)));
-   ExprNodeList args;
-   visitArgumentList(node->child(1), args);
+   ExprNodeList args{};
+   auto size = visitArgumentList(node->child(1), args) + 1;
    ops.concat(args);
-   ops.push_back(alloc.new_object<ClassInstanceCreation>(args.size() + 1));
+   ops.push_back(alloc.new_object<ClassInstanceCreation>(size));
    return ops;
 }
 
 ExprNodeList ptv::visitArrayAccess(Node* node) {
    check_node_type(node, pty::ArrayAccess);
    check_num_children(node, 2, 2);
-   ExprNodeList ops;
+   ExprNodeList ops{};
    ops.concat(visitExprChild(node->child(0)));
    ops.concat(visitExprChild(node->child(1)));
    ops.push_back(alloc.new_object<ArrayAccess>());
@@ -237,7 +237,7 @@ ExprNodeList ptv::visitArrayAccess(Node* node) {
 ExprNodeList ptv::visitCastExpression(Node* node) {
    check_node_type(node, pty::CastExpression);
    check_num_children(node, 2, 3);
-   ExprNodeList ops;
+   ExprNodeList ops{};
    Node* expr;
    // If there are 3 children, the expr is (type, dims, expr)
    // Otherwise, the expr is (type, expr)
@@ -287,17 +287,19 @@ LiteralNode* ptv::visitLiteral(Node* node) {
    unreachable();
 }
 
-void ptv::visitArgumentList(Node* node, ExprNodeList& ops) {
-   if(node == nullptr) return;
+int ptv::visitArgumentList(Node* node, ExprNodeList& ops) {
+   if(node == nullptr) return 0;
    check_node_type(node, pty::ArgumentList);
    check_num_children(node, 1, 2);
+   int args = -1;
    if(node->num_children() == 1) {
+      args = 1;
       ops.concat(visitExprChild(node->child(0)));
    } else if(node->num_children() == 2) {
-      visitArgumentList(node->child(0), ops);
+      args = visitArgumentList(node->child(0), ops);
       ops.concat(visitExprChild(node->child(1)));
    }
-   return;
+   return args;
 }
 
 } // namespace parsetree

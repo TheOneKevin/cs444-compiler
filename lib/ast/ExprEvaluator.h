@@ -56,13 +56,12 @@ public:
       const auto getArgs = [&op_args, this](int nargs) {
          op_args.clear();
          for(int i = 0; i < nargs; ++i) {
-            op_args.push_back(op_stack_.top());
-            op_stack_.pop();
+            op_args.push_back(popSafe());
          }
       };
 
       // Clear the stack
-      while(!op_stack_.empty()) op_stack_.pop();
+      while(!op_stack_.empty()) popSafe();
 
       // Lock all the nodes
       for(auto const* nodes : subexpr.nodes()) {
@@ -70,68 +69,64 @@ public:
       }
 
       // Evaluate the RPN expression
-      ExprNode* prev = nullptr;
-      for(auto* node : subexpr.mut_nodes()) {
-         if(prev) prev->const_unlock();
+      auto* node = subexpr.mut_head();
+      for(size_t i = 0; i < subexpr.size(); ++i) {
+         // We grab the next node because we will unlock the current node
+         auto next_node = node->mut_next();
+         node->const_unlock();
          if(auto* value = dynamic_cast<ExprValue*>(node)) {
             op_stack_.push(mapValue(*value));
          } else if(auto* unary = dynamic_cast<UnaryOp*>(node)) {
-            auto rhs = op_stack_.top();
-            op_stack_.pop();
+            auto rhs = popSafe();
             op_stack_.push(evalUnaryOp(*unary, rhs));
          } else if(auto* binary = dynamic_cast<BinaryOp*>(node)) {
-            auto rhs = op_stack_.top();
-            op_stack_.pop();
-            auto lhs = op_stack_.top();
-            op_stack_.pop();
+            auto rhs = popSafe();
+            auto lhs = popSafe();
             op_stack_.push(evalBinaryOp(*binary, lhs, rhs));
          } else if(auto* member = dynamic_cast<MemberAccess const*>(node)) {
-            auto field = op_stack_.top();
-            op_stack_.pop();
-            auto lhs = op_stack_.top();
-            op_stack_.pop();
+            auto field = popSafe();
+            auto lhs = popSafe();
             op_stack_.push(evalMemberAccess(lhs, field));
          } else if(auto* method = dynamic_cast<MethodInvocation const*>(node)) {
             if(method->nargs() > 1)
                getArgs(method->nargs()-1);
-            auto method_name = op_stack_.top();
-            op_stack_.pop();
+            auto method_name = popSafe();
             op_stack_.push(evalMethodCall(method_name, op_args));
          } else if(auto* new_object =
                          dynamic_cast<ClassInstanceCreation const*>(node)) {
             if(new_object->nargs() > 1)
                getArgs(new_object->nargs()-1);
-            auto type = op_stack_.top();
-            op_stack_.pop();
+            auto type = popSafe();
             op_stack_.push(evalNewObject(type, op_args));
          } else if(auto* new_array =
                          dynamic_cast<ArrayInstanceCreation const*>(node)) {
-            auto size = op_stack_.top();
-            op_stack_.pop();
-            auto type = op_stack_.top();
-            op_stack_.pop();
+            auto size = popSafe();
+            auto type = popSafe();
             op_stack_.push(evalNewArray(type, size));
          } else if(auto* array_access = dynamic_cast<ArrayAccess const*>(node)) {
-            auto index = op_stack_.top();
-            op_stack_.pop();
-            auto array = op_stack_.top();
-            op_stack_.pop();
+            auto index = popSafe();
+            auto array = popSafe();
             op_stack_.push(evalArrayAccess(array, index));
          } else if(auto* cast = dynamic_cast<Cast const*>(node)) {
-            auto value = op_stack_.top();
-            op_stack_.pop();
-            auto type = op_stack_.top();
-            op_stack_.pop();
+            auto value = popSafe();
+            auto type = popSafe();
             op_stack_.push(evalCast(type, value));
          }
-         prev = node;
+         node = next_node;
       }
 
       // Return the result
-      auto result = op_stack_.top();
-      op_stack_.pop();
+      auto result = popSafe();
       assert(op_stack_.empty() && "Stack not empty after evaluation");
       return result;
+   }
+
+private:
+   inline T popSafe() {
+      assert(!op_stack_.empty() && "Stack underflow");
+      T value = op_stack_.top();
+      op_stack_.pop();
+      return value;
    }
 
 private:

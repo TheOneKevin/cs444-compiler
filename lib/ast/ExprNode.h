@@ -125,6 +125,10 @@ public:
       }
    }
 
+   ExprNode* mut_head() const { return head_; }
+
+   void dump() const;
+
 private:
    inline void check_invariants() const {
       assert((!tail_ || tail_->next() == nullptr) &&
@@ -160,25 +164,23 @@ private:
    ast::Decl const* decl_;
 };
 
-class MethodName : public ExprValue {
-   std::pmr::string name;
-
-public:
-   MethodName(std::string_view name) : name{name} {}
-   std::ostream& print(std::ostream& os) const override {
-      return os << "(Method name:" << name << ")";
-   }
-};
-
 class MemberName : public ExprValue {
    std::pmr::string name_;
 
 public:
-   MemberName(std::string_view name) : name_{name} {}
+   MemberName(BumpAllocator& alloc, std::string_view name) : name_{name, alloc} {}
    std::ostream& print(std::ostream& os) const override {
       return os << "(Member name:" << name_ << ")";
    }
    std::string_view name() const { return name_; }
+};
+
+class MethodName : public MemberName {
+public:
+   MethodName(BumpAllocator& alloc, std::string_view name) : MemberName{alloc, name} {}
+   std::ostream& print(std::ostream& os) const override {
+      return os << "(Method name:" << name() << ")";
+   }
 };
 
 class ThisNode final : public ExprValue {
@@ -239,7 +241,7 @@ class MethodInvocation : public ExprOp {
 public:
    MethodInvocation(int num_args) : ExprOp(num_args) {}
    std::ostream& print(std::ostream& os) const override {
-      return os << "MethodInvocation";
+      return os << "MethodInvocation(" << nargs()-1 << ")";
    }
 };
 

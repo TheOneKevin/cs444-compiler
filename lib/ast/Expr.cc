@@ -59,4 +59,12 @@ void Expr::dump() const {
    this->print(std::cerr, 0);
 }
 
+void ExprNodeList::dump() const {
+   for(auto node : nodes()) {
+      node->print(std::cerr);
+      std::cerr << " ";
+   }
+   std::cerr << "\n";
+}
+
 } // namespace ast

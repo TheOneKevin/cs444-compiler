@@ -4,6 +4,7 @@
 #include <ranges>
 #include <set>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "parsetree/ParseTree.h"
@@ -150,7 +151,7 @@ public:
       Decl const* ret = nullptr;
       for(auto decl : decls()) {
          if(decl->name() == name) {
-            if(ret != nullptr) return nullptr; // Ambiguous, cannot resolve
+            if(ret) return nullptr; // Ambiguous, cannot resolve
             ret = decl;
          }
       }
@@ -196,11 +197,11 @@ public:
 
    /**
     * @brief Get the type as a class representation. i.e., char -> java.lang.Char
-    * and int[] -> java.lang.Array.
+    * and int[] -> java.lang.Array. FIXME(kevin): Remove this API.
     *
     * @return ast::Decl* Returns nullptr if the type has no class representation.
     */
-   virtual ast::ClassDecl* getAsClass() const = 0;
+   ast::ClassDecl const* getAsClass() const { return nullptr; }
 
 private:
    SourceRange loc_;

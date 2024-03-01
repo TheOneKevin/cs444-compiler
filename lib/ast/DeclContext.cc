@@ -348,7 +348,7 @@ void MethodDecl::setParent(DeclContext* parent) {
    canonicalName_ += ".";
    canonicalName_ += name();
    // Propagate the setParent call to the parameters and the body
-   for(auto& parameter : parameters_) parameter->setParent(this);
+   for(auto& parameter : locals_) parameter->setParent(this);
    // if(body_) body_->setParent(this);
 }
 

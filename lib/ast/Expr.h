@@ -1,9 +1,5 @@
 #pragma once
 
-#include <concepts>
-#include <stack>
-#include <vector>
-
 #include "ast/AstNode.h"
 #include "ast/ExprNode.h"
 #include "diagnostics/Location.h"
@@ -22,6 +18,8 @@ public:
    auto list() const { return rpn_ops; }
    auto location() const { return loc_; }
    void dump() const;
+   // FIXME(kevin): Temporary, remove later
+   void clear() { rpn_ops = ExprNodeList{}; }
 };
 
 } // namespace ast

@@ -35,9 +35,7 @@ struct ExprNameWrapper {
       this->type = type;
    }
 
-   void resolve(ast::Decl const* resolution) {
-      this->resolution = resolution;
-   }
+   void resolve(ast::Decl const* resolution) { this->resolution = resolution; }
 
    void verifyInvariants(Type expectedTy) const;
 
@@ -47,7 +45,8 @@ struct ExprNameWrapper {
    ExprNameWrapper* prev = nullptr;
 };
 
-using ExprResolverT = std::variant<ExprNameWrapper*, ast::ExprNode*, ast::ExprNodeList>;
+using ExprResolverT =
+      std::variant<ExprNameWrapper*, ast::ExprNode*, ast::ExprNodeList>;
 
 } // namespace internal
 
@@ -57,9 +56,7 @@ class ExprResolver : ast::ExprEvaluator<internal::ExprResolverT> {
 public:
    ExprResolver(diagnostics::DiagnosticEngine& diag, BumpAllocator& alloc)
          : diag{diag}, alloc{alloc} {}
-   void Init(NameResolver* NR) {
-      this->NR = NR;
-   }
+   void Init(NameResolver* NR) { this->NR = NR; }
    void Resolve(ast::LinkingUnit* lu);
 
 private:
@@ -72,8 +69,7 @@ protected:
    using ExprValue = ast::exprnode::ExprValue;
 
    ETy mapValue(ExprValue& node) const override;
-   ETy evalBinaryOp(BinaryOp& op, const ETy lhs,
-                    const ETy rhs) const override;
+   ETy evalBinaryOp(BinaryOp& op, const ETy lhs, const ETy rhs) const override;
    ETy evalUnaryOp(UnaryOp& op, const ETy rhs) const override;
    ETy evalMemberAccess(const ETy lhs, const ETy field) const override;
    ETy evalMethodCall(const ETy method, const op_array& args) const override;
@@ -95,8 +91,8 @@ private:
    void resolveFieldAccess(internal::ExprNameWrapper* access) const;
    void resolveTypeAccess(internal::ExprNameWrapper* access) const;
    void resolvePackageAccess(internal::ExprNameWrapper* access) const;
-
    ast::ExprNodeList resolveExprNode(const ETy node) const;
+   ast::ExprNodeList resolveMethodNode(const ETy node) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;

@@ -172,7 +172,7 @@ public:
 
    ast::exprnode::UnaryOp* convertToUnaryOp(Operator::Type type);
    ast::exprnode::BinaryOp* convertToBinaryOp(Operator::Type type);
-   void visitArgumentList(Node* node, ast::ExprNodeList& ops);
+   int visitArgumentList(Node* node, ast::ExprNodeList& ops);
 
    template <>
    ast::Stmt* visit<pty::BlockStatementList>(Node* node);

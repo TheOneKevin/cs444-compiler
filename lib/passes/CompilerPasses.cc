@@ -250,8 +250,9 @@ public:
    void Init() override { alloc = std::make_unique<BumpAllocator>(NewHeap()); }
    void Run() override {
       auto lu = GetPass<LinkerPass>().LinkingUnit();
+      auto sema = &GetPass<AstContextPass>().Sema();
       resolver = std::make_unique<semantic::NameResolver>(*alloc, PM().Diag());
-      resolver->Init(lu);
+      resolver->Init(lu, sema);
       if(!PM().Diag().hasErrors()) resolver->Resolve();
    }
    semantic::NameResolver& Resolver() { return *resolver; }

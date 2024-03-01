@@ -9,11 +9,11 @@
 #include <variant>
 #include <vector>
 
-#include "ast/AST.h"
 #include "ast/AstNode.h"
 #include "ast/DeclContext.h"
 #include "ast/Type.h"
 #include "diagnostics/Location.h"
+#include "semantic/Semantic.h"
 #include "utils/BumpAllocator.h"
 
 using ast::Decl;
@@ -89,29 +89,80 @@ void NameResolver::populateJavaLangCache() {
    auto langPkg = std::get<Pkg*>(javaPkg->children["lang"]);
    // Now we can populate the java.lang.* cache
    // FIXME(kevin): Implement better error handling here?
-   java_lang_.Boolean = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Boolean"]));
-   java_lang_.Byte = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Byte"]));
-   java_lang_.Character = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Character"]));
-   java_lang_.Class = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Class"]));
-   java_lang_.Cloneable = dynamic_cast<ast::InterfaceDecl*>(std::get<Decl*>(langPkg->children["Cloneable"]));
-   java_lang_.Integer = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Integer"]));
-   java_lang_.Number = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Number"]));
-   java_lang_.Object = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Object"]));
-   java_lang_.Short = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Short"]));
-   java_lang_.String = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["String"]));
-   java_lang_.System = dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["System"]));
+   java_lang_.Boolean = dynamic_cast<ast::ClassDecl*>(
+         std::get<Decl*>(langPkg->children["Boolean"]));
+   java_lang_.Byte =
+         dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Byte"]));
+   java_lang_.Character = dynamic_cast<ast::ClassDecl*>(
+         std::get<Decl*>(langPkg->children["Character"]));
+   java_lang_.Class = dynamic_cast<ast::ClassDecl*>(
+         std::get<Decl*>(langPkg->children["Class"]));
+   java_lang_.Cloneable = dynamic_cast<ast::InterfaceDecl*>(
+         std::get<Decl*>(langPkg->children["Cloneable"]));
+   java_lang_.Integer = dynamic_cast<ast::ClassDecl*>(
+         std::get<Decl*>(langPkg->children["Integer"]));
+   java_lang_.Number = dynamic_cast<ast::ClassDecl*>(
+         std::get<Decl*>(langPkg->children["Number"]));
+   java_lang_.Object = dynamic_cast<ast::ClassDecl*>(
+         std::get<Decl*>(langPkg->children["Object"]));
+   java_lang_.Short = dynamic_cast<ast::ClassDecl*>(
+         std::get<Decl*>(langPkg->children["Short"]));
+   java_lang_.String = dynamic_cast<ast::ClassDecl*>(
+         std::get<Decl*>(langPkg->children["String"]));
+   java_lang_.System = dynamic_cast<ast::ClassDecl*>(
+         std::get<Decl*>(langPkg->children["System"]));
    // Make sure they are all non-null
    assert(java_lang_.Boolean && "java.lang.Boolean not valid (expected class)");
    assert(java_lang_.Byte && "java.lang.Byte not valid (expected class)");
-   assert(java_lang_.Character && "java.lang.Character not valid (expected class)");
+   assert(java_lang_.Character &&
+          "java.lang.Character not valid (expected class)");
    assert(java_lang_.Class && "java.lang.Class not valid (expected class)");
-   assert(java_lang_.Cloneable && "java.lang.Cloneable not valid (expected interface)");
+   assert(java_lang_.Cloneable &&
+          "java.lang.Cloneable not valid (expected interface)");
    assert(java_lang_.Integer && "java.lang.Integer not valid (expected class)");
    assert(java_lang_.Number && "java.lang.Number not valid (expected class)");
    assert(java_lang_.Object && "java.lang.Object not valid (expected class)");
    assert(java_lang_.Short && "java.lang.Short not valid (expected class)");
    assert(java_lang_.String && "java.lang.String not valid (expected class)");
    assert(java_lang_.System && "java.lang.System not valid (expected class)");
+
+   // Build the Java array prototype class
+   {
+      using namespace ast;
+      std::pmr::vector<ReferenceType*> interfaces{alloc};
+      std::pmr::vector<Decl*> body{alloc};
+      std::pmr::vector<VarDecl*> emptyParams{alloc};
+      std::pmr::vector<ImportDeclaration> emptyImports{alloc};
+      Modifiers lengthMod{};
+      lengthMod.set(ast::Modifiers::Type::Public);
+      lengthMod.set(ast::Modifiers::Type::Static);
+      lengthMod.set(ast::Modifiers::Type::Final);
+      Modifiers pubMod{};
+      pubMod.set(ast::Modifiers::Type::Public);
+      // clang-format off
+      auto intTy = sema_->BuildBuiltInType(parsetree::BasicType::Type::Int,SourceRange{});
+      auto length = sema_->BuildFieldDecl(lengthMod, SourceRange{}, intTy, "length", nullptr, true);
+      auto ctor = sema_->BuildMethodDecl(pubMod,
+                                         SourceRange{},
+                                         "[__builtin_array_ctor",
+                                         nullptr,
+                                         emptyParams,
+                                         true,
+                                         sema_->BuildNullStmt());
+      body.push_back(length);
+      body.push_back(ctor);
+      // FIXME(kevin): There should be a clone() method that's overriden as well
+      arrayPrototype_ = sema_->BuildClassDecl(pubMod,
+                                              SourceRange{},
+                                              "[__builtin_array_proto",
+                                              nullptr,
+                                              interfaces,
+                                              body);
+      (void) sema_->BuildCompilationUnit(nullptr, emptyImports, SourceRange{}, arrayPrototype_);
+      // Now wrap it in a reference type
+      arrayClassType_ = alloc.new_object<ReferenceType>(arrayPrototype_, arrayPrototype_->location());
+      // clang-format on
+   }
 }
 
 void NameResolver::beginContext(ast::CompilationUnit* cu) {
@@ -447,6 +498,39 @@ NameResolver::ConstImportOpt NameResolver::GetImport(
    } else {
       return static_cast<Pkg const*>(std::get<Pkg*>(it2->second));
    }
+}
+
+ast::ClassDecl const* NameResolver::GetTypeAsClass(ast::Type const* ty) const {
+   assert(ty->isResolved() && "Type should be resolved");
+   // If the type is a reference type, then we can grab the declaration
+   if(auto refTy = dynamic_cast<ast::ReferenceType const*>(ty)) {
+      return dynamic_cast<ast::ClassDecl const*>(refTy->decl());
+   }
+   // If the type is a built-in type, then we can grab the Java class
+   if(auto builtInTy = dynamic_cast<ast::BuiltInType const*>(ty)) {
+      switch(builtInTy->getKind()) {
+         case ast::BuiltInType::Kind::Boolean:
+            return GetJavaLang().Boolean;
+         case ast::BuiltInType::Kind::Byte:
+            return GetJavaLang().Byte;
+         case ast::BuiltInType::Kind::Char:
+            return GetJavaLang().Character;
+         case ast::BuiltInType::Kind::Short:
+            return GetJavaLang().Short;
+         case ast::BuiltInType::Kind::Int:
+            return GetJavaLang().Integer;
+         case ast::BuiltInType::Kind::String:
+            return GetJavaLang().String;
+         default:
+            return nullptr;
+      }
+   }
+   // If the type is an array type, then we can grab the array prototype
+   if(auto arrayTy = dynamic_cast<ast::ArrayType const*>(ty)) {
+      return arrayPrototype_;
+   }
+   // FIXME(kevin): How do we handle interfaces here?
+   return nullptr;
 }
 
 } // namespace semantic
