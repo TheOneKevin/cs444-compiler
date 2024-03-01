@@ -4,6 +4,7 @@ import sys
 import argparse
 import subprocess
 
+
 # Build the json file for debugging from exec path, test name and prog args
 def build_json(name, args):
     return json.dumps(
@@ -17,6 +18,9 @@ def build_json(name, args):
                     "program": os.path.abspath(args[0]),
                     "args": args[1:],
                     "cwd": os.getcwd(),
+                    "initCommands": [
+                        "command script import ${workspaceFolder}/stdvariant.py",
+                    ],
                 }
             ],
         },

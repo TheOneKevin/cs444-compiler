@@ -37,5 +37,9 @@
     "-pretty",
     "--background-index",
     "--compile-commands-dir=${workspaceFolder}/build",
-  ]
+  ],
+  "extensions.ignoreRecommendations": true,
+  "C_Cpp.inlayHints.parameterNames.enabled": false,
+  "C_Cpp.vcpkg.enabled": false,
+  "C_Cpp.debugShortcut": false
 }
