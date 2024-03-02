@@ -209,6 +209,7 @@ public:
       // TODO(kevin): re-implement this
       return os << "(Literal)";
    }
+   ast::Type const* type() { return type_; }
 
 private:
    std::pmr::string value_;

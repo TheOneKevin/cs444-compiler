@@ -20,6 +20,12 @@ public:
 
    bool isSubtype(ast::Type* sub, ast::Type* super);
 
+   // @brief Check if a class is a subclass of another class
+   bool isSuperClass(ast::ClassDecl* super, ast::ClassDecl* sub);
+
+   // @brief Check if an interface is a subperinterface of another class/interface
+   bool isSuperInterface(ast::InterfaceDecl* super, ast::Decl* sub);
+
 private:
    diagnostics::DiagnosticEngine& diag;
    ast::LinkingUnit* lu_;

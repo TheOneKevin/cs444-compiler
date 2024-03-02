@@ -18,6 +18,24 @@ static bool isSameMethodSignature(ast::MethodDecl* method1,
    return true;
 }
 
+bool HierarchyChecker::isSuperClass(ast::ClassDecl* super, ast::ClassDecl* sub) {
+   if(super == sub) return true;
+   for(auto superClass : inheritanceMap_[sub]) {
+      if(auto directSuper = dynamic_cast<ast::ClassDecl*>(superClass)) {
+         if(isSuperClass(super, directSuper)) return true;
+      }
+   }
+   return false;
+}
+
+bool HierarchyChecker::isSuperInterface(ast::InterfaceDecl* super, ast::Decl* sub) {
+   if (super == sub) return true;
+   for(auto superInterface : inheritanceMap_[sub]) {
+      if(isSuperInterface(super, superInterface)) return true;
+   }
+   return false;
+}
+
 void HierarchyChecker::checkMethodInheritanceHelper(
       ast::Decl* node, std::pmr::set<ast::Decl*>& visited) {
    // Mark the node as visited
@@ -154,8 +172,9 @@ void HierarchyChecker::checkInheritance() {
             inheritanceMap_[interfaceDecl].insert(superInterface);
             // print debug information
             if(diag.Verbose(2)) {
-               diag.ReportDebug(2) << "Interface: " << interfaceDecl->name()
-                                  << " extends " << superInterface->name() << "\n";
+               diag.ReportDebug(2)
+                     << "Interface: " << interfaceDecl->name() << " extends "
+                     << superInterface->name() << "\n";
             }
          }
       }

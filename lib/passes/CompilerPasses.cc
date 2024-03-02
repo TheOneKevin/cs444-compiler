@@ -289,6 +289,7 @@ public:
       auto lu = GetPass<LinkerPass>().LinkingUnit();
       checker.Check(lu);
    }
+   semantic::HierarchyChecker& Checker() {return checker;}
 
 private:
    void computeDependencies() override {
@@ -398,14 +399,15 @@ public:
    string_view Name() const override { return "sema-expr"; }
    string_view Desc() const override { return "Expression Resolution"; }
    void Run() override {
-      auto lu = GetPass<LinkerPass>().LinkingUnit();
-      auto& nr = GetPass<NameResolverPass>().Resolver();
-      BumpAllocator alloc{NewHeap()};
-      semantic::ExprResolver resolver{PM().Diag(), alloc};
-      semantic::ExprTypeResolver tr{PM().Diag()};
-      resolver.Init(&tr, &nr);
+      auto LU = GetPass<LinkerPass>().LinkingUnit();
+      auto& NR = GetPass<NameResolverPass>().Resolver();
+      auto& HC = GetPass<HierarchyCheckerPass>().Checker();
+      semantic::ExprResolver ER{PM().Diag(), NewHeap()};
+      semantic::ExprTypeResolver TR{PM().Diag(), NewHeap()};
+      ER.Init(&TR, &NR);
+      TR.Init(&HC, &NR);
       try {
-         resolver.Resolve(lu);
+         ER.Resolve(LU);
       } catch(const diagnostics::DiagnosticBuilder&) {
          // Print the errors from diag in the next step
       }
@@ -415,6 +417,7 @@ private:
    void computeDependencies() override {
       ComputeDependency(GetPass<AstContextPass>());
       ComputeDependency(GetPass<NameResolverPass>());
+      ComputeDependency(GetPass<HierarchyCheckerPass>());
    }
 };
 

@@ -259,4 +259,44 @@ public:
    bool isString() const override { return false; }
 };
 
+
+class MethodType final : public Type {
+   Type* returnType;
+   pmr_vector<Type*> paramTypes;
+
+public:
+   MethodType(Type* returnType, array_ref<Type*> paramTypes, SourceRange loc = {})
+         : Type{loc}, returnType{returnType}, paramTypes{paramTypes} {}
+
+   string_view toString() const override { 
+      return "MethodType"; 
+   }
+   bool isResolved() const override { return true; }
+
+   bool operator==(const Type& other) const override {
+      if(auto otherArrayType = dynamic_cast<const MethodType*>(&other)) {
+         if (*returnType != *otherArrayType->returnType) {
+            return false;
+         }
+         if (paramTypes.size() != otherArrayType->paramTypes.size()) {
+            return false;
+         }
+         for (size_t i = 0; i < paramTypes.size(); i++) {
+            if (*paramTypes[i] != *otherArrayType->paramTypes[i]) {
+               return false;
+            }
+         }
+         return true;
+      }
+      return false;
+   }
+
+   Type* getReturnType() const { return returnType; }
+   pmr_vector<Type*> getParamTypes() const { return paramTypes; }
+
+   bool isNumeric() const override { return false; }
+   bool isBoolean() const override { return false; }
+   bool isNull() const override { return false; }
+   bool isString() const override { return false; }
+};
 } // namespace ast
