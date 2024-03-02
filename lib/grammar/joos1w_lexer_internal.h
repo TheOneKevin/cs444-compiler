@@ -1,7 +1,9 @@
 #pragma once
 
-#include <memory_resource>
-#include <vector>
+#ifndef INCLUDED_FLEXLEXER_H
+   #warning "This file should not be included directly"
+   #include <FlexLexer.h>
+#endif
 
 #include "diagnostics/Diagnostics.h"
 #include "diagnostics/Location.h"
