@@ -84,11 +84,15 @@ public:
       }
       return false;
    }
+   [[deprecated("Use getKind() instead")]]
    bool isNumeric() const override { 
       return kind != BuiltInType::Kind::Boolean; 
    }
+   [[deprecated("Use getKind() instead")]]
    bool isBoolean() const override { return kind == BuiltInType::Kind::Boolean; }
+   [[deprecated("Use getKind() instead")]]
    bool isNull() const override { return kind == BuiltInType::Kind::NoneType; }
+   [[deprecated("Use getKind() instead")]]
    bool isString() const override { return kind == BuiltInType::Kind::String; }
 };
 

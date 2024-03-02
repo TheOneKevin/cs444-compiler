@@ -189,18 +189,18 @@ public:
    utils::Generator<AstNode const*> children() const override final {
       co_yield nullptr;
    }
+   [[deprecated]]
    virtual bool isInvalid() const { return false; }
+   [[deprecated]]
    virtual bool isNumeric() const = 0;
+   [[deprecated]]
    virtual bool isBoolean() const = 0;
+   [[deprecated]]
    virtual bool isNull() const = 0;
+   [[deprecated]]
    virtual bool isString() const = 0;
 
-   /**
-    * @brief Get the type as a class representation. i.e., char -> java.lang.Char
-    * and int[] -> java.lang.Array. FIXME(kevin): Remove this API.
-    *
-    * @return ast::Decl* Returns nullptr if the type has no class representation.
-    */
+   [[deprecated]]
    ast::ClassDecl const* getAsClass() const { return nullptr; }
 
 private:
