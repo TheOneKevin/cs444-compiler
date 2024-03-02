@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory_resource>
 #include <variant>
 
 #include "ast/AstNode.h"
@@ -76,12 +77,13 @@ struct ExprNameWrapper {
 
 } // namespace internal
 
-class ExprResolver : ast::ExprEvaluator<internal::ExprResolverTy> {
+class ExprResolver final : ast::ExprEvaluator<internal::ExprResolverTy> {
    using ETy = internal::ExprResolverTy;
+   using Heap = std::pmr::memory_resource;
 
 public:
-   ExprResolver(diagnostics::DiagnosticEngine& diag, BumpAllocator& alloc)
-         : diag{diag}, alloc{alloc} {}
+   ExprResolver(diagnostics::DiagnosticEngine& diag, Heap* heap)
+         : diag{diag}, heap{heap}, alloc{heap} {}
    void Init(ExprTypeResolver* TR, NameResolver* NR) {
       this->TR = TR;
       this->NR = NR;
@@ -89,9 +91,17 @@ public:
    void Resolve(ast::LinkingUnit* lu);
 
 private:
+   ETy EvaluateList(ast::ExprNodeList subexpr) override final {
+      // Clear the heap
+      if(auto h = dynamic_cast<utils::CustomBufferResource*>(heap))
+         h->reset();
+      // Call the base class implementation
+      return ast::ExprEvaluator<internal::ExprResolverTy>::EvaluateList(subexpr);
+   }
+
    void resolveRecursive(ast::AstNode* node);
 
-protected: // Overriden methods
+private: // Overriden methods
    using Type = ast::Type;
    using BinaryOp = ast::exprnode::BinaryOp;
    using UnaryOp = ast::exprnode::UnaryOp;
@@ -147,7 +157,8 @@ private:
    ast::DeclContext const* lctx_;
    semantic::NameResolver* NR;
    semantic::ExprTypeResolver* TR;
-   BumpAllocator& alloc;
+   mutable Heap* heap;
+   mutable BumpAllocator alloc;
 };
 
 } // namespace semantic

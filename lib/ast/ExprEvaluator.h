@@ -43,13 +43,13 @@ public:
     * @brief Evaluates the given expression.
     * @param expr The expression to evaluate.
     */
-   T Evaluate(Expr* expr) { return Evaluate(expr->list()); }
+   T Evaluate(Expr* expr) { return EvaluateList(expr->list()); }
 
    /**
     * @brief Evaluates the given subexpression.
     * @param subexpr The list of expression nodes to evaluate.
     */
-   T Evaluate(ExprNodeList subexpr) {
+   virtual T EvaluateList(ExprNodeList subexpr) {
       using namespace ast::exprnode;
 
       std::pmr::vector<T> op_args;

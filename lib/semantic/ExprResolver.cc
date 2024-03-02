@@ -232,7 +232,7 @@ ast::Decl const* ExprNameWrapper::prevAsDecl(ExprTypeResolver& TR,
       return std::get<ast::Decl const*>(prev->resolution.value());
    // Complex case, the previous node is an expression list
    auto prevList = std::get<ast::ExprNodeList>(prev.value());
-   auto type = TR.Evaluate(prevList);
+   auto type = TR.EvaluateList(prevList);
    // FIXME(kevin): What about interfaces here?
    return NR.GetTypeAsClass(type);
 }
