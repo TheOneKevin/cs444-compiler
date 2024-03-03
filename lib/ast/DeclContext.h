@@ -91,7 +91,6 @@ public:
              array_ref<Decl*> classBodyDecls) throw();
    auto fields() const { return std::views::all(fields_); }
    auto methods() const { return std::views::all(methods_); }
-   auto inheritedMethods() const { return std::views::all(inheritedMethods_); }
    auto constructors() const { return std::views::all(constructors_); }
    auto interfaces() const { return std::views::all(interfaces_); }
    /// @brief Grabs a view of the super classes.
@@ -106,13 +105,6 @@ public:
    void setParent(DeclContext* parent) override;
    SourceRange location() const override { return location_; }
 
-   /// @brief Set the inherited methods. It should only be called once.
-   void setInheritedMethods(std::pmr::vector<MethodDecl*>& inheritedMethods) {
-      assert(!inheritedSet_ && "Inherited methods already set");
-      inheritedMethods_ = inheritedMethods;
-      inheritedSet_ = true;
-   }
-   bool isInheritedSet() const { return inheritedSet_; }
 
    utils::Generator<ast::AstNode const*> children() const override {
       for(auto field : fields_) co_yield field;
@@ -131,8 +123,6 @@ private:
    pmr_vector<MethodDecl*> methods_;
    pmr_vector<MethodDecl*> constructors_;
    SourceRange location_;
-   pmr_vector<MethodDecl*> inheritedMethods_;
-   bool inheritedSet_ = false;
 };
 
 class InterfaceDecl final : public DeclContext, public Decl {
@@ -143,7 +133,6 @@ public:
                  array_ref<Decl*> interfaceBodyDecls) throw();
    auto extends() const { return std::views::all(extends_); }
    auto methods() const { return std::views::all(methods_); }
-   auto inheritedMethods() const { return std::views::all(inheritedMethods_); }
    auto modifiers() const { return modifiers_; }
    auto const* objectSuperclass() const { return objectSuperclass_; }
    bool hasCanonicalName() const override { return true; }
@@ -151,13 +140,6 @@ public:
    int printDotNode(DotPrinter& dp) const override;
    /// @brief Overrides the setParent to construct canonical name.
    void setParent(DeclContext* parent) override;
-   /// @brief Set the inherited methods. It should only be called once.
-   void setInheritedMethods(std::pmr::vector<MethodDecl*>& inheritedMethods) {
-      assert(!inheritedSet_ && "Inherited methods already set");
-      inheritedMethods_ = inheritedMethods;
-      inheritedSet_ = true;
-   }
-   bool isInheritedSet() const { return inheritedSet_; }
    SourceRange location() const override { return location_; }
 
    utils::Generator<ast::AstNode const*> children() const override {
@@ -170,9 +152,7 @@ private:
    pmr_vector<ReferenceType*> extends_;
    pmr_vector<MethodDecl*> methods_;
    SourceRange location_;
-   pmr_vector<MethodDecl*> inheritedMethods_;
    ReferenceType* objectSuperclass_;
-   bool inheritedSet_ = false;
 };
 
 class MethodDecl final : public DeclContext, public Decl {

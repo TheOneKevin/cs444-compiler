@@ -63,20 +63,20 @@ bool ExprTypeResolver::isAssignableTo(const Type* lhs, const Type* rhs) const {
    }
 
    if (leftRef && rightRef) {
-      if (auto rightClass = dynamic_cast<ClassDecl *>(rightRef->decl())) {
+      if (auto rightClass = dynamic_cast<ClassDecl const*>(rightRef->decl())) {
          // Step 3.1
-         if (auto leftClass = dynamic_cast<ClassDecl *>(leftRef->decl())) {
+         if (auto leftClass = dynamic_cast<ClassDecl const*>(leftRef->decl())) {
             return HC->isSuperClass(leftClass, rightClass);
-         } else if (auto leftInterface = dynamic_cast<InterfaceDecl *>(leftRef->decl())) {
+         } else if (auto leftInterface = dynamic_cast<InterfaceDecl const*>(leftRef->decl())) {
             return HC->isSuperInterface(leftInterface, rightClass);
          } else {
             assert(false && "Unreachable");
          }
-      } else if (auto rightInterface = dynamic_cast<InterfaceDecl *>(rightRef->decl())) {
+      } else if (auto rightInterface = dynamic_cast<InterfaceDecl const*>(rightRef->decl())) {
          // Step 3.2
-         if (auto leftClass = dynamic_cast<ClassDecl *>(leftRef->decl())) {
+         if (auto leftClass = dynamic_cast<ClassDecl const*>(leftRef->decl())) {
             return leftClass = NR->GetJavaLang().Object;
-         } else if (auto leftInterface = dynamic_cast<InterfaceDecl *>(leftRef->decl())) {
+         } else if (auto leftInterface = dynamic_cast<InterfaceDecl const*>(leftRef->decl())) {
             return HC->isSuperInterface(leftInterface, rightInterface);
          } else {
             assert(false && "Unreachable");

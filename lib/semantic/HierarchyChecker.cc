@@ -4,8 +4,8 @@
 
 namespace semantic {
 
-static bool isSameMethodSignature(ast::MethodDecl* method1,
-                                  ast::MethodDecl* method2) {
+static bool isSameMethodSignature(ast::MethodDecl const* method1,
+                                  ast::MethodDecl const* method2) {
    if(method1->name() != method2->name()) return false;
    if(method1->parameters().size() != method2->parameters().size()) return false;
 
@@ -18,18 +18,20 @@ static bool isSameMethodSignature(ast::MethodDecl* method1,
    return true;
 }
 
-bool HierarchyChecker::isSuperClass(ast::ClassDecl* super, ast::ClassDecl* sub) {
+bool HierarchyChecker::isSuperClass(ast::ClassDecl const* super,
+                                    ast::ClassDecl const* sub) {
    if(super == sub) return true;
    for(auto superClass : inheritanceMap_[sub]) {
-      if(auto directSuper = dynamic_cast<ast::ClassDecl*>(superClass)) {
+      if(auto directSuper = dynamic_cast<ast::ClassDecl const*>(superClass)) {
          if(isSuperClass(super, directSuper)) return true;
       }
    }
    return false;
 }
 
-bool HierarchyChecker::isSuperInterface(ast::InterfaceDecl* super, ast::Decl* sub) {
-   if (super == sub) return true;
+bool HierarchyChecker::isSuperInterface(ast::InterfaceDecl const* super,
+                                        ast::Decl const* sub) {
+   if(super == sub) return true;
    for(auto superInterface : inheritanceMap_[sub]) {
       if(isSuperInterface(super, superInterface)) return true;
    }
@@ -37,59 +39,60 @@ bool HierarchyChecker::isSuperInterface(ast::InterfaceDecl* super, ast::Decl* su
 }
 
 void HierarchyChecker::checkMethodInheritanceHelper(
-      ast::Decl* node, std::pmr::set<ast::Decl*>& visited) {
+      ast::Decl const* node, std::pmr::set<ast::Decl const*>& visited) {
    // Mark the node as visited
    visited.insert(node);
-   std::pmr::vector<ast::MethodDecl*> inheritedMethods;
+   std::pmr::vector<ast::MethodDecl const*> inheritedMethods;
 
    for(auto super : inheritanceMap_[node]) {
-      if(auto superClass = dynamic_cast<ast::ClassDecl*>(super)) {
+      if(auto superClass = dynamic_cast<ast::ClassDecl const*>(super)) {
          if(!visited.count(superClass)) {
             checkMethodInheritanceHelper(superClass, visited);
-         } else if(!superClass->isInheritedSet()) {
+         } else if(!isInheritedSet(superClass)) {
             diag.ReportError(superClass->location())
                   << "Cycle is detected in the inheritance graph. "
                   << superClass->name();
             continue;
          }
-         for(auto method : superClass->inheritedMethods()) {
+         for(auto method : getInheritedMethods(superClass)) {
             inheritedMethods.emplace_back(method);
          }
-      } else if(auto superInterface = dynamic_cast<ast::InterfaceDecl*>(super)) {
+      } else if(auto superInterface =
+                      dynamic_cast<ast::InterfaceDecl const*>(super)) {
          if(!visited.count(superInterface)) {
             checkMethodInheritanceHelper(superInterface, visited);
-         } else if(!superInterface->isInheritedSet()) {
+         } else if(!isInheritedSet(superInterface)) {
             diag.ReportError(superInterface->location())
                   << "Cycle is detected in the inheritance graph. "
                   << superInterface->name();
             continue;
          }
-         for(auto method : superInterface->inheritedMethods()) {
+         for(auto method : getInheritedMethods(superInterface)) {
             inheritedMethods.emplace_back(method);
          }
       } else if(super != nullptr) {
          assert(false && "Unreachable");
       }
    }
-   if(auto classDecl = dynamic_cast<ast::ClassDecl*>(node)) {
+   if(auto classDecl = dynamic_cast<ast::ClassDecl const*>(node)) {
       checkClassMethod(classDecl, inheritedMethods);
       checkClassConstructors(classDecl);
-   } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(node)) {
+   } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl const*>(node)) {
       checkInterfaceMethod(interfaceDecl, inheritedMethods);
    }
 }
 
 void HierarchyChecker::checkMethodInheritance() {
-   std::pmr::set<ast::Decl*> visited;
+   std::pmr::set<ast::Decl const*> visited;
    for(auto cu : lu_->compliationUnits()) {
-      // FIXME(kevin, larry): Do we really need mutable here?
-      auto body = cu->mut_body();
+      auto body = cu->body();
       // if the body is null, continue to the next iteration
       if(!body) continue;
-      if(auto classDecl = dynamic_cast<ast::ClassDecl*>(body)) {
+      if(auto classDecl = dynamic_cast<ast::ClassDecl const*>(body)) {
          if(visited.count(classDecl)) continue;
          checkMethodInheritanceHelper(classDecl, visited);
-      } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(body)) {
+      } else if(auto interfaceDecl =
+                      dynamic_cast<ast::InterfaceDecl const*>(body)) {
          if(visited.count(interfaceDecl)) continue;
          checkMethodInheritanceHelper(interfaceDecl, visited);
       }
@@ -99,16 +102,15 @@ void HierarchyChecker::checkMethodInheritance() {
 void HierarchyChecker::checkInheritance() {
    inheritanceMap_.clear();
    for(auto cu : lu_->compliationUnits()) {
-      // FIXME(kevin, larry): Do we really need mutable here?
-      auto body = cu->mut_body();
+      auto body = cu->body();
       // if the body is null, continue to the next iteration
       if(!body) continue;
 
-      if(auto classDecl = dynamic_cast<ast::ClassDecl*>(body)) {
+      if(auto classDecl = dynamic_cast<ast::ClassDecl const*>(body)) {
          // if there is a superclass
          if(auto superClass = classDecl->superClasses()[0]) {
             auto superClassDecl =
-                  dynamic_cast<ast::ClassDecl*>(superClass->decl());
+                  dynamic_cast<ast::ClassDecl const*>(superClass->decl());
             // class cannot extend an interface
             if(!superClassDecl) {
                diag.ReportError(classDecl->location())
@@ -126,7 +128,7 @@ void HierarchyChecker::checkInheritance() {
          } else if(auto objectClass = classDecl->superClasses()[1]) {
             // if the class does not extend any class, it extends the object class
             inheritanceMap_[classDecl].insert(
-                  dynamic_cast<ast::ClassDecl*>(objectClass->decl()));
+                  dynamic_cast<ast::ClassDecl const*>(objectClass->decl()));
          }
 
          // check if interfaces are valid
@@ -143,14 +145,15 @@ void HierarchyChecker::checkInheritance() {
 
             // check that the interface is not a class
             auto interfaceDecl =
-                  dynamic_cast<ast::InterfaceDecl*>(interface->decl());
+                  dynamic_cast<ast::InterfaceDecl const*>(interface->decl());
             if(!interfaceDecl) {
                diag.ReportError(classDecl->location())
                      << "A class must not implement a class" << classDecl->name();
             }
             inheritanceMap_[classDecl].insert(interfaceDecl);
          }
-      } else if(auto interfaceDecl = dynamic_cast<ast::InterfaceDecl*>(body)) {
+      } else if(auto interfaceDecl =
+                      dynamic_cast<ast::InterfaceDecl const*>(body)) {
          // no duplicate interfaces
          for(auto extends : interfaceDecl->extends()) {
             for(auto other : interfaceDecl->extends()) {
@@ -163,7 +166,7 @@ void HierarchyChecker::checkInheritance() {
             }
             // check that the interface is not a class
             auto superInterface =
-                  dynamic_cast<ast::InterfaceDecl*>(extends->decl());
+                  dynamic_cast<ast::InterfaceDecl const*>(extends->decl());
             if(!superInterface) {
                diag.ReportError(superInterface->location())
                      << "A interface must not extend a class"
@@ -183,10 +186,10 @@ void HierarchyChecker::checkInheritance() {
 }
 
 void HierarchyChecker::checkClassMethod(
-      ast::ClassDecl* classDecl,
-      std::pmr::vector<ast::MethodDecl*>& inheritedMethods) {
-   std::pmr::vector<ast::MethodDecl*> allMethods;
-   std::pmr::vector<ast::MethodDecl*> inheritedNotOverriden;
+      ast::ClassDecl const* classDecl,
+      std::pmr::vector<ast::MethodDecl const*>& inheritedMethods) {
+   std::pmr::vector<ast::MethodDecl const*> allMethods;
+   std::pmr::vector<ast::MethodDecl const*> inheritedNotOverriden;
    // check for duplicate methods
    for(auto method : classDecl->methods()) {
       allMethods.emplace_back(method);
@@ -214,9 +217,9 @@ void HierarchyChecker::checkClassMethod(
    }
 
    // check for method replacement
-   for(auto* other : inheritedMethods) {
+   for(auto const* other : inheritedMethods) {
       bool isOverriden = false;
-      for(auto* method : classDecl->methods()) {
+      for(auto const* method : classDecl->methods()) {
          if(!isSameMethodSignature(method, other)) continue;
          isOverriden = true;
          if(method->returnTy() != other->returnTy()) {
@@ -283,7 +286,7 @@ void HierarchyChecker::checkClassMethod(
       }
    }
    // record the inherited methods
-   classDecl->setInheritedMethods(allMethods);
+   setInheritedMethods(classDecl, allMethods);
 
    // print debug information
    if(diag.Verbose(2)) {
@@ -293,7 +296,7 @@ void HierarchyChecker::checkClassMethod(
    }
 }
 
-void HierarchyChecker::checkClassConstructors(ast::ClassDecl* classDecl) {
+void HierarchyChecker::checkClassConstructors(ast::ClassDecl const* classDecl) {
    for(auto constructor : classDecl->constructors()) {
       for(auto other : classDecl->constructors()) {
          if(constructor == other) continue;
@@ -308,9 +311,9 @@ void HierarchyChecker::checkClassConstructors(ast::ClassDecl* classDecl) {
 }
 
 void HierarchyChecker::checkInterfaceMethod(
-      ast::InterfaceDecl* interfaceDecl,
-      std::pmr::vector<ast::MethodDecl*>& inheritedMethods) {
-   std::pmr::vector<ast::MethodDecl*> allMethods;
+      ast::InterfaceDecl const* interfaceDecl,
+      std::pmr::vector<ast::MethodDecl const*>& inheritedMethods) {
+   std::pmr::vector<ast::MethodDecl const*> allMethods;
 
    for(auto method : interfaceDecl->methods()) {
       allMethods.emplace_back(method);
@@ -326,8 +329,8 @@ void HierarchyChecker::checkInterfaceMethod(
    }
 
    // for some reason we have to check against the object class
-   auto objectClass =
-         dynamic_cast<ast::ClassDecl*>(interfaceDecl->objectSuperclass()->decl());
+   auto objectClass = dynamic_cast<ast::ClassDecl const*>(
+         interfaceDecl->objectSuperclass()->decl());
    for(auto method : interfaceDecl->methods()) {
       for(auto other : objectClass->methods()) {
          if(!isSameMethodSignature(method, other)) continue;
@@ -381,7 +384,7 @@ void HierarchyChecker::checkInterfaceMethod(
    }
 
    // record the inherited methods
-   interfaceDecl->setInheritedMethods(allMethods);
+   setInheritedMethods(interfaceDecl, allMethods);
 
    // print debug information
    if(diag.Verbose(2)) {

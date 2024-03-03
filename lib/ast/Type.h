@@ -4,8 +4,8 @@
 
 #include "ast/AstNode.h"
 #include "parsetree/ParseTree.h"
-#include "utils/EnumMacros.h"
 #include "semantic/NameResolver.h"
+#include "utils/EnumMacros.h"
 
 namespace ast {
 
@@ -40,7 +40,7 @@ public:
    F(Int)                  \
    F(Char)                 \
    F(Boolean)              \
-   F(String)               
+   F(String)
    DECLARE_ENUM(Kind, BASIC_TYPE_LIST)
 private:
    DECLARE_STRING_TABLE(Kind, kind_strings, BASIC_TYPE_LIST)
@@ -102,9 +102,7 @@ public:
       }
       return false;
    }
-   bool isNumeric() const override { 
-      return kind != BuiltInType::Kind::Boolean; 
-   }
+   bool isNumeric() const override { return kind != BuiltInType::Kind::Boolean; }
    bool isBoolean() const override { return kind == BuiltInType::Kind::Boolean; }
    bool isNull() const override { return kind == BuiltInType::Kind::NoneType; }
    bool isString() const override { return kind == BuiltInType::Kind::String; }
@@ -123,21 +121,21 @@ protected:
 public:
    /// @brief Reference types must be resolved when created like this
    /// @param decl The declaration that this reference type refers to.
-   ReferenceType(Decl* decl, SourceRange loc) : Type{loc}, decl_{decl} {
+   ReferenceType(Decl const* decl, SourceRange loc) : Type{loc}, decl_{decl} {
       assert(decl && "Declaration cannot be null for reference type");
    }
    /// @brief TODO: Implement this.
    virtual string_view toString() const override { return "ReferenceType"; }
    /// @brief The reference type is resolved if it has a declaration.
    bool isResolved() const override { return decl_ != nullptr; }
-   auto decl() const { return decl_; }
+   Decl const* decl() const { return decl_; }
    /// @brief This does nothing as a reference type is always resolved.
    virtual void resolve(semantic::NameResolver&) override {
       assert(isResolved() && "Type is not resolved");
    }
 
    /// @brief Resolves the type to a declaration if it is an unresolved type.
-   void resolveInternal(Decl* decl) {
+   void resolveInternal(Decl const* decl) {
       assert(!isResolved() && "Type already resolved");
       decl_ = decl;
    }
@@ -150,8 +148,8 @@ public:
       }
       return false;
    }
-   bool isNumeric() const override final { 
-      if (auto builtIn = getAsBuiltIn()) {
+   bool isNumeric() const override final {
+      if(auto builtIn = getAsBuiltIn()) {
          return builtIn->isNumeric();
       }
       return false;
@@ -159,7 +157,7 @@ public:
    bool isBoolean() const override final { return false; }
    bool isNull() const override { return false; }
    bool isString() const override final {
-      if (auto builtIn = getAsBuiltIn()) {
+      if(auto builtIn = getAsBuiltIn()) {
          return builtIn->isString();
       }
       return false;
@@ -169,7 +167,7 @@ public:
     * @brief If the current reference type is a built-in type, then returns
     * the built-in type. For ex. if the reference type is java.lang.Integer,
     * this will return the "int" built-in type (ast::Node).
-    * 
+    *
     * @return ast::BuiltInType* Returns the built-in type if the reference type
     * is a built-in type. Otherwise, returns nullptr.
     */
@@ -179,7 +177,7 @@ public:
    }
 
 protected:
-   Decl* decl_;
+   Decl const* decl_;
 };
 
 /**
@@ -277,30 +275,28 @@ public:
    bool isString() const override { return false; }
 };
 
-
 class MethodType final : public Type {
-   ReturnType *returnType;
+   ReturnType* returnType;
    pmr_vector<Type*> paramTypes;
 
-   public:
-      MethodType(ReturnType* returnType, array_ref<Type*> paramTypes, SourceRange loc = {})
-            : Type{loc}, returnType{returnType}, paramTypes{paramTypes} {}
+public:
+   MethodType(ReturnType* returnType, array_ref<Type*> paramTypes,
+              SourceRange loc = {})
+         : Type{loc}, returnType{returnType}, paramTypes{paramTypes} {}
 
-      string_view toString() const override { 
-         return "MethodType"; 
-      }
-      bool isResolved() const override { return true; }
+   string_view toString() const override { return "MethodType"; }
+   bool isResolved() const override { return true; }
 
    bool operator==(const Type& other) const override {
       if(auto otherMethod = dynamic_cast<const MethodType*>(&other)) {
-         if (*returnType != *otherMethod->returnType) {
+         if(*returnType != *otherMethod->returnType) {
             return false;
          }
-         if (paramTypes.size() != otherMethod->paramTypes.size()) {
+         if(paramTypes.size() != otherMethod->paramTypes.size()) {
             return false;
          }
-         for (size_t i = 0; i < paramTypes.size(); i++) {
-            if (*paramTypes[i] != *otherMethod->paramTypes[i]) {
+         for(size_t i = 0; i < paramTypes.size(); i++) {
+            if(*paramTypes[i] != *otherMethod->paramTypes[i]) {
                return false;
             }
          }
