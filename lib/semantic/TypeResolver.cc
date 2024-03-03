@@ -160,12 +160,10 @@ Type const* ExprTypeResolver::mapValue(ExprValue& node) const {
    assert(node.decl() && "ExprValue has no decl");
    
    if(auto classDecl = dynamic_cast<const ast::ClassDecl*>(node.decl())) {
-      // new ReferenceType(classDecl, loc_);
       return alloc.new_object<ast::ReferenceType>(classDecl, loc_); // fixme(owen, larry): tofix
    } 
    
    if(auto interfaceDecl = dynamic_cast<const ast::InterfaceDecl*>(node.decl())) {
-      // new ReferenceType(interfaceDecl, loc_); 
       return alloc.new_object<ast::ReferenceType>(interfaceDecl, loc_); // fixme(owen, larry): tofix
    } 
 
@@ -371,6 +369,7 @@ Type const* ExprTypeResolver::evalNewArray(const Type* array,
    } else if (auto builtInType = dynamic_cast<const BuiltInType*>(array)) {
       copiedType = alloc.new_object<BuiltInType>(builtInType->getKind(), loc_);
    }
+   assert(copiedType && "Invalid type for base type of array");
    auto arrayType = alloc.new_object<ArrayType>(alloc, copiedType, loc_);
 
    if(!size->isNumeric()) {

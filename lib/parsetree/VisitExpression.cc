@@ -296,7 +296,7 @@ int ptv::visitArgumentList(Node* node, ExprNodeList& ops) {
       args = 1;
       ops.concat(visitExprChild(node->child(0)));
    } else if(node->num_children() == 2) {
-      args = visitArgumentList(node->child(0), ops);
+      args = visitArgumentList(node->child(0), ops) + 1;
       ops.concat(visitExprChild(node->child(1)));
    }
    return args;
