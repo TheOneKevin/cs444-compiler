@@ -1,6 +1,8 @@
 #include "semantic/TypeResolver.h"
 
 #include "ast/AstNode.h"
+#include "ast/Decl.h"
+#include "ast/DeclContext.h"
 #include "ast/Expr.h"
 #include "ast/ExprNode.h"
 #include "ast/Type.h"
@@ -104,6 +106,7 @@ bool ExprTypeResolver::isAssignableTo(const Type* lhs, const Type* rhs) const {
          // }
       }
    }
+   return false;
 }
 
 bool ExprTypeResolver::isValidCast(const Type* exprType, const Type* castType) const {
@@ -146,14 +149,43 @@ bool ExprTypeResolver::isValidCast(const Type* exprType, const Type* castType) c
 }
 
 Type const* ExprTypeResolver::mapValue(ExprValue& node) const {
-   // FIXME(larry) what about other subclasses of exprvalue?
+   assert(node.isResolved() && "ExprValue is not resolved");
    if(auto literal = dynamic_cast<ast::exprnode::LiteralNode*>(&node)) {
       return literal->type();
-   }
+   } 
    if(auto type = dynamic_cast<ast::exprnode::TypeNode*>(&node)) {
       return type->type();
    }
-   return nullptr;
+
+   assert(node.decl() && "ExprValue has no decl");
+   
+   if(auto classDecl = dynamic_cast<const ast::ClassDecl*>(node.decl())) {
+      // new ReferenceType(classDecl, loc_);
+      return alloc.new_object<ast::ReferenceType>(classDecl, loc_); // fixme(owen, larry): tofix
+   } 
+   
+   if(auto interfaceDecl = dynamic_cast<const ast::InterfaceDecl*>(node.decl())) {
+      // new ReferenceType(interfaceDecl, loc_); 
+      return alloc.new_object<ast::ReferenceType>(interfaceDecl, loc_); // fixme(owen, larry): tofix
+   } 
+
+   if (auto methodDecl = dynamic_cast<const ast::MethodDecl*>(node.decl())) {
+      std::pmr::vector<Type*> paramsTypes;
+
+      for (auto param : methodDecl->parameters()) {
+         paramsTypes.push_back(param->type());
+      }
+
+      auto returnType = methodDecl->returnTy();
+      
+      return alloc.new_object<ast::MethodType>(&returnType, paramsTypes, loc_);
+   } 
+
+   if (auto typedDecl = dynamic_cast<const ast::TypedDecl*>(node.decl())) {
+      return typedDecl->type();
+   }
+   
+   throw diag.ReportError(loc_) << "Invalid value type";
 }
 
 Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
@@ -260,7 +292,7 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
       }
 
       default:
-         return nullptr;
+         throw diag.ReportError(loc_) << "Invalid binary operation";
    }
 }
 
@@ -285,7 +317,7 @@ Type const* ExprTypeResolver::evalUnaryOp(UnaryOp& op, const Type* rhs) const {
                   << "Invalid type for unary not, non-boolean";
          }
       default:
-         return nullptr;
+         throw diag.ReportError(loc_) << "Invalid unary operation";
    }
 }
 
@@ -309,7 +341,8 @@ Type const* ExprTypeResolver::evalMethodCall(const Type* method,
       }
    }
    
-   return methodType->getReturnType();
+   // fixme(owen, larry) do we want to return nullptr when the type is void?
+   return methodType->getReturnType()->type;
 }
 
 Type const* ExprTypeResolver::evalNewObject(const Type* object,
@@ -326,14 +359,20 @@ Type const* ExprTypeResolver::evalNewObject(const Type* object,
       }
    }
 
-   return constructor;
+   return constructor->getReturnType()->type;
 }
 
 Type const* ExprTypeResolver::evalNewArray(const Type* array,
                                            const Type* size) const {
-   auto arrayType = dynamic_cast<const ArrayType*>(array);
-   assert(arrayType && "Not an array type");
-   
+           
+   Type* copiedType = nullptr;
+   if (auto refType = dynamic_cast<const ReferenceType*>(array)) {
+      copiedType = alloc.new_object<ReferenceType>(refType->decl(), loc_);
+   } else if (auto builtInType = dynamic_cast<const BuiltInType*>(array)) {
+      copiedType = alloc.new_object<BuiltInType>(builtInType->getKind(), loc_);
+   }
+   auto arrayType = alloc.new_object<ArrayType>(alloc, copiedType, loc_);
+
    if(!size->isNumeric()) {
       throw diag.ReportError(loc_) << "Invalid type for array size, non-numeric";
    }

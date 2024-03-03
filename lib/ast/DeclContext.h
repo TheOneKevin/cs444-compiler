@@ -177,23 +177,6 @@ private:
 
 class MethodDecl final : public DeclContext, public Decl {
 public:
-   /// @brief Represents the return type of a method. This wraps ast::Type
-   /// to allow for void return types (we don't consider void a type).
-   struct ReturnType {
-      const ast::Type* const type;
-      bool operator==(ReturnType const& other) const {
-         // If one or both are null, then they are equal if both are null.
-         if(type == nullptr || other.type == nullptr) return type == other.type;
-         // Otherwise, dereference and compare.
-         return *type == *other.type;
-      }
-
-   private:
-      ReturnType(ast::Type const* type) : type{type} {}
-      friend class MethodDecl;
-   };
-
-public:
    MethodDecl(BumpAllocator& alloc, Modifiers modifiers, SourceRange location,
               string_view name, Type* returnType, array_ref<VarDecl*> parameters,
               bool isConstructor, Stmt* body) noexcept

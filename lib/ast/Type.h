@@ -11,6 +11,24 @@ namespace ast {
 
 class ClassDecl;
 class InterfaceDecl;
+class MethodDecl;
+
+/// @brief Represents the return type of a method. This wraps ast::Type
+/// to allow for void return types (we don't consider void a type).
+struct ReturnType {
+   const ast::Type* const type;
+   bool operator==(ReturnType const& other) const {
+      // If one or both are null, then they are equal if both are null.
+      if(type == nullptr || other.type == nullptr) return type == other.type;
+      // Otherwise, dereference and compare.
+      return *type == *other.type;
+   }
+   bool operator!=(ReturnType const& other) const { return !(*this == other); }
+
+private:
+   ReturnType(ast::Type const* type) : type{type} {}
+   friend class MethodDecl;
+};
 
 /// @brief Represents a primitive type in the Java language.
 class BuiltInType final : public Type {
@@ -84,15 +102,11 @@ public:
       }
       return false;
    }
-   [[deprecated("Use getKind() instead")]]
    bool isNumeric() const override { 
       return kind != BuiltInType::Kind::Boolean; 
    }
-   [[deprecated("Use getKind() instead")]]
    bool isBoolean() const override { return kind == BuiltInType::Kind::Boolean; }
-   [[deprecated("Use getKind() instead")]]
    bool isNull() const override { return kind == BuiltInType::Kind::NoneType; }
-   [[deprecated("Use getKind() instead")]]
    bool isString() const override { return kind == BuiltInType::Kind::String; }
 };
 
@@ -265,28 +279,28 @@ public:
 
 
 class MethodType final : public Type {
-   Type* returnType;
+   ReturnType *returnType;
    pmr_vector<Type*> paramTypes;
 
-public:
-   MethodType(Type* returnType, array_ref<Type*> paramTypes, SourceRange loc = {})
-         : Type{loc}, returnType{returnType}, paramTypes{paramTypes} {}
+   public:
+      MethodType(ReturnType* returnType, array_ref<Type*> paramTypes, SourceRange loc = {})
+            : Type{loc}, returnType{returnType}, paramTypes{paramTypes} {}
 
-   string_view toString() const override { 
-      return "MethodType"; 
-   }
-   bool isResolved() const override { return true; }
+      string_view toString() const override { 
+         return "MethodType"; 
+      }
+      bool isResolved() const override { return true; }
 
    bool operator==(const Type& other) const override {
-      if(auto otherArrayType = dynamic_cast<const MethodType*>(&other)) {
-         if (*returnType != *otherArrayType->returnType) {
+      if(auto otherMethod = dynamic_cast<const MethodType*>(&other)) {
+         if (*returnType != *otherMethod->returnType) {
             return false;
          }
-         if (paramTypes.size() != otherArrayType->paramTypes.size()) {
+         if (paramTypes.size() != otherMethod->paramTypes.size()) {
             return false;
          }
          for (size_t i = 0; i < paramTypes.size(); i++) {
-            if (*paramTypes[i] != *otherArrayType->paramTypes[i]) {
+            if (*paramTypes[i] != *otherMethod->paramTypes[i]) {
                return false;
             }
          }
@@ -295,7 +309,7 @@ public:
       return false;
    }
 
-   Type* getReturnType() const { return returnType; }
+   ReturnType* getReturnType() const { return returnType; }
    pmr_vector<Type*> getParamTypes() const { return paramTypes; }
 
    bool isNumeric() const override { return false; }

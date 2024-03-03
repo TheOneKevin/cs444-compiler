@@ -58,10 +58,8 @@ private:
    // lhs to rhs (call this latter type T) by assignment conversion (§5.2);
    bool isAssignableTo(const Type* lhs, const Type* rhs) const;
 
-   // @brieg check if it is valid to cast exprType to castType
+   // @brief check if it is valid to cast exprType to castType
    bool isValidCast(const Type* exprType, const Type* castType) const;
-
-   // (castType) {exprType: a + b} 
 };
 
 } // namespace semantic

@@ -189,18 +189,13 @@ public:
    utils::Generator<AstNode const*> children() const override final {
       co_yield nullptr;
    }
-   [[deprecated]]
+
    virtual bool isInvalid() const { return false; }
-   [[deprecated]]
    virtual bool isNumeric() const = 0;
-   [[deprecated]]
    virtual bool isBoolean() const = 0;
-   [[deprecated]]
    virtual bool isNull() const = 0;
-   [[deprecated]]
    virtual bool isString() const = 0;
 
-   [[deprecated]]
    ast::ClassDecl const* getAsClass() const { return nullptr; }
 
 private:
