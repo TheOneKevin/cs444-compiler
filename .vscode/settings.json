@@ -30,7 +30,7 @@
   "C_Cpp.default.compilerPath": "/usr/bin/clang++",
   "C_Cpp.autoAddFileAssociations": false,
   "C_Cpp.autocomplete": "disabled",
-  "C_Cpp.intelliSenseEngine": "default",
+  "C_Cpp.intelliSenseEngine": "disabled",
   "clangd.detectExtensionConflicts": false,
   "clangd.restartAfterCrash": true,
   "C_Cpp.hover": "disabled",

@@ -5,10 +5,12 @@
 
 #include "ast/AstNode.h"
 #include "ast/DeclContext.h"
+#include "ast/Expr.h"
 #include "ast/ExprEvaluator.h"
 #include "ast/ExprNode.h"
 #include "diagnostics/Diagnostics.h"
-#include "semantic/TypeResolver.h"
+#include "semantic/ExprTypeResolver.h"
+#include "semantic/Semantic.h"
 #include "utils/BumpAllocator.h"
 
 namespace semantic {
@@ -46,32 +48,36 @@ struct ExprNameWrapper {
    };
    // Build an unresolved wrapper of Type given a name node
    ExprNameWrapper(Type type, ast::exprnode::MemberName* node)
-         : type{type}, node{node}, resolution{std::nullopt}, prev{std::nullopt} {}
+         : node{node},
+           prev_{std::nullopt},
+           type_{type},
+           resolution_{std::nullopt} {}
    // Reclassifies the name as a type name based on JLS 6.5.2
-   void reclassify(Type type, ast::Decl const* resolution) {
-      this->resolution = resolution;
-      this->type = type;
+   void reclassify(Type type, ast::Decl const* resolution,
+                   ast::Type const* typeResolution) {
+      this->resolution_ = resolution;
+      this->type_ = type;
+      this->typeResolution_ = typeResolution;
    }
    // Reclassifies the name as a package name based on JLS 6.5.2
    void reclassify(Type type, NameResolver::Pkg const* resolution) {
-      this->resolution = resolution;
-      this->type = type;
+      this->resolution_ = resolution;
+      this->type_ = type;
+      this->typeResolution_ = nullptr;
    }
-   // Resolves the underlying name to a declaration
-   void resolve(ast::Decl const* resolution) { this->resolution = resolution; }
    // Function to verify invariants of the wrapper
    void verifyInvariants(Type expectedTy) const;
    // Get the previous value of the wrapper as a wrapper
    ExprNameWrapper* prevAsWrapper() const {
-      assert(prev.has_value() && "No previous value");
-      assert(std::holds_alternative<ExprNameWrapper*>(prev.value()) &&
+      assert(prev_.has_value() && "No previous value");
+      assert(std::holds_alternative<ExprNameWrapper*>(prev_.value()) &&
              "Previous value is not a wrapper");
-      return std::get<ExprNameWrapper*>(prev.value());
+      return std::get<ExprNameWrapper*>(prev_.value());
    }
    // Get the previous value of the wrapper as a list of expressions
    ExprNameWrapper* prevIfWrapper() const {
-      assert(prev.has_value() && "No previous value");
-      if(auto* list = std::get_if<ExprNameWrapper*>(&prev.value())) return *list;
+      assert(prev_.has_value() && "No previous value");
+      if(auto* list = std::get_if<ExprNameWrapper*>(&prev_.value())) return *list;
       return nullptr;
    }
    /**
@@ -84,11 +90,32 @@ struct ExprNameWrapper {
     * @return ast::Decl const* Either a decl or a type represented as decl
     */
    ast::Decl const* prevAsDecl(ExprTypeResolver& TR, NameResolver& NR) const;
+   // Gets the "type of name" the current particle has been resolved to
+   Type type() const { return type_; }
+   // Gets the resolution of the name particle (must exist). The resolution
+   // will be either a package or a declaration.
+   auto resolution() const { return resolution_.value(); }
+   // Gets the type of the resolution of the name particle.
+   auto typeResolution() const { return typeResolution_; }
+   // Sets the previous type of the wrapper
+   void setPrev(std::optional<PrevTy> prev) {
+      // Make sure if prev is a wrapper, it is not nullptr
+      if(prev.has_value())
+         if(auto wrapper = std::get_if<ExprNameWrapper*>(&prev.value()))
+            assert(*wrapper && "Previous value is nullptr");
+      prev_ = prev;
+   }
+   std::optional<PrevTy> prev() const { return prev_; }
 
-   Type type;
+public:
    ast::exprnode::MemberName* node;
-   NameResolver::ConstImportOpt resolution;
-   std::optional<PrevTy> prev;
+
+   // Private means the semantics of the wrapper must NOT be changed!
+private:
+   Type type_;
+   NameResolver::ConstImportOpt resolution_;
+   ast::Type const* typeResolution_;
+   std::optional<PrevTy> prev_;
 };
 
 } // namespace internal
@@ -104,9 +131,10 @@ class ExprResolver final : ast::ExprEvaluator<internal::ExprResolverTy> {
 public:
    ExprResolver(diagnostics::DiagnosticEngine& diag, Heap* heap)
          : diag{diag}, heap{heap}, alloc{heap} {}
-   void Init(ExprTypeResolver* TR, NameResolver* NR) {
+   void Init(ExprTypeResolver* TR, NameResolver* NR, ast::Semantic* Sema) {
       this->TR = TR;
       this->NR = NR;
+      this->Sema = Sema;
    }
    void Resolve(ast::LinkingUnit* lu);
 
@@ -117,6 +145,7 @@ private:
       // Call the base class implementation
       return ast::ExprEvaluator<internal::ExprResolverTy>::EvaluateList(subexpr);
    }
+   ast::ExprNodeList evaluateAsList(ast::Expr*);
 
    void resolveRecursive(ast::AstNode* node);
 
@@ -191,6 +220,7 @@ private:
    ast::DeclContext const* lctx_;
    semantic::NameResolver* NR;
    semantic::ExprTypeResolver* TR;
+   ast::Semantic* Sema;
    mutable Heap* heap;
    mutable BumpAllocator alloc;
 };

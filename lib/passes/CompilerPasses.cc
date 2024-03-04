@@ -11,7 +11,7 @@
 #include "semantic/HierarchyChecker.h"
 #include "semantic/NameResolver.h"
 #include "semantic/Semantic.h"
-#include "semantic/TypeResolver.h"
+#include "semantic/ExprTypeResolver.h"
 #include "utils/BumpAllocator.h"
 #include "utils/CLI11.h"
 #include "utils/PassManager.h"
@@ -404,7 +404,7 @@ public:
       auto& Sema = GetPass<AstContextPass>().Sema();
       semantic::ExprResolver ER{PM().Diag(), NewHeap()};
       semantic::ExprTypeResolver TR{PM().Diag(), NewHeap(), Sema};
-      ER.Init(&TR, &NR);
+      ER.Init(&TR, &NR, &Sema);
       TR.Init(&HC, &NR);
       try {
          ER.Resolve(LU);

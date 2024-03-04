@@ -395,8 +395,8 @@ void NameResolver::resolveExpr(ast::Expr* expr)  {
    for(auto node : expr->mut_nodes()) {
       auto tyNode = dyn_cast<ast::exprnode::TypeNode>(node);
       if(!tyNode) continue;
-      if(tyNode->mut_type()->isResolved()) continue;
-      tyNode->mut_type()->resolve(*this);
+      if(tyNode->isTypeResolved()) continue;
+      tyNode->resolveUnderlyingType(*this);
    }
 }
 
@@ -516,40 +516,6 @@ NameResolver::ConstImportOpt NameResolver::GetImport(
    } else {
       return static_cast<Pkg const*>(std::get<Pkg*>(it2->second));
    }
-}
-
-ast::ClassDecl const* NameResolver::GetTypeAsClass(ast::Type const* ty) const {
-   assert(ty && "Type should not be null");
-   assert(ty->isResolved() && "Type should be resolved");
-   // If the type is a reference type, then we can grab the declaration
-   if(auto refTy = dyn_cast<ast::ReferenceType const*>(ty)) {
-      return cast<ast::ClassDecl const*>(refTy->decl());
-   }
-   // If the type is a built-in type, then we can grab the Java class
-   if(auto builtInTy = dyn_cast<ast::BuiltInType>(ty)) {
-      switch(builtInTy->getKind()) {
-         case ast::BuiltInType::Kind::Boolean:
-            return GetJavaLang().Boolean;
-         case ast::BuiltInType::Kind::Byte:
-            return GetJavaLang().Byte;
-         case ast::BuiltInType::Kind::Char:
-            return GetJavaLang().Character;
-         case ast::BuiltInType::Kind::Short:
-            return GetJavaLang().Short;
-         case ast::BuiltInType::Kind::Int:
-            return GetJavaLang().Integer;
-         case ast::BuiltInType::Kind::String:
-            return GetJavaLang().String;
-         default:
-            return nullptr;
-      }
-   }
-   // If the type is an array type, then we can grab the array prototype
-   if(auto arrayTy = dyn_cast<ast::ArrayType>(ty)) {
-      return arrayPrototype_;
-   }
-   // FIXME(kevin): How do we handle interfaces here?
-   return nullptr;
 }
 
 } // namespace semantic

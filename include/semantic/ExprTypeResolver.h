@@ -8,6 +8,7 @@
 #include "diagnostics/Diagnostics.h"
 #include "diagnostics/Location.h"
 #include "semantic/HierarchyChecker.h"
+#include "semantic/NameResolver.h"
 #include "semantic/Semantic.h"
 #include "utils/BumpAllocator.h"
 

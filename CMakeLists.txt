@@ -18,7 +18,24 @@ if (${FORCE_COLORED_OUTPUT})
 endif()
 
 # Set debug mode flags
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -Wpedantic -Wno-unused-function -Wno-unused-private-field -g -gdwarf-4 -O0 -DDEBUG")
+string(CONCAT CMAKE_CXX_FLAGS_DEBUG
+    " ${CMAKE_CXX_FLAGS_DEBUG}"
+    # The warnings to enable and ignore
+    " -Wall"
+    " -Wextra"
+    " -Wpedantic"
+    " -Wno-unused-function"
+    " -Wno-unused-private-field"
+    # Emit debug symbols
+    " -g"
+    " -gdwarf-4"
+    " -O0"
+    " -DDEBUG"
+    # Add the sanitizers too
+    " -fsanitize=undefined"
+    " -fsanitize=address"
+    " -fno-omit-frame-pointer"
+)
 
 # Set release mode flags
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -g")
@@ -86,7 +103,7 @@ add_library(OLKCompilerLib
     "lib/semantic/Semantic.cc"
     "lib/semantic/NameResolver.cc"
     "lib/semantic/HierarchyChecker.cc"
-    "lib/semantic/TypeResolver.cc"
+    "lib/semantic/ExprTypeResolver.cc"
     "lib/semantic/ExprResolver.cc"
     # grammar
     "lib/grammar/Joos1W.cc"

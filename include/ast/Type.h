@@ -4,7 +4,6 @@
 
 #include "ast/AstNode.h"
 #include "parsetree/ParseTree.h"
-#include "semantic/NameResolver.h"
 #include "utils/EnumMacros.h"
 
 namespace ast {
@@ -106,6 +105,7 @@ public:
    bool isBoolean() const override { return kind == BuiltInType::Kind::Boolean; }
    bool isNull() const override { return kind == BuiltInType::Kind::NoneType; }
    bool isString() const override { return kind == BuiltInType::Kind::String; }
+   bool isBuiltIn() const override { return true; }
 };
 
 /**
@@ -130,7 +130,7 @@ public:
    bool isResolved() const override { return decl_ != nullptr; }
    Decl const* decl() const { return decl_; }
    /// @brief This does nothing as a reference type is always resolved.
-   virtual void resolve(semantic::NameResolver&) override {
+   virtual void resolve(TypeResolver&) override {
       assert(isResolved() && "Type is not resolved");
    }
 
@@ -147,33 +147,6 @@ public:
          return decl_ == otherType->decl_;
       }
       return false;
-   }
-   bool isNumeric() const override final {
-      if(auto builtIn = getAsBuiltIn()) {
-         return builtIn->isNumeric();
-      }
-      return false;
-   }
-   bool isBoolean() const override final { return false; }
-   bool isNull() const override { return false; }
-   bool isString() const override final {
-      if(auto builtIn = getAsBuiltIn()) {
-         return builtIn->isString();
-      }
-      return false;
-   }
-
-   /**
-    * @brief If the current reference type is a built-in type, then returns
-    * the built-in type. For ex. if the reference type is java.lang.Integer,
-    * this will return the "int" built-in type (ast::Node).
-    *
-    * @return ast::BuiltInType* Returns the built-in type if the reference type
-    * is a built-in type. Otherwise, returns nullptr.
-    */
-   ast::BuiltInType* getAsBuiltIn() const {
-      // FIXME(everyone): Should this be part of the operator==?
-      return nullptr;
    }
 
 protected:
@@ -230,7 +203,7 @@ public:
    void lock() const { locked_ = true; }
 
    /// @brief Resolves the underlying reference type to a declaration.
-   void resolve(semantic::NameResolver& x) override {
+   void resolve(TypeResolver& x) override {
       assert(!isInvalid() && "Attempted to resolve invalid type");
       x.ResolveType(this);
    }
@@ -256,7 +229,7 @@ public:
    }
    string_view toString() const override { return name; }
    bool isResolved() const override { return elementType->isResolved(); }
-   void resolve(semantic::NameResolver& x) override {
+   void resolve(TypeResolver& x) override {
       // Resolve only if the element type is an unresolved type.
       if(auto unresTy = dyn_cast<UnresolvedType>(elementType)) {
          if(!elementType->isResolved()) unresTy->resolve(x);
@@ -269,10 +242,7 @@ public:
       return false;
    }
    Type* getElementType() const { return elementType; }
-   bool isNumeric() const override { return false; }
-   bool isBoolean() const override { return false; }
-   bool isNull() const override { return false; }
-   bool isString() const override { return false; }
+   bool isArray() const override { return true; }
 };
 
 class MethodType final : public Type {
@@ -307,10 +277,5 @@ public:
 
    ReturnType* getReturnType() const { return returnType; }
    pmr_vector<Type*> getParamTypes() const { return paramTypes; }
-
-   bool isNumeric() const override { return false; }
-   bool isBoolean() const override { return false; }
-   bool isNull() const override { return false; }
-   bool isString() const override { return false; }
 };
 } // namespace ast

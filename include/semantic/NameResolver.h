@@ -8,7 +8,6 @@
 #include <variant>
 
 #include "ast/AstNode.h"
-#include "ast/Expr.h"
 #include "diagnostics/Diagnostics.h"
 #include "utils/BumpAllocator.h"
 
@@ -22,11 +21,12 @@ class ClassDecl;
 class MethodDecl;
 class ReferenceType;
 class Semantic;
+class Expr;
 } // namespace ast
 
 namespace semantic {
 
-class NameResolver {
+class NameResolver final : public ast::TypeResolver {
 public:
    struct Pkg;
    using ConstImport = std::variant<ast::Decl const*, Pkg const*>;
@@ -105,7 +105,7 @@ public:
     *
     * @param type The unresolved type to resolve.
     */
-   void ResolveType(ast::UnresolvedType* type);
+   void ResolveType(ast::UnresolvedType* type) override;
 
    /**
     * @brief Get an import object from the import table of the given
@@ -128,17 +128,11 @@ public:
     * @return auto An anonymous struct with all the java.lang.* types.
     */
    auto GetJavaLang() const { return java_lang_; }
-
    /**
-    * @brief Get the type as a class representation. i.e., char -> java.lang.Char
-    * and int[] -> java.lang.Array. If the type is already a class, then it is
-    * returned as-is.
-    * 
-    * @param ty The type to get as a class.
-    * @return ast::ClassDecl const* The class representation of the type.
+    * @brief Get the Array Prototype object. This is a decl representing
+    * the prototype of the array class.
     */
-   ast::ClassDecl const* GetTypeAsClass(ast::Type const* ty) const;
-   // FIXME(kevin): What about interfaces here?
+   auto GetArrayPrototype() const { return arrayPrototype_; }
 
 public:
    /// @brief Dumps the symbol and import tables to the output stream.

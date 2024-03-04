@@ -127,6 +127,7 @@ public:
    ExprNode* mut_head() const { return head_; }
 
    void dump() const;
+   std::ostream& print(std::ostream&) const;
 
 private:
    void check_invariants() const;
@@ -148,26 +149,30 @@ namespace ast::exprnode {
 class ExprValue : public ExprNode {
 public:
    ExprValue() : decl_{nullptr}, type_{nullptr} {}
-   explicit ExprValue(ast::Type* type) : decl_{nullptr}, type_{type} {}
+   explicit ExprValue(ast::Type const* type) : decl_{nullptr}, type_{type} {}
    ast::Decl const* decl() { return decl_; }
    virtual bool isDeclResolved() const { return decl_ != nullptr; }
    bool isTypeResolved() const { return type_ != nullptr; }
-   void resolveDecl(ast::Decl const* decl) {
+   void resolveDeclAndType(ast::Decl const* decl, ast::Type const* type) {
       assert(!decl_ && "Tried to resolve expression decl twice");
       decl_ = decl;
-   }
-   void resolveType(ast::Type* type) {
       assert(!type_ && "Tried to resolve expression type twice");
-      assert(type->isResolved() &&
+      assert((!type || type->isResolved()) &&
              "Tried to resolve expression with unresolved type");
       type_ = type;
    }
    ast::Type const* type() const { return type_; }
-   ast::Type* mut_type() { return type_; }
+
+protected:
+   ast::Type const* set_type(ast::Type const* type) {
+      assert(!type_ && "Tried to set type twice");
+      type_ = type;
+      return type;
+   }
 
 private:
    ast::Decl const* decl_;
-   ast::Type* type_;
+   ast::Type const* type_;
 };
 
 class MemberName : public ExprValue {
@@ -188,15 +193,25 @@ public:
 };
 
 class ThisNode final : public ExprValue {
-   // FIXME(kevin): ThisNode requires decl which points to the class decl
    std::ostream& print(std::ostream& os) const override;
 };
 
 class TypeNode final : public ExprValue {
 public:
-   TypeNode(Type* type) : ExprValue{type} {}
+   TypeNode(Type* type) : ExprValue{nullptr}, unres_type_{type} {}
+   void resolveUnderlyingType(TypeResolver& NR) {
+      assert(unres_type_ && "Tried to resolve underlying type twice");
+      // Resolve underlying type if it's not already resolved
+      if(!unres_type_->isResolved()) unres_type_->resolve(NR);
+      // Move the resolved type to the type_ field
+      set_type(unres_type_);
+      unres_type_ = nullptr;
+   }
    bool isDeclResolved() const override { return true; }
    std::ostream& print(std::ostream& os) const override;
+
+private:
+   ast::Type* unres_type_;
 };
 
 class LiteralNode final : public ExprValue {
@@ -222,7 +237,7 @@ public:
    auto nargs() const { return num_args_; }
    std::ostream& print(std::ostream& os) const override = 0;
    ast::Type const* resolveResultType(ast::Type const* type) {
-      assert(!result_type_ && "Tried to operator resolve result type twice");
+      assert(!result_type_ && "Tried to operator-resolve result type twice");
       assert(type->isResolved() &&
              "Tried to resolve operator with unresolved type");
       result_type_ = type;

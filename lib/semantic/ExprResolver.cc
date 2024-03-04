@@ -7,7 +7,10 @@
 #include "ast/AstNode.h"
 #include "ast/Decl.h"
 #include "ast/DeclContext.h"
+#include "ast/Expr.h"
 #include "ast/ExprNode.h"
+#include "ast/Type.h"
+#include "utils/Utils.h"
 
 namespace semantic {
 
@@ -19,6 +22,22 @@ using internal::ExprNameWrapper;
 using Pkg = semantic::NameResolver::Pkg;
 
 /* ===--------------------------------------------------------------------=== */
+// Static helper functions
+/* ===--------------------------------------------------------------------=== */
+
+static ast::DeclContext const* GetTypeAsDecl(ast::Type const* type,
+                                             NameResolver const& NR) {
+   if(auto refty = dynamic_cast<ast::ReferenceType const*>(type)) {
+      return cast<ast::DeclContext>(refty->decl());
+   } else if(type->isString()) {
+      return NR.GetJavaLang().String;
+   } else if(type->isArray()) {
+      return NR.GetArrayPrototype();
+   }
+   return nullptr;
+}
+
+/* ===--------------------------------------------------------------------=== */
 // Functions to resolve names and chains of names
 /* ===--------------------------------------------------------------------=== */
 
@@ -27,10 +46,13 @@ bool ER::tryReclassifyDecl(ExprNameWrapper& data,
    // Search in this context
    if(auto decl = ctx->lookupDecl(data.node->name())) {
       if(auto varDecl = dynamic_cast<ast::VarDecl const*>(decl)) {
-         data.reclassify(ExprNameWrapper::Type::ExpressionName, varDecl);
+         data.reclassify(
+               ExprNameWrapper::Type::ExpressionName, varDecl, varDecl->type());
          return true;
       } else if(auto fieldDecl = dynamic_cast<ast::FieldDecl const*>(decl)) {
-         data.reclassify(ExprNameWrapper::Type::ExpressionName, fieldDecl);
+         data.reclassify(ExprNameWrapper::Type::ExpressionName,
+                         fieldDecl,
+                         fieldDecl->type());
          return true;
       }
    }
@@ -56,7 +78,8 @@ bool ER::tryReclassifyImport(ExprNameWrapper& data,
          throw diag.ReportError(cu_->location())
                << "ambiguous import-on-demand conflict";
       }
-      data.reclassify(ExprNameWrapper::Type::TypeName, decl);
+      data.reclassify(
+            ExprNameWrapper::Type::TypeName, decl, Sema->BuildReferenceType(decl));
       return true;
    } else if(std::holds_alternative<const Pkg*>(import.value())) {
       auto pkg = std::get<const Pkg*>(import.value());
@@ -70,7 +93,7 @@ bool ER::tryReclassifyImport(ExprNameWrapper& data,
 ExprNameWrapper* ER::reclassifySingleAmbiguousName(ExprNameWrapper* data) const {
    // JLS 6.5.2 Reclassification of Contextually Ambiguous Names
 
-   assert(data->type == ExprNameWrapper::Type::SingleAmbiguousName &&
+   assert(data->type() == ExprNameWrapper::Type::SingleAmbiguousName &&
           "Expected SingleAmbiguousName here");
    auto copy = alloc.new_object<ExprNameWrapper>(*data);
 
@@ -117,11 +140,11 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
    // Next, fetch the type or declaration
    auto name = access->node->name();
    auto typeOrDecl = access->prevAsDecl(*TR, *NR);
-   auto refTy = dynamic_cast<ast::DeclContext const*>(typeOrDecl);
+   ast::DeclContext const* refTy = nullptr;
    if(access->prevIfWrapper()) {
       // If the previous node is a wrapper, then we resolve the type
       auto decl = typeOrDecl;
-      auto typeddecl = dynamic_cast<ast::TypedDecl const*>(decl);
+      auto typeddecl = dyn_cast<ast::TypedDecl>(decl);
       if(!typeddecl) {
          throw diag.ReportError(cu_->location())
                << "field access \"" << name
@@ -133,26 +156,29 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
                << "field access \"" << name
                << "\" to void-typed declaration: " << decl->name();
       }
-      refTy = NR->GetTypeAsClass(type);
+      refTy = GetTypeAsDecl(type, *NR);
       if(!refTy) {
          throw diag.ReportError(cu_->location())
                << "field access \"" << name << "\" to non-class type: "
                << (decl->hasCanonicalName() ? decl->getCanonicalName()
                                             : decl->name());
       }
+   } else {
+      refTy = typeOrDecl->asDeclContext();
+      assert(refTy && "Expected non-null type here");
    }
    // Now we check if "name" is a field of "decl"
-   assert(refTy && "Expected non-null refTy here");
    auto field = refTy->lookupDecl(name);
    if(!field) {
       throw diag.ReportError(cu_->location())
             << "field access to undeclared field: " << name;
    }
    // Field must be either a FieldDecl or a MethodDecl
-   assert(dynamic_cast<ast::FieldDecl const*>(field) ||
-          dynamic_cast<ast::MethodDecl const*>(field));
+   assert(dyn_cast<ast::FieldDecl>(field) || dyn_cast<ast::MethodDecl>(field));
    // Now we can reclassify the access node
-   access->reclassify(ExprNameWrapper::Type::ExpressionName, field);
+   ast::Type* fieldty = nullptr;
+   if(auto x = dyn_cast<ast::FieldDecl>(field)) fieldty = x->type();
+   access->reclassify(ExprNameWrapper::Type::ExpressionName, field, fieldty);
 }
 
 void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
@@ -178,10 +204,12 @@ void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
    }
    // With the additional constraint that the field must be static
    ast::Modifiers mods;
-   if(auto fieldDecl = dynamic_cast<ast::FieldDecl const*>(field)) {
+   if(auto fieldDecl = dyn_cast<ast::FieldDecl>(field)) {
       mods = fieldDecl->modifiers();
-   } else if(auto methodDecl = dynamic_cast<ast::MethodDecl const*>(field)) {
+   } else if(auto methodDecl = dyn_cast<ast::MethodDecl>(field)) {
       mods = methodDecl->modifiers();
+   } else {
+      assert(false && "Field must be either a FieldDecl or a MethodDecl");
    }
    if(!mods.isStatic()) {
       throw diag.ReportError(cu_->location())
@@ -189,8 +217,10 @@ void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
             << field->getCanonicalName();
    }
    // We've reached here which means the field access is valid
-   access->reclassify(ExprNameWrapper::Type::ExpressionName, field);
-   access->prev = nullptr;
+   ast::Type* fieldty = nullptr;
+   if(auto x = dyn_cast<ast::FieldDecl>(field)) fieldty = x->type();
+   access->reclassify(ExprNameWrapper::Type::ExpressionName, field, fieldty);
+   access->setPrev(std::nullopt);
 }
 
 void ER::resolvePackageAccess(internal::ExprNameWrapper* access) const {
@@ -200,7 +230,7 @@ void ER::resolvePackageAccess(internal::ExprNameWrapper* access) const {
    access->verifyInvariants(ExprNameWrapper::Type::SingleAmbiguousName);
    prev->verifyInvariants(ExprNameWrapper::Type::PackageName);
    // Now we can get the "pkg" and "name" to resolve against
-   auto pkg = std::get<Pkg const*>(prev->resolution.value());
+   auto pkg = std::get<Pkg const*>(prev->resolution());
    auto name = access->node->name();
    assert(pkg && "Expected non-null package here");
    // Now we check if "name" is a package of "pkg"
@@ -211,13 +241,15 @@ void ER::resolvePackageAccess(internal::ExprNameWrapper* access) const {
    }
    // Now we can reclassify the access node depending on what we found
    if(std::holds_alternative<ast::Decl const*>(subpkg.value())) {
+      auto pkgdecl = std::get<ast::Decl const*>(subpkg.value());
       access->reclassify(ExprNameWrapper::Type::TypeName,
-                         std::get<ast::Decl const*>(subpkg.value()));
+                         pkgdecl,
+                         Sema->BuildReferenceType(pkgdecl));
    } else {
       access->reclassify(ExprNameWrapper::Type::PackageName,
                          std::get<Pkg const*>(subpkg.value()));
    }
-   access->prev = nullptr;
+   access->setPrev(std::nullopt);
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -225,32 +257,30 @@ void ER::resolvePackageAccess(internal::ExprNameWrapper* access) const {
 /* ===--------------------------------------------------------------------=== */
 
 void ExprNameWrapper::verifyInvariants(ExprNameWrapper::Type expectedTy) const {
-   assert(type == expectedTy && "Expected type does not match actual type");
+   assert(type_ == expectedTy && "Expected type does not match actual type");
    // TODO(kevin): Add more invariants here
 }
 
 ast::Decl const* ExprNameWrapper::prevAsDecl(ExprTypeResolver& TR,
                                              NameResolver& NR) const {
    // Simple case, the previous node is wrapped so we know the decl
-   if(auto prev = prevIfWrapper())
-      return std::get<ast::Decl const*>(prev->resolution.value());
+   if(auto p = prevIfWrapper()) return std::get<ast::Decl const*>(p->resolution());
    // Complex case, the previous node is an expression list
-   auto prevList = std::get<ast::ExprNodeList>(prev.value());
+   ast::ExprNodeList prevList = std::get<ast::ExprNodeList>(prev_.value());
    auto type = TR.EvaluateList(prevList);
-   // FIXME(kevin): What about interfaces here?
-   return NR.GetTypeAsClass(type);
+   return cast<ast::Decl>(GetTypeAsDecl(type, NR));
 }
 
 ast::ExprNodeList ER::recursiveReduce(ExprNameWrapper* node) const {
    node->verifyInvariants(ExprNameWrapper::Type::ExpressionName);
-   auto decl = std::get<ast::Decl const*>(node->resolution.value());
+   auto decl = std::get<ast::Decl const*>(node->resolution());
    auto* expr = node->node;
 
    // Base case, no more nodes to reduce. Return singleton list.
-   if(!node->prev.has_value() /* Either no more previous */ ||
+   if(!node->prev().has_value() /* Either no more previous */ ||
       (node->prevIfWrapper() /* Or the previous node is irreducible */ &&
-       node->prevAsWrapper()->type != ExprNameWrapper::Type::ExpressionName)) {
-      expr->resolveDecl(decl);
+       node->prevAsWrapper()->type() != ExprNameWrapper::Type::ExpressionName)) {
+      expr->resolveDeclAndType(decl, node->typeResolution());
       return ast::ExprNodeList{expr};
    }
 
@@ -259,9 +289,9 @@ ast::ExprNodeList ER::recursiveReduce(ExprNameWrapper* node) const {
    if(auto prev = node->prevIfWrapper()) {
       list = recursiveReduce(prev);
    } else {
-      list = std::get<ast::ExprNodeList>(node->prev.value());
+      list = std::get<ast::ExprNodeList>(node->prev().value());
    }
-   expr->resolveDecl(decl);
+   expr->resolveDeclAndType(decl, node->typeResolution());
    list.push_back(expr);
    return list;
 }
@@ -276,7 +306,9 @@ ast::ExprNodeList ER::resolveExprNode(const ETy node) const {
       auto thisNode = dyn_cast<ex::ThisNode*>(expr);
       auto name = dynamic_cast<ex::MemberName*>(expr);
       if(thisNode) {
-         thisNode->resolveDecl(cast<ast::Decl>(cu_->body()));
+         thisNode->resolveDeclAndType(
+               cast<ast::Decl>(cu_->body()),
+               Sema->BuildReferenceType(cast<ast::Decl>(cu_->body())));
       }
       if(!name) return ast::ExprNodeList{expr};
       Q = resolveSingleName(name);
@@ -327,9 +359,9 @@ ETy ER::evalMemberAccess(DotOp&, const ETy lhs, const ETy id) const {
    // The LHS must be an ExpressionName, TypeName or PackageName
    auto* P = std::get_if<ExprNameWrapper*>(&Q);
    if(P) {
-      assert(((*P)->type == ExprNameWrapper::Type::ExpressionName ||
-              (*P)->type == ExprNameWrapper::Type::TypeName ||
-              (*P)->type == ExprNameWrapper::Type::PackageName) &&
+      assert(((*P)->type() == ExprNameWrapper::Type::ExpressionName ||
+              (*P)->type() == ExprNameWrapper::Type::TypeName ||
+              (*P)->type() == ExprNameWrapper::Type::PackageName) &&
              "Malformed node. Expected ExpressionName, TypeName or PackageName "
              "here.");
    }
@@ -339,7 +371,7 @@ ETy ER::evalMemberAccess(DotOp&, const ETy lhs, const ETy id) const {
    if(auto methodNode = dynamic_cast<ex::MethodName*>(exprNode)) {
       auto newQ = alloc.new_object<ExprNameWrapper>(
             ExprNameWrapper::Type::MethodName, methodNode);
-      newQ->prev = Q;
+      newQ->setPrev(Q);
       return newQ;
    }
    // Now grab the id and cast it to the appropriate type
@@ -348,13 +380,13 @@ ETy ER::evalMemberAccess(DotOp&, const ETy lhs, const ETy id) const {
    // Allocate a new node as the member access to represent "Id" in Lhs . Id
    auto newQ = alloc.new_object<ExprNameWrapper>(
          ExprNameWrapper::Type::SingleAmbiguousName, fieldNode);
-   newQ->prev = Q;
+   newQ->setPrev(Q);
    // And we can build the reduced expression now
    // 1. If the previous node is a wrapper, then newQ can be anything
    // 2. If the previous is a list, then newQ must be ExpressionName
    //    FIXME: Is this true? What about (Class).Field?
    if(P) {
-      switch((*P)->type) {
+      switch((*P)->type()) {
          case ExprNameWrapper::Type::ExpressionName:
             resolveFieldAccess(newQ);
             break;
@@ -391,7 +423,7 @@ ETy ER::evalUnaryOp(UnaryOp& op, const ETy rhs) const {
 ast::DeclContext const* ER::getMethodParent(ExprNameWrapper* Q) const {
    Q->verifyInvariants(ExprNameWrapper::Type::MethodName);
    // If there's no previous, use the current context
-   if(!Q->prev.has_value()) return cu_->body();
+   if(!Q->prev().has_value()) return cu_->body();
    auto declOrType = Q->prevAsDecl(*TR, *NR);
    auto ty = dynamic_cast<ast::DeclContext const*>(declOrType);
    if(Q->prevIfWrapper() && !ty) {
@@ -405,7 +437,7 @@ ast::DeclContext const* ER::getMethodParent(ExprNameWrapper* Q) const {
          throw diag.ReportError(cu_->location())
                << "method call to void-typed declaration: " << declOrType->name();
       }
-      ty = NR->GetTypeAsClass(type);
+      ty = GetTypeAsDecl(type, *NR);
    }
    assert(ty && "Expected non-null type here");
    return ty;
@@ -443,7 +475,7 @@ ETy ER::evalMethodCall(MethodOp&, const ETy method, const op_array& args) const 
    // Begin resolution of the method call
    auto ctx = getMethodParent(Q);
    auto methodDecl = resolveMethodOverload(ctx, Q->node->name(), argtys);
-   Q->reclassify(ExprNameWrapper::Type::ExpressionName, methodDecl);
+   Q->reclassify(ExprNameWrapper::Type::ExpressionName, methodDecl, nullptr);
 
    // Once Q has been resolved, we can build the expression list
    ast::ExprNodeList list{};
@@ -479,7 +511,8 @@ ETy ER::evalNewArray(NewArrayOp& op, const ETy type, const ETy size) const {
    return list;
 }
 
-ETy ER::evalArrayAccess(ArrayAccessOp& op, const ETy array, const ETy index) const {
+ETy ER::evalArrayAccess(ArrayAccessOp& op, const ETy array,
+                        const ETy index) const {
    ast::ExprNodeList list{};
    list.concat(resolveExprNode(array));
    list.concat(resolveExprNode(index));
@@ -502,14 +535,29 @@ ETy ER::evalCast(CastOp& op, const ETy type, const ETy value) const {
 
 void ER::Resolve(ast::LinkingUnit* lu) { resolveRecursive(lu); }
 
+ast::ExprNodeList ER::evaluateAsList(ast::Expr* expr) {
+   if(diag.Verbose(2)) {
+      auto dbg = diag.ReportDebug(2);
+      dbg << "[*] Printing expression before resolution:\n";
+      expr->print(dbg.get(), 1);
+   }
+   ETy result = Evaluate(expr);
+   ast::ExprNodeList list = resolveExprNode(result);
+   if(diag.Verbose(2)) {
+      auto dbg = diag.ReportDebug(2);
+      dbg << "[*] Printing expression after resolution:\n";
+      list.print(dbg.get());
+   }
+   return list;
+}
+
 void ER::resolveRecursive(ast::AstNode* node) {
    // Set the CU
    if(auto* cu = dynamic_cast<ast::CompilationUnit*>(node)) {
       cu_ = cu;
       if(diag.Verbose(2)) {
          auto dbg = diag.ReportDebug(2);
-         dbg << "[*] Resolving compilation unit in: " << cu->location().toString()
-             << "\n";
+         dbg << "[*] Resolving compilation unit in: " << cu->location().toString();
       }
    }
    // Set the CTX
@@ -520,12 +568,10 @@ void ER::resolveRecursive(ast::AstNode* node) {
    if(auto* decl = dynamic_cast<ast::VarDecl*>(node)) {
       if(auto* init = decl->mut_init()) {
          if(diag.Verbose(2)) {
-            auto dbg = diag.ReportDebug(2);
-            dbg << "[*] Resolving initializer for variable: " << decl->name()
-                << "\n";
-            init->print(dbg.get(), 1);
+            diag.ReportDebug(2)
+                  << "[*] Resolving initializer for variable: " << decl->name();
          }
-         Evaluate(init);
+         evaluateAsList(init);
          // FIXME(kevin): Not ready yet
          // TR->Evaluate(init);
          init->clear();
@@ -534,11 +580,9 @@ void ER::resolveRecursive(ast::AstNode* node) {
       for(auto* expr : stmt->mut_exprs()) {
          if(!expr) continue;
          if(diag.Verbose(2)) {
-            auto dbg = diag.ReportDebug(2);
-            dbg << "[*] Resolving expression in statement:\n";
-            expr->print(dbg.get(), 1);
+            diag.ReportDebug(2) << "[*] Resolving expression in statement:";
          }
-         Evaluate(expr);
+         evaluateAsList(expr);
          // FIXME(kevin): Not ready yet
          // TR->Evaluate(expr);
          expr->clear();

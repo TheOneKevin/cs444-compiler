@@ -1,4 +1,4 @@
-#include "semantic/TypeResolver.h"
+#include "semantic/ExprTypeResolver.h"
 
 #include "ast/AstNode.h"
 #include "ast/Decl.h"
@@ -158,8 +158,8 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
 }
 
 Type const* ExprTypeResolver::mapValue(ExprValue& node) const {
-   assert(node.isDeclResolved() && "ExprValue is not resolved");
-   assert(node.isTypeResolved() && "ExprValue is not resolved");
+   assert(node.isDeclResolved() && "ExprValue decl is not resolved");
+   assert(node.isTypeResolved() && "ExprValue type is not resolved");
    return node.type();
 }
 
@@ -312,7 +312,7 @@ Type const* ExprTypeResolver::evalUnaryOp(UnaryOp& op, const Type* rhs) const {
    }
 }
 
-Type const* ExprTypeResolver::evalMemberAccess(DotOp& op, const Type*,
+Type const* ExprTypeResolver::evalMemberAccess(DotOp&, const Type*,
                                                const Type* field) const {
    return field;
 }
@@ -397,7 +397,7 @@ Type const* ExprTypeResolver::evalCast(CastOp& op, const Type* type,
                                    << " to " << type->toString();
    }
 
-   return op.resolveResultType(op.resolveResultType(type));
+   return op.resolveResultType(type);
 }
 
 } // namespace semantic

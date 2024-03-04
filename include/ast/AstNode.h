@@ -10,10 +10,6 @@
 #include "utils/Generator.h"
 #include "utils/Utils.h"
 
-namespace semantic {
-class NameResolver;
-} // namespace semantic
-
 namespace ast {
 
 using utils::DotPrinter;
@@ -112,6 +108,8 @@ public:
    /// @brief Returns the location of the declaration. This is an abstract
    /// method to allow abstract classes of Decl without location.
    virtual SourceRange location() const = 0;
+   /// @brief
+   virtual DeclContext const* asDeclContext() const { return nullptr; }
 
 protected:
    std::pmr::string canonicalName_;
@@ -162,6 +160,14 @@ public:
 // Type
 /* ===--------------------------------------------------------------------=== */
 
+class UnresolvedType;
+
+/// @brief Abstract base representing a (stateful) class used to resolve types.
+class TypeResolver {
+public:
+   virtual void ResolveType(UnresolvedType* type) = 0;
+};
+
 /// @brief Base class for all types.
 class Type : public AstNode {
 public:
@@ -177,7 +183,7 @@ public:
    }
    SourceRange location() const { return loc_; }
    /// @brief Resolves the type based on the condition of isResolved()
-   virtual void resolve(semantic::NameResolver&) {}
+   virtual void resolve(TypeResolver&) {}
    /// @brief Returns if the type is resolved
    virtual bool isResolved() const = 0;
    virtual bool operator==(const Type&) const = 0;
@@ -190,10 +196,12 @@ public:
    }
 
    virtual bool isInvalid() const { return false; }
-   virtual bool isNumeric() const = 0;
-   virtual bool isBoolean() const = 0;
-   virtual bool isNull() const = 0;
-   virtual bool isString() const = 0;
+   virtual bool isNumeric() const { return false; }
+   virtual bool isBoolean() const { return false; }
+   virtual bool isNull() const { return false; }
+   virtual bool isString() const { return false; }
+   virtual bool isArray() const { return false; }
+   virtual bool isBuiltIn() const { return false; }
 
    ast::ClassDecl const* getAsClass() const { return nullptr; }
 

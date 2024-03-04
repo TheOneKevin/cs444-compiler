@@ -58,12 +58,15 @@ void Expr::dump() const { this->print(std::cerr, 0); }
 
 void ExprNode::dump() const { this->print(std::cerr); }
 
-void ExprNodeList::dump() const {
+void ExprNodeList::dump() const { print(std::cerr); }
+
+std::ostream& ExprNodeList::print(std::ostream& os) const {
    for(auto node : nodes()) {
-      node->print(std::cerr);
-      std::cerr << " ";
+      node->print(os);
+      os << " ";
    }
-   std::cerr << "\n";
+   os << "\n";
+   return os;
 }
 
 void ExprNodeList::check_invariants() const {
