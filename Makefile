@@ -1,36 +1,47 @@
 CC = clang++-16
-CXXFLAGS = -std=c++2b -g -Og -DYYDEBUG=1
+CXXFLAGS = -std=c++2b -O3
 FLEX = flex
 BISON = bison
 BISONFLAGS = --locations -k
-INCLUDES = -Ilib -I$(PARSER_DIR)
-PARSER_DIR = ./build1
-LEXER_OUT = $(PARSER_DIR)/joos1w_lexer.cpp
-PARSER_OUT = $(PARSER_DIR)/joos1w_parser.cpp
-LEXER_HEADER = $(PARSER_DIR)/joos1w.lexer.do.not.use.h
-PARSER_HEADER = $(PARSER_DIR)/joos1w.parser.tab.h
+BUILD_DIR = ./build1
 
-# Joosc specific sources and their dependencies
-JOOSC_SRCS = \
-  lib/ast/Decl.cc lib/ast/DeclContext.cc lib/ast/Expr.cc \
-  lib/ast/Stmt.cc lib/ast/Modifiers.cc lib/semantic/Semantic.cc \
-  lib/grammar/Joos1W.cc lib/parsetree/ParseTree.cc \
-  lib/parsetree/ParseTreeVisitor.cc lib/parsetree/VisitClassInterface.cc \
-  lib/parsetree/VisitExpression.cc lib/parsetree/VisitLeaf.cc \
-  lib/parsetree/VisitStatement.cc tools/genfrags/FragmentGenerator.cc \
-  lib/utils/DotPrinter.cc lib/semantic/NameResolver.cc lib/semantic/HierarchyChecker.cc \
-  lib/passes/CompilerPasses.cc lib/utils/PassManager.cc tools/joosc/main.cc \
-  ${LEXER_OUT} ${PARSER_OUT}
+INCLUDES = -Iinclude -I$(BUILD_DIR)
+LEXER_HEADER = $(BUILD_DIR)/joos1w.lexer.do.not.use.h
+LEXER_OBJ = $(BUILD_DIR)/joos1w_lexer.o
+PARSER_HEADER = $(BUILD_DIR)/joos1w.parser.tab.h
+PARSER_OBJ = $(BUILD_DIR)/joos1w_parser.o
+
+# Recursive glob .cc files under lib
+JOOSC_SRCS = $(shell find lib -name '*.cc') tools/joosc/main.cc
+JOOSC_OBJS = $(patsubst %.cc,%.o,$(JOOSC_SRCS))
+JOOSC_OBJS := $(addprefix $(BUILD_DIR)/,$(JOOSC_OBJS))
 
 all: joosc
 
-joosc:
-	mkdir -p $(PARSER_DIR)
-	$(FLEX) --outfile=$(LEXER_OUT) --header-file=$(LEXER_HEADER) lib/grammar/joos1w_lexer.l
-	$(BISON) $(BISONFLAGS) --output=$(PARSER_OUT) --defines=$(PARSER_HEADER) lib/grammar/joos1w_parser.y
-	$(CC) $(CXXFLAGS) $(INCLUDES) $(JOOSC_SRCS) -o $@
+joosc: $(JOOSC_OBJS) $(LEXER_OBJ) $(PARSER_OBJ)
+	@echo "Linking joosc"
+	@$(CC) $(CXXFLAGS) -o $@ $^
+
+$(LEXER_OBJ): lib/grammar/joos1w_lexer.l
+	@echo "Building lexer"
+	@mkdir -p $(BUILD_DIR)
+	@$(FLEX) --outfile=lexer.cpp --header-file=$(LEXER_HEADER) $<
+	@$(CC) $(CXXFLAGS) $(INCLUDES) -c -o $@ lexer.cpp
+
+$(PARSER_OBJ): lib/grammar/joos1w_parser.y
+	@echo "Building parser"
+	@mkdir -p $(BUILD_DIR)
+	@$(BISON) $(BISONFLAGS) --output=parser.cpp --defines=$(PARSER_HEADER) $<
+	@$(CC) $(CXXFLAGS) $(INCLUDES) -c -o $@ parser.cpp
+
+generated_sources: $(LEXER_OBJ) $(PARSER_OBJ)
+
+$(BUILD_DIR)/%.o: %.cc generated_sources
+	@echo "Building $<"
+	@mkdir -p $(dir $@)
+	@$(CC) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
 
 clean:
-	rm -rf $(PARSER_DIR) && rm joosc
+	@rm -rf $(BUILD_DIR) && rm -f joosc
 
-.PHONY: all clean joosc
+.PHONY: all clean

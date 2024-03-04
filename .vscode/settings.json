@@ -6,6 +6,11 @@
     80,
     160
   ],
+  "[makefile]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4,
+    "editor.detectIndentation": false,
+  },
   "cmake.sourceDirectory": "${workspaceFolder}",
   "editor.indentSize": "tabSize",
   "editor.tabSize": 4,

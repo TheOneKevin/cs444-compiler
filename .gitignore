@@ -8,3 +8,5 @@ out.dot
 .trunk/
 .vscode/launch.json
 __pycache__/
+joosc
+!joosc/
