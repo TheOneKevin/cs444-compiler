@@ -1,7 +1,7 @@
 #pragma once
 
+#include <cstring>
 #include <memory_resource>
-#include <cassert>
 
 using BumpAllocator = std::pmr::polymorphic_allocator<std::byte>;
 
@@ -10,59 +10,26 @@ namespace utils {
 class CustomBufferResource : public std::pmr::memory_resource {
 public:
    CustomBufferResource() : CustomBufferResource{128 * sizeof(void*)} {}
-   CustomBufferResource(size_t size) {
-      buffers_.emplace_back(size, std::malloc(size));
-      cur_buf_ = buffers_.begin();
-      alloc_top_ = cur_buf_->buf;
-      avail_ = size;
-   }
+   CustomBufferResource(size_t size);
 
-   void* do_allocate(std::size_t bytes, std::size_t alignment) override {
-      assert((!invalid) && "attempt to allocate when CustomBufferResource is invalid");
+   void* do_allocate(std::size_t bytes, std::size_t alignment) override;
 
-      // Do not return the same pointer twice, so set min size to 1
-      if(bytes == 0) bytes = 1;
-
-      // Align the next allocation
-      void* p = std::align(alignment, bytes, alloc_top_, avail_);
-
-      // Do we have enough space in the current buffer?
-      if(!p) {
-         // Is there no next buffer? Allocate a new one
-         if(std::next(cur_buf_) == buffers_.end()) {
-            size_t new_size = cur_buf_->size * growth_factor;
-            buffers_.emplace_back(new_size, std::malloc(new_size));
-            cur_buf_ = std::prev(buffers_.end());
-         } else {
-            ++cur_buf_;
-         }
-         alloc_top_ = cur_buf_->buf;
-         avail_ = cur_buf_->size;
-         p = cur_buf_->buf;
-      }
-
-      // Update the allocation pointer and the available space
-      alloc_top_ = static_cast<char*>(alloc_top_) + bytes;
-      avail_ -= bytes;
-
-      // Return the aligned pointer
-      return p;
-   }
-
-   void reset() {
+   inline void reset() {
       alloc_top_ = 0;
       cur_buf_ = buffers_.begin();
+#ifdef DEBUG
+      clear_all_buffers();
+#endif
    }
 
    void destroy() {
       invalid = true;
+      clear_all_buffers();
    }
 
-   ~CustomBufferResource() {
-      for(auto& buf : buffers_) {
-         std::free(buf.buf);
-      }
-   }
+   void clear_all_buffers();
+
+   ~CustomBufferResource();
 
    void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
       // No-op
