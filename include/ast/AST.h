@@ -1,10 +1,10 @@
 #pragma once
 
-#include "ast/AstNode.h"
-#include "ast/Decl.h"
-#include "ast/DeclContext.h"
-#include "ast/Expr.h"
-#include "ast/Stmt.h"
-#include "ast/Type.h"
+#include "ast/AstNode.h" // IWYU pragma: export
+#include "ast/Decl.h" // IWYU pragma: export
+#include "ast/DeclContext.h" // IWYU pragma: export
+#include "ast/Expr.h" // IWYU pragma: export
+#include "ast/Stmt.h" // IWYU pragma: export
+#include "ast/Type.h" // IWYU pragma: export
 
 namespace ast {} // namespace ast

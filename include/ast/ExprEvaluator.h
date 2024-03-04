@@ -74,6 +74,7 @@ public:
          // We grab the next node because we will unlock the current node
          auto next_node = node->mut_next();
          node->const_unlock();
+         cur_op = dyn_cast<ExprOp*>(node);
          if(auto* value = dyn_cast<ExprValue*>(node)) {
             op_stack_.push(mapValue(*value));
          } else if(auto* unary = dyn_cast<UnaryOp*>(node)) {
@@ -117,6 +118,9 @@ public:
       return result;
    }
 
+protected:
+   ast::exprnode::ExprOp* currentOp() const { return cur_op; }
+
 private:
    inline T popSafe() {
       assert(!op_stack_.empty() && "Stack underflow");
@@ -127,5 +131,6 @@ private:
 
 private:
    std::stack<T> op_stack_;
+   ast::exprnode::ExprOp* cur_op;
 };
 } // namespace ast

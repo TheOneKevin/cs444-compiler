@@ -19,7 +19,7 @@ using internal::ExprNameWrapper;
 using Pkg = semantic::NameResolver::Pkg;
 
 /* ===--------------------------------------------------------------------=== */
-//
+// Functions to resolve names and chains of names
 /* ===--------------------------------------------------------------------=== */
 
 bool ER::tryReclassifyDecl(ExprNameWrapper& data,
@@ -220,6 +220,10 @@ void ER::resolvePackageAccess(internal::ExprNameWrapper* access) const {
    access->prev = nullptr;
 }
 
+/* ===--------------------------------------------------------------------=== */
+//
+/* ===--------------------------------------------------------------------=== */
+
 void ExprNameWrapper::verifyInvariants(ExprNameWrapper::Type expectedTy) const {
    assert(type == expectedTy && "Expected type does not match actual type");
    // TODO(kevin): Add more invariants here
@@ -285,8 +289,15 @@ ast::ExprNodeList ER::resolveExprNode(const ETy node) const {
    return recursiveReduce(Q);
 }
 
+ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
+                                                 std::string_view name,
+                                                 const ty_array& argtys) const {
+   // Search for the method in the context
+   return nullptr;
+}
+
 /* ===--------------------------------------------------------------------=== */
-//
+// Begin the evaluation of the expression nodes
 /* ===--------------------------------------------------------------------=== */
 
 ETy ER::mapValue(ExprValue& node) const { return &node; }
@@ -420,19 +431,24 @@ ETy ER::evalMethodCall(const ETy method, const op_array& args) const {
       assert(false && "This is not supported");
    }
 
+   // Resolve the array of arguments
+   ty_array argtys{alloc};
+   ast::ExprNodeList arglist{};
+   for(auto& arg : args) {
+      auto tmplist = resolveExprNode(arg);
+      argtys.push_back(TR->EvaluateList(tmplist));
+      arglist.concat(tmplist);
+   }
+
    // Begin resolution of the method call
    auto ctx = getMethodParent(Q);
-   ast::Decl* methodDecl = nullptr;
-   // TODO: Grab the type array and resolve the overloads here
-   // ...
+   auto methodDecl = resolveMethodOverload(ctx, Q->node->name(), argtys);
    Q->reclassify(ExprNameWrapper::Type::ExpressionName, methodDecl);
 
    // Once Q has been resolved, we can build the expression list
    ast::ExprNodeList list{};
    list.concat(recursiveReduce(Q));
-   for(auto& arg : args) {
-      list.concat(resolveExprNode(arg));
-   }
+   list.concat(arglist);
    return list;
 }
 
@@ -444,8 +460,9 @@ ETy ER::evalNewObject(const ETy object, const op_array& args) const {
    } else {
       assert(false && "Grammar wrong, object must be an atomic ExprNode*");
    }
+   // FIXME(kevin): Resolve constructor overloads
    for(auto& arg : args) list.concat(resolveExprNode(arg));
-   list.push_back(alloc.new_object<ex::ClassInstanceCreation>(args.size()));
+   list.push_back(currentOp());
    return list;
 }
 
@@ -458,7 +475,7 @@ ETy ER::evalNewArray(const ETy type, const ETy size) const {
       assert(false && "Grammar wrong, type must be an atomic ExprNode*");
    }
    list.concat(resolveExprNode(size));
-   list.push_back(alloc.new_object<ex::ArrayInstanceCreation>());
+   list.push_back(currentOp());
    return list;
 }
 
@@ -478,7 +495,7 @@ ETy ER::evalCast(const ETy type, const ETy value) const {
       assert(false && "Grammar wrong, type must be an atomic ExprNode*");
    }
    list.concat(resolveExprNode(value));
-   list.push_back(alloc.new_object<ex::Cast>());
+   list.push_back(currentOp());
    return list;
 }
 
@@ -508,7 +525,8 @@ void ER::resolveRecursive(ast::AstNode* node) {
             init->print(dbg.get(), 1);
          }
          Evaluate(init);
-         TR->Evaluate(init);
+         // FIXME(kevin): Not ready yet
+         // TR->Evaluate(init);
          init->clear();
       }
    } else if(auto* stmt = dynamic_cast<ast::Stmt*>(node)) {
@@ -520,7 +538,8 @@ void ER::resolveRecursive(ast::AstNode* node) {
             expr->print(dbg.get(), 1);
          }
          Evaluate(expr);
-         TR->Evaluate(expr);
+         // FIXME(kevin): Not ready yet
+         // TR->Evaluate(expr);
          expr->clear();
       }
    }

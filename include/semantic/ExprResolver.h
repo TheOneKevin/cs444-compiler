@@ -13,12 +13,28 @@
 
 namespace semantic {
 
+/* ===--------------------------------------------------------------------=== */
+// internal::
+/* ===--------------------------------------------------------------------=== */
+
 namespace internal {
 
 struct ExprNameWrapper;
+
+/**
+ * @brief The ExprResolverTy struct is a variant that represents the different
+ * things an expression can resolve to. They are as follows:
+ * 1. A name wrapper is a chain of names that are being resolved
+ * 2. An expression node is a single unresolved expression
+ * 3. An expression node list is a list of resolved expressions
+ */
 using ExprResolverTy =
       std::variant<ExprNameWrapper*, ast::ExprNode*, ast::ExprNodeList>;
 
+/**
+ * @brief Represents a wrapper around a name that is being resolved. This
+ * is a list of either ExprNameWrapper or ast::ExprNodeList.
+ */
 struct ExprNameWrapper {
    using PrevTy = std::variant<ExprNameWrapper*, ast::ExprNodeList>;
    enum class Type {
@@ -77,6 +93,10 @@ struct ExprNameWrapper {
 
 } // namespace internal
 
+/* ===--------------------------------------------------------------------=== */
+// ExprResolver
+/* ===--------------------------------------------------------------------=== */
+
 class ExprResolver final : ast::ExprEvaluator<internal::ExprResolverTy> {
    using ETy = internal::ExprResolverTy;
    using Heap = std::pmr::memory_resource;
@@ -93,8 +113,7 @@ public:
 private:
    ETy EvaluateList(ast::ExprNodeList subexpr) override final {
       // Clear the heap
-      if(auto h = dyn_cast<utils::CustomBufferResource*>(heap))
-         h->reset();
+      if(auto h = dyn_cast<utils::CustomBufferResource*>(heap)) h->reset();
       // Call the base class implementation
       return ast::ExprEvaluator<internal::ExprResolverTy>::EvaluateList(subexpr);
    }
@@ -118,6 +137,8 @@ private: // Overriden methods
    ETy evalCast(const ETy type, const ETy value) const override;
 
 private:
+   using ty_array = std::pmr::vector<ast::Type const*>;
+
    // Given a single ambiguous name, reclassify it into a package or type name
    internal::ExprNameWrapper* reclassifySingleAmbiguousName(
          internal::ExprNameWrapper* data) const;
@@ -150,6 +171,10 @@ private:
    ast::ExprNodeList recursiveReduce(internal::ExprNameWrapper* node) const;
    // Gets the parent context the method is declared under
    ast::DeclContext const* getMethodParent(internal::ExprNameWrapper* node) const;
+   // Resolves a method overload given a context and a list of argument types
+   ast::MethodDecl const* resolveMethodOverload(ast::DeclContext const* ctx,
+                                                std::string_view name,
+                                                const ty_array& argtys) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;
