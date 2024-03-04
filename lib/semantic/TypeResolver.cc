@@ -122,7 +122,7 @@ bool ExprTypeResolver::isValidCast(const Type* exprType, const Type* castType) c
    auto rightArr = dynamic_cast<const ast::ArrayType*>(castType);
 
    if(leftPrimitive && rightPrimitive) {
-      return isAssignableTo(leftPrimitive, rightPrimitive);
+      return isAssignableTo(rightPrimitive, leftPrimitive);
    } else if (leftRef && rightRef) {
       auto leftInterface = dynamic_cast<const ast::InterfaceDecl*>(leftRef->decl());
       auto rightInterface = dynamic_cast<const ast::InterfaceDecl*>(rightRef->decl());
