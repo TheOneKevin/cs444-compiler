@@ -106,7 +106,7 @@ add_library(OLKCompilerLib
 target_include_directories(
     OLKCompilerLib
     PUBLIC
-    "lib"
+    "include"
     "${PARSER_DIR}"
 )
 

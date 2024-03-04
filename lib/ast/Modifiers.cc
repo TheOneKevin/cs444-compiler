@@ -1,4 +1,4 @@
-#include "AstNode.h"
+#include "ast/AstNode.h"
 
 namespace ast {
 

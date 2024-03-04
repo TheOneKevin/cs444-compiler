@@ -1,5 +1,5 @@
-#include "ParseTree.h"
-#include "ParseTreeVisitor.h"
+#include "parsetree/ParseTree.h"
+#include "parsetree/ParseTreeVisitor.h"
 
 namespace parsetree {
 

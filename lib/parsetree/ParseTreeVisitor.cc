@@ -1,7 +1,7 @@
-#include "ParseTreeVisitor.h"
+#include "parsetree/ParseTreeVisitor.h"
 
-#include "ParseTree.h"
 #include "ast/AST.h"
+#include "parsetree/ParseTree.h"
 
 namespace parsetree {
 

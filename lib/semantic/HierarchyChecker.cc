@@ -1,4 +1,4 @@
-#include "HierarchyChecker.h"
+#include "semantic/HierarchyChecker.h"
 
 #include <set>
 
