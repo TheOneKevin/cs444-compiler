@@ -8,8 +8,10 @@ BUILD_DIR = ./build1
 INCLUDES = -Iinclude -I$(BUILD_DIR)
 LEXER_HEADER = $(BUILD_DIR)/joos1w.lexer.do.not.use.h
 LEXER_OBJ = $(BUILD_DIR)/joos1w_lexer.o
+LEXER_SRC = $(BUILD_DIR)/lexer.cpp
 PARSER_HEADER = $(BUILD_DIR)/joos1w.parser.tab.h
 PARSER_OBJ = $(BUILD_DIR)/joos1w_parser.o
+PARSER_SRC = $(BUILD_DIR)/parser.cpp
 
 # Recursive glob .cc files under lib
 JOOSC_SRCS = $(shell find lib -name '*.cc') tools/joosc/main.cc
@@ -20,21 +22,24 @@ joosc: $(JOOSC_OBJS) $(LEXER_OBJ) $(PARSER_OBJ)
 	@echo "Linking joosc"
 	@$(CC) $(CXXFLAGS) -o $@ $^
 
-$(LEXER_OBJ): lib/grammar/joos1w_lexer.l
-	@echo "Building lexer"
-	@mkdir -p $(BUILD_DIR)
-	@$(FLEX) --outfile=lexer.cpp --header-file=$(LEXER_HEADER) $<
-	@$(CC) $(CXXFLAGS) $(INCLUDES) -c -o $@ lexer.cpp
+$(LEXER_SRC): lib/grammar/joos1w_lexer.l
+	@echo "Generating lexer" && mkdir -p $(BUILD_DIR)
+	@$(FLEX) --outfile=$(LEXER_SRC) --header-file=$(LEXER_HEADER) $<
 
-$(PARSER_OBJ): lib/grammar/joos1w_parser.y
-	@echo "Building parser"
-	@mkdir -p $(BUILD_DIR)
-	@$(BISON) $(BISONFLAGS) --output=parser.cpp --defines=$(PARSER_HEADER) $<
-	@$(CC) $(CXXFLAGS) $(INCLUDES) -c -o $@ parser.cpp
+$(PARSER_SRC): lib/grammar/joos1w_parser.y
+	@echo "Generating parser" && mkdir -p $(BUILD_DIR)
+	@$(BISON) $(BISONFLAGS) --output=$(PARSER_SRC) --defines=$(PARSER_HEADER) $<
+
+$(LEXER_OBJ): $(LEXER_SRC) $(PARSER_SRC) # Flex requires bison to be run first
+	@echo "Building $@" && mkdir -p $(BUILD_DIR)
+	@$(CC) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
+
+$(PARSER_OBJ): $(PARSER_SRC)
+	@echo "Building $@" && mkdir -p $(BUILD_DIR)
+	@$(CC) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
 
 generated_sources: $(LEXER_OBJ) $(PARSER_OBJ)
 
 $(BUILD_DIR)/%.o: %.cc generated_sources
-	@echo "Building $<"
-	@mkdir -p $(dir $@)
+	@echo "Building $<" && mkdir -p $(dir $@)
 	@$(CC) $(CXXFLAGS) $(INCLUDES) -c -o $@ $<
