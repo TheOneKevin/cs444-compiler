@@ -199,7 +199,7 @@ InterfaceDecl* Semantic::BuildInterfaceDecl(Modifiers modifiers, SourceRange loc
       diag.ReportError(loc) << "interface must have a visibility modifier";
    // Verify the methods are abstract
    for(auto decl : interfaceBodyDecls) {
-      if(auto methodDecl = dynamic_cast<MethodDecl*>(decl)) {
+      if(auto methodDecl = dyn_cast<MethodDecl*>(decl)) {
          if(!methodDecl->modifiers().isAbstract()) {
             diag.ReportError(methodDecl->location())
                   << "interface method must be abstract";
@@ -242,7 +242,7 @@ MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers, SourceRange loc,
       if(!modifiers.isStatic()) {
          diag.ReportError(loc) << "native method must be static.";
       }
-      if(auto ty = dynamic_cast<BuiltInType*>(returnType)) {
+      if(auto ty = dyn_cast<BuiltInType*>(returnType)) {
          if(ty->getKind() != BuiltInType::Kind::Int) {
             diag.ReportError(loc) << "native method must have return type int.";
          }
@@ -250,7 +250,7 @@ MethodDecl* Semantic::BuildMethodDecl(Modifiers modifiers, SourceRange loc,
       if(parameters.size() != 1) {
          diag.ReportError(loc) << "native method must have exactly one "
                                   "parameter of type int.";
-      } else if(auto ty = dynamic_cast<BuiltInType*>(parameters[0]->type())) {
+      } else if(auto ty = dyn_cast<BuiltInType*>(parameters[0]->type())) {
          if(ty->getKind() != BuiltInType::Kind::Int) {
             diag.ReportError(loc) << "native method must have exactly one "
                                      "parameter of type int.";

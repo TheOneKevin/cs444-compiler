@@ -428,15 +428,27 @@ ETy ER::evalMethodCall(const ETy method, const op_array& args) const {
 
 ETy ER::evalNewObject(const ETy object, const op_array& args) const {
    ast::ExprNodeList list{};
-   // TODO: object is a type!
+   if(std::holds_alternative<ast::ExprNode*>(object)) {
+      auto expr = cast<ex::TypeNode>(std::get<ast::ExprNode*>(object));
+      list.push_back(expr);
+   } else {
+      assert(false && "Grammar wrong, object must be an atomic ExprNode*");
+   }
    for(auto& arg : args) list.concat(resolveExprNode(arg));
+   list.push_back(alloc.new_object<ex::ClassInstanceCreation>(args.size()));
    return list;
 }
 
 ETy ER::evalNewArray(const ETy type, const ETy size) const {
    ast::ExprNodeList list{};
-   // TODO: object is a type!
+   if(std::holds_alternative<ast::ExprNode*>(type)) {
+      auto expr = cast<ex::TypeNode>(std::get<ast::ExprNode*>(type));
+      list.push_back(expr);
+   } else {
+      assert(false && "Grammar wrong, type must be an atomic ExprNode*");
+   }
    list.concat(resolveExprNode(size));
+   list.push_back(alloc.new_object<ex::ArrayInstanceCreation>());
    return list;
 }
 
@@ -449,8 +461,14 @@ ETy ER::evalArrayAccess(const ETy array, const ETy index) const {
 
 ETy ER::evalCast(const ETy type, const ETy value) const {
    ast::ExprNodeList list{};
-   // TODO: object is a type!
+   if(std::holds_alternative<ast::ExprNode*>(type)) {
+      auto expr = cast<ex::TypeNode>(std::get<ast::ExprNode*>(type));
+      list.push_back(expr);
+   } else {
+      assert(false && "Grammar wrong, type must be an atomic ExprNode*");
+   }
    list.concat(resolveExprNode(value));
+   list.push_back(alloc.new_object<ex::Cast>());
    return list;
 }
 

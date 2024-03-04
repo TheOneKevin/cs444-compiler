@@ -93,7 +93,7 @@ public:
 private:
    ETy EvaluateList(ast::ExprNodeList subexpr) override final {
       // Clear the heap
-      if(auto h = dynamic_cast<utils::CustomBufferResource*>(heap))
+      if(auto h = dyn_cast<utils::CustomBufferResource*>(heap))
          h->reset();
       // Call the base class implementation
       return ast::ExprEvaluator<internal::ExprResolverTy>::EvaluateList(subexpr);
@@ -139,7 +139,7 @@ private:
    // function over reclassifySingleAmbiguousName that allocates the wrapper.
    internal::ExprNameWrapper* resolveSingleName(
          ast::exprnode::MemberName* node) const {
-      if(auto method = dynamic_cast<ast::exprnode::MethodName*>(node))
+      if(auto method = dyn_cast<ast::exprnode::MethodName*>(node))
          return alloc.new_object<internal::ExprNameWrapper>(
                internal::ExprNameWrapper::Type::MethodName, method);
       return reclassifySingleAmbiguousName(

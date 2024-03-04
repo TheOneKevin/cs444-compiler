@@ -11,6 +11,8 @@
 
 #include "ast/AstNode.h"
 #include "ast/DeclContext.h"
+#include "ast/Expr.h"
+#include "ast/ExprNode.h"
 #include "ast/Type.h"
 #include "diagnostics/Location.h"
 #include "semantic/Semantic.h"
@@ -34,8 +36,8 @@ void NameResolver::buildSymbolTable() {
    // Grab the package type from the compilation unit.
    for(auto cu : lu_->compliationUnits()) {
       // Grab the CU's package and mark it as immutable
-      auto pkg = dynamic_cast<UnresolvedType const*>(cu->package());
-      assert(pkg && "Package should be an unresolved type");
+      // Package should be an unresolved type
+      auto pkg = cast<UnresolvedType>(cu->package());
       pkg->lock();
       // Traverse the package name to find the leaf package.
       Pkg* subPkg = rootPkg_;
@@ -89,28 +91,28 @@ void NameResolver::populateJavaLangCache() {
    auto langPkg = std::get<Pkg*>(javaPkg->children["lang"]);
    // Now we can populate the java.lang.* cache
    // FIXME(kevin): Implement better error handling here?
-   java_lang_.Boolean = dynamic_cast<ast::ClassDecl*>(
-         std::get<Decl*>(langPkg->children["Boolean"]));
+   java_lang_.Boolean =
+         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Boolean"]));
    java_lang_.Byte =
-         dynamic_cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Byte"]));
-   java_lang_.Character = dynamic_cast<ast::ClassDecl*>(
-         std::get<Decl*>(langPkg->children["Character"]));
-   java_lang_.Class = dynamic_cast<ast::ClassDecl*>(
-         std::get<Decl*>(langPkg->children["Class"]));
-   java_lang_.Cloneable = dynamic_cast<ast::InterfaceDecl*>(
+         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Byte"]));
+   java_lang_.Character =
+         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Character"]));
+   java_lang_.Class =
+         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Class"]));
+   java_lang_.Cloneable = cast<ast::InterfaceDecl*>(
          std::get<Decl*>(langPkg->children["Cloneable"]));
-   java_lang_.Integer = dynamic_cast<ast::ClassDecl*>(
-         std::get<Decl*>(langPkg->children["Integer"]));
-   java_lang_.Number = dynamic_cast<ast::ClassDecl*>(
-         std::get<Decl*>(langPkg->children["Number"]));
-   java_lang_.Object = dynamic_cast<ast::ClassDecl*>(
-         std::get<Decl*>(langPkg->children["Object"]));
-   java_lang_.Short = dynamic_cast<ast::ClassDecl*>(
-         std::get<Decl*>(langPkg->children["Short"]));
-   java_lang_.String = dynamic_cast<ast::ClassDecl*>(
-         std::get<Decl*>(langPkg->children["String"]));
-   java_lang_.System = dynamic_cast<ast::ClassDecl*>(
-         std::get<Decl*>(langPkg->children["System"]));
+   java_lang_.Integer =
+         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Integer"]));
+   java_lang_.Number =
+         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Number"]));
+   java_lang_.Object =
+         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Object"]));
+   java_lang_.Short =
+         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Short"]));
+   java_lang_.String =
+         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["String"]));
+   java_lang_.System =
+         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["System"]));
    // Make sure they are all non-null
    assert(java_lang_.Boolean && "java.lang.Boolean not valid (expected class)");
    assert(java_lang_.Byte && "java.lang.Byte not valid (expected class)");
@@ -169,8 +171,8 @@ void NameResolver::beginContext(ast::CompilationUnit* cu) {
    // Set the current compilation unit and clear the imports map
    auto& importsMap = importsMap_[cu];
    currentCU_ = cu;
-   auto curPkg = dynamic_cast<UnresolvedType const*>(cu->package());
-   assert(curPkg && "Package should be an unresolved type");
+   // Package should be an unresolved type
+   auto curPkg = cast<UnresolvedType>(cu->package());
 
    // We can populate the imports map by order of shadowing cf. JLS 6.3.1.
    //   1. Package declarations, does not shadow anything.
@@ -369,7 +371,7 @@ void NameResolver::Resolve() {
 }
 
 void NameResolver::replaceObjectClass(ast::AstNode* node) {
-   auto decl = dynamic_cast<ast::ClassDecl*>(node);
+   auto decl = dyn_cast_or_null<ast::ClassDecl*>(node);
    if(!decl) return;
    // Check if the class is Object
    if(decl != GetJavaLang().Object) return;
@@ -388,22 +390,37 @@ void NameResolver::replaceObjectClass(ast::AstNode* node) {
    }
 }
 
+void NameResolver::resolveExpr(ast::Expr* expr)  {
+   if(!expr) return;
+   for(auto node : expr->mut_nodes()) {
+      auto tyNode = dyn_cast<ast::exprnode::TypeNode>(node);
+      if(!tyNode) continue;
+      tyNode->mut_type()->resolve(*this);
+   }
+}
+
 void NameResolver::resolveRecursive(ast::AstNode* node) {
    assert(node && "Node must not be null here!");
    for(auto child : node->mut_children()) {
       if(!child) continue;
-      if(auto cu = dynamic_cast<ast::CompilationUnit*>(child)) {
+      if(auto cu = dyn_cast<ast::CompilationUnit*>(child)) {
          // If the CU has no body, then we can skip to the next CU :)
          if(!cu->body()) return;
          // Resolve the current compilation unit's body
          beginContext(cu);
          resolveRecursive(cu->mut_body());
          replaceObjectClass(cu->mut_body());
-      } else if(auto ty = dynamic_cast<ast::Type*>(child)) {
+      } else if(auto ty = dyn_cast<ast::Type*>(child)) {
          if(ty->isInvalid()) continue;
          // If the type is not resolved, then we should resolve it
          if(!ty->isResolved()) ty->resolve(*this);
       } else {
+         // Resolve any Type in expressions
+         if(auto decl = dyn_cast<ast::VarDecl*>(child)) {
+            resolveExpr(decl->mut_init());
+         } else if(auto stmt = dyn_cast<ast::Stmt*>(child)) {
+            for(auto expr : stmt->mut_exprs()) resolveExpr(expr);
+         }
          // This is a generic node, just resolve its children
          resolveRecursive(child);
       }
@@ -504,11 +521,11 @@ ast::ClassDecl const* NameResolver::GetTypeAsClass(ast::Type const* ty) const {
    assert(ty && "Type should not be null");
    assert(ty->isResolved() && "Type should be resolved");
    // If the type is a reference type, then we can grab the declaration
-   if(auto refTy = dynamic_cast<ast::ReferenceType const*>(ty)) {
-      return dynamic_cast<ast::ClassDecl const*>(refTy->decl());
+   if(auto refTy = dyn_cast<ast::ReferenceType const*>(ty)) {
+      return cast<ast::ClassDecl const*>(refTy->decl());
    }
    // If the type is a built-in type, then we can grab the Java class
-   if(auto builtInTy = dynamic_cast<ast::BuiltInType const*>(ty)) {
+   if(auto builtInTy = dyn_cast<ast::BuiltInType>(ty)) {
       switch(builtInTy->getKind()) {
          case ast::BuiltInType::Kind::Boolean:
             return GetJavaLang().Boolean;
@@ -527,7 +544,7 @@ ast::ClassDecl const* NameResolver::GetTypeAsClass(ast::Type const* ty) const {
       }
    }
    // If the type is an array type, then we can grab the array prototype
-   if(auto arrayTy = dynamic_cast<ast::ArrayType const*>(ty)) {
+   if(auto arrayTy = dyn_cast<ast::ArrayType>(ty)) {
       return arrayPrototype_;
    }
    // FIXME(kevin): How do we handle interfaces here?

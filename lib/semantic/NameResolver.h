@@ -8,6 +8,7 @@
 #include <variant>
 
 #include "ast/AstNode.h"
+#include "ast/Expr.h"
 #include "diagnostics/Diagnostics.h"
 #include "utils/BumpAllocator.h"
 
@@ -154,6 +155,9 @@ private:
 
    /// @brief Resolves the AST recursively
    void resolveRecursive(ast::AstNode* node);
+
+   /// @brief Resolves the expression recursively
+   void resolveExpr(ast::Expr* node);
    
    /// @brief Disallows java.lang.Object from extending itself
    void replaceObjectClass(ast::AstNode* node);
