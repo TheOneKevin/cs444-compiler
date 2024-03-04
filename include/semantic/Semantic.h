@@ -22,10 +22,12 @@ public:
    // ast/Type.h
    /* ===-----------------------------------------------------------------=== */
 
-   UnresolvedType* BuildUnresolvedType(SourceRange loc);
-   ArrayType* BuildArrayType(Type* elementType, SourceRange loc);
-   BuiltInType* BuildBuiltInType(parsetree::BasicType::Type type, SourceRange loc);
+   UnresolvedType* BuildUnresolvedType(SourceRange loc = {});
+   ReferenceType* BuildReferenceType(Decl const* decl);
+   ArrayType* BuildArrayType(Type* elementType, SourceRange loc = {});
+   BuiltInType* BuildBuiltInType(parsetree::BasicType::Type type, SourceRange loc = {});
    BuiltInType* BuildBuiltInType(parsetree::Literal::Type type);
+   BuiltInType* BuildBuiltInType(ast::BuiltInType::Kind type);
 
    /* ===-----------------------------------------------------------------=== */
    // ast/Decl.h

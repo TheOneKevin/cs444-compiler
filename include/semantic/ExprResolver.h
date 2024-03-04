@@ -124,17 +124,26 @@ private: // Overriden methods
    using Type = ast::Type;
    using BinaryOp = ast::exprnode::BinaryOp;
    using UnaryOp = ast::exprnode::UnaryOp;
+   using DotOp = ast::exprnode::MemberAccess;
+   using MethodOp = ast::exprnode::MethodInvocation;
+   using NewOp = ast::exprnode::ClassInstanceCreation;
+   using NewArrayOp = ast::exprnode::ArrayInstanceCreation;
+   using ArrayAccessOp = ast::exprnode::ArrayAccess;
+   using CastOp = ast::exprnode::Cast;
    using ExprValue = ast::exprnode::ExprValue;
 
    ETy mapValue(ExprValue& node) const override;
    ETy evalBinaryOp(BinaryOp& op, const ETy lhs, const ETy rhs) const override;
    ETy evalUnaryOp(UnaryOp& op, const ETy rhs) const override;
-   ETy evalMemberAccess(const ETy lhs, const ETy field) const override;
-   ETy evalMethodCall(const ETy method, const op_array& args) const override;
-   ETy evalNewObject(const ETy object, const op_array& args) const override;
-   ETy evalNewArray(const ETy type, const ETy size) const override;
-   ETy evalArrayAccess(const ETy array, const ETy index) const override;
-   ETy evalCast(const ETy type, const ETy value) const override;
+   ETy evalMemberAccess(DotOp& op, const ETy lhs, const ETy field) const override;
+   ETy evalMethodCall(MethodOp& op, const ETy method,
+                      const op_array& args) const override;
+   ETy evalNewObject(NewOp& op, const ETy object,
+                     const op_array& args) const override;
+   ETy evalNewArray(NewArrayOp& op, const ETy type, const ETy size) const override;
+   ETy evalArrayAccess(ArrayAccessOp& op, const ETy array,
+                       const ETy index) const override;
+   ETy evalCast(CastOp& op, const ETy type, const ETy value) const override;
 
 private:
    using ty_array = std::pmr::vector<ast::Type const*>;

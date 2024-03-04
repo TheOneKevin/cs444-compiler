@@ -45,6 +45,14 @@ BuiltInType* Semantic::BuildBuiltInType(parsetree::Literal::Type type) {
    return alloc.new_object<BuiltInType>(type);
 }
 
+BuiltInType* Semantic::BuildBuiltInType(ast::BuiltInType::Kind type) {
+   return alloc.new_object<BuiltInType>(type, SourceRange{});
+}
+
+ReferenceType* Semantic::BuildReferenceType(Decl const* decl) {
+   return alloc.new_object<ReferenceType>(decl, SourceRange{});
+}
+
 /* ===--------------------------------------------------------------------=== */
 // ast/Decl.h
 /* ===--------------------------------------------------------------------=== */

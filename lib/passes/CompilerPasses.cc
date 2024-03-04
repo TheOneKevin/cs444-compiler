@@ -401,8 +401,9 @@ public:
       auto LU = GetPass<LinkerPass>().LinkingUnit();
       auto& NR = GetPass<NameResolverPass>().Resolver();
       auto& HC = GetPass<HierarchyCheckerPass>().Checker();
+      auto& Sema = GetPass<AstContextPass>().Sema();
       semantic::ExprResolver ER{PM().Diag(), NewHeap()};
-      semantic::ExprTypeResolver TR{PM().Diag(), NewHeap()};
+      semantic::ExprTypeResolver TR{PM().Diag(), NewHeap(), Sema};
       ER.Init(&TR, &NR);
       TR.Init(&HC, &NR);
       try {

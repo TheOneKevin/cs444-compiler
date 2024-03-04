@@ -51,7 +51,7 @@ private:
 };
 
 /// @brief A list of ExprNodes* that can be iterated and concatenated
-class ExprNodeList {
+class ExprNodeList final {
 public:
    explicit ExprNodeList(ExprNode* node) : head_{node}, tail_{node}, size_{1} {
       node->setNext(nullptr);
@@ -129,14 +129,7 @@ public:
    void dump() const;
 
 private:
-   inline void check_invariants() const {
-      assert((!tail_ || tail_->next() == nullptr) &&
-             "Tail node should not have a next node");
-      assert(((head_ != nullptr) == (tail_ != nullptr)) &&
-             "Head is null if and only if tail is null");
-      assert(((head_ == nullptr) == (size_ == 0)) &&
-             "Size should be 0 if and only if head is null");
-   }
+   void check_invariants() const;
 
 private:
    ExprNode* head_;
@@ -154,66 +147,67 @@ namespace ast::exprnode {
 
 class ExprValue : public ExprNode {
 public:
-   ExprValue() : decl_{nullptr} {}
+   ExprValue() : decl_{nullptr}, type_{nullptr} {}
+   explicit ExprValue(ast::Type* type) : decl_{nullptr}, type_{type} {}
    ast::Decl const* decl() { return decl_; }
-   virtual bool isResolved() const { return decl_ != nullptr; }
-   void resolve(ast::Decl const* decl) { decl_ = decl; }
+   virtual bool isDeclResolved() const { return decl_ != nullptr; }
+   bool isTypeResolved() const { return type_ != nullptr; }
+   void resolveDecl(ast::Decl const* decl) {
+      assert(!decl_ && "Tried to resolve expression decl twice");
+      decl_ = decl;
+   }
+   void resolveType(ast::Type* type) {
+      assert(!type_ && "Tried to resolve expression type twice");
+      assert(type->isResolved() &&
+             "Tried to resolve expression with unresolved type");
+      type_ = type;
+   }
+   ast::Type const* type() const { return type_; }
+   ast::Type* mut_type() { return type_; }
 
 private:
    ast::Decl const* decl_;
+   ast::Type* type_;
 };
 
 class MemberName : public ExprValue {
-   std::pmr::string name_;
-
 public:
    MemberName(BumpAllocator& alloc, std::string_view name) : name_{name, alloc} {}
-   std::ostream& print(std::ostream& os) const override {
-      return os << "(Member name:" << name_ << ")";
-   }
+   std::ostream& print(std::ostream& os) const;
    std::string_view name() const { return name_; }
+
+private:
+   std::pmr::string name_;
 };
 
 class MethodName : public MemberName {
 public:
-   MethodName(BumpAllocator& alloc, std::string_view name) : MemberName{alloc, name} {}
-   std::ostream& print(std::ostream& os) const override {
-      return os << "(Method name:" << name() << ")";
-   }
+   MethodName(BumpAllocator& alloc, std::string_view name)
+         : MemberName{alloc, name} {}
+   std::ostream& print(std::ostream& os) const override;
 };
 
 class ThisNode final : public ExprValue {
    // FIXME(kevin): ThisNode requires decl which points to the class decl
-   std::ostream& print(std::ostream& os) const override { return os << "(THIS)"; }
+   std::ostream& print(std::ostream& os) const override;
 };
 
 class TypeNode final : public ExprValue {
-   Type* type_;
-
 public:
-   TypeNode(Type* type) : type_{type} {}
-   bool isResolved() const override { return true; }
-   ast::Type const* type() const { return type_; }
-   ast::Type* mut_type() { return type_; }
-   std::ostream& print(std::ostream& os) const override {
-      return os << "(Type: " << type_->toString() << ")";
-   }
+   TypeNode(Type* type) : ExprValue{type} {}
+   bool isDeclResolved() const override { return true; }
+   std::ostream& print(std::ostream& os) const override;
 };
 
 class LiteralNode final : public ExprValue {
 public:
-   LiteralNode(std::string_view value, ast::BuiltInType const* type)
-         : value_{value}, type_{type} {}
-   bool isResolved() const override { return true; }
-   std::ostream& print(std::ostream& os) const override {
-      // TODO(kevin): re-implement this
-      return os << "(Literal)";
-   }
-   ast::Type const* type() { return reinterpret_cast<ast::Type const*>(type_); }
+   LiteralNode(std::string_view value, ast::BuiltInType* type);
+   bool isDeclResolved() const override { return true; }
+   std::ostream& print(std::ostream& os) const override;
+   ast::BuiltInType const* builtinType() const;
 
 private:
    std::pmr::string value_;
-   ast::BuiltInType const* type_;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -223,61 +217,61 @@ private:
 class ExprOp : public ExprNode {
 protected:
    ExprOp(int num_args) : num_args_{num_args} {}
-   int num_args_;
 
 public:
    auto nargs() const { return num_args_; }
-   std::ostream& print(std::ostream& os) const override { return os << "ExprOp"; }
+   std::ostream& print(std::ostream& os) const override = 0;
+   ast::Type const* resolveResultType(ast::Type const* type) {
+      assert(!result_type_ && "Tried to operator resolve result type twice");
+      assert(type->isResolved() &&
+             "Tried to resolve operator with unresolved type");
+      result_type_ = type;
+      return type;
+   }
+   ast::Type const* resultType() const { return result_type_; }
+
+private:
+   int num_args_;
+   ast::Type const* result_type_;
 };
 
-class MemberAccess : public ExprOp {
+class MemberAccess final : public ExprOp {
 public:
    MemberAccess() : ExprOp(1) {}
-   std::ostream& print(std::ostream& os) const override {
-      return os << "MemberAccess";
-   }
+   std::ostream& print(std::ostream& os) const override;
 };
 
-class MethodInvocation : public ExprOp {
+class MethodInvocation final : public ExprOp {
 public:
    MethodInvocation(int num_args) : ExprOp(num_args) {}
-   std::ostream& print(std::ostream& os) const override {
-      return os << "MethodInvocation(" << nargs()-1 << ")";
-   }
+   std::ostream& print(std::ostream& os) const override;
 };
 
-class ClassInstanceCreation : public ExprOp {
+class ClassInstanceCreation final : public ExprOp {
 public:
    ClassInstanceCreation(int num_args) : ExprOp(num_args) {}
-   std::ostream& print(std::ostream& os) const override {
-      return os << "(ClassInstanceCreation args: " << std::to_string(nargs())
-                << ")";
-   }
+   std::ostream& print(std::ostream& os) const override;
 };
 
-class ArrayInstanceCreation : public ExprOp {
+class ArrayInstanceCreation final : public ExprOp {
 public:
    ArrayInstanceCreation() : ExprOp(2) {}
-   std::ostream& print(std::ostream& os) const override {
-      return os << "ArrayInstanceCreation";
-   }
+   std::ostream& print(std::ostream& os) const override;
 };
 
-class ArrayAccess : public ExprOp {
+class ArrayAccess final : public ExprOp {
 public:
    ArrayAccess() : ExprOp(2) {}
-   std::ostream& print(std::ostream& os) const override {
-      return os << "ArrayAccess";
-   }
+   std::ostream& print(std::ostream& os) const override;
 };
 
-class Cast : public ExprOp {
+class Cast final : public ExprOp {
 public:
    Cast() : ExprOp(2) {}
-   std::ostream& print(std::ostream& os) const override { return os << "Cast"; }
+   std::ostream& print(std::ostream& os) const override;
 };
 
-class UnaryOp : public ExprOp {
+class UnaryOp final : public ExprOp {
 #define UNARY_OP_TYPE_LIST(F) \
    /* Leaf nodes */           \
    F(Not)                     \
@@ -294,13 +288,11 @@ private:
 
 public:
    UnaryOp(OpType type) : ExprOp(1), type{type} {}
-   std::ostream& print(std::ostream& os) const override {
-      return os << OpType_to_string(type, "(Unknown unary op)");
-   }
-   OpType getType() const { return type; }
+   std::ostream& print(std::ostream& os) const override;
+   OpType opType() const { return type; }
 };
 
-class BinaryOp : public ExprOp {
+class BinaryOp final : public ExprOp {
 #define BINARY_OP_TYPE_LIST(F) \
    F(Assignment)               \
    F(GreaterThan)              \
@@ -330,10 +322,8 @@ private:
 
 public:
    BinaryOp(OpType type) : ExprOp(2), type{type} {}
-   std::ostream& print(std::ostream& os) const override {
-      return os << OpType_to_string(type, "(Unknown binary op)");
-   }
-   OpType getType() const { return type; }
+   std::ostream& print(std::ostream& os) const override;
+   OpType opType() const { return type; }
 };
 
 } // namespace ast::exprnode

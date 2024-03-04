@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "ast/Expr.h"
+#include "ast/ExprNode.h"
 
 namespace ast {
 template <typename T>
@@ -13,17 +14,20 @@ protected:
    using op_array = std::pmr::vector<T>;
 
    virtual T mapValue(exprnode::ExprValue& node) const = 0;
-
    virtual T evalBinaryOp(exprnode::BinaryOp& op, const T lhs,
                           const T rhs) const = 0;
    virtual T evalUnaryOp(exprnode::UnaryOp& op, const T rhs) const = 0;
-
-   virtual T evalMemberAccess(const T lhs, const T field) const = 0;
-   virtual T evalMethodCall(const T method, const op_array& args) const = 0;
-   virtual T evalNewObject(const T object, const op_array& args) const = 0;
-   virtual T evalNewArray(const T type, const T size) const = 0;
-   virtual T evalArrayAccess(const T array, const T index) const = 0;
-   virtual T evalCast(const T type, const T value) const = 0;
+   virtual T evalMemberAccess(exprnode::MemberAccess& op, const T lhs,
+                              const T field) const = 0;
+   virtual T evalMethodCall(exprnode::MethodInvocation& op, const T method,
+                            const op_array& args) const = 0;
+   virtual T evalNewObject(exprnode::ClassInstanceCreation& op, const T object,
+                           const op_array& args) const = 0;
+   virtual T evalNewArray(exprnode::ArrayInstanceCreation& op, const T type,
+                          const T size) const = 0;
+   virtual T evalArrayAccess(exprnode::ArrayAccess& op, const T array,
+                             const T index) const = 0;
+   virtual T evalCast(exprnode::Cast& op, const T type, const T value) const = 0;
 
    /**
     * @brief Gets the location of the argument at the given index.
@@ -83,30 +87,30 @@ public:
             auto rhs = popSafe();
             auto lhs = popSafe();
             op_stack_.push(evalBinaryOp(*binary, lhs, rhs));
-         } else if(dyn_cast<MemberAccess*>(node)) {
+         } else if(auto op = dyn_cast<MemberAccess*>(node)) {
             auto field = popSafe();
             auto lhs = popSafe();
-            op_stack_.push(evalMemberAccess(lhs, field));
+            op_stack_.push(evalMemberAccess(*op, lhs, field));
          } else if(auto* method = dyn_cast<MethodInvocation*>(node)) {
             if(method->nargs() > 1) getArgs(method->nargs() - 1);
             auto method_name = popSafe();
-            op_stack_.push(evalMethodCall(method_name, op_args));
+            op_stack_.push(evalMethodCall(*method, method_name, op_args));
          } else if(auto* newObj = dyn_cast<ClassInstanceCreation*>(node)) {
             if(newObj->nargs() > 1) getArgs(newObj->nargs() - 1);
             auto type = popSafe();
-            op_stack_.push(evalNewObject(type, op_args));
-         } else if(dyn_cast<ArrayInstanceCreation*>(node)) {
+            op_stack_.push(evalNewObject(*newObj, type, op_args));
+         } else if(auto op = dyn_cast<ArrayInstanceCreation*>(node)) {
             auto size = popSafe();
             auto type = popSafe();
-            op_stack_.push(evalNewArray(type, size));
-         } else if(dyn_cast<ArrayAccess*>(node)) {
+            op_stack_.push(evalNewArray(*op, type, size));
+         } else if(auto op = dyn_cast<ArrayAccess*>(node)) {
             auto index = popSafe();
             auto array = popSafe();
-            op_stack_.push(evalArrayAccess(array, index));
-         } else if(dyn_cast<Cast*>(node)) {
+            op_stack_.push(evalArrayAccess(*op, array, index));
+         } else if(auto op = dyn_cast<Cast*>(node)) {
             auto value = popSafe();
             auto type = popSafe();
-            op_stack_.push(evalCast(type, value));
+            op_stack_.push(evalCast(*op, type, value));
          }
          node = next_node;
       }
@@ -116,9 +120,6 @@ public:
       assert(op_stack_.empty() && "Stack not empty after evaluation");
       return result;
    }
-
-protected:
-   ast::exprnode::ExprOp* currentOp() const { return cur_op; }
 
 private:
    inline T popSafe() {

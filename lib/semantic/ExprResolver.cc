@@ -250,7 +250,7 @@ ast::ExprNodeList ER::recursiveReduce(ExprNameWrapper* node) const {
    if(!node->prev.has_value() /* Either no more previous */ ||
       (node->prevIfWrapper() /* Or the previous node is irreducible */ &&
        node->prevAsWrapper()->type != ExprNameWrapper::Type::ExpressionName)) {
-      expr->resolve(decl);
+      expr->resolveDecl(decl);
       return ast::ExprNodeList{expr};
    }
 
@@ -261,7 +261,7 @@ ast::ExprNodeList ER::recursiveReduce(ExprNameWrapper* node) const {
    } else {
       list = std::get<ast::ExprNodeList>(node->prev.value());
    }
-   expr->resolve(decl);
+   expr->resolveDecl(decl);
    list.push_back(expr);
    return list;
 }
@@ -276,7 +276,7 @@ ast::ExprNodeList ER::resolveExprNode(const ETy node) const {
       auto thisNode = dyn_cast<ex::ThisNode*>(expr);
       auto name = dynamic_cast<ex::MemberName*>(expr);
       if(thisNode) {
-         thisNode->resolve(cast<ast::Decl>(cu_->body()));
+         thisNode->resolveDecl(cast<ast::Decl>(cu_->body()));
       }
       if(!name) return ast::ExprNodeList{expr};
       Q = resolveSingleName(name);
@@ -302,7 +302,7 @@ ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
 
 ETy ER::mapValue(ExprValue& node) const { return &node; }
 
-ETy ER::evalMemberAccess(const ETy lhs, const ETy id) const {
+ETy ER::evalMemberAccess(DotOp&, const ETy lhs, const ETy id) const {
    // Resolves expr of form: Q . Id
    //    Where Q is either a simple identifier or a qualified
    //    identifier. If the LHS is an ExprNode, then it is simple and we need to
@@ -411,7 +411,7 @@ ast::DeclContext const* ER::getMethodParent(ExprNameWrapper* Q) const {
    return ty;
 }
 
-ETy ER::evalMethodCall(const ETy method, const op_array& args) const {
+ETy ER::evalMethodCall(MethodOp&, const ETy method, const op_array& args) const {
    // Q is the incompletely resolved method name
    ExprNameWrapper* Q = nullptr;
 
@@ -452,7 +452,7 @@ ETy ER::evalMethodCall(const ETy method, const op_array& args) const {
    return list;
 }
 
-ETy ER::evalNewObject(const ETy object, const op_array& args) const {
+ETy ER::evalNewObject(NewOp& op, const ETy object, const op_array& args) const {
    ast::ExprNodeList list{};
    if(std::holds_alternative<ast::ExprNode*>(object)) {
       auto expr = cast<ex::TypeNode>(std::get<ast::ExprNode*>(object));
@@ -462,11 +462,11 @@ ETy ER::evalNewObject(const ETy object, const op_array& args) const {
    }
    // FIXME(kevin): Resolve constructor overloads
    for(auto& arg : args) list.concat(resolveExprNode(arg));
-   list.push_back(currentOp());
+   list.push_back(&op);
    return list;
 }
 
-ETy ER::evalNewArray(const ETy type, const ETy size) const {
+ETy ER::evalNewArray(NewArrayOp& op, const ETy type, const ETy size) const {
    ast::ExprNodeList list{};
    if(std::holds_alternative<ast::ExprNode*>(type)) {
       auto expr = cast<ex::TypeNode>(std::get<ast::ExprNode*>(type));
@@ -475,18 +475,19 @@ ETy ER::evalNewArray(const ETy type, const ETy size) const {
       assert(false && "Grammar wrong, type must be an atomic ExprNode*");
    }
    list.concat(resolveExprNode(size));
-   list.push_back(currentOp());
+   list.push_back(&op);
    return list;
 }
 
-ETy ER::evalArrayAccess(const ETy array, const ETy index) const {
+ETy ER::evalArrayAccess(ArrayAccessOp& op, const ETy array, const ETy index) const {
    ast::ExprNodeList list{};
    list.concat(resolveExprNode(array));
    list.concat(resolveExprNode(index));
+   list.push_back(&op);
    return list;
 }
 
-ETy ER::evalCast(const ETy type, const ETy value) const {
+ETy ER::evalCast(CastOp& op, const ETy type, const ETy value) const {
    ast::ExprNodeList list{};
    if(std::holds_alternative<ast::ExprNode*>(type)) {
       auto expr = cast<ex::TypeNode>(std::get<ast::ExprNode*>(type));
@@ -495,7 +496,7 @@ ETy ER::evalCast(const ETy type, const ETy value) const {
       assert(false && "Grammar wrong, type must be an atomic ExprNode*");
    }
    list.concat(resolveExprNode(value));
-   list.push_back(currentOp());
+   list.push_back(&op);
    return list;
 }
 

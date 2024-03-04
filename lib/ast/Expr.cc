@@ -50,13 +50,13 @@ int Expr::printDotNode(DotPrinter& dp) const {
    return -1;
 }
 
-void ExprNode::dump() const {
-   this->print(std::cerr);
-}
+void Expr::dump() const { this->print(std::cerr, 0); }
 
-void Expr::dump() const {
-   this->print(std::cerr, 0);
-}
+/* ===--------------------------------------------------------------------=== */
+// ExprNode Subclasses
+/* ===--------------------------------------------------------------------=== */
+
+void ExprNode::dump() const { this->print(std::cerr); }
 
 void ExprNodeList::dump() const {
    for(auto node : nodes()) {
@@ -65,5 +65,76 @@ void ExprNodeList::dump() const {
    }
    std::cerr << "\n";
 }
+
+void ExprNodeList::check_invariants() const {
+   assert((!tail_ || tail_->next() == nullptr) &&
+          "Tail node should not have a next node");
+   assert(((head_ != nullptr) == (tail_ != nullptr)) &&
+          "Head is null if and only if tail is null");
+   assert(((head_ == nullptr) == (size_ == 0)) &&
+          "Size should be 0 if and only if head is null");
+}
+
+namespace exprnode {
+
+std::ostream& MemberName::print(std::ostream& os) const {
+   return os << "(Member name:" << name_ << ")";
+}
+
+std::ostream& MethodName::print(std::ostream& os) const {
+   return os << "(Method name:" << name() << ")";
+}
+
+std::ostream& ThisNode::print(std::ostream& os) const { return os << "(THIS)"; }
+
+std::ostream& TypeNode::print(std::ostream& os) const {
+   os << "(Type: ";
+   type()->print(os);
+   return os << ")";
+}
+
+LiteralNode::LiteralNode(std::string_view value, ast::BuiltInType* type)
+      : ExprValue{reinterpret_cast<ast::Type*>(type)}, value_{value} {}
+
+std::ostream& LiteralNode::print(std::ostream& os) const {
+   // TODO(kevin): re-implement this
+   return os << "(Literal)";
+}
+
+ast::BuiltInType const* LiteralNode::builtinType() const {
+   return cast<ast::BuiltInType>(type());
+}
+
+std::ostream& MemberAccess::print(std::ostream& os) const {
+   return os << "MemberAccess";
+}
+
+std::ostream& MethodInvocation::print(std::ostream& os) const {
+   return os << "MethodInvocation(" << nargs() - 1 << ")";
+}
+
+std::ostream& ClassInstanceCreation::print(std::ostream& os) const {
+   return os << "(ClassInstanceCreation args: " << std::to_string(nargs()) << ")";
+}
+
+std::ostream& ArrayInstanceCreation::print(std::ostream& os) const {
+   return os << "ArrayInstanceCreation";
+}
+
+std::ostream& ArrayAccess::print(std::ostream& os) const {
+   return os << "ArrayAccess";
+}
+
+std::ostream& Cast::print(std::ostream& os) const { return os << "Cast"; }
+
+std::ostream& UnaryOp::print(std::ostream& os) const {
+   return os << OpType_to_string(type, "(Unknown unary op)");
+}
+
+std::ostream& BinaryOp::print(std::ostream& os) const {
+   return os << OpType_to_string(type, "(Unknown binary op)");
+}
+
+} // namespace exprnode
 
 } // namespace ast
