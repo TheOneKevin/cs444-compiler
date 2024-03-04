@@ -213,7 +213,8 @@ ExprNodeList ptv::visitClassCreation(Node* node) {
    check_node_type(node, pty::ClassInstanceCreationExpression);
    check_num_children(node, 2, 2);
    ExprNodeList ops{};
-   ops.concat(visitQualifiedIdentifierInExpr(node->child(0)));
+   auto type = visitReferenceType(node->child(0));
+   ops.push_back(alloc.new_object<TypeNode>(type));
    ExprNodeList args{};
    auto size = visitArgumentList(node->child(1), args) + 1;
    ops.concat(args);

@@ -269,7 +269,11 @@ ast::ExprNodeList ER::resolveExprNode(const ETy node) const {
    // 3. Otherwise, get the wrapped node and build resolution
    if(std::holds_alternative<ast::ExprNode*>(node)) {
       auto expr = std::get<ast::ExprNode*>(node);
+      auto thisNode = dyn_cast<ex::ThisNode*>(expr);
       auto name = dynamic_cast<ex::MemberName*>(expr);
+      if(thisNode) {
+         thisNode->resolve(cast<ast::Decl>(cu_->body()));
+      }
       if(!name) return ast::ExprNodeList{expr};
       Q = resolveSingleName(name);
    } else if(std::holds_alternative<ast::ExprNodeList>(node)) {
@@ -294,10 +298,16 @@ ETy ER::evalMemberAccess(const ETy lhs, const ETy id) const {
    //    reclassify it. Otherwise, we can continue to resolve recursively.
    PrevTy Q = nullptr;
    if(std::holds_alternative<ast::ExprNode*>(lhs)) {
-      auto simpleName =
-            dynamic_cast<ex::MemberName*>(std::get<ast::ExprNode*>(lhs));
-      assert(simpleName && "Malformed node. Expected MemberName here.");
-      Q = resolveSingleName(simpleName);
+      if(auto simpleName =
+               dynamic_cast<ex::MemberName*>(std::get<ast::ExprNode*>(lhs))) {
+         Q = resolveSingleName(simpleName);
+      } else if(auto thisNode =
+                      dynamic_cast<ex::ThisNode*>(std::get<ast::ExprNode*>(lhs))) {
+         Q = resolveExprNode(thisNode);
+      } else {
+         assert(false && "Malformed node. Expected MemberName here.");
+      }
+
    } else if(std::holds_alternative<ExprNameWrapper*>(lhs)) {
       Q = std::get<ExprNameWrapper*>(lhs);
    } else {
@@ -498,6 +508,7 @@ void ER::resolveRecursive(ast::AstNode* node) {
             init->print(dbg.get(), 1);
          }
          Evaluate(init);
+         TR->Evaluate(init);
          init->clear();
       }
    } else if(auto* stmt = dynamic_cast<ast::Stmt*>(node)) {
@@ -509,6 +520,7 @@ void ER::resolveRecursive(ast::AstNode* node) {
             expr->print(dbg.get(), 1);
          }
          Evaluate(expr);
+         TR->Evaluate(expr);
          expr->clear();
       }
    }

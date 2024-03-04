@@ -395,6 +395,7 @@ void NameResolver::resolveExpr(ast::Expr* expr)  {
    for(auto node : expr->mut_nodes()) {
       auto tyNode = dyn_cast<ast::exprnode::TypeNode>(node);
       if(!tyNode) continue;
+      if(tyNode->mut_type()->isResolved()) continue;
       tyNode->mut_type()->resolve(*this);
    }
 }

@@ -7,4 +7,7 @@ public class Gabriel {
         x = 2 * n + n;
         n = n + 1;
     }
+    public void test (Object o) {
+        int a = o + 2;
+    }
 }
