@@ -10,7 +10,7 @@ using std::string;
 std::pair<int, int> printStmtSubgraph(utils::DotPrinter& dp, ast::Stmt* stmt) {
    int firstId = -1;
    int subgraphId = -1;
-   if(auto block = dynamic_cast<ast::BlockStatement*>(stmt)) {
+   if(auto block = dyn_cast_or_null<ast::BlockStatement*>(stmt)) {
       subgraphId = dp.id();
       dp.startSubgraph(subgraphId);
       dp.print("label=\"Statement body\"");

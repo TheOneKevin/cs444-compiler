@@ -74,40 +74,36 @@ public:
          // We grab the next node because we will unlock the current node
          auto next_node = node->mut_next();
          node->const_unlock();
-         if(auto* value = dynamic_cast<ExprValue*>(node)) {
+         if(auto* value = dyn_cast<ExprValue*>(node)) {
             op_stack_.push(mapValue(*value));
-         } else if(auto* unary = dynamic_cast<UnaryOp*>(node)) {
+         } else if(auto* unary = dyn_cast<UnaryOp*>(node)) {
             auto rhs = popSafe();
             op_stack_.push(evalUnaryOp(*unary, rhs));
-         } else if(auto* binary = dynamic_cast<BinaryOp*>(node)) {
+         } else if(auto* binary = dyn_cast<BinaryOp*>(node)) {
             auto rhs = popSafe();
             auto lhs = popSafe();
             op_stack_.push(evalBinaryOp(*binary, lhs, rhs));
-         } else if(auto* member = dynamic_cast<MemberAccess const*>(node)) {
+         } else if(dyn_cast<MemberAccess*>(node)) {
             auto field = popSafe();
             auto lhs = popSafe();
             op_stack_.push(evalMemberAccess(lhs, field));
-         } else if(auto* method = dynamic_cast<MethodInvocation const*>(node)) {
-            if(method->nargs() > 1)
-               getArgs(method->nargs()-1);
+         } else if(auto* method = dyn_cast<MethodInvocation*>(node)) {
+            if(method->nargs() > 1) getArgs(method->nargs() - 1);
             auto method_name = popSafe();
             op_stack_.push(evalMethodCall(method_name, op_args));
-         } else if(auto* new_object =
-                         dynamic_cast<ClassInstanceCreation const*>(node)) {
-            if(new_object->nargs() > 1)
-               getArgs(new_object->nargs()-1);
+         } else if(auto* newObj = dyn_cast<ClassInstanceCreation*>(node)) {
+            if(newObj->nargs() > 1) getArgs(newObj->nargs() - 1);
             auto type = popSafe();
             op_stack_.push(evalNewObject(type, op_args));
-         } else if(auto* new_array =
-                         dynamic_cast<ArrayInstanceCreation const*>(node)) {
+         } else if(dyn_cast<ArrayInstanceCreation*>(node)) {
             auto size = popSafe();
             auto type = popSafe();
             op_stack_.push(evalNewArray(type, size));
-         } else if(auto* array_access = dynamic_cast<ArrayAccess const*>(node)) {
+         } else if(dyn_cast<ArrayAccess*>(node)) {
             auto index = popSafe();
             auto array = popSafe();
             op_stack_.push(evalArrayAccess(array, index));
-         } else if(auto* cast = dynamic_cast<Cast const*>(node)) {
+         } else if(dyn_cast<Cast*>(node)) {
             auto value = popSafe();
             auto type = popSafe();
             op_stack_.push(evalCast(type, value));

@@ -4,7 +4,6 @@
 #include <string_view>
 
 #include "ast/AstNode.h"
-#include "ast/Type.h"
 #include "utils/EnumMacros.h"
 #include "utils/Generator.h"
 
@@ -189,12 +188,13 @@ class ThisNode final : public ExprValue {
 };
 
 class TypeNode final : public ExprValue {
-   Type const* type_;
+   Type* type_;
 
 public:
-   TypeNode(Type const* type) : type_{type} {}
+   TypeNode(Type* type) : type_{type} {}
    bool isResolved() const override { return true; }
-   ast::Type const* type() { return type_; }
+   ast::Type const* type() const { return type_; }
+   ast::Type* mut_type() { return type_; }
    std::ostream& print(std::ostream& os) const override {
       return os << "(Type: " << type_->toString() << ")";
    }
@@ -209,7 +209,7 @@ public:
       // TODO(kevin): re-implement this
       return os << "(Literal)";
    }
-   ast::Type const* type() { return type_; }
+   ast::Type const* type() { return reinterpret_cast<ast::Type const*>(type_); }
 
 private:
    std::pmr::string value_;

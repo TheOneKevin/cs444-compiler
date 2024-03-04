@@ -97,7 +97,7 @@ public:
    string_view toString() const override { return Kind_to_string(kind, "??"); }
    bool isResolved() const override { return true; }
    bool operator==(const Type& other) const override {
-      if(auto otherBuiltIn = dynamic_cast<const BuiltInType*>(&other)) {
+      if(auto otherBuiltIn = dyn_cast<BuiltInType>(other)) {
          return kind == otherBuiltIn->kind;
       }
       return false;
@@ -141,7 +141,7 @@ public:
    }
 
    bool operator==(const Type& other) const override final {
-      if(auto otherType = dynamic_cast<const ReferenceType*>(&other)) {
+      if(auto otherType = dyn_cast<ReferenceType>(other)) {
          assert(decl_ && otherType->decl_ &&
                 "Reference types are not resolved during comparison");
          return decl_ == otherType->decl_;
@@ -258,12 +258,12 @@ public:
    bool isResolved() const override { return elementType->isResolved(); }
    void resolve(semantic::NameResolver& x) override {
       // Resolve only if the element type is an unresolved type.
-      if(auto unresTy = dynamic_cast<UnresolvedType*>(elementType)) {
+      if(auto unresTy = dyn_cast<UnresolvedType>(elementType)) {
          if(!elementType->isResolved()) unresTy->resolve(x);
       }
    }
    bool operator==(const Type& other) const override {
-      if(auto otherArrayType = dynamic_cast<const ArrayType*>(&other)) {
+      if(auto otherArrayType = dyn_cast<ArrayType>(other)) {
          return *elementType == *otherArrayType->elementType;
       }
       return false;
@@ -288,7 +288,7 @@ public:
    bool isResolved() const override { return true; }
 
    bool operator==(const Type& other) const override {
-      if(auto otherMethod = dynamic_cast<const MethodType*>(&other)) {
+      if(auto otherMethod = dyn_cast<MethodType>(other)) {
          if(*returnType != *otherMethod->returnType) {
             return false;
          }

@@ -237,7 +237,7 @@ public:
       requires PassType<T>
    T& AddPass(Args&&... args) {
       passes_.emplace_back(new T(*this, std::forward<Args>(args)...));
-      T& result = *dynamic_cast<T*>(passes_.back().get());
+      T& result = *cast<T*>(passes_.back().get());
       // If the pass has a name, register it as constructible from the command
       // line options
       if(!result.Name().empty()) result.RegisterCLI();
@@ -254,7 +254,7 @@ private:
    T& getPass(Pass& pass) {
       T* result = nullptr;
       for(auto& pass : passes_) {
-         if(auto* p = dynamic_cast<T*>(pass.get())) {
+         if(auto* p = dyn_cast<T*>(pass.get())) {
             if(result != nullptr)
                throw std::runtime_error("Multiple passes of type: " +
                                         std::string(typeid(T).name()));
@@ -278,7 +278,7 @@ private:
    Generator<T*> getPasses(Pass& pass) {
       bool found = false;
       for(auto& pass : passes_) {
-         if(auto* p = dynamic_cast<T*>(pass.get())) {
+         if(auto* p = dyn_cast<T*>(pass.get())) {
             // If the requester is running, the result must be valid
             if(p->state == Pass::Running && p->state != Pass::Valid) {
                throw std::runtime_error("Pass not valid: " +

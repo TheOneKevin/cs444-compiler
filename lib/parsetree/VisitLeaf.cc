@@ -26,7 +26,7 @@ ast::UnresolvedType* ptv::visitReferenceType(Node* node,
 
 std::string_view ptv::visitIdentifier(Node* node) {
    check_node_type(node, pty::Identifier);
-   return dynamic_cast<Identifier*>(node)->get_name();
+   return cast<Identifier*>(node)->get_name();
 }
 
 ast::Modifiers ptv::visitModifierList(Node* node, ast::Modifiers modifiers) {
@@ -48,7 +48,7 @@ ast::Modifiers ptv::visitModifierList(Node* node, ast::Modifiers modifiers) {
 
 Modifier ptv::visitModifier(Node* node) {
    check_node_type(node, pty::Modifier);
-   return *dynamic_cast<Modifier*>(node);
+   return *cast<Modifier*>(node);
 }
 
 ast::Type* ptv::visitType(Node* node) {
@@ -57,7 +57,7 @@ ast::Type* ptv::visitType(Node* node) {
    innerTy = node->child(0);
    ast::Type* elemTy = nullptr;
    if(innerTy->get_node_type() == pty::BasicType) {
-      elemTy = sem.BuildBuiltInType(dynamic_cast<BasicType*>(innerTy)->get_type(),
+      elemTy = sem.BuildBuiltInType(cast<BasicType*>(innerTy)->get_type(),
                                     node->location());
    } else if(innerTy->get_node_type() == pty::QualifiedIdentifier) {
       elemTy = visitReferenceType(innerTy);

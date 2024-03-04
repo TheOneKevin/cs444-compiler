@@ -51,7 +51,7 @@ public:
    auto modifiers() const { return modifiers_; }
    void setParent(DeclContext* parent) override {
       Decl::setParent(parent);
-      Decl* parentDecl = dynamic_cast<Decl*>(parent);
+      auto parentDecl = dyn_cast<Decl>(parent);
       assert(parentDecl && "Parent must be a Decl");
       if(modifiers_.isStatic()) {
          canonicalName_ = parentDecl->getCanonicalName();

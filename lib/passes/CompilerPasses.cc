@@ -204,8 +204,8 @@ private:
 };
 
 Pass& NewAstBuilderPass(PassManager& PM, Pass* depends) {
-   auto* p = dynamic_cast<Joos1WParserPass*>(depends);
-   if(!p) throw std::invalid_argument{"depends must be a Joos1WParserPass"};
+   // "depends" must be a Joos1WParserPass
+   auto* p = cast<Joos1WParserPass*>(depends);
    return PM.AddPass<AstBuilderPass>(*p);
 }
 

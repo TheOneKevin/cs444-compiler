@@ -18,6 +18,7 @@ public:
    auto list() const { return rpn_ops; }
    auto location() const { return loc_; }
    void dump() const;
+   auto mut_nodes() { return rpn_ops.mut_nodes(); }
    // FIXME(kevin): Temporary, remove later
    void clear() { rpn_ops = ExprNodeList{}; }
 };

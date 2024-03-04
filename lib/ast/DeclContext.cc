@@ -53,7 +53,7 @@ CompilationUnit::CompilationUnit(BumpAllocator& alloc, ReferenceType* package,
                                  array_ref<ImportDeclaration> imports,
                                  SourceRange location, DeclContext* body) noexcept
       : package_{package}, imports_{alloc}, body_{body}, location_{location} {
-   if(auto decl = dynamic_cast<Decl*>(body)) {
+   if(auto decl = dyn_cast_or_null<Decl*>(body)) {
       decl->setParent(this);
    } else if(decl != nullptr) {
       assert(false && "Body must be a Decl.");
@@ -114,9 +114,9 @@ ClassDecl::ClassDecl(BumpAllocator& alloc, Modifiers modifiers,
    utils::move_vector<ReferenceType*>(interfaces, interfaces_);
    // Sort the classBodyDecls into fields, methods, and constructors
    for(auto bodyDecl : classBodyDecls) {
-      if(auto fieldDecl = dynamic_cast<FieldDecl*>(bodyDecl)) {
+      if(auto fieldDecl = dyn_cast<FieldDecl*>(bodyDecl)) {
          fields_.push_back(fieldDecl);
-      } else if(auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {
+      } else if(auto methodDecl = dyn_cast<MethodDecl*>(bodyDecl)) {
          if(methodDecl->isConstructor())
             constructors_.push_back(methodDecl);
          else
@@ -180,8 +180,7 @@ int ClassDecl::printDotNode(DotPrinter& dp) const {
 }
 
 void ClassDecl::setParent(DeclContext* parent) {
-   auto cu = dynamic_cast<CompilationUnit*>(parent);
-   assert(cu != nullptr && "Parent must be a CompilationUnit");
+   auto cu = cast<CompilationUnit*>(parent);
    // Set the parent of the class
    Decl::setParent(parent);
    // Build the canonical name
@@ -201,7 +200,8 @@ void ClassDecl::setParent(DeclContext* parent) {
 
 InterfaceDecl::InterfaceDecl(BumpAllocator& alloc, Modifiers modifiers,
                              SourceRange location, string_view name,
-                             array_ref<ReferenceType*> extends, ReferenceType* objectSuperclass,
+                             array_ref<ReferenceType*> extends,
+                             ReferenceType* objectSuperclass,
                              array_ref<Decl*> interfaceBodyDecls) throw()
       : Decl{alloc, name},
         modifiers_{modifiers},
@@ -211,11 +211,7 @@ InterfaceDecl::InterfaceDecl(BumpAllocator& alloc, Modifiers modifiers,
         objectSuperclass_{objectSuperclass} {
    utils::move_vector<ReferenceType*>(extends, extends_);
    for(auto bodyDecl : interfaceBodyDecls) {
-      if(auto methodDecl = dynamic_cast<MethodDecl*>(bodyDecl)) {
-         methods_.push_back(methodDecl);
-      } else {
-         assert(false && "Unexpected interface body declaration type");
-      }
+      methods_.push_back(cast<MethodDecl*>(bodyDecl));
    }
 }
 
@@ -253,8 +249,7 @@ int InterfaceDecl::printDotNode(DotPrinter& dp) const {
 }
 
 void InterfaceDecl::setParent(DeclContext* parent) {
-   auto cu = dynamic_cast<CompilationUnit*>(parent);
-   assert(cu != nullptr && "Parent must be a CompilationUnit");
+   auto cu = cast<CompilationUnit*>(parent);
    // Set the parent of the interface
    Decl::setParent(parent);
    // Build the canonical name
@@ -337,10 +332,8 @@ int MethodDecl::printDotNode(DotPrinter& dp) const {
 
 void MethodDecl::setParent(DeclContext* parent) {
    // Check that parent is either a ClassDecl or an InterfaceDecl
-   auto decl = dynamic_cast<Decl*>(parent);
-   assert(dynamic_cast<ClassDecl*>(parent) ||
-          dynamic_cast<InterfaceDecl*>(parent));
-   assert(decl != nullptr);
+   auto decl = cast<Decl*>(parent);
+   assert(dyn_cast<ClassDecl*>(parent) || dyn_cast<InterfaceDecl*>(parent));
    // Set the parent of the method
    Decl::setParent(parent);
    // Build the canonical name

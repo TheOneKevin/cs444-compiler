@@ -18,8 +18,8 @@ struct ImportDeclaration {
    ReferenceType* type;
    bool isOnDemand;
    auto simpleName() const {
-      auto unresTy = dynamic_cast<UnresolvedType*>(type);
-      assert(unresTy && "Can only extract simple name from unresolved type");
+      // Can only extract simple name from unresolved type
+      auto unresTy = cast<UnresolvedType*>(type);
       return unresTy->parts().back();
    }
    SourceRange location() const { return type->location(); }
@@ -31,13 +31,14 @@ public:
                    array_ref<ImportDeclaration> imports, SourceRange location,
                    DeclContext* body) noexcept;
    auto const* body() const { return body_; }
-   auto const* bodyAsDecl() const { return dynamic_cast<Decl const*>(body_); }
-   auto mut_bodyAsDecl() { return dynamic_cast<Decl*>(body_); }
+   auto const* bodyAsDecl() const { return dyn_cast_or_null<Decl>(body_); }
+   auto mut_bodyAsDecl() { return dyn_cast_or_null<Decl>(body_); }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
    string_view getPackageName() const {
-      auto package = dynamic_cast<UnresolvedType*>(package_);
-      assert(package_ && "Package must be unresolved type");
+      assert(package_ && "Package can never be null");
+      // Package must be unresolved type
+      auto package = cast<UnresolvedType*>(package_);
       if(package->parts().size() > 0) return package_->toString();
       return "unnamed package";
    }
@@ -45,8 +46,8 @@ public:
    auto const* package() const { return package_; }
    auto imports() const { return std::views::all(imports_); }
    auto isDefaultPackage() const {
-      auto unresTy = dynamic_cast<UnresolvedType*>(package_);
-      assert(unresTy && "Package must be unresolved type");
+      // Package must be unresolved type
+      auto unresTy = cast<UnresolvedType*>(package_);
       return unresTy->parts().size() == 0;
    }
    utils::Generator<ast::AstNode const*> children() const override {
@@ -56,8 +57,8 @@ public:
    }
    auto mut_body() { return body_; }
    bool isStdLib() const {
-      auto package = dynamic_cast<UnresolvedType*>(package_);
-      assert(package_ && "Package must be unresolved type");
+      // Package must be unresolved type
+      auto package = cast<UnresolvedType*>(package_);
       return package->parts().size() >= 1 && package->parts().front() == "java";
    }
 

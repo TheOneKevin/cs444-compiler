@@ -10,6 +10,7 @@
 #include "parsetree/ParseTree.h"
 #include "utils/DotPrinter.h"
 #include "utils/Generator.h"
+#include "utils/Utils.h"
 
 namespace semantic {
 class NameResolver;
@@ -132,7 +133,7 @@ public:
    /// @brief Generator to yield all children decls of the context.
    virtual utils::Generator<ast::Decl const*> decls() const {
       for(auto child : children()) {
-         if(auto decl = dynamic_cast<Decl const*>(child)) {
+         if(auto decl = dyn_cast_or_null<Decl>(child)) {
             assert(decl->parent() == this &&
                    "child declaration of this context has wrong the parent!");
             co_yield decl;
