@@ -1,0 +1,13 @@
+{
+    "recommendations": [
+        "ms-vscode.cpptools",
+        "llvm-vs-code-extensions.vscode-clangd",
+        "twxs.cmake",
+        "ms-vscode.cmake-tools",
+        "vadimcn.vscode-lldb",
+        "cschlosser.doxdocgen",
+        "tintinweb.graphviz-interactive-preview",
+        "daohong-emilio.yash",
+        "gruntfuggly.todo-tree"
+    ]
+}

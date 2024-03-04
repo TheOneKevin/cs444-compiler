@@ -42,5 +42,7 @@
   "C_Cpp.inlayHints.parameterNames.enabled": false,
   "C_Cpp.vcpkg.enabled": false,
   "C_Cpp.debugShortcut": false,
-  "gitlens.codeLens.enabled": false
+  "gitlens.codeLens.enabled": false,
+  "todo-tree.highlights.useColourScheme": false,
+  "todo-tree.regex.regexCaseSensitive": false
 }
