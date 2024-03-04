@@ -1,6 +1,5 @@
 #pragma once
 
-#include <concepts>
 #include <stack>
 #include <vector>
 

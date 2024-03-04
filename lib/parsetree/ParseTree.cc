@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <iostream>
 #include <string>
-#include <vector>
 
 #include "utils/DotPrinter.h"
 
