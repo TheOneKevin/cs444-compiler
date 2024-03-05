@@ -105,9 +105,8 @@ public:
    /// @brief Overrides the setParent to construct canonical name.
    void setParent(DeclContext* parent) override;
    SourceRange location() const override { return location_; }
-   DeclContext const* asDeclContext() const override {
-      return this;
-   }
+   DeclContext const* asDeclContext() const override { return this; }
+   Decl const* asDecl() const override { return this; }
 
    utils::Generator<ast::AstNode const*> children() const override {
       for(auto field : fields_) co_yield field;
@@ -144,9 +143,8 @@ public:
    /// @brief Overrides the setParent to construct canonical name.
    void setParent(DeclContext* parent) override;
    SourceRange location() const override { return location_; }
-   DeclContext const* asDeclContext() const override {
-      return this;
-   }
+   DeclContext const* asDeclContext() const override { return this; }
+   Decl const* asDecl() const override { return this; }
 
    utils::Generator<ast::AstNode const*> children() const override {
       for(auto method : methods_) co_yield reinterpret_cast<Decl*>(method);
@@ -192,9 +190,8 @@ public:
    }
    SourceRange location() const override { return location_; }
    ReturnType returnTy() const { return ReturnType{returnType_}; }
-   DeclContext const* asDeclContext() const override {
-      return this;
-   }
+   DeclContext const* asDeclContext() const override { return this; }
+   Decl const* asDecl() const override { return this; }
 
    utils::Generator<ast::AstNode const*> children() const override {
       co_yield returnType_;

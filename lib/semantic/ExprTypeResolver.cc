@@ -170,7 +170,10 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
 Type const* ExprTypeResolver::mapValue(ExprValue& node) const {
    assert(node.isDeclResolved() && "ExprValue decl is not resolved");
    if(auto method = dyn_cast_or_null<MethodDecl>(node.decl())) {
-      return alloc.new_object<MethodType>(alloc, method);
+      auto ty = alloc.new_object<MethodType>(alloc, method);
+      if(method->isConstructor())
+         ty->setReturnType(sema.BuildReferenceType(cast<Decl>(method->parent())));
+      return ty;
    } else {
       assert(node.isTypeResolved() && "ExprValue type is not resolved");
       return node.type();

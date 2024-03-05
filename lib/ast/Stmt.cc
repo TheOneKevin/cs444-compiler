@@ -182,6 +182,7 @@ std::ostream& ReturnStmt::print(std::ostream& os, int indentation) const {
 int ReturnStmt::printDotNode(DotPrinter& dp) const {
    auto id = dp.id();
    dp.printLabel(id, "ReturnStmt");
+   if(expr_) dp.printConnection(id, expr_->printDotNode(dp));
    return id;
 }
 

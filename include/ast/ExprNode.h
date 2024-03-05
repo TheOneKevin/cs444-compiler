@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "ast/AstNode.h"
+#include "ast/DeclContext.h"
 #include "utils/BumpAllocator.h"
 #include "utils/EnumMacros.h"
 #include "utils/Generator.h"
@@ -162,6 +163,9 @@ public:
       assert((!type || type->isResolved()) &&
              "Tried to resolve expression with unresolved type");
       type_ = type;
+   }
+   void overrideDecl(ast::Decl const* decl) {
+      decl_ = decl;
    }
    ast::Type const* type() const { return type_; }
 

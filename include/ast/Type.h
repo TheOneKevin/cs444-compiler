@@ -129,6 +129,7 @@ public:
    /// @brief The reference type is resolved if it has a declaration.
    bool isResolved() const override { return decl_ != nullptr; }
    Decl const* decl() const { return decl_; }
+   virtual ast::Decl const* getAsDecl() const override { return decl_;}
    /// @brief This does nothing as a reference type is always resolved.
    virtual void resolve(TypeResolver&) override {
       assert(isResolved() && "Type is not resolved");
@@ -274,7 +275,7 @@ public:
       }
       return false;
    }
-
+   void setReturnType(Type const* type) { returnType_ = type; }
    Type const* returnType() const { return returnType_; }
    pmr_vector<Type const*> paramTypes() const { return paramTypes_; }
 

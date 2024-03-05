@@ -154,6 +154,9 @@ public:
       }
       return ret;
    }
+   
+   /// @brief
+   virtual Decl const* asDecl() const { return nullptr; }
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -203,7 +206,7 @@ public:
    virtual bool isArray() const { return false; }
    virtual bool isBuiltIn() const { return false; }
 
-   ast::ClassDecl const* getAsClass() const { return nullptr; }
+   virtual ast::Decl const* getAsDecl() const { return nullptr; }
 
 private:
    SourceRange loc_;

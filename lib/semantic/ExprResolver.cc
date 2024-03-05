@@ -369,22 +369,42 @@ bool ER::isMethodMoreSpecific(ast::MethodDecl const* a,
    return true;
 }
 
+bool ER::areParameterTypesApplicable(ast::MethodDecl const* decl,
+                                     const ty_array& argtys) const {
+   bool valid = true;
+   for(size_t i = 0; i < argtys.size(); i++) {
+      auto ty1 = argtys[i];
+      auto ty2 = decl->parameters()[i]->type();
+      valid &= TR->isAssignableTo(ty1, ty2);
+   }
+   return valid;
+}
+
 ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
                                                  std::string_view name,
-                                                 const ty_array& argtys) const {
+                                                 const ty_array& argtys,
+                                                 bool isCtor) const {
+   // Set the name to the constructor name if isCtor is true
+   if(isCtor) name = ctx->asDecl()->name();
    // 15.12.2.1 Find Methods that are Applicable and Accessible
    std::pmr::vector<ast::MethodDecl const*> candidates{alloc};
-   for(auto decl : HC->getInheritedMethods(cast<ast::Decl>(ctx))) {
-      if(!decl) continue;
-      if(decl->name() != name) continue;
-      if(decl->parameters().size() != argtys.size()) continue;
-      bool valid = true;
-      for(size_t i = 0; i < argtys.size(); i++) {
-         auto ty1 = argtys[i];
-         auto ty2 = decl->parameters()[i]->type();
-         valid &= TR->isAssignableTo(ty1, ty2);
+   if(isCtor) {
+      // Only grab the constructors of this type
+      for(auto decl : ctx->decls()) {
+         auto ctor = dynamic_cast<ast::MethodDecl const*>(decl);
+         if(!ctor) continue;
+         if(!ctor->isConstructor()) continue;
+         if(ctor->parameters().size() != argtys.size()) continue;
+         if(areParameterTypesApplicable(ctor, argtys)) candidates.push_back(ctor);
       }
-      if(valid) candidates.push_back(decl);
+   } else {
+      // Search the current class and all superclasses
+      for(auto decl : HC->getInheritedMethods(cast<ast::Decl>(ctx))) {
+         if(!decl) continue;
+         if(decl->parameters().size() != argtys.size()) continue;
+         if(decl->name() != name) continue;
+         if(areParameterTypesApplicable(decl, argtys)) candidates.push_back(decl);
+      }
    }
    if(candidates.size() == 0)
       throw diag.ReportError(cu_->location())
@@ -538,7 +558,8 @@ ast::DeclContext const* ER::getMethodParent(ExprNameWrapper* Q) const {
    return ty;
 }
 
-ETy ER::evalMethodCall(MethodOp& op, const ETy method, const op_array& args) const {
+ETy ER::evalMethodCall(MethodOp& op, const ETy method,
+                       const op_array& args) const {
    // Q is the incompletely resolved method name
    ExprNameWrapper* Q = nullptr;
 
@@ -569,7 +590,7 @@ ETy ER::evalMethodCall(MethodOp& op, const ETy method, const op_array& args) con
 
    // Begin resolution of the method call
    auto ctx = getMethodParent(Q);
-   auto methodDecl = resolveMethodOverload(ctx, Q->node->name(), argtys);
+   auto methodDecl = resolveMethodOverload(ctx, Q->node->name(), argtys, false);
    Q->reclassify(ExprNameWrapper::Type::ExpressionName, methodDecl, nullptr);
 
    // Once Q has been resolved, we can build the expression list
@@ -581,15 +602,32 @@ ETy ER::evalMethodCall(MethodOp& op, const ETy method, const op_array& args) con
 }
 
 ETy ER::evalNewObject(NewOp& op, const ETy object, const op_array& args) const {
-   ast::ExprNodeList list{};
+   // Get the type we are instantiating
+   ex::TypeNode* expr = nullptr;
    if(std::holds_alternative<ast::ExprNode*>(object)) {
-      auto expr = cast<ex::TypeNode>(std::get<ast::ExprNode*>(object));
-      list.push_back(expr);
+      expr = cast<ex::TypeNode>(std::get<ast::ExprNode*>(object));
    } else {
       assert(false && "Grammar wrong, object must be an atomic ExprNode*");
    }
-   // FIXME(kevin): Resolve constructor overloads
-   for(auto& arg : args) list.concat(resolveExprNode(arg));
+
+   // Resolve the array of arguments
+   ty_array argtys{alloc};
+   ast::ExprNodeList arglist{};
+   for(auto& arg : args) {
+      auto tmplist = resolveExprNode(arg);
+      argtys.push_back(TR->EvaluateList(tmplist));
+      arglist.concat(tmplist);
+   }
+
+   // Begin resolution of the method call
+   auto ctx = cast<ast::DeclContext>(expr->type()->getAsDecl());
+   auto methodDecl = resolveMethodOverload(ctx, "", argtys, true);
+   expr->overrideDecl(methodDecl);
+
+   // Once op has been resolved, we can build the expression list
+   ast::ExprNodeList list{};
+   list.push_back(expr);
+   list.concat(arglist);
    list.push_back(&op);
    return list;
 }

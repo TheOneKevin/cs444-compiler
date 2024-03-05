@@ -243,10 +243,14 @@ private:
    // Resolves a method overload given a context and a list of argument types
    ast::MethodDecl const* resolveMethodOverload(ast::DeclContext const* ctx,
                                                 std::string_view name,
-                                                const ty_array& argtys) const;
+                                                const ty_array& argtys,
+                                                bool isCtor) const;
    // Checks if a method is more specific than another: returns a > b
    bool isMethodMoreSpecific(ast::MethodDecl const* a,
                              ast::MethodDecl const* b) const;
+   // Checks if the parameter types are applicable
+   bool areParameterTypesApplicable(ast::MethodDecl const* method,
+                                   const ty_array& argtys) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;

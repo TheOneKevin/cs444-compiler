@@ -121,7 +121,7 @@ ExprNodeList ptv::visitExprChild(Node* node) {
          if(name == "this") {
             return ExprNodeList(sem_alloc<ThisNode>());
          }
-         return ExprNodeList(sem_alloc<MemberName>(alloc, name));
+         return ExprNodeList(sem_alloc<MemberName>(sem.allocator(), name));
       }
       case pty::QualifiedIdentifier:
          return visitQualifiedIdentifierInExpr(node);
@@ -150,21 +150,21 @@ ExprNodeList ptv::visitQualifiedIdentifierInExpr(Node* node,
    ExprNodeList ops{};
    if(node->num_children() == 1) {
       if(isMethodInvocation) {
-         ops.push_back(
-               sem_alloc<MethodName>(alloc, visitIdentifier(node->child(0))));
+         ops.push_back(sem_alloc<MethodName>(sem.allocator(),
+                                             visitIdentifier(node->child(0))));
       } else {
-         ops.push_back(
-               sem_alloc<MemberName>(alloc, visitIdentifier(node->child(0))));
+         ops.push_back(sem_alloc<MemberName>(sem.allocator(),
+                                             visitIdentifier(node->child(0))));
       }
 
    } else if(node->num_children() == 2) {
       ops = visitQualifiedIdentifierInExpr(node->child(0));
       if(isMethodInvocation) {
-         ops.push_back(
-               sem_alloc<MethodName>(alloc, visitIdentifier(node->child(1))));
+         ops.push_back(sem_alloc<MethodName>(sem.allocator(),
+                                             visitIdentifier(node->child(1))));
       } else {
-         ops.push_back(
-               sem_alloc<MemberName>(alloc, visitIdentifier(node->child(1))));
+         ops.push_back(sem_alloc<MemberName>(sem.allocator(),
+                                             visitIdentifier(node->child(1))));
       }
       ops.push_back(sem_alloc<MemberAccess>());
    }
@@ -186,7 +186,8 @@ ExprNodeList ptv::visitMethodInvocation(Node* node) {
       return ops;
    } else if(node->num_children() == 3) {
       ops.concat(visitExprChild(node->child(0)));
-      ops.push_back(sem_alloc<MethodName>(alloc, visitIdentifier(node->child(1))));
+      ops.push_back(sem_alloc<MethodName>(sem.allocator(),
+                                          visitIdentifier(node->child(1))));
       ops.push_back(sem_alloc<MemberAccess>());
 
       ExprNodeList args{};
@@ -204,7 +205,8 @@ ExprNodeList ptv::visitFieldAccess(Node* node) {
    check_num_children(node, 2, 2);
    ExprNodeList ops{};
    ops.concat(visitExprChild(node->child(0)));
-   ops.push_back(sem_alloc<MemberName>(alloc, visitIdentifier(node->child(1))));
+   ops.push_back(
+         sem_alloc<MemberName>(sem.allocator(), visitIdentifier(node->child(1))));
    ops.push_back(sem_alloc<MemberAccess>());
    return ops;
 }
