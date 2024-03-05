@@ -1,10 +1,11 @@
 #include "CompilerPasses.h"
+#include "semantic/AstValidator.h"
 #include "semantic/ExprResolver.h"
+#include "utils/BumpAllocator.h"
 #include "utils/PassManager.h"
 
 using namespace joos1;
-
-using semantic::ExprResolver;
+using namespace semantic;
 using std::string_view;
 using utils::Pass;
 using utils::PassManager;
@@ -20,11 +21,14 @@ public:
       auto& HC = GetPass<HierarchyCheckerPass>().Checker();
       auto& Sema = GetPass<AstContextPass>().Sema();
       ExprResolver ER{PM().Diag(), NewHeap()};
-      semantic::ExprTypeResolver TR{PM().Diag(), NewHeap(), Sema};
+      ExprTypeResolver TR{PM().Diag(), NewHeap(), Sema};
+      BumpAllocator alloc{NewHeap()};
+      AstChecker AC{alloc, PM().Diag()};
       ER.Init(&TR, &NR, &Sema, &HC);
       TR.Init(&HC, &NR);
       try {
          resolveRecursive(ER, LU);
+         AC.ValidateLU(*LU);
       } catch(const diagnostics::DiagnosticBuilder&) {
          // Print the errors from diag in the next step
       }
