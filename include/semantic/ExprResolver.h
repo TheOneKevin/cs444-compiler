@@ -5,7 +5,6 @@
 
 #include "ast/AstNode.h"
 #include "ast/DeclContext.h"
-#include "ast/Expr.h"
 #include "ast/ExprEvaluator.h"
 #include "ast/ExprNode.h"
 #include "diagnostics/Diagnostics.h"
@@ -253,6 +252,7 @@ private:
    // Checks if the parameter types are applicable
    bool areParameterTypesApplicable(ast::MethodDecl const* method,
                                     const ty_array& argtys) const;
+   bool isAccessible(ast::Modifiers, ast::DeclContext const*) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;

@@ -571,6 +571,19 @@ ast::DeclContext const* ER::getMethodParent(ExprNameWrapper* Q) const {
    return ty;
 }
 
+bool ER::isAccessible(ast::Modifiers mod, ast::DeclContext const* parent) const {
+   // 6.6.1 Determining Accessibility
+   if(mod.isPublic()) return true;
+   // 6.6.2 Details on protected Access
+   // If current is a child of parent, then it is accessible
+   if(auto* curClass= dyn_cast<ast::ClassDecl>(cu_->bodyAsDecl())) {
+      auto* targetClass = cast<ast::ClassDecl>(parent);
+      if(HC->isSuperClass(targetClass, curClass) && mod.isProtected())
+         return true;
+   }
+   return false;
+}
+
 ETy ER::evalMethodCall(MethodOp& op, const ETy method,
                        const op_array& args) const {
    // Q is the incompletely resolved method name
@@ -589,7 +602,8 @@ ETy ER::evalMethodCall(MethodOp& op, const ETy method,
    } else if(std::holds_alternative<ExprNameWrapper*>(method)) {
       Q = std::get<ExprNameWrapper*>(method);
    } else {
-      assert(false && "This is not supported");
+      throw diag.ReportError(cu_->location())
+            << "malformed method call expression";
    }
 
    // Resolve the array of arguments
@@ -604,6 +618,14 @@ ETy ER::evalMethodCall(MethodOp& op, const ETy method,
    // Begin resolution of the method call
    auto ctx = getMethodParent(Q);
    auto methodDecl = resolveMethodOverload(ctx, Q->node->name(), argtys, false);
+
+   // Check if the method call is legal
+   if(!isAccessible(methodDecl->modifiers(), methodDecl->parent())) {
+      throw diag.ReportError(cu_->location())
+            << "method call to non-accessible method: " << methodDecl->name();
+   }
+
+   // Reclassify the Q node to be an ExpressionName
    Q->reclassify(ExprNameWrapper::Type::ExpressionName, methodDecl, nullptr);
 
    // Once Q has been resolved, we can build the expression list
