@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "parsetree/ParseTree.h"
+#include "utils/BumpAllocator.h"
 #include "utils/DotPrinter.h"
 #include "utils/Generator.h"
 #include "utils/Utils.h"
@@ -155,7 +156,7 @@ public:
       }
       return ret;
    }
-   
+
    /// @brief
    virtual Decl const* asDecl() const { return nullptr; }
 };
@@ -352,6 +353,71 @@ private:
    static constexpr int test(uint8_t value, Type bit) {
       return (value & (1 << (uint8_t)bit)) != 0;
    }
+};
+
+/* ===--------------------------------------------------------------------=== */
+// ScopeID
+/* ===--------------------------------------------------------------------=== */
+
+/**
+ * @brief Immutable struct that represents a unique identifier for a scope.
+ * This captures the position of the lexical scope in the AST to be used
+ * after AST construction, when lexical information has been lost.
+ */
+class ScopeID {
+private:
+   ScopeID(ScopeID const* parent, int pos) : parent_{parent}, pos_{pos} {}
+
+public:
+   /**
+    * @brief Move on to the next declaration in the given scope.
+    * 
+    * @param alloc The allocator to allocate the new scope
+    * @param parent The parent scope
+    * @return ScopeID const* The ScopeID for this declaration
+    */
+   ScopeID const* next(BumpAllocator& alloc, ScopeID const* parent) const {
+      void* mem = alloc.allocate_bytes(sizeof(ScopeID), alignof(ScopeID));
+      return new(mem) ScopeID{parent, pos_ + 1};
+   }
+
+   /**
+    * @brief Returns true if we can view the "other" scope from this scope.
+    *
+    * @param other The other scope we want to view
+    */
+   bool canView(ScopeID const* other) const {
+      assert(other != nullptr && "Can't view the null scope");
+      // If under same scope, we can view other iff we are later position
+      if(this->parent_ == other->parent_) {
+         return this->pos_ >= other->pos_;
+      }
+      // If under different scope, check if other is visible from parent
+      if(this->parent_) {
+         return this->parent_->canView(other);
+      }
+      // If we're the topmost scope, then other is a child we cannot see.
+      return false;
+   }
+
+   const ScopeID* parent() const { return parent_; }
+
+   static const ScopeID* New(BumpAllocator& alloc) {
+      void* mem = alloc.allocate_bytes(sizeof(ScopeID), alignof(ScopeID));
+      return new(mem) ScopeID{nullptr, 0};
+   }
+
+public: // Printing functions
+   std::string toString() const;
+   std::ostream& print(std::ostream& os) const;
+   void dump() const;
+   friend std::ostream& operator<<(std::ostream& os, const ScopeID& id) {
+      return os << id.toString();
+   }
+
+private:
+   const ScopeID* const parent_;
+   const int pos_;
 };
 
 } // namespace ast

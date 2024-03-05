@@ -58,8 +58,8 @@ ReferenceType* Semantic::BuildReferenceType(Decl const* decl) {
 /* ===--------------------------------------------------------------------=== */
 
 VarDecl* Semantic::BuildVarDecl(Type* type, SourceRange loc, string_view name,
-                                Expr* init) {
-   auto decl = alloc.new_object<VarDecl>(alloc, loc, type, name, init);
+                                ScopeID const* scope, Expr* init) {
+   auto decl = alloc.new_object<VarDecl>(alloc, loc, type, name, init, scope);
    if(!AddLexicalLocal(decl)) {
       diag.ReportError(loc) << "local variable \"" << name
                             << "\" already declared in this scope.";

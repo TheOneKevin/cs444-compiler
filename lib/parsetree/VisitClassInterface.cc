@@ -169,7 +169,7 @@ ast::VarDecl* ptv::visit<pty::FormalParameterList>(Node* node) {
    auto nameNode = node->child(1);
    auto name = visitIdentifier(nameNode);
    // Return the constructed AST node
-   return sem.BuildVarDecl(type, nameNode->location(), name);
+   return sem.BuildVarDecl(type, nameNode->location(), name, sem.NextScopeID());
 }
 
 // pty::InterfaceDeclaration ///////////////////////////////////////////////////

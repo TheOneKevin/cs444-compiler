@@ -20,8 +20,8 @@ ostream& VarDecl::print(ostream& os, int indentation) const {
    os << i1 << "VarDecl {\n"
       << i1 << "  type: " << type()->toString() << "\n"
       << i1 << "  name: " << name() << "\n";
-   if(init_) {
-      init_->print(os, indentation + 1);
+   if(init()) {
+      init()->print(os, indentation + 1);
    }
    os << i1 << "}\n";
    return os;
@@ -34,7 +34,7 @@ int VarDecl::printDotNode(DotPrinter& dp) const {
    dp.printTableDoubleRow("type", type()->toString());
    dp.printTableDoubleRow("name", name());
    std::ostringstream expr;
-   if(init_) init_->print(expr, -1);
+   if(init()) init()->print(expr, -1);
    dp.printTableDoubleRow(
          "init", expr.str(), {"port", "init"}, {"balign", "left"});
    dp.endTLabel();

@@ -1,7 +1,8 @@
+#include <utils/Error.h>
+
 #include "ast/AST.h"
 #include "parsetree/ParseTree.h"
 #include "parsetree/ParseTreeVisitor.h"
-#include <utils/Error.h>
 
 namespace parsetree {
 
@@ -171,7 +172,8 @@ ast::DeclStmt* ptv::visitLocalVariableDeclarationStatement(Node* node) {
    // $1: Get the variable declarator
    auto declNode = node->child(1);
    auto decl = visitVariableDeclarator(tyNode, declNode);
-   auto astDecl = sem.BuildVarDecl(decl.type, decl.loc, decl.name, decl.init);
+   auto astDecl = sem.BuildVarDecl(
+         decl.type, decl.loc, decl.name, sem.NextScopeID(), decl.init);
    return sem.BuildDeclStmt(astDecl);
 }
 

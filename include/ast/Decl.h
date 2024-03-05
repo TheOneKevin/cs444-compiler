@@ -5,45 +5,58 @@
 
 namespace ast {
 
+/**
+ * @brief Represents a variable declaration with: a name, a type and an
+ * optional initializer.
+ */
 class TypedDecl : public Decl {
 public:
-   TypedDecl(BumpAllocator& alloc, Type* type, string_view name) noexcept
-         : Decl{alloc, name}, type_{type} {}
+   TypedDecl(BumpAllocator& alloc, SourceRange location, Type* type,
+             string_view name, Expr* init) noexcept
+         : Decl{alloc, name}, type_{type}, init_{init}, location_{location} {}
 
    Type const* type() const { return type_; }
    Type* mut_type() const { return type_; }
    utils::Generator<ast::AstNode const*> children() const override final {
       co_yield type_;
    }
-
-private:
-   Type* type_;
-};
-
-class VarDecl : public TypedDecl {
-public:
-   VarDecl(BumpAllocator& alloc, SourceRange location, Type* type,
-           string_view name, Expr* init) noexcept
-         : TypedDecl{alloc, type, name}, init_{init}, location_{location} {}
-
    bool hasInit() const { return init_ != nullptr; }
    Expr const* init() const { return init_; }
    Expr* mut_init() { return init_; }
-   std::ostream& print(std::ostream& os, int indentation = 0) const override;
-   int printDotNode(DotPrinter& dp) const override;
-   virtual bool hasCanonicalName() const override { return false; }
    SourceRange location() const override { return location_; }
 
 private:
+   Type* type_;
    Expr* init_;
    SourceRange location_;
 };
 
-class FieldDecl final : public VarDecl {
+/**
+ * @brief Represents a scoped (i.e., local) typed variable declaration.
+ */
+class VarDecl : public TypedDecl {
+public:
+   VarDecl(BumpAllocator& alloc, SourceRange location, Type* type,
+           string_view name, Expr* init, ScopeID const* scope) noexcept
+         : TypedDecl{alloc, location, type, name, init}, scope_{scope} {}
+
+   std::ostream& print(std::ostream& os, int indentation = 0) const override;
+   int printDotNode(DotPrinter& dp) const override;
+   virtual bool hasCanonicalName() const override { return false; }
+   ScopeID const* scope() const { return scope_; }
+
+private:
+   ScopeID const* const scope_;
+};
+
+/**
+ * @brief Represents a typed declaration with access modifiers.
+ */
+class FieldDecl final : public TypedDecl {
 public:
    FieldDecl(BumpAllocator& alloc, SourceRange location, Modifiers modifiers,
              Type* type, string_view name, Expr* init) noexcept
-         : VarDecl{alloc, location, type, name, init}, modifiers_{modifiers} {};
+         : TypedDecl{alloc, location, type, name, init}, modifiers_{modifiers} {};
 
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;

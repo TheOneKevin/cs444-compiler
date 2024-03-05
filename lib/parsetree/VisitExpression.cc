@@ -1,5 +1,6 @@
-#include "parsetree/ParseTreeVisitor.h"
 #include <utils/Error.h>
+
+#include "parsetree/ParseTreeVisitor.h"
 
 namespace parsetree {
 
@@ -71,7 +72,8 @@ BinaryOp* ptv::convertToBinaryOp(Operator::Type type) {
 }
 
 Expr* ptv::visitExpr(Node* node) {
-   return sem_alloc<Expr>(visitExprChild(node), node->location());
+   return sem_alloc<Expr>(
+         visitExprChild(node), node->location(), sem.CurrentScopeID());
 }
 
 ExprNodeList ptv::visitExprNode(parsetree::Node* node) {

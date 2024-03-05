@@ -3,6 +3,7 @@
 #include <unordered_set>
 
 #include "ast/AST.h"
+#include "ast/AstNode.h"
 #include "ast/DeclContext.h"
 #include "ast/Type.h"
 #include "diagnostics/Diagnostics.h"
@@ -25,7 +26,8 @@ public:
    UnresolvedType* BuildUnresolvedType(SourceRange loc = {});
    ReferenceType* BuildReferenceType(Decl const* decl);
    ArrayType* BuildArrayType(Type* elementType, SourceRange loc = {});
-   BuiltInType* BuildBuiltInType(parsetree::BasicType::Type type, SourceRange loc = {});
+   BuiltInType* BuildBuiltInType(parsetree::BasicType::Type type,
+                                 SourceRange loc = {});
    BuiltInType* BuildBuiltInType(parsetree::Literal::Type type);
    BuiltInType* BuildBuiltInType(ast::BuiltInType::Kind type);
 
@@ -34,7 +36,7 @@ public:
    /* ===-----------------------------------------------------------------=== */
 
    VarDecl* BuildVarDecl(Type* type, SourceRange location, string_view name,
-                         Expr* init = nullptr);
+                         ScopeID const* scope, Expr* init = nullptr);
    FieldDecl* BuildFieldDecl(Modifiers modifiers, SourceRange location, Type* type,
                              string_view name, Expr* init = nullptr,
                              bool allowFinal = false);
@@ -81,6 +83,7 @@ public:
       lexicalLocalScope.clear();
       lexicalLocalDecls.clear();
       lexicalLocalDeclStack.clear();
+      currentScope_ = ScopeID::New(alloc);
    }
 
    /**
@@ -106,6 +109,7 @@ public:
     */
    int EnterLexicalScope() {
       int size = lexicalLocalDeclStack.size();
+      currentScope_ = currentScope_->next(alloc, currentScope_);
       return size;
    }
 
@@ -120,12 +124,22 @@ public:
       for(int i = lexicalLocalDeclStack.size() - 1; i >= size; --i)
          lexicalLocalScope.erase(lexicalLocalDeclStack[i]->name().data());
       lexicalLocalDeclStack.resize(size);
+      assert(currentScope_->parent() != nullptr);
+      currentScope_ =
+            currentScope_->next(alloc, currentScope_->parent()->parent());
    }
 
    /**
     * @brief Get all the lexical declarations in the current scope.
     */
    auto getAllLexicalDecls() const { return std::views::all(lexicalLocalDecls); }
+
+   ast::ScopeID const* NextScopeID() {
+      currentScope_ = currentScope_->next(alloc, currentScope_->parent());
+      return currentScope_;
+   }
+
+   ast::ScopeID const* CurrentScopeID() const { return currentScope_; }
 
 private:
    BumpAllocator& alloc;
@@ -135,6 +149,8 @@ private:
    std::unordered_set<std::string> lexicalLocalScope;
    // java.lang.Object type
    ast::ReferenceType* objectType_;
+   // Current scope
+   ast::ScopeID const* currentScope_;
 };
 
 } // namespace ast
