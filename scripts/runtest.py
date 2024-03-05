@@ -10,13 +10,18 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "common.py"))
 from common import *
 
 num_crashes = 0
+ind = '⢎⡰⢎⡡⢎⡑⢎⠱⠎⡱⢊⡱⢌⡱⢆⡱'
 
 # Run the tests
 def run_test(test, exp_rc):
     global num_crashes
+    global ind
+    print(f'[{ind[0]}{ind[1]}] Running {test:65.65}', end='\r', flush=True)
+    ind = ind[2:] + ind[:2] # Rotate the indicator
     test_path = os.path.join(test_dir, test)
     cmd = get_joosc_command(args.args, test_path, stdlib_dir)
     ret, _, _ = run_test_case(cmd)
+    print(' ' * 80, end='\r', flush=True)
     if ret != 0 and ret != 42:
         num_crashes += 1
     if ret != exp_rc:
@@ -57,7 +62,7 @@ invalid_failures = reduce(
 )
 failures = valid_failures + invalid_failures + num_crashes
 
-print("---")
+print('---')
 print(
     f"Total failures: {failures}/{len(test_names)} or {len(test_names) - failures}/{len(test_names)} passing"
 )
