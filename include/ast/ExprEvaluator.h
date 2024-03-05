@@ -92,10 +92,12 @@ public:
             auto lhs = popSafe();
             op_stack_.push(evalMemberAccess(*op, lhs, field));
          } else if(auto* method = dyn_cast<MethodInvocation*>(node)) {
+            op_args.clear();
             if(method->nargs() > 1) getArgs(method->nargs() - 1);
             auto method_name = popSafe();
             op_stack_.push(evalMethodCall(*method, method_name, op_args));
          } else if(auto* newObj = dyn_cast<ClassInstanceCreation*>(node)) {
+            op_args.clear();
             if(newObj->nargs() > 1) getArgs(newObj->nargs() - 1);
             auto type = popSafe();
             op_stack_.push(evalNewObject(*newObj, type, op_args));
