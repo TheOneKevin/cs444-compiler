@@ -2,6 +2,7 @@
 
 #include "ast/AST.h"
 #include "parsetree/ParseTree.h"
+#include <utils/Error.h>
 
 namespace parsetree {
 
@@ -50,7 +51,7 @@ ast::ImportDeclaration ptv::visit<pty::ImportDeclarationList>(Node* node) {
    } else if(node->get_node_type() == pty::TypeImportOnDemandDeclaration) {
       return ast::ImportDeclaration{id, true};
    }
-   throw std::runtime_error("Import called on a node that is not a Import");
+   throw utils::FatalError("Import called on a node that is not a Import");
 }
 
 } // namespace parsetree

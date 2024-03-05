@@ -7,7 +7,7 @@
 #include <semantic/HierarchyChecker.h>
 #include <semantic/NameResolver.h>
 #include <utils/BumpAllocator.h>
-#include <utils/CLI11.h>
+#include <third-party/CLI11.h>
 #include <utils/PassManager.h>
 
 #include <filesystem>

@@ -2,6 +2,7 @@
 
 #include "parsetree/ParseTree.h"
 #include "semantic/Semantic.h"
+#include <utils/Error.h>
 
 namespace parsetree {
 
@@ -42,7 +43,7 @@ private:
 
    static inline void check_num_children(Node* node, size_t min, size_t max) {
       if(node->num_children() < min || node->num_children() > max) {
-         throw std::runtime_error(
+         throw utils::FatalError(
                "Node has incorrect number of children!"
                " Type: " +
                node->type_string() + " Expected: " + std::to_string(min) + " to " +
@@ -52,7 +53,7 @@ private:
    }
 
    [[noreturn]] static inline void unreachable() {
-      throw std::runtime_error("Unreachable code reached!");
+      throw utils::FatalError("Unreachable code reached!");
    }
 
    // Templated visitor patterns ///////////////////////////////////////////////
@@ -75,7 +76,7 @@ private:
     */
    template <parsetree::Node::Type N, typename T>
    T visit(Node* node) {
-      throw std::runtime_error("No visitor for node type " + node->type_string());
+      throw utils::FatalError("No visitor for node type " + node->type_string());
    }
 
    /**
@@ -95,7 +96,7 @@ private:
    void visitListPattern(Node* node, ast::array_ref<T> list) {
       if(nullable && node == nullptr) return;
       if(!nullable && node == nullptr)
-         throw std::runtime_error("Visited a null node!");
+         throw utils::FatalError("Visited a null node!");
       check_node_type(node, N);
       check_num_children(node, 1, 2);
       if(node->num_children() == 1) {

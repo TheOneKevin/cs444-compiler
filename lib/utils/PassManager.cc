@@ -1,7 +1,8 @@
-#include <utils/CLI11.h>
+#include <third-party/CLI11.h>
 #include <utils/PassManager.h>
 
 #include <sstream>
+#include <utils/Error.h>
 
 namespace utils {
 
@@ -99,7 +100,7 @@ void Pass::RegisterCLI() {
 CustomBufferResource* PassManager::newHeap(Pass& pass) {
    // Check the pass is running
    if(pass.state != Pass::Running && pass.state != Pass::AcquireResources) {
-      throw std::runtime_error("Pass requesting a heap is not running");
+      throw utils::FatalError("Pass requesting a heap is not running");
    }
    // First, find a free heap
    for(auto& heap : heaps_) {
@@ -185,7 +186,7 @@ bool PassManager::Run() {
    }
    // 4. Check for cycles
    if(L.size() != NumEnabledPasses)
-      throw std::runtime_error("Cyclic pass dependency detected");
+      throw utils::FatalError("Cyclic pass dependency detected");
    // 5. Run the passes in topological order
    for(auto& pass : L) {
       assert(pass->state != Pass::Valid && "Pass already run");

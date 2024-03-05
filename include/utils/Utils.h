@@ -1,7 +1,6 @@
 #pragma once
 
 #include <type_traits>
-#include <typeinfo>
 #include <vector>
 
 namespace utils {
@@ -82,7 +81,7 @@ using canonicalize_t = utils::union_cv_t<utils::remove_ptr_or_ref_t<To>,
 
 /**
  * @brief Casts a pointer of type From to a pointer type of: To or To*.
- * Will throw std::bad_cast if the cast is invalid.
+ * Will assert, if the cast is invalid.
  *
  * @tparam To A class or pointer to a class type.
  * @tparam From A pointer to a class type.
@@ -114,7 +113,7 @@ cast(From& from) {
 
 /**
  * @brief Casts a pointer of type From to a pointer type of: To or To*.
- * Will throw std::bad_cast if the from pointer is nullptr. Will return
+ * Will assert, if the from pointer is nullptr. Will return
  * nullptr if the cast is invalid.
  *
  * @tparam To A class or pointer to a class type.

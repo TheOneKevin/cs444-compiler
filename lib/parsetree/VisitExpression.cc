@@ -1,4 +1,5 @@
 #include "parsetree/ParseTreeVisitor.h"
+#include <utils/Error.h>
 
 namespace parsetree {
 
@@ -19,7 +20,7 @@ UnaryOp* ptv::convertToUnaryOp(Operator::Type type) {
       case oty::Minus:
          return sem_alloc<UnaryOp>(UnaryOp::OpType::Minus);
       default:
-         throw std::runtime_error("Invalid operator type");
+         throw utils::FatalError("Invalid operator type");
    }
 }
 

@@ -9,8 +9,9 @@
 
 #include "diagnostics/Diagnostics.h"
 #include "utils/BumpAllocator.h"
-#include "utils/CLI11.h"
+#include "third-party/CLI11.h"
 #include "utils/Generator.h"
+#include <utils/Error.h>
 
 namespace utils {
 
@@ -50,7 +51,7 @@ public:
    CLI::Option* GetExistingOption(std::string name) {
       auto opt = FindOption(name);
       if(opt == nullptr)
-         throw std::runtime_error("pass requested nonexistent option: " + name);
+         throw utils::FatalError("pass requested nonexistent option: " + name);
       return opt;
    }
 
@@ -256,18 +257,18 @@ private:
       for(auto& pass : passes_) {
          if(auto* p = dyn_cast<T*>(pass.get())) {
             if(result != nullptr)
-               throw std::runtime_error("Multiple passes of type: " +
+               throw utils::FatalError("Multiple passes of type: " +
                                         std::string(typeid(T).name()));
             result = p;
          }
       }
       if(result == nullptr) {
-         throw std::runtime_error("Pass not found: " +
+         throw utils::FatalError("Pass not found: " +
                                   std::string(typeid(T).name()));
       }
       // If the requester is running, the result must be valid
       if(pass.state == Pass::Running && result->state != Pass::Valid) {
-         throw std::runtime_error("Pass not valid: " +
+         throw utils::FatalError("Pass not valid: " +
                                   std::string(typeid(T).name()));
       }
       return *result;
@@ -281,7 +282,7 @@ private:
          if(auto* p = dyn_cast<T*>(pass.get())) {
             // If the requester is running, the result must be valid
             if(p->state == Pass::Running && p->state != Pass::Valid) {
-               throw std::runtime_error("Pass not valid: " +
+               throw utils::FatalError("Pass not valid: " +
                                         std::string(typeid(T).name()));
             }
             co_yield p;
@@ -289,7 +290,7 @@ private:
          }
       }
       if(!found)
-         throw std::runtime_error("Pass of type not found: " +
+         throw utils::FatalError("Pass of type not found: " +
                                   std::string(typeid(T).name()));
    }
 

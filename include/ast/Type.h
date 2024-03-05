@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cassert>
+#include <utils/Assert.h>
 
 #include "ast/AstNode.h"
 #include "parsetree/ParseTree.h"

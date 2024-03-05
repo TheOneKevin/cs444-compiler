@@ -1,6 +1,6 @@
 #include "semantic/NameResolver.h"
 
-#include <cassert>
+#include <utils/Assert.h>
 #include <iostream>
 #include <memory_resource>
 #include <string>

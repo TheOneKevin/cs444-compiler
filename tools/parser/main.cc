@@ -6,7 +6,7 @@
 #include <string>
 
 #include "grammar/Joos1WGrammar.h"
-#include "utils/CLI11.h"
+#include "third-party/CLI11.h"
 
 int main(int argc, char** argv) {
    bool debug_mode, print_dot;

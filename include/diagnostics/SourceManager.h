@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <fstream>
+#include <utils/Error.h>
 
 class SourceManager;
 class SourceLocation;
@@ -51,11 +52,11 @@ public:
    void addFile(std::string_view path) {
       // Check the path ends in ".java"
       if(path.size() < 5 || path.substr(path.size() - 5) != ".java") {
-         throw std::runtime_error{"File " + std::string{path} + " is not a .java file"};
+         throw utils::FatalError{"File " + std::string{path} + " is not a .java file"};
       }
       std::ifstream file{std::string{path}};
       if(!file) {
-         throw std::runtime_error{"File " + std::string{path} + " does not exist"};
+         throw utils::FatalError{"File " + std::string{path} + " does not exist"};
       }
       files_.emplace_back(path, std::istreambuf_iterator<char>{file}, this);
    }

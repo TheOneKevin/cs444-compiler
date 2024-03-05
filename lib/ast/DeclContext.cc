@@ -1,4 +1,4 @@
-#include <cassert>
+#include <utils/Assert.h>
 #include <ostream>
 #include <ranges>
 #include <string>

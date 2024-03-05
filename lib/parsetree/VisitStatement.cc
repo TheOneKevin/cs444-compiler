@@ -1,6 +1,7 @@
 #include "ast/AST.h"
 #include "parsetree/ParseTree.h"
 #include "parsetree/ParseTreeVisitor.h"
+#include <utils/Error.h>
 
 namespace parsetree {
 
@@ -61,7 +62,7 @@ ast::IfStmt* ptv::visitIfThenStatement(Node* node) {
    check_num_children(node, 2, 3);
 
    if(node->child(0) == nullptr || node->child(1) == nullptr)
-      throw std::runtime_error("Invalid if-then statement");
+      throw utils::FatalError("Invalid if-then statement");
 
    // $1: Visit the expression
    auto expr = visitExpr(node->child(0));
@@ -87,7 +88,7 @@ ast::WhileStmt* ptv::visitWhileStatement(Node* node) {
    check_num_children(node, 2, 2);
 
    if(node->child(0) == nullptr || node->child(1) == nullptr)
-      throw std::runtime_error("Invalid while statement");
+      throw utils::FatalError("Invalid while statement");
 
    // $1: Visit the condition
    auto condition = visitExpr(node->child(0));
@@ -104,7 +105,7 @@ ast::ForStmt* ptv::visitForStatement(Node* node) {
    check_node_type(node, pty::ForStatement);
    check_num_children(node, 4, 4);
 
-   if(node->child(3) == nullptr) throw std::runtime_error("Invalid for statement");
+   if(node->child(3) == nullptr) throw utils::FatalError("Invalid for statement");
 
    ast::Stmt* init = nullptr;
    ast::Expr* condition = nullptr;

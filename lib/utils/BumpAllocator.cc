@@ -1,6 +1,6 @@
 #include "utils/BumpAllocator.h"
 
-#include <cassert>
+#include <utils/Assert.h>
 
 namespace utils {
 

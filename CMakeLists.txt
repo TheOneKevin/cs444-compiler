@@ -30,6 +30,7 @@ string(CONCAT CMAKE_CXX_FLAGS_DEBUG
     " -g"
     " -gdwarf-4"
     " -O0"
+    # Macro to enable debug mode
     " -DDEBUG"
     # Add the sanitizers too
     " -fsanitize=undefined"
@@ -37,8 +38,18 @@ string(CONCAT CMAKE_CXX_FLAGS_DEBUG
     " -fno-omit-frame-pointer"
 )
 
+# Set the linker flags for debug mode
+string(CONCAT CMAKE_EXE_LINKER_FLAGS_DEBUG
+    "${CMAKE_EXE_LINKER_FLAGS_DEBUG}"
+)
+
 # Set release mode flags
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -g")
+string(CONCAT CMAKE_CXX_FLAGS_RELEASE
+    "${CMAKE_CXX_FLAGS_RELEASE}"
+    # Turn on optimizations and emit debug symbols
+    " -O3"
+    " -g"
+)
 
 # Define YYDEBUG for bison
 add_compile_definitions(YYDEBUG=1)
@@ -119,7 +130,9 @@ add_library(OLKCompilerLib
     "lib/utils/DotPrinter.cc"
     "lib/utils/PassManager.cc"
     "lib/utils/BumpAllocator.cc"
-    # Passes
+    "lib/utils/Assert.cc"
+    "lib/utils/Error.cc"
+    # passes
     "lib/passes/CompilerPasses.cc"
 )
 target_include_directories(
@@ -148,6 +161,13 @@ macro(add_my_test TARGET_NAME)
     target_link_libraries(${TARGET_NAME} GTest::gtest_main)
     gtest_discover_tests(${TARGET_NAME})
 endmacro()
+
+################################################################################
+# Include backward
+################################################################################
+
+add_subdirectory("lib/third-party/backward-cpp")
+target_link_libraries(OLKCompilerLib PUBLIC Backward::Interface)
 
 ################################################################################
 #            Run python program right now to generate the tests                #
@@ -205,4 +225,9 @@ add_tool(
 add_tool(
     jcc1
     "tools/jcc1/main.cc"
+)
+
+add_tool(
+    crashtest
+    "tools/crashtest/main.cc"
 )

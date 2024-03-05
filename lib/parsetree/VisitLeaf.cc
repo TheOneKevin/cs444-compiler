@@ -1,5 +1,6 @@
 #include "parsetree/ParseTree.h"
 #include "parsetree/ParseTreeVisitor.h"
+#include <utils/Error.h>
 
 namespace parsetree {
 
@@ -63,14 +64,14 @@ ast::Type* ptv::visitType(Node* node) {
       elemTy = visitReferenceType(innerTy);
    }
    if(elemTy == nullptr)
-      throw std::runtime_error(
+      throw utils::FatalError(
             "Expected a BasicType or QualifiedIdentifier node but got " +
             innerTy->type_string());
    if(node->get_node_type() == pty::ArrayType)
       return sem.BuildArrayType(elemTy, node->location());
    else if(node->get_node_type() == pty::Type)
       return elemTy;
-   throw std::runtime_error("Expected a Type or ArrayType node");
+   throw utils::FatalError("Expected a Type or ArrayType node");
 }
 
 } // namespace parsetree
