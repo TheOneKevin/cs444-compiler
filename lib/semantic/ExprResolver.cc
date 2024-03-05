@@ -306,6 +306,11 @@ ast::Decl const* ExprNameWrapper::prevAsDecl(ExprTypeResolver& TR,
 }
 
 ast::ExprNodeList ER::recursiveReduce(ExprNameWrapper* node) const {
+   if(node->type() != ExprNameWrapper::Type::ExpressionName) {
+      throw diag.ReportError(cu_->location())
+            << "expected an expression name here, got: \""
+            << node->type_string() << "\" instead";
+   }
    node->verifyInvariants(ExprNameWrapper::Type::ExpressionName);
    auto decl = std::get<ast::Decl const*>(node->resolution());
    auto* expr = node->node;

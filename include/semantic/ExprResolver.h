@@ -130,6 +130,9 @@ public:
    std::optional<PrevTy> prev() const { return prev_; }
    void dump() const;
    void dump(int indent) const;
+   std::string_view type_string() const {
+      return Type_to_string(type_, "Unknown Type");
+   }
 
 public:
    ast::exprnode::MemberName* node;
