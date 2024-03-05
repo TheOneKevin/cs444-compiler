@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <cstring>
+#include <string>
 #ifndef INCLUDED_FLEXLEXER_H
    #warning "This file should not be included directly"
    #include <FlexLexer.h>
@@ -26,7 +29,7 @@ class Joos1WLexer : public yyFlexLexer {
 private:
    Joos1WLexer(BumpAllocator& alloc, diagnostics::DiagnosticEngine* diag,
                SourceFile file = {})
-         : file{file}, yycolumn{1}, diag{diag}, alloc{alloc} {}
+         : file{file}, yycolumn{1}, diag{diag}, alloc{alloc}, messages{alloc} {}
 
 public:
    /// @brief This is the generate Flex lexer function
@@ -71,7 +74,12 @@ public:
                                    std::initializer_list<YYLTYPE> ranges = {}) {
       if(!diag) return;
       auto os = diag->ReportError(make_range(loc));
-      os << msg;
+      // Copy msg to the heap
+      size_t length = std::min(1024UL, strlen(msg) + 1);
+      char* ptr = reinterpret_cast<char*>(alloc.allocate(length));
+      strncpy(ptr, msg, length);
+      messages.push_back(ptr);
+      os << std::string_view{ptr};
       for(auto const& range : ranges) os << make_range(range);
    }
 
@@ -93,4 +101,5 @@ private:
    int yycolumn;
    diagnostics::DiagnosticEngine* diag;
    BumpAllocator& alloc;
+   std::pmr::vector<const char*> messages;
 };
