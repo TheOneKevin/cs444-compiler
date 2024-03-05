@@ -266,7 +266,8 @@ void NameResolver::beginContext(ast::CompilationUnit* cu) {
                                           << decl->name();
          continue;
       }
-      importsMap[imp.simpleName()] = decl;
+      std::pmr::string name{imp.simpleName().data(), alloc};
+      importsMap[name] = decl;
    }
    // 5. All declarations in the current CU. This may also shadow anything.
    if(cu->body())

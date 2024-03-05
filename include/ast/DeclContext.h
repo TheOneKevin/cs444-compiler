@@ -17,7 +17,7 @@ class MethodDecl;
 struct ImportDeclaration {
    ReferenceType* type;
    bool isOnDemand;
-   auto simpleName() const {
+   std::string_view simpleName() const {
       // Can only extract simple name from unresolved type
       auto unresTy = cast<UnresolvedType*>(type);
       return unresTy->parts().back();
