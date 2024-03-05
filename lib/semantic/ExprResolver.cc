@@ -44,7 +44,10 @@ static ast::DeclContext const* GetTypeAsDecl(ast::Type const* type,
 bool ER::tryReclassifyDecl(ExprNameWrapper& data,
                            ast::DeclContext const* ctx) const {
    // Search in this context
-   if(auto decl = ctx->lookupDecl(data.node->name())) {
+   auto cond = [name = data.node->name()](ast::Decl const* d) {
+      return d->name() == name && dyn_cast<ast::TypedDecl>(d);
+   };
+   if(auto decl = ctx->lookupDecl(cond)) {
       if(auto varDecl = dynamic_cast<ast::VarDecl const*>(decl)) {
          data.reclassify(
                ExprNameWrapper::Type::ExpressionName, varDecl, varDecl->type());
@@ -168,7 +171,9 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
       assert(refTy && "Expected non-null type here");
    }
    // Now we check if "name" is a field of "decl"
-   auto field = refTy->lookupDecl(name);
+   auto field = refTy->lookupDecl([name](ast::Decl const* d) {
+      return d->name() == name && dyn_cast<ast::TypedDecl>(d);
+   });
    if(!field) {
       throw diag.ReportError(cu_->location())
             << "field access to undeclared field: " << name;
@@ -197,7 +202,9 @@ void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
             << "\" to non-class type: " << typeOrDecl->name();
    }
    // Now we check if "name" is a field of "decl".
-   auto field = type->lookupDecl(name);
+   auto field = type->lookupDecl([name](ast::Decl const* d) {
+      return d->name() == name && dyn_cast<ast::TypedDecl>(d);
+   });
    if(!field) {
       throw diag.ReportError(cu_->location())
             << "static member access to undeclared field: " << name;

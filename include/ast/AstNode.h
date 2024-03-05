@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <iostream>
 #include <ranges>
 #include <string>
@@ -144,10 +145,10 @@ public:
     * @param name The name of the declaration to look up.
     * @return Decl const* The declaration with the given name or nullptr.
     */
-   Decl const* lookupDecl(std::string_view name) const {
+   Decl const* lookupDecl(std::function<bool(Decl const*)> cond) const {
       Decl const* ret = nullptr;
       for(auto decl : decls()) {
-         if(decl->name() == name) {
+         if(cond(decl)) {
             if(ret) return nullptr; // Ambiguous, cannot resolve
             ret = decl;
          }
