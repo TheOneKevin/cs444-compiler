@@ -69,8 +69,7 @@ bool ExprTypeResolver::isAssignableTo(const Type* lhs, const Type* rhs) const {
       return isWiderThan(leftPrimitive, rightPrimitive);
    }
    // Step 2.1
-   if(rightPrimitive &&
-      rightPrimitive->getKind() == ast::BuiltInType::Kind::NoneType) {
+   if(rightPrimitive && rightPrimitive->isNull()) {
       return leftRef || leftArr;
    }
 
@@ -133,6 +132,11 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
 
    auto leftRef = dyn_cast<ast::ReferenceType*>(exprType);
    auto rightRef = dyn_cast<ast::ReferenceType*>(castType);
+
+   // If expr is "null", the type is actually Object
+   if(exprType->isNull()) {
+      return rightRef;
+   }
 
    auto leftArr = dyn_cast<ast::ArrayType*>(exprType);
    auto rightArr = dyn_cast<ast::ArrayType*>(castType);
