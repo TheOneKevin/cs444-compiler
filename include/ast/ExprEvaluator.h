@@ -124,6 +124,7 @@ public:
       return result;
    }
 
+protected:
    virtual bool validate(T const&) const { return true; }
 
 private:

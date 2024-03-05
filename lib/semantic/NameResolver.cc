@@ -11,8 +11,6 @@
 
 #include "ast/AstNode.h"
 #include "ast/DeclContext.h"
-#include "ast/Expr.h"
-#include "ast/ExprNode.h"
 #include "ast/Type.h"
 #include "diagnostics/Location.h"
 #include "semantic/Semantic.h"
@@ -167,7 +165,7 @@ void NameResolver::populateJavaLangCache() {
    }
 }
 
-void NameResolver::beginContext(ast::CompilationUnit* cu) {
+void NameResolver::BeginContext(ast::CompilationUnit* cu) {
    // Set the current compilation unit and clear the imports map
    auto& importsMap = importsMap_[cu];
    currentCU_ = cu;
@@ -363,70 +361,6 @@ void NameResolver::ResolveType(UnresolvedType* ty) {
    ty->resolveInternal(std::get<Decl*>(subTy));
    // After, the type should be resolved
    assert(ty->isResolved() && "Type should be resolved");
-}
-
-void NameResolver::Resolve() {
-   resolveRecursive(lu_);
-   // Clear the current compilation unit to avoid any bugs
-   currentCU_ = nullptr;
-}
-
-void NameResolver::replaceObjectClass(ast::AstNode* node) {
-   auto decl = dyn_cast_or_null<ast::ClassDecl*>(node);
-   if(!decl) return;
-   // Check if the class is Object
-   if(decl != GetJavaLang().Object) return;
-   // Go through the superclasses and replace Object with nullptr
-   for(int i = 0; i < 2; i++) {
-      auto super = decl->superClasses()[i];
-      if(!super) continue;
-      // If the superclass is not resolved, then we should just bail out
-      if(!diag.hasErrors())
-         assert(super->isResolved() && "Superclass should be resolved");
-      else
-         continue;
-      // Do not allow Object to extend Object
-      if(super->decl() == GetJavaLang().Object)
-         decl->mut_superClasses()[i] = nullptr;
-   }
-}
-
-void NameResolver::resolveExpr(ast::Expr* expr)  {
-   if(!expr) return;
-   for(auto node : expr->mut_nodes()) {
-      auto tyNode = dyn_cast<ast::exprnode::TypeNode>(node);
-      if(!tyNode) continue;
-      if(tyNode->isTypeResolved()) continue;
-      tyNode->resolveUnderlyingType(*this);
-   }
-}
-
-void NameResolver::resolveRecursive(ast::AstNode* node) {
-   assert(node && "Node must not be null here!");
-   for(auto child : node->mut_children()) {
-      if(!child) continue;
-      if(auto cu = dyn_cast<ast::CompilationUnit*>(child)) {
-         // If the CU has no body, then we can skip to the next CU :)
-         if(!cu->body()) return;
-         // Resolve the current compilation unit's body
-         beginContext(cu);
-         resolveRecursive(cu->mut_body());
-         replaceObjectClass(cu->mut_body());
-      } else if(auto ty = dyn_cast<ast::Type*>(child)) {
-         if(ty->isInvalid()) continue;
-         // If the type is not resolved, then we should resolve it
-         if(!ty->isResolved()) ty->resolve(*this);
-      } else {
-         // Resolve any Type in expressions
-         if(auto decl = dyn_cast<ast::VarDecl*>(child)) {
-            resolveExpr(decl->mut_init());
-         } else if(auto stmt = dyn_cast<ast::Stmt*>(child)) {
-            for(auto expr : stmt->mut_exprs()) resolveExpr(expr);
-         }
-         // This is a generic node, just resolve its children
-         resolveRecursive(child);
-      }
-   }
 }
 
 std::ostream& NameResolver::Pkg::print(std::ostream& os, int indent) const {

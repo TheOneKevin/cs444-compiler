@@ -96,11 +96,6 @@ public:
    }
 
    /**
-    * @brief Resolves all types in the current linking unit.
-    */
-   void Resolve();
-
-   /**
     * @brief Resolves the type in-place (does not return anything)
     *
     * @param type The unresolved type to resolve.
@@ -128,11 +123,27 @@ public:
     * @return auto An anonymous struct with all the java.lang.* types.
     */
    auto GetJavaLang() const { return java_lang_; }
+
    /**
     * @brief Get the Array Prototype object. This is a decl representing
     * the prototype of the array class.
     */
    auto GetArrayPrototype() const { return arrayPrototype_; }
+
+   /**
+    * @brief Called to begin the resolution of a compilation unit.
+    * This will build the import table (and any other data structures) to help
+    * resolve types within the compilation unit.
+    *
+    * @param cu The compilation unit to begin resolution for.
+    */
+   void BeginContext(ast::CompilationUnit* cu);
+
+   /**
+    * @brief Called to end the resolution of a compilation unit.
+    * This will clear the current compilation unit being resolved.
+    */
+   void EndContext() { currentCU_ = nullptr; }
 
 public:
    /// @brief Dumps the symbol and import tables to the output stream.
@@ -146,24 +157,6 @@ public:
 
 private:
    using ChildOpt = std::optional<Pkg::Child>;
-
-   /// @brief Resolves the AST recursively
-   void resolveRecursive(ast::AstNode* node);
-
-   /// @brief Resolves the expression recursively
-   void resolveExpr(ast::Expr* node);
-   
-   /// @brief Disallows java.lang.Object from extending itself
-   void replaceObjectClass(ast::AstNode* node);
-
-   /**
-    * @brief Called to begin the resolution of a compilation unit.
-    * This will build the import table (and any other data structures) to help
-    * resolve types within the compilation unit.
-    *
-    * @param cu The compilation unit to begin resolution for.
-    */
-   void beginContext(ast::CompilationUnit* cu);
 
    /// @brief Builds the symbol lookup tables and any other data structures
    /// or maps to facilitate name resolution.

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utils/Error.h>
+
 #include <cstdint>
 #include <memory>
 #include <string_view>
@@ -8,10 +10,9 @@
 #include <vector>
 
 #include "diagnostics/Diagnostics.h"
-#include "utils/BumpAllocator.h"
 #include "third-party/CLI11.h"
+#include "utils/BumpAllocator.h"
 #include "utils/Generator.h"
-#include <utils/Error.h>
 
 namespace utils {
 
@@ -206,8 +207,7 @@ private:
    };
 
 public:
-   PassManager(CLI::App& app)
-         : options_{app}, reuseHeaps_{true} {}
+   PassManager(CLI::App& app) : options_{app}, reuseHeaps_{true} {}
    /// @brief Runs all the passes in the pass manager
    /// @return True if all passes ran successfully
    bool Run();
@@ -258,18 +258,18 @@ private:
          if(auto* p = dyn_cast<T*>(pass.get())) {
             if(result != nullptr)
                throw utils::FatalError("Multiple passes of type: " +
-                                        std::string(typeid(T).name()));
+                                       std::string(typeid(T).name()));
             result = p;
          }
       }
       if(result == nullptr) {
          throw utils::FatalError("Pass not found: " +
-                                  std::string(typeid(T).name()));
+                                 std::string(typeid(T).name()));
       }
       // If the requester is running, the result must be valid
       if(pass.state == Pass::Running && result->state != Pass::Valid) {
          throw utils::FatalError("Pass not valid: " +
-                                  std::string(typeid(T).name()));
+                                 std::string(typeid(T).name()));
       }
       return *result;
    }
@@ -283,7 +283,7 @@ private:
             // If the requester is running, the result must be valid
             if(p->state == Pass::Running && p->state != Pass::Valid) {
                throw utils::FatalError("Pass not valid: " +
-                                        std::string(typeid(T).name()));
+                                       std::string(typeid(T).name()));
             }
             co_yield p;
             found = true;
@@ -291,7 +291,7 @@ private:
       }
       if(!found)
          throw utils::FatalError("Pass of type not found: " +
-                                  std::string(typeid(T).name()));
+                                 std::string(typeid(T).name()));
    }
 
 private:
@@ -326,5 +326,19 @@ template <typename T>
 Generator<T*> Pass::GetPasses() {
    return PM().getPasses<T>(*this);
 }
+
+/**
+ * @brief Registers NS::T with the pass manager.
+ */
+#define REGISTER_PASS_NS(NS, T) \
+   utils::Pass& New##T(utils::PassManager& PM) { return PM.AddPass<NS::T>(); }
+
+/**
+ * @brief Registers T with the pass manager.
+ */
+#define REGISTER_PASS(T) \
+   utils::Pass& New##T(utils::PassManager& PM) { return PM.AddPass<T>(); }
+
+#define DECLARE_PASS(T) utils::Pass& New##T(utils::PassManager& PM);
 
 } // namespace utils

@@ -7,7 +7,6 @@
 #include "ast/AstNode.h"
 #include "ast/Decl.h"
 #include "ast/DeclContext.h"
-#include "ast/Expr.h"
 #include "ast/ExprNode.h"
 #include "ast/Type.h"
 #include "utils/Utils.h"
@@ -172,7 +171,9 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
    }
    // Now we check if "name" is a field of "decl"
    auto field = refTy->lookupDecl([name](ast::Decl const* d) {
-      return d->name() == name && dyn_cast<ast::TypedDecl>(d);
+      bool b1 = d->name() == name;
+      bool b2 = dyn_cast<ast::TypedDecl>(d);
+      return b1 && b2;
    });
    if(!field) {
       throw diag.ReportError(cu_->location())
@@ -260,7 +261,7 @@ void ER::resolvePackageAccess(internal::ExprNameWrapper* access) const {
 }
 
 /* ===--------------------------------------------------------------------=== */
-// ExprNameWrapper methods and resolveExprNode reduction functions
+// ExprNameWrapper methods and ResolveExprNode reduction functions
 /* ===--------------------------------------------------------------------=== */
 
 void ExprNameWrapper::dump() const {
@@ -331,7 +332,7 @@ ast::ExprNodeList ER::recursiveReduce(ExprNameWrapper* node) const {
    return list;
 }
 
-ast::ExprNodeList ER::resolveExprNode(const ETy node) const {
+ast::ExprNodeList ER::ResolveExprNode(const ETy node) const {
    ExprNameWrapper* Q = nullptr;
    // 1. If node is an ExprNode, then resolution is only needed for names
    // 2. If the node is a list, then no resolution is needed
@@ -468,7 +469,7 @@ ETy ER::evalMemberAccess(DotOp& op, const ETy lhs, const ETy id) const {
          Q = resolveSingleName(simpleName);
       } else if(auto thisNode =
                       dynamic_cast<ex::ThisNode*>(std::get<ast::ExprNode*>(lhs))) {
-         Q = resolveExprNode(thisNode);
+         Q = ResolveExprNode(thisNode);
       } else {
          assert(false && "Malformed node. Expected MemberName here.");
       }
@@ -529,15 +530,15 @@ ETy ER::evalMemberAccess(DotOp& op, const ETy lhs, const ETy id) const {
 
 ETy ER::evalBinaryOp(BinaryOp& op, const ETy lhs, const ETy rhs) const {
    ast::ExprNodeList list{};
-   list.concat(resolveExprNode(lhs));
-   list.concat(resolveExprNode(rhs));
+   list.concat(ResolveExprNode(lhs));
+   list.concat(ResolveExprNode(rhs));
    list.push_back(&op);
    return list;
 }
 
 ETy ER::evalUnaryOp(UnaryOp& op, const ETy rhs) const {
    ast::ExprNodeList list{};
-   list.concat(resolveExprNode(rhs));
+   list.concat(ResolveExprNode(rhs));
    list.push_back(&op);
    return list;
 }
@@ -590,7 +591,7 @@ ETy ER::evalMethodCall(MethodOp& op, const ETy method,
    ty_array argtys{alloc};
    ast::ExprNodeList arglist{};
    for(auto& arg : args) {
-      auto tmplist = resolveExprNode(arg);
+      auto tmplist = ResolveExprNode(arg);
       argtys.push_back(TR->EvaluateList(tmplist));
       arglist.concat(tmplist);
    }
@@ -621,7 +622,7 @@ ETy ER::evalNewObject(NewOp& op, const ETy object, const op_array& args) const {
    ty_array argtys{alloc};
    ast::ExprNodeList arglist{};
    for(auto& arg : args) {
-      auto tmplist = resolveExprNode(arg);
+      auto tmplist = ResolveExprNode(arg);
       argtys.push_back(TR->EvaluateList(tmplist));
       arglist.concat(tmplist);
    }
@@ -647,7 +648,7 @@ ETy ER::evalNewArray(NewArrayOp& op, const ETy type, const ETy size) const {
    } else {
       assert(false && "Grammar wrong, type must be an atomic ExprNode*");
    }
-   list.concat(resolveExprNode(size));
+   list.concat(ResolveExprNode(size));
    list.push_back(&op);
    return list;
 }
@@ -655,8 +656,8 @@ ETy ER::evalNewArray(NewArrayOp& op, const ETy type, const ETy size) const {
 ETy ER::evalArrayAccess(ArrayAccessOp& op, const ETy array,
                         const ETy index) const {
    ast::ExprNodeList list{};
-   list.concat(resolveExprNode(array));
-   list.concat(resolveExprNode(index));
+   list.concat(ResolveExprNode(array));
+   list.concat(ResolveExprNode(index));
    list.push_back(&op);
    return list;
 }
@@ -669,7 +670,7 @@ ETy ER::evalCast(CastOp& op, const ETy type, const ETy value) const {
    } else {
       assert(false && "Grammar wrong, type must be an atomic ExprNode*");
    }
-   list.concat(resolveExprNode(value));
+   list.concat(ResolveExprNode(value));
    list.push_back(&op);
    return list;
 }
@@ -685,71 +686,6 @@ bool ER::validate(ETy const& value) const {
       // TODO(kevin)
    }
    return true;
-}
-
-/* ===--------------------------------------------------------------------=== */
-// Resolve whole expressions functions
-/* ===--------------------------------------------------------------------=== */
-
-void ER::Resolve(ast::LinkingUnit* lu) { resolveRecursive(lu); }
-
-ast::ExprNodeList ER::evaluateAsList(ast::Expr* expr) {
-   if(diag.Verbose(2)) {
-      auto dbg = diag.ReportDebug(2);
-      dbg << "[*] Location: ";
-      expr->location().print(dbg.get()) << "\n";
-      dbg << "[*] Printing expression before resolution:\n";
-      expr->print(dbg.get(), 1);
-   }
-   ETy result = Evaluate(expr);
-   ast::ExprNodeList list = resolveExprNode(result);
-   if(diag.Verbose(2)) {
-      auto dbg = diag.ReportDebug(2);
-      dbg << "[*] Printing expression after resolution:\n  ";
-      list.print(dbg.get());
-   }
-   return list;
-}
-
-void ER::resolveRecursive(ast::AstNode* node) {
-   // Set the CU
-   if(auto* cu = dynamic_cast<ast::CompilationUnit*>(node)) {
-      cu_ = cu;
-   }
-   // Set the CTX
-   if(auto* ctx = dynamic_cast<ast::DeclContext*>(node)) {
-      lctx_ = ctx;
-   }
-   // Visit the expression nodes
-   if(auto* decl = dynamic_cast<ast::VarDecl*>(node)) {
-      if(auto* init = decl->mut_init()) {
-         if(diag.Verbose(2)) {
-            diag.ReportDebug(2)
-                  << "[*] Resolving initializer for variable: " << decl->name();
-         }
-         evaluateAsList(init);
-         // FIXME(kevin): Not ready yet
-         // TR->Evaluate(init);
-         init->clear();
-      }
-   } else if(auto* stmt = dynamic_cast<ast::Stmt*>(node)) {
-      for(auto* expr : stmt->mut_exprs()) {
-         if(!expr) continue;
-         if(diag.Verbose(2)) {
-            diag.ReportDebug(2) << "[*] Resolving expression in statement:";
-         }
-         evaluateAsList(expr);
-         // FIXME(kevin): Not ready yet
-         // TR->Evaluate(expr);
-         expr->clear();
-      }
-   }
-   // We want to avoid visiting nodes twice
-   if(dynamic_cast<ast::DeclStmt*>(node)) return;
-   // Visit the children recursively
-   for(auto* child : node->mut_children()) {
-      if(child) resolveRecursive(child);
-   }
 }
 
 } // namespace semantic

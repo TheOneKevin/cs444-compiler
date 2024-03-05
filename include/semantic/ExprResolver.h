@@ -149,7 +149,7 @@ private:
 // ExprResolver
 /* ===--------------------------------------------------------------------=== */
 
-class ExprResolver final : ast::ExprEvaluator<internal::ExprResolverTy> {
+class ExprResolver final : public ast::ExprEvaluator<internal::ExprResolverTy> {
    using ETy = internal::ExprResolverTy;
    using Heap = std::pmr::memory_resource;
 
@@ -158,23 +158,24 @@ public:
          : diag{diag}, heap{heap}, alloc{heap} {}
    void Init(ExprTypeResolver* TR, NameResolver* NR, ast::Semantic* Sema,
              semantic::HierarchyChecker* HC) {
+      // FIXME(kevin): This API is ugly but its low priority to remove
       this->TR = TR;
       this->NR = NR;
       this->Sema = Sema;
       this->HC = HC;
    }
-   void Resolve(ast::LinkingUnit* lu);
+   void BeginCU(ast::CompilationUnit const* cu) { cu_ = cu; }
+   void BeginContext(ast::DeclContext const* ctx) { lctx_ = ctx; }
 
-private:
    ETy EvaluateList(ast::ExprNodeList subexpr) override final {
       // Clear the heap
       if(auto h = dyn_cast<utils::CustomBufferResource*>(heap)) h->reset();
       // Call the base class implementation
       return ast::ExprEvaluator<internal::ExprResolverTy>::EvaluateList(subexpr);
    }
-   ast::ExprNodeList evaluateAsList(ast::Expr*);
 
-   void resolveRecursive(ast::AstNode* node);
+   // Resolve an expression node into a list (i.e., removes expr wrapper)
+   ast::ExprNodeList ResolveExprNode(const ETy node) const;
 
 private: // Overriden methods
    using Type = ast::Type;
@@ -220,8 +221,6 @@ private:
    void resolveTypeAccess(internal::ExprNameWrapper* access) const;
    // Resolve access into a package -> either package or type is resolved
    void resolvePackageAccess(internal::ExprNameWrapper* access) const;
-   // Resolve an expression node into a list (i.e., removes expr wrapper)
-   ast::ExprNodeList resolveExprNode(const ETy node) const;
    // Resolves a single name node into a wrapped name. This is just a light
    // function over reclassifySingleAmbiguousName that allocates the wrapper.
    internal::ExprNameWrapper* resolveSingleName(
@@ -250,7 +249,7 @@ private:
                              ast::MethodDecl const* b) const;
    // Checks if the parameter types are applicable
    bool areParameterTypesApplicable(ast::MethodDecl const* method,
-                                   const ty_array& argtys) const;
+                                    const ty_array& argtys) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;
