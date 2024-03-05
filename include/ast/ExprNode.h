@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "ast/AstNode.h"
+#include "utils/BumpAllocator.h"
 #include "utils/EnumMacros.h"
 #include "utils/Generator.h"
 
@@ -125,6 +126,7 @@ public:
    }
 
    ExprNode* mut_head() const { return head_; }
+   ExprNode const* tail() const { return tail_; }
 
    void dump() const;
    std::ostream& print(std::ostream&) const;
@@ -216,7 +218,7 @@ private:
 
 class LiteralNode final : public ExprValue {
 public:
-   LiteralNode(std::string_view value, ast::BuiltInType* type);
+   LiteralNode(BumpAllocator&, std::string_view value, ast::BuiltInType* type);
    bool isDeclResolved() const override { return true; }
    std::ostream& print(std::ostream& os) const override;
    ast::BuiltInType const* builtinType() const;
@@ -231,7 +233,7 @@ private:
 
 class ExprOp : public ExprNode {
 protected:
-   ExprOp(int num_args) : num_args_{num_args} {}
+   ExprOp(int num_args) : num_args_{num_args}, result_type_{nullptr} {}
 
 public:
    auto nargs() const { return num_args_; }

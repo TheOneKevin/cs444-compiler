@@ -10,7 +10,7 @@ public:
    TypedDecl(BumpAllocator& alloc, Type* type, string_view name) noexcept
          : Decl{alloc, name}, type_{type} {}
 
-   Type* type() const { return type_; }
+   Type const* type() const { return type_; }
    Type* mut_type() const { return type_; }
    utils::Generator<ast::AstNode const*> children() const override final {
       co_yield type_;

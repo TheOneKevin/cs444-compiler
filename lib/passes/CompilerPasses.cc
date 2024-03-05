@@ -404,7 +404,7 @@ public:
       auto& Sema = GetPass<AstContextPass>().Sema();
       semantic::ExprResolver ER{PM().Diag(), NewHeap()};
       semantic::ExprTypeResolver TR{PM().Diag(), NewHeap(), Sema};
-      ER.Init(&TR, &NR, &Sema);
+      ER.Init(&TR, &NR, &Sema, &HC);
       TR.Init(&HC, &NR);
       try {
          ER.Resolve(LU);

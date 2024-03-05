@@ -281,6 +281,20 @@ ostream& MethodDecl::print(ostream& os, int indentation) const {
    return os;
 }
 
+std::ostream& MethodDecl::printSignature(std::ostream& os) const {
+   os << returnType_->toString() << " " << name() << "(";
+   for(auto& param : parameters_) {
+      os << param->type()->toString() << " " << param->name();
+      if(param != parameters_.back()) os << ", ";
+   }
+   os << ")";
+   return os;
+}
+
+void MethodDecl::dumpSignature() const {
+   printSignature(std::cerr) << "\n";
+}
+
 int MethodDecl::printDotNode(DotPrinter& dp) const {
    int id = dp.id();
    int paramSubgraphId = dp.id();

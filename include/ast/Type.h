@@ -241,32 +241,32 @@ public:
       }
       return false;
    }
-   Type* getElementType() const { return elementType; }
+   Type const* getElementType() const { return elementType; }
    bool isArray() const override { return true; }
 };
 
+/**
+ * @brief This is a synthetic MethodType that should not exist inside
+ * the AST.
+ */
 class MethodType final : public Type {
-   ReturnType* returnType;
-   pmr_vector<Type*> paramTypes;
-
 public:
-   MethodType(ReturnType* returnType, array_ref<Type*> paramTypes,
-              SourceRange loc = {})
-         : Type{loc}, returnType{returnType}, paramTypes{paramTypes} {}
-
+   MethodType(BumpAllocator& alloc, MethodDecl const* method);
    string_view toString() const override { return "MethodType"; }
    bool isResolved() const override { return true; }
-
+   void resolve(TypeResolver&) override {
+      assert(false && "Attempted to resolve synthetic MethodType!");
+   }
    bool operator==(const Type& other) const override {
       if(auto otherMethod = dyn_cast<MethodType>(other)) {
-         if(*returnType != *otherMethod->returnType) {
+         if(*returnType_ != *otherMethod->returnType_) {
             return false;
          }
-         if(paramTypes.size() != otherMethod->paramTypes.size()) {
+         if(paramTypes_.size() != otherMethod->paramTypes_.size()) {
             return false;
          }
-         for(size_t i = 0; i < paramTypes.size(); i++) {
-            if(*paramTypes[i] != *otherMethod->paramTypes[i]) {
+         for(size_t i = 0; i < paramTypes_.size(); i++) {
+            if(*paramTypes_[i] != *otherMethod->paramTypes_[i]) {
                return false;
             }
          }
@@ -275,7 +275,11 @@ public:
       return false;
    }
 
-   ReturnType* getReturnType() const { return returnType; }
-   pmr_vector<Type*> getParamTypes() const { return paramTypes; }
+   Type const* returnType() const { return returnType_; }
+   pmr_vector<Type const*> paramTypes() const { return paramTypes_; }
+
+private:
+   Type const* returnType_;
+   pmr_vector<Type const*> paramTypes_;
 };
 } // namespace ast

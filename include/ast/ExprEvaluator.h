@@ -112,6 +112,7 @@ public:
             auto type = popSafe();
             op_stack_.push(evalCast(*op, type, value));
          }
+         assert(validate(op_stack_.top()));
          node = next_node;
       }
 
@@ -120,6 +121,8 @@ public:
       assert(op_stack_.empty() && "Stack not empty after evaluation");
       return result;
    }
+
+   virtual bool validate(T const&) const { return true; }
 
 private:
    inline T popSafe() {

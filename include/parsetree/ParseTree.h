@@ -218,7 +218,7 @@ public:
    // Get the type of the literal
    Type get_type() const { return type; }
    // Get the string representation of the literal
-   std::pmr::string get_value() const { return value; }
+   std::string_view get_value() const { return value; }
 
 protected:
    void printDotNode(DotPrinter& dp) const override;

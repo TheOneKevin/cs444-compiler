@@ -27,7 +27,7 @@ using Pkg = semantic::NameResolver::Pkg;
 
 static ast::DeclContext const* GetTypeAsDecl(ast::Type const* type,
                                              NameResolver const& NR) {
-   if(auto refty = dynamic_cast<ast::ReferenceType const*>(type)) {
+   if(auto refty = dyn_cast<ast::ReferenceType>(type)) {
       return cast<ast::DeclContext>(refty->decl());
    } else if(type->isString()) {
       return NR.GetJavaLang().String;
@@ -176,7 +176,7 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
    // Field must be either a FieldDecl or a MethodDecl
    assert(dyn_cast<ast::FieldDecl>(field) || dyn_cast<ast::MethodDecl>(field));
    // Now we can reclassify the access node
-   ast::Type* fieldty = nullptr;
+   ast::Type const* fieldty = nullptr;
    if(auto x = dyn_cast<ast::FieldDecl>(field)) fieldty = x->type();
    access->reclassify(ExprNameWrapper::Type::ExpressionName, field, fieldty);
 }
@@ -217,7 +217,7 @@ void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
             << field->getCanonicalName();
    }
    // We've reached here which means the field access is valid
-   ast::Type* fieldty = nullptr;
+   ast::Type const* fieldty = nullptr;
    if(auto x = dyn_cast<ast::FieldDecl>(field)) fieldty = x->type();
    access->reclassify(ExprNameWrapper::Type::ExpressionName, field, fieldty);
    access->setPrev(std::nullopt);
@@ -349,11 +349,78 @@ ast::ExprNodeList ER::resolveExprNode(const ETy node) const {
    return recursiveReduce(Q);
 }
 
+bool ER::isMethodMoreSpecific(ast::MethodDecl const* a,
+                              ast::MethodDecl const* b) const {
+   // Let a be declared in T with parameter types Ti
+   // Let b be declared in U with parameter types Ui
+   // Then a > b when for all i, Ti > Ui and T > U
+   // Where two types A > B when A converts to B
+   auto T = alloc.new_object<ast::ReferenceType>(cast<ast::Decl>(a->parent()),
+                                                 SourceRange{});
+   auto U = alloc.new_object<ast::ReferenceType>(cast<ast::Decl>(b->parent()),
+                                                 SourceRange{});
+   if(!TR->isAssignableTo(T, U)) return false;
+   assert(a->parameters().size() == b->parameters().size());
+   for(size_t i = 0; i < a->parameters().size(); i++) {
+      auto Ti = a->parameters()[i]->type();
+      auto Ui = b->parameters()[i]->type();
+      if(!TR->isAssignableTo(Ti, Ui)) return false;
+   }
+   return true;
+}
+
 ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
                                                  std::string_view name,
                                                  const ty_array& argtys) const {
-   // Search for the method in the context
-   return nullptr;
+   // 15.12.2.1 Find Methods that are Applicable and Accessible
+   std::pmr::vector<ast::MethodDecl const*> candidates{alloc};
+   for(auto decl : HC->getInheritedMethods(cast<ast::Decl>(ctx))) {
+      if(!decl) continue;
+      if(decl->name() != name) continue;
+      if(decl->parameters().size() != argtys.size()) continue;
+      bool valid = true;
+      for(size_t i = 0; i < argtys.size(); i++) {
+         auto ty1 = argtys[i];
+         auto ty2 = decl->parameters()[i]->type();
+         valid &= TR->isAssignableTo(ty1, ty2);
+      }
+      if(valid) candidates.push_back(decl);
+   }
+   if(candidates.size() == 0)
+      throw diag.ReportError(cu_->location())
+            << "no method found for name: " << name;
+   if(candidates.size() == 1) return candidates[0];
+
+   // 15.12.2.2 Choose the Most Specific Method
+   ast::MethodDecl const* mostSpecific = nullptr;
+   std::pmr::vector<ast::MethodDecl const*> maxSpecific{alloc};
+   // Grab the (not necessarily unique) minimum
+   for(auto cur : candidates) {
+      if(!mostSpecific) {
+         mostSpecific = cur;
+         continue;
+      }
+      // cur < minimum?
+      if(isMethodMoreSpecific(cur, mostSpecific)) {
+         mostSpecific = cur;
+      }
+   }
+   // Now grab all the maximally specific methods
+   for(auto cur : candidates) {
+      if(cur == mostSpecific) {
+         maxSpecific.push_back(cur);
+      } else if(isMethodMoreSpecific(cur, mostSpecific) &&
+                isMethodMoreSpecific(mostSpecific, cur)) {
+         maxSpecific.push_back(cur);
+      }
+   }
+   // If there's only one maximally specific method, return it
+   if(maxSpecific.size() == 1) return maxSpecific[0];
+   // FIXME(kevin): There are more conditions i.e., abstract...
+   // Otherwise, we have an ambiguity error
+   for(auto cur : maxSpecific) cur->printSignature(std::cerr) << "\n";
+   throw diag.ReportError(cu_->location())
+         << "ambiguous method found for name: " << name;
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -471,7 +538,7 @@ ast::DeclContext const* ER::getMethodParent(ExprNameWrapper* Q) const {
    return ty;
 }
 
-ETy ER::evalMethodCall(MethodOp&, const ETy method, const op_array& args) const {
+ETy ER::evalMethodCall(MethodOp& op, const ETy method, const op_array& args) const {
    // Q is the incompletely resolved method name
    ExprNameWrapper* Q = nullptr;
 
@@ -509,6 +576,7 @@ ETy ER::evalMethodCall(MethodOp&, const ETy method, const op_array& args) const 
    ast::ExprNodeList list{};
    list.concat(recursiveReduce(Q));
    list.concat(arglist);
+   list.push_back(&op);
    return list;
 }
 
@@ -560,6 +628,23 @@ ETy ER::evalCast(CastOp& op, const ETy type, const ETy value) const {
    list.push_back(&op);
    return list;
 }
+
+bool ER::validate(ETy const& value) const {
+   if(auto wrapper = std::get_if<ExprNameWrapper*>(&value)) {
+      // TODO(kevin)
+   } else if(auto list = std::get_if<ast::ExprNodeList>(&value)) {
+      if(list->size() == 0) return false;
+      if(list->size() == 1) return true;
+      return dyn_cast<ex::ExprOp>(list->tail()) != nullptr;
+   } else if(auto expr = std::get_if<ast::ExprNode*>(&value)) {
+      // TODO(kevin)
+   }
+   return true;
+}
+
+/* ===--------------------------------------------------------------------=== */
+// Resolve whole expressions functions
+/* ===--------------------------------------------------------------------=== */
 
 void ER::Resolve(ast::LinkingUnit* lu) { resolveRecursive(lu); }
 

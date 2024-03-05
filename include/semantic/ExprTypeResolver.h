@@ -57,13 +57,17 @@ protected:
                        const ETy index) const override;
    ETy evalCast(CastOp& op, const ETy type, const ETy value) const override;
 
-private:
+public:
    // @brief Check if it is possible to convert
    // lhs to rhs (call this latter type T) by assignment conversion (§5.2);
    bool isAssignableTo(const Type* lhs, const Type* rhs) const;
 
    // @brief check if it is valid to cast exprType to castType
    bool isValidCast(const Type* exprType, const Type* castType) const;
+
+   /// @brief Check if the type is a string type, including conversion to
+   /// java.lang.String implicitly.
+   bool isTypeString(const Type* type) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;

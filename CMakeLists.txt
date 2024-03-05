@@ -99,6 +99,7 @@ add_library(OLKCompilerLib
     "lib/ast/Expr.cc"
     "lib/ast/Stmt.cc"
     "lib/ast/Modifiers.cc"
+    "lib/ast/Type.cc"
     # semantic
     "lib/semantic/Semantic.cc"
     "lib/semantic/NameResolver.cc"

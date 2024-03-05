@@ -30,6 +30,14 @@ static bool isWiderThan(const BuiltInType* type, const BuiltInType* other) {
    return false;
 }
 
+bool ExprTypeResolver::isTypeString(const Type* type) const {
+   if(type->isString()) return true;
+   if(auto refType = dyn_cast<const ReferenceType*>(type)) {
+      return refType->decl() == NR->GetJavaLang().String;
+   }
+   return false;
+}
+
 // 1. Identity conversion
 // 2. Widening Primitive Conversion
 //    2.1 Null type can be cast to any class type, interface type, or array type.
@@ -46,12 +54,15 @@ bool ExprTypeResolver::isAssignableTo(const Type* lhs, const Type* rhs) const {
    // step 1
    if(*lhs == *rhs) return true;
 
-   auto leftPrimitive = dynamic_cast<const ast::BuiltInType*>(lhs);
-   auto rightPrimitive = dynamic_cast<const ast::BuiltInType*>(rhs);
-   auto leftRef = dynamic_cast<const ast::ReferenceType*>(lhs);
-   auto rightRef = dynamic_cast<const ast::ReferenceType*>(rhs);
-   auto leftArr = dynamic_cast<const ast::ArrayType*>(lhs);
-   auto rightArr = dynamic_cast<const ast::ArrayType*>(rhs);
+   auto leftPrimitive = dyn_cast<const ast::BuiltInType*>(lhs);
+   auto rightPrimitive = dyn_cast<const ast::BuiltInType*>(rhs);
+   auto leftRef = dyn_cast<const ast::ReferenceType*>(lhs);
+   auto rightRef = dyn_cast<const ast::ReferenceType*>(rhs);
+   auto leftArr = dyn_cast<const ast::ArrayType*>(lhs);
+   auto rightArr = dyn_cast<const ast::ArrayType*>(rhs);
+
+   // identity conversion: java.lang.String <-> primitive type string
+   if(isTypeString(lhs) && isTypeString(rhs)) return true;
 
    // step 2
    if(leftPrimitive && rightPrimitive) {
@@ -64,23 +75,23 @@ bool ExprTypeResolver::isAssignableTo(const Type* lhs, const Type* rhs) const {
    }
 
    if(leftRef && rightRef) {
-      if(auto rightClass = dynamic_cast<ClassDecl const*>(rightRef->decl())) {
+      if(auto rightClass = dyn_cast<ClassDecl const*>(rightRef->decl())) {
          // Step 3.1
-         if(auto leftClass = dynamic_cast<ClassDecl const*>(leftRef->decl())) {
+         if(auto leftClass = dyn_cast<ClassDecl const*>(leftRef->decl())) {
             return HC->isSuperClass(leftClass, rightClass);
          } else if(auto leftInterface =
-                         dynamic_cast<InterfaceDecl const*>(leftRef->decl())) {
+                         dyn_cast<InterfaceDecl const*>(leftRef->decl())) {
             return HC->isSuperInterface(leftInterface, rightClass);
          } else {
             assert(false && "Unreachable");
          }
       } else if(auto rightInterface =
-                      dynamic_cast<InterfaceDecl const*>(rightRef->decl())) {
+                      dyn_cast<InterfaceDecl const*>(rightRef->decl())) {
          // Step 3.2
-         if(auto leftClass = dynamic_cast<ClassDecl const*>(leftRef->decl())) {
+         if(auto leftClass = dyn_cast<ClassDecl const*>(leftRef->decl())) {
             return leftClass = NR->GetJavaLang().Object;
          } else if(auto leftInterface =
-                         dynamic_cast<InterfaceDecl const*>(leftRef->decl())) {
+                         dyn_cast<InterfaceDecl const*>(leftRef->decl())) {
             return HC->isSuperInterface(leftInterface, rightInterface);
          } else {
             assert(false && "Unreachable");
@@ -91,8 +102,8 @@ bool ExprTypeResolver::isAssignableTo(const Type* lhs, const Type* rhs) const {
    if(rightArr) {
       if(leftArr) {
          // Step 3.3.4
-         auto leftElem = dynamic_cast<ReferenceType*>(leftArr->getElementType());
-         auto rightElem = dynamic_cast<ReferenceType*>(rightArr->getElementType());
+         auto leftElem = dyn_cast<ReferenceType*>(leftArr->getElementType());
+         auto rightElem = dyn_cast<ReferenceType*>(rightArr->getElementType());
          return leftElem && rightElem && isAssignableTo(leftElem, rightElem);
       } else if(leftRef) {
          // Step 3.3.1
@@ -146,8 +157,8 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
                 isAssignableTo(rightRef, leftRef);
       }
    } else if(leftArr && rightArr) {
-      auto leftElem = dynamic_cast<ReferenceType*>(leftArr->getElementType());
-      auto rightElem = dynamic_cast<ReferenceType*>(rightArr->getElementType());
+      auto leftElem = dyn_cast<ReferenceType>(leftArr->getElementType());
+      auto rightElem = dyn_cast<ReferenceType>(rightArr->getElementType());
       return leftElem && rightElem &&
              isValidCast(leftArr->getElementType(), rightArr->getElementType());
    } else {
@@ -158,8 +169,12 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
 
 Type const* ExprTypeResolver::mapValue(ExprValue& node) const {
    assert(node.isDeclResolved() && "ExprValue decl is not resolved");
-   assert(node.isTypeResolved() && "ExprValue type is not resolved");
-   return node.type();
+   if(auto method = dyn_cast_or_null<MethodDecl>(node.decl())) {
+      return alloc.new_object<MethodType>(alloc, method);
+   } else {
+      assert(node.isTypeResolved() && "ExprValue type is not resolved");
+      return node.type();
+   }
 }
 
 Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
@@ -322,7 +337,7 @@ Type const* ExprTypeResolver::evalMethodCall(MethodOp& op, const Type* method,
    auto methodType = dynamic_cast<const MethodType*>(method);
    assert(methodType && "Not a method type");
 
-   auto methodParams = methodType->getParamTypes();
+   auto methodParams = methodType->paramTypes();
    assert(methodParams.size() == args.size() &&
           "Method params and args size mismatch");
 
@@ -333,7 +348,7 @@ Type const* ExprTypeResolver::evalMethodCall(MethodOp& op, const Type* method,
    }
 
    // fixme(owen, larry) do we want to return nullptr when the type is void?
-   return op.resolveResultType(methodType->getReturnType()->type);
+   return op.resolveResultType(methodType->returnType());
 }
 
 Type const* ExprTypeResolver::evalNewObject(NewOp& op, const Type* object,
@@ -342,7 +357,7 @@ Type const* ExprTypeResolver::evalNewObject(NewOp& op, const Type* object,
    auto constructor = dynamic_cast<const MethodType*>(object);
    assert(constructor && "Not a method type");
 
-   auto constructorParams = constructor->getParamTypes();
+   auto constructorParams = constructor->paramTypes();
    assert(constructorParams.size() == args.size() &&
           "Constructor params and args size mismatch");
 
@@ -353,7 +368,7 @@ Type const* ExprTypeResolver::evalNewObject(NewOp& op, const Type* object,
       }
    }
 
-   return op.resolveResultType(constructor->getReturnType()->type);
+   return op.resolveResultType(constructor->returnType());
 }
 
 Type const* ExprTypeResolver::evalNewArray(NewArrayOp& op, const Type* array,

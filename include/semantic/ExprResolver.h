@@ -10,6 +10,7 @@
 #include "ast/ExprNode.h"
 #include "diagnostics/Diagnostics.h"
 #include "semantic/ExprTypeResolver.h"
+#include "semantic/HierarchyChecker.h"
 #include "semantic/Semantic.h"
 #include "utils/BumpAllocator.h"
 #include "utils/EnumMacros.h"
@@ -60,7 +61,7 @@ public:
    /**
     * @brief Build an unresolved wrapper of Type given a name node,
     * represents a name particle represented by "node" of type "type".
-    * 
+    *
     * @param type The Java name type of the current particle
     * @param node The expression node representing the particle
     * @param op The operator joining the particle to the previous particle.
@@ -155,10 +156,12 @@ class ExprResolver final : ast::ExprEvaluator<internal::ExprResolverTy> {
 public:
    ExprResolver(diagnostics::DiagnosticEngine& diag, Heap* heap)
          : diag{diag}, heap{heap}, alloc{heap} {}
-   void Init(ExprTypeResolver* TR, NameResolver* NR, ast::Semantic* Sema) {
+   void Init(ExprTypeResolver* TR, NameResolver* NR, ast::Semantic* Sema,
+             semantic::HierarchyChecker* HC) {
       this->TR = TR;
       this->NR = NR;
       this->Sema = Sema;
+      this->HC = HC;
    }
    void Resolve(ast::LinkingUnit* lu);
 
@@ -197,6 +200,7 @@ private: // Overriden methods
    ETy evalArrayAccess(ArrayAccessOp& op, const ETy array,
                        const ETy index) const override;
    ETy evalCast(CastOp& op, const ETy type, const ETy value) const override;
+   bool validate(ETy const& value) const override;
 
 private:
    using ty_array = std::pmr::vector<ast::Type const*>;
@@ -240,6 +244,9 @@ private:
    ast::MethodDecl const* resolveMethodOverload(ast::DeclContext const* ctx,
                                                 std::string_view name,
                                                 const ty_array& argtys) const;
+   // Checks if a method is more specific than another: returns a > b
+   bool isMethodMoreSpecific(ast::MethodDecl const* a,
+                             ast::MethodDecl const* b) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;
@@ -247,6 +254,7 @@ private:
    ast::DeclContext const* lctx_;
    semantic::NameResolver* NR;
    semantic::ExprTypeResolver* TR;
+   semantic::HierarchyChecker* HC;
    ast::Semantic* Sema;
    mutable Heap* heap;
    mutable BumpAllocator alloc;

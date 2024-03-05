@@ -201,6 +201,8 @@ public:
       for(auto local : locals_) co_yield local;
       co_yield body_;
    }
+   std::ostream& printSignature(std::ostream& os) const;
+   void dumpSignature() const;
 
 private:
    Modifiers modifiers_;
