@@ -253,8 +253,34 @@ void ER::resolvePackageAccess(internal::ExprNameWrapper* access) const {
 }
 
 /* ===--------------------------------------------------------------------=== */
-//
+// ExprNameWrapper methods and resolveExprNode reduction functions
 /* ===--------------------------------------------------------------------=== */
+
+void ExprNameWrapper::dump() const {
+   std::cerr << "\n**** ExprNameWrapper reverse list dump ****\n";
+   dump(0);
+}
+
+void ExprNameWrapper::dump(int indent) const {
+   // Print the indent
+   for(int i = 0; i < indent; i++) std::cerr << "  ";
+   // Print the current type and node
+   std::cerr << "{ " << Type_to_string(type_, "??") << ", ";
+   node->print(std::cerr) << " }\n";
+   // If the previous is nullopt
+   if(!prev_.has_value()) {
+      for(int i = 0; i < indent; i++) std::cerr << "  ";
+      std::cerr << "  - prev: nullopt\n";
+   }
+   // If the previous node is a wrapper, print it
+   else if(auto p = prevIfWrapper()) {
+      p->dump(indent + 1);
+   }
+   // If the previous node is a list, print it
+   else {
+      std::get<ast::ExprNodeList>(prev_.value()).print(std::cerr);
+   }
+}
 
 void ExprNameWrapper::verifyInvariants(ExprNameWrapper::Type expectedTy) const {
    assert(type_ == expectedTy && "Expected type does not match actual type");
@@ -293,6 +319,8 @@ ast::ExprNodeList ER::recursiveReduce(ExprNameWrapper* node) const {
    }
    expr->resolveDeclAndType(decl, node->typeResolution());
    list.push_back(expr);
+   assert(node->op && "Expected non-null operator here");
+   list.push_back(node->op);
    return list;
 }
 
@@ -334,7 +362,7 @@ ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
 
 ETy ER::mapValue(ExprValue& node) const { return &node; }
 
-ETy ER::evalMemberAccess(DotOp&, const ETy lhs, const ETy id) const {
+ETy ER::evalMemberAccess(DotOp& op, const ETy lhs, const ETy id) const {
    // Resolves expr of form: Q . Id
    //    Where Q is either a simple identifier or a qualified
    //    identifier. If the LHS is an ExprNode, then it is simple and we need to
@@ -370,7 +398,7 @@ ETy ER::evalMemberAccess(DotOp&, const ETy lhs, const ETy id) const {
    // Special case: If "Id" in Q . Id is a method name, then defer resolution
    if(auto methodNode = dynamic_cast<ex::MethodName*>(exprNode)) {
       auto newQ = alloc.new_object<ExprNameWrapper>(
-            ExprNameWrapper::Type::MethodName, methodNode);
+            ExprNameWrapper::Type::MethodName, methodNode, &op);
       newQ->setPrev(Q);
       return newQ;
    }
@@ -379,7 +407,7 @@ ETy ER::evalMemberAccess(DotOp&, const ETy lhs, const ETy id) const {
    assert(fieldNode && "Malformed node. Expected MemberName here.");
    // Allocate a new node as the member access to represent "Id" in Lhs . Id
    auto newQ = alloc.new_object<ExprNameWrapper>(
-         ExprNameWrapper::Type::SingleAmbiguousName, fieldNode);
+         ExprNameWrapper::Type::SingleAmbiguousName, fieldNode, &op);
    newQ->setPrev(Q);
    // And we can build the reduced expression now
    // 1. If the previous node is a wrapper, then newQ can be anything
@@ -538,6 +566,8 @@ void ER::Resolve(ast::LinkingUnit* lu) { resolveRecursive(lu); }
 ast::ExprNodeList ER::evaluateAsList(ast::Expr* expr) {
    if(diag.Verbose(2)) {
       auto dbg = diag.ReportDebug(2);
+      dbg << "[*] Location: ";
+      expr->location().print(dbg.get()) << "\n";
       dbg << "[*] Printing expression before resolution:\n";
       expr->print(dbg.get(), 1);
    }
@@ -545,7 +575,7 @@ ast::ExprNodeList ER::evaluateAsList(ast::Expr* expr) {
    ast::ExprNodeList list = resolveExprNode(result);
    if(diag.Verbose(2)) {
       auto dbg = diag.ReportDebug(2);
-      dbg << "[*] Printing expression after resolution:\n";
+      dbg << "[*] Printing expression after resolution:\n  ";
       list.print(dbg.get());
    }
    return list;
@@ -555,10 +585,6 @@ void ER::resolveRecursive(ast::AstNode* node) {
    // Set the CU
    if(auto* cu = dynamic_cast<ast::CompilationUnit*>(node)) {
       cu_ = cu;
-      if(diag.Verbose(2)) {
-         auto dbg = diag.ReportDebug(2);
-         dbg << "[*] Resolving compilation unit in: " << cu->location().toString();
-      }
    }
    // Set the CTX
    if(auto* ctx = dynamic_cast<ast::DeclContext*>(node)) {

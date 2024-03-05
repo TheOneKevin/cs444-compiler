@@ -12,6 +12,7 @@
 #include "semantic/ExprTypeResolver.h"
 #include "semantic/Semantic.h"
 #include "utils/BumpAllocator.h"
+#include "utils/EnumMacros.h"
 
 namespace semantic {
 
@@ -21,7 +22,7 @@ namespace semantic {
 
 namespace internal {
 
-struct ExprNameWrapper;
+class ExprNameWrapper;
 
 /**
  * @brief The ExprResolverTy struct is a variant that represents the different
@@ -37,20 +38,40 @@ using ExprResolverTy =
  * @brief Represents a wrapper around a name that is being resolved. This
  * is a list of either ExprNameWrapper or ast::ExprNodeList.
  */
-struct ExprNameWrapper {
+class ExprNameWrapper {
+public:
    using PrevTy = std::variant<ExprNameWrapper*, ast::ExprNodeList>;
-   enum class Type {
-      PackageName,
-      TypeName,
-      ExpressionName,
-      MethodName,
-      SingleAmbiguousName
-   };
-   // Build an unresolved wrapper of Type given a name node
-   ExprNameWrapper(Type type, ast::exprnode::MemberName* node)
+
+public:
+#define NAME_TYPE_LIST(F) \
+   F(PackageName)         \
+   F(TypeName)            \
+   F(ExpressionName)      \
+   F(MethodName)          \
+   F(SingleAmbiguousName)
+
+   DECLARE_ENUM(Type, NAME_TYPE_LIST)
+
+private:
+   DECLARE_STRING_TABLE(Type, type_strings, NAME_TYPE_LIST)
+#undef NAME_TYPE_LIST
+
+public:
+   /**
+    * @brief Build an unresolved wrapper of Type given a name node,
+    * represents a name particle represented by "node" of type "type".
+    * 
+    * @param type The Java name type of the current particle
+    * @param node The expression node representing the particle
+    * @param op The operator joining the particle to the previous particle.
+    *           If this is a single name, then op is nullptr.
+    */
+   ExprNameWrapper(Type type, ast::exprnode::MemberName* node,
+                   ast::exprnode::MemberAccess* op)
          : node{node},
-           prev_{std::nullopt},
+           op{op},
            type_{type},
+           prev_{std::nullopt},
            resolution_{std::nullopt} {}
    // Reclassifies the name as a type name based on JLS 6.5.2
    void reclassify(Type type, ast::Decl const* resolution,
@@ -106,16 +127,19 @@ struct ExprNameWrapper {
       prev_ = prev;
    }
    std::optional<PrevTy> prev() const { return prev_; }
+   void dump() const;
+   void dump(int indent) const;
 
 public:
    ast::exprnode::MemberName* node;
+   ast::exprnode::MemberAccess* op;
 
    // Private means the semantics of the wrapper must NOT be changed!
 private:
    Type type_;
+   std::optional<PrevTy> prev_;
    NameResolver::ConstImportOpt resolution_;
    ast::Type const* typeResolution_;
-   std::optional<PrevTy> prev_;
 };
 
 } // namespace internal
@@ -198,12 +222,15 @@ private:
    // function over reclassifySingleAmbiguousName that allocates the wrapper.
    internal::ExprNameWrapper* resolveSingleName(
          ast::exprnode::MemberName* node) const {
-      if(auto method = dyn_cast<ast::exprnode::MethodName*>(node))
+      if(auto method = dyn_cast<ast::exprnode::MethodName*>(node)) {
          return alloc.new_object<internal::ExprNameWrapper>(
-               internal::ExprNameWrapper::Type::MethodName, method);
+               internal::ExprNameWrapper::Type::MethodName, method, nullptr);
+      }
       return reclassifySingleAmbiguousName(
             alloc.new_object<internal::ExprNameWrapper>(
-                  internal::ExprNameWrapper::Type::SingleAmbiguousName, node));
+                  internal::ExprNameWrapper::Type::SingleAmbiguousName,
+                  node,
+                  nullptr));
    }
    // ???
    ast::ExprNodeList recursiveReduce(internal::ExprNameWrapper* node) const;

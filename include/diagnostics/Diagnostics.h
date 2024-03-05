@@ -86,7 +86,12 @@ class DiagnosticStream : public std::ostream {
 public:
    explicit DiagnosticStream(std::ostream& stream) : stream_{stream} {}
    std::ostream& get() { return buffer; }
-   ~DiagnosticStream() { stream_ << buffer.str() << std::endl; }
+   ~DiagnosticStream() {
+      auto str = buffer.str();
+      stream_ << str;
+      // Prevent double newlines
+      if(!str.ends_with('\n')) stream_ << std::endl;
+   }
 
 private:
    std::ostream& stream_;

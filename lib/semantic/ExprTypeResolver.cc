@@ -1,7 +1,6 @@
 #include "semantic/ExprTypeResolver.h"
 
 #include "ast/AstNode.h"
-#include "ast/Decl.h"
 #include "ast/DeclContext.h"
 #include "ast/Expr.h"
 #include "ast/ExprNode.h"
