@@ -138,7 +138,6 @@ add_library(OLKCompilerLib
     "lib/passes/NameResolverPass.cc"
     "lib/passes/ExprResolverPass.cc"
     "lib/passes/PrintASTPass.cc"
-    "lib/passes/TypeCheckerPass.cc"
 )
 target_include_directories(
     OLKCompilerLib

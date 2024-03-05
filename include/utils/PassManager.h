@@ -145,6 +145,9 @@ protected:
       requires PassType<T>
    T& GetPass();
 
+   /// @brief Gets a single pass by name. Throws if no pass is found.
+   Pass& GetPass(std::string_view name);
+
    /// @brief Gets all passes of type T. Throws if no pass is found.
    /// @tparam T The type of the pass
    /// @return A generator that yields all passes of type T
@@ -292,6 +295,13 @@ private:
       if(!found)
          throw utils::FatalError("Pass of type not found: " +
                                  std::string(typeid(T).name()));
+   }
+
+   /// @brief Gets a single pass by name. Throws if no pass is found.
+   Pass& getPass(std::string_view name) {
+      for(auto& pass : passes_)
+         if(pass->Name() == name) return *pass;
+      throw utils::FatalError("Pass not found: " + std::string{name});
    }
 
 private:

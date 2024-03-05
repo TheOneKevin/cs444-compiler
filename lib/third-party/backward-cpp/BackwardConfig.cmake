@@ -28,7 +28,7 @@ set(STACK_WALKING_UNWIND TRUE CACHE BOOL
 	"Use compiler's unwind API")
 set(STACK_WALKING_BACKTRACE FALSE CACHE BOOL
 	"Use backtrace from (e)glibc for stack walking")
-set(STACK_WALKING_LIBUNWIND TRUE CACHE BOOL
+set(STACK_WALKING_LIBUNWIND FALSE CACHE BOOL
 	"Use libunwind for stack walking")
 
 set(STACK_DETAILS_AUTO_DETECT TRUE CACHE BOOL

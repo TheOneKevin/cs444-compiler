@@ -93,6 +93,10 @@ void Pass::RegisterCLI() {
          PassOptions::PassDesc{false, std::string{Desc()}};
 }
 
+Pass& Pass::GetPass(std::string_view name) {
+   PM().getPass(name);
+}
+
 /* ===--------------------------------------------------------------------=== */
 // PassManager
 /* ===--------------------------------------------------------------------=== */
