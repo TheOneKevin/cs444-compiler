@@ -107,7 +107,6 @@ public:
    SourceRange location() const override { return location_; }
    DeclContext const* asDeclContext() const override { return this; }
    Decl const* asDecl() const override { return this; }
-
    utils::Generator<ast::AstNode const*> children() const override {
       for(auto field : fields_) co_yield field;
       for(auto method : methods_) co_yield reinterpret_cast<Decl*>(method);
@@ -145,7 +144,6 @@ public:
    SourceRange location() const override { return location_; }
    DeclContext const* asDeclContext() const override { return this; }
    Decl const* asDecl() const override { return this; }
-
    utils::Generator<ast::AstNode const*> children() const override {
       for(auto method : methods_) co_yield reinterpret_cast<Decl*>(method);
       for(auto superClass : extends_) co_yield superClass;

@@ -84,7 +84,7 @@ protected:
 /* ===--------------------------------------------------------------------=== */
 
 /// @brief Base class for all declarations.
-class Decl : public AstNode {
+class Decl : public virtual AstNode {
 public:
    Decl(BumpAllocator& alloc, std::string_view name) noexcept
          : canonicalName_{alloc}, name_{name, alloc}, parent_{nullptr} {}
@@ -126,7 +126,7 @@ private:
 /* ===--------------------------------------------------------------------=== */
 
 /// @brief Base class for all declaration contexts (i.e., methods).
-class DeclContext : public AstNode {
+class DeclContext : public virtual AstNode {
 public:
    /// @brief Generator to yield all children decls of the context.
    virtual utils::Generator<ast::Decl const*> decls() const {
@@ -156,7 +156,7 @@ public:
 };
 
 /// @brief Base class for all types.
-class Type : public AstNode {
+class Type : public virtual AstNode {
 public:
    Type(SourceRange loc) : loc_{loc} {}
    virtual string_view toString() const = 0;
@@ -201,7 +201,7 @@ private:
 /* ===--------------------------------------------------------------------=== */
 
 /// @brief Base class for all statements.
-class Stmt : public AstNode {
+class Stmt : public virtual AstNode {
 public:
    /// @brief By default, returns an empty generator for the statement.
    virtual utils::Generator<AstNode const*> children() const override {

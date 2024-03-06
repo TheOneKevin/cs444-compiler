@@ -468,11 +468,16 @@ ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
       }
    } else {
       // Search the current class and all superclasses
+      // 1. Parameters number match
+      // 2. Parameters are convertible
+      // 3. Method is accessible
       for(auto decl : getInheritedMethods(ctx)) {
          if(!decl) continue;
          if(decl->parameters().size() != argtys.size()) continue;
          if(decl->name() != name) continue;
-         if(areParameterTypesApplicable(decl, argtys)) candidates.push_back(decl);
+         if(!areParameterTypesApplicable(decl, argtys)) continue;
+         if(!isAccessible(decl->modifiers(), decl->parent())) continue;
+         candidates.push_back(decl);
       }
    }
    if(candidates.size() == 0)

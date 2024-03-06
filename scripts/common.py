@@ -72,6 +72,7 @@ def get_joosc_command(args: list[str], test_case: str, stdlib_dir: str):
     custom_args = [*args]
     if "JOOSC" in os.environ:
         files += grab_all_java(stdlib_dir)
+        custom_args += ["--freestanding"]
         binary = os.path.abspath(os.environ["JOOSC"])
     else:
         custom_args += ["--stdlib", stdlib_dir]
