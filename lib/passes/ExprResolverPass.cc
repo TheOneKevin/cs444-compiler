@@ -23,7 +23,7 @@ public:
       ExprResolver ER{PM().Diag(), NewHeap()};
       ExprTypeResolver TR{PM().Diag(), NewHeap(), Sema};
       BumpAllocator alloc{NewHeap()};
-      AstChecker AC{alloc, PM().Diag()};
+      AstChecker AC{alloc, PM().Diag(), TR};
       ER.Init(&TR, &NR, &Sema, &HC);
       TR.Init(&HC, &NR);
       try {

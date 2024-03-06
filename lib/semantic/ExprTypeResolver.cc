@@ -363,9 +363,10 @@ Type const* ExprTypeResolver::evalUnaryOp(UnaryOp& op, const Type* rhs) const {
    }
 }
 
-Type const* ExprTypeResolver::evalMemberAccess(DotOp&, const Type*,
+Type const* ExprTypeResolver::evalMemberAccess(DotOp& op, const Type*,
                                                const Type* field) const {
-   return field;
+   if (op.resultType()) return op.resultType();
+   return op.resolveResultType(field);
 }
 
 Type const* ExprTypeResolver::evalMethodCall(MethodOp& op, const Type* method,

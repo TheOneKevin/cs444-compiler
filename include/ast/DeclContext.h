@@ -192,6 +192,7 @@ public:
    ReturnType returnTy() const { return ReturnType{returnType_}; }
    DeclContext const* asDeclContext() const override { return this; }
    Decl const* asDecl() const override { return this; }
+   Stmt const* body() const { return body_; }
 
    utils::Generator<ast::AstNode const*> children() const override {
       co_yield returnType_;
