@@ -105,7 +105,7 @@ public:
    bool isBoolean() const override { return kind == BuiltInType::Kind::Boolean; }
    bool isNull() const override { return kind == BuiltInType::Kind::NoneType; }
    bool isString() const override { return kind == BuiltInType::Kind::String; }
-   bool isBuiltIn() const override { return true; }
+   bool isPrimitive() const override { return kind != BuiltInType::Kind::String; }
 };
 
 /**

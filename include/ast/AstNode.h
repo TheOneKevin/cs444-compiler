@@ -188,7 +188,7 @@ public:
    virtual bool isNull() const { return false; }
    virtual bool isString() const { return false; }
    virtual bool isArray() const { return false; }
-   virtual bool isBuiltIn() const { return false; }
+   virtual bool isPrimitive() const { return false; }
 
    virtual ast::Decl const* getAsDecl() const { return nullptr; }
 

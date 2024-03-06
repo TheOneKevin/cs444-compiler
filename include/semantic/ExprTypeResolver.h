@@ -74,6 +74,8 @@ public:
    /// java.lang.String implicitly.
    bool isTypeString(const Type* type) const;
 
+   /// @brief Check if the type is a reference type or an array type. 
+   bool isReferenceOrArrType(const Type* type) const;
 private:
    diagnostics::DiagnosticEngine& diag;
    HierarchyChecker* HC;

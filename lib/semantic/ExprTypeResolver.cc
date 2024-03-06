@@ -11,6 +11,7 @@
 #include "ast/Type.h"
 #include "diagnostics/Location.h"
 #include "semantic/NameResolver.h"
+#include "utils/Utils.h"
 
 namespace semantic {
 
@@ -42,6 +43,11 @@ bool ExprTypeResolver::isTypeString(const Type* type) const {
    return false;
 }
 
+bool ExprTypeResolver::isReferenceOrArrType(const Type* type) const {
+   return dyn_cast<ReferenceType>(type) || dyn_cast<ArrayType>(type) ||
+          type->isString();
+}
+
 // 1. Identity conversion
 // 2. Widening Primitive Conversion
 //    2.1 Null type can be cast to any class type, interface type, or array type.
@@ -68,13 +74,28 @@ bool ExprTypeResolver::isAssignableTo(const Type* lhs, const Type* rhs) const {
    // identity conversion: java.lang.String <-> primitive type string
    if(isTypeString(lhs) && isTypeString(rhs)) return true;
 
+   if(rhs->isString() && leftRef) {
+      if(auto leftClass = dyn_cast<ClassDecl const*>(leftRef->decl())) {
+         return HC->isSuperClass(leftClass, NR->GetJavaLang().String);
+      } else if(auto leftInterface =
+                      dyn_cast<InterfaceDecl const*>(leftRef->decl())) {
+         return HC->isSuperInterface(leftInterface, NR->GetJavaLang().String);
+      } else
+         return false;
+   }
+   if(lhs->isString() && rightRef) {
+      if(auto rightClass = dyn_cast<ClassDecl const*>(rightRef->decl())) {
+         return HC->isSuperClass(NR->GetJavaLang().String, rightClass);
+      } else
+         return false;
+   }
    // step 2
-   if(leftPrimitive && rightPrimitive) {
+   if(lhs->isPrimitive() && rhs->isPrimitive()) {
       return isWiderThan(leftPrimitive, rightPrimitive);
    }
    // Step 2.1
-   if(rightPrimitive && rightPrimitive->isNull()) {
-      return leftRef || leftArr;
+   if(rhs->isNull()) {
+      return isReferenceOrArrType(lhs);
    }
 
    if(leftRef && rightRef) {
@@ -134,8 +155,10 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
    // identity conversion: java.lang.String <-> primitive type string
    if(isTypeString(exprType) && isTypeString(castType)) return true;
 
-   auto exprPrimitive = dyn_cast<ast::BuiltInType*>(exprType);
-   auto castPrimitive = dyn_cast<ast::BuiltInType*>(castType);
+   if(isAssignableTo(exprType, castType) || 
+      isAssignableTo(castType, exprType)) {
+         return true;
+   }
 
    auto exprRef = dyn_cast<ast::ReferenceType*>(exprType);
    auto castRef = dyn_cast<ast::ReferenceType*>(castType);
@@ -150,10 +173,10 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
    auto exprArr = dyn_cast<ast::ArrayType*>(exprType);
    auto castArr = dyn_cast<ast::ArrayType*>(castType);
 
-   if(exprPrimitive && castPrimitive) {
-      return isAssignableTo(castPrimitive, exprPrimitive) ||
-             isAssignableTo(exprPrimitive, castPrimitive);
-   } else if(exprRef) {
+   if(exprType->isPrimitive() && castType->isPrimitive()) {
+      return exprType->isNumeric() && castType->isNumeric();
+   }
+   if(exprRef) {
       if(castArr) {
          return exprRef->decl() == NR->GetJavaLang().Object;
       }
@@ -266,7 +289,7 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
       case BinaryOp::OpType::Add: {
          // FIXME(larry) for primitive types, we need to create a new class
          // instance.
-         if(lhs->isString() || rhs->isString()) {
+         if(isTypeString(lhs) || isTypeString(rhs)) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::String));
          } else if(lhs->isNumeric() && rhs->isNumeric()) {
@@ -311,14 +334,8 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
       }
 
       case BinaryOp::OpType::InstanceOf: {
-         auto lhsRef = dynamic_cast<const ast::ReferenceType*>(lhs);
-         auto rhsRef = dynamic_cast<const ast::ReferenceType*>(rhs);
-
-         auto lhsArr = dynamic_cast<const ast::ArrayType*>(lhs);
-         auto rhsArr = dynamic_cast<const ast::ArrayType*>(rhs);
-
-         if((lhs->isNull() || lhsRef || lhsArr) && (rhsArr || rhsRef) &&
-            isValidCast(rhs, lhs)) {
+         if((lhs->isNull() || isReferenceOrArrType(lhs)) &&
+            (isReferenceOrArrType(rhs)) && isValidCast(rhs, lhs)) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::Boolean));
          } else {

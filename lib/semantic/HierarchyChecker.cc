@@ -1,6 +1,9 @@
 #include "semantic/HierarchyChecker.h"
 
 #include <set>
+#include "ast/AstNode.h"
+#include "ast/DeclContext.h"
+#include "utils/Utils.h"
 
 namespace semantic {
 
@@ -316,7 +319,13 @@ void HierarchyChecker::checkClassMethod(
    if(diag.Verbose(2)) {
       diag.ReportDebug(2) << "Class: " << classDecl->name();
       diag.ReportDebug(2) << "Inherited methods: ";
-      for(auto method : allMethods) diag.ReportDebug() << "\t" << method->name();
+      for(auto method : allMethods) {
+         if (auto parent = dyn_cast<ast::ClassDecl>(method->parent())) {
+            diag.ReportDebug(2) << "\t" << method->name() << " -> " << parent->name();
+         } else if (auto parent = dyn_cast<ast::InterfaceDecl>(method->parent())) {
+            diag.ReportDebug(2) << "\t" << method->name() << " -> " << parent->name();
+         }
+      }
    }
 }
 
