@@ -8,6 +8,6 @@ public class Gabriel {
         n = n + 1;
     }
     public void test (Object o) {
-        int a = o + 2;
+        int a = o.hashCode() + 2;
     }
 }

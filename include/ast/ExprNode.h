@@ -244,7 +244,7 @@ public:
    std::ostream& print(std::ostream& os) const override = 0;
    ast::Type const* resolveResultType(ast::Type const* type) {
       assert(!result_type_ && "Tried to operator-resolve result type twice");
-      assert(type->isResolved() &&
+      assert((!type || type->isResolved()) &&
              "Tried to resolve operator with unresolved type");
       result_type_ = type;
       return type;

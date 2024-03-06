@@ -27,7 +27,7 @@ public:
       ER.Init(&TR, &NR, &Sema, &HC);
       TR.Init(&HC, &NR);
       try {
-         resolveRecursive(ER, LU);
+         resolveRecursive(ER, TR, LU);
          AC.ValidateLU(*LU);
       } catch(const diagnostics::DiagnosticBuilder&) {
          // Print the errors from diag in the next step
@@ -35,7 +35,7 @@ public:
    }
 
 private:
-   void evaluateAsList(ExprResolver& ER, ast::Expr* expr) {
+   void evaluateAsList(ExprResolver& ER, ExprTypeResolver& TR, ast::Expr* expr) {
       if(PM().Diag().Verbose(2)) {
          auto dbg = PM().Diag().ReportDebug(2);
          dbg << "[*] Location: ";
@@ -51,9 +51,12 @@ private:
          list.print(dbg.get());
       }
       expr->replace(list);
+      TR.Evaluate(expr);
+      (void) TR;
    }
 
-   void resolveRecursive(ExprResolver& ER, ast::AstNode* node) {
+   void resolveRecursive(ExprResolver& ER, ExprTypeResolver& TR,
+                         ast::AstNode* node) {
       // Set the CU and context
       if(auto* cu = dyn_cast<ast::CompilationUnit>(node)) ER.BeginCU(cu);
       if(auto* ctx = dyn_cast<ast::DeclContext>(node)) ER.BeginContext(ctx);
@@ -64,7 +67,7 @@ private:
                PM().Diag().ReportDebug(2)
                      << "[*] Resolving initializer for variable: " << decl->name();
             }
-            evaluateAsList(ER, init);
+            evaluateAsList(ER, TR, init);
          }
       } else if(auto* stmt = dynamic_cast<ast::Stmt*>(node)) {
          for(auto* expr : stmt->mut_exprs()) {
@@ -73,14 +76,14 @@ private:
                PM().Diag().ReportDebug(2)
                      << "[*] Resolving expression in statement:";
             }
-            evaluateAsList(ER, expr);
+            evaluateAsList(ER, TR, expr);
          }
       }
       // We want to avoid visiting nodes twice
       if(dynamic_cast<ast::DeclStmt*>(node)) return;
       // Visit the children recursively
       for(auto* child : node->mut_children()) {
-         if(child) resolveRecursive(ER, child);
+         if(child) resolveRecursive(ER, TR, child);
       }
    }
 

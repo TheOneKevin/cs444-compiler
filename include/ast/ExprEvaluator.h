@@ -126,12 +126,15 @@ public:
 
 protected:
    virtual bool validate(T const&) const { return true; }
+   virtual bool validatePop(T const&) const { return true; }
+   int opStackSize() const { return op_stack_.size(); }
 
 private:
    inline T popSafe() {
       assert(!op_stack_.empty() && "Stack underflow");
       T value = op_stack_.top();
       op_stack_.pop();
+      assert(validatePop(value));
       return value;
    }
 

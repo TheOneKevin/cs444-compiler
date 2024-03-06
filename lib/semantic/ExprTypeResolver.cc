@@ -136,13 +136,16 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
    // If expr is "null", the type is actually Object
    if(exprType->isNull()) {
       return rightRef;
+   } else if(castType->isNull()) {
+      return leftRef;
    }
 
    auto leftArr = dyn_cast<ast::ArrayType*>(exprType);
    auto rightArr = dyn_cast<ast::ArrayType*>(castType);
 
    if(leftPrimitive && rightPrimitive) {
-      return isAssignableTo(rightPrimitive, leftPrimitive);
+      return isAssignableTo(rightPrimitive, leftPrimitive) ||
+             isAssignableTo(leftPrimitive, rightPrimitive);
    } else if(leftRef && rightRef) {
       auto leftInterface = dyn_cast<ast::InterfaceDecl*>(leftRef->decl());
       auto rightInterface = dyn_cast<ast::InterfaceDecl*>(rightRef->decl());
@@ -354,7 +357,7 @@ Type const* ExprTypeResolver::evalMethodCall(MethodOp& op, const Type* method,
       }
    }
 
-   // fixme(owen, larry) do we want to return nullptr when the type is void?
+   // Return nullptr if the method has no return type
    return op.resolveResultType(methodType->returnType());
 }
 
@@ -381,20 +384,10 @@ Type const* ExprTypeResolver::evalNewObject(NewOp& op, const Type* object,
 Type const* ExprTypeResolver::evalNewArray(NewArrayOp& op, const Type* array,
                                            const Type* size) const {
    if(op.resultType()) return op.resultType();
-   Type* copiedType = nullptr;
-   if(auto refType = dynamic_cast<const ReferenceType*>(array)) {
-      copiedType = sema.BuildReferenceType(refType->decl());
-   } else if(auto builtInType = dynamic_cast<const BuiltInType*>(array)) {
-      copiedType = sema.BuildBuiltInType(builtInType->getKind());
-   }
-   assert(copiedType && "Invalid type for base type of array");
-   auto arrayType = alloc.new_object<ArrayType>(alloc, copiedType, loc_);
-
    if(!size->isNumeric()) {
       throw diag.ReportError(loc_) << "Invalid type for array size, non-numeric";
    }
-
-   return op.resolveResultType(arrayType);
+   return op.resolveResultType(array);
 }
 
 Type const* ExprTypeResolver::evalArrayAccess(ArrayAccessOp& op, const Type* array,

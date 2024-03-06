@@ -56,6 +56,11 @@ protected:
    ETy evalArrayAccess(ArrayAccessOp& op, const ETy array,
                        const ETy index) const override;
    ETy evalCast(CastOp& op, const ETy type, const ETy value) const override;
+   bool validatePop(ETy const& type) const override {
+      if(type) return true;
+      if(opStackSize() == 0) return true;
+      throw diag.ReportError(loc_) << "cannot use void type in expression";
+   }
 
 public:
    // @brief Check if it is possible to convert
