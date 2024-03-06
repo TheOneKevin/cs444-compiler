@@ -6,6 +6,6 @@ public class HelloWorld {
 
   }
   public void g() {
-    fn("", 10);
+    fn(10, "");
   }
 }
