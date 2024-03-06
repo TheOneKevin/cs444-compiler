@@ -174,6 +174,13 @@ ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers, SourceRange loc,
    // Check if the class has at least one constructor
    if(node->constructors().size() == 0)
       diag.ReportError(loc) << "class must have at least one constructor";
+   // Check if the construct name is the same as the class name
+   for(auto constructor : node->constructors()) {
+      if(loc.isValid() /* is decl synthetic? */ && constructor->name() != name) {
+         diag.ReportError(constructor->location())
+               << "constructor name must be the same as the class name";
+      }
+   }
    // Check if multiple fields have the same name
    for(auto field : node->fields()) {
       for(auto other : node->fields()) {

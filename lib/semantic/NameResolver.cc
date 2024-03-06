@@ -144,7 +144,7 @@ void NameResolver::populateJavaLangCache() {
       auto length = sema_->BuildFieldDecl(lengthMod, SourceRange{}, intTy, "length", nullptr, true);
       auto ctor = sema_->BuildMethodDecl(pubMod,
                                          SourceRange{},
-                                         "[__builtin_array_ctor",
+                                         "[__builtin_array_proto",
                                          nullptr,
                                          emptyParams,
                                          true,
