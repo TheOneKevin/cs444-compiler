@@ -253,6 +253,8 @@ private:
    bool areParameterTypesApplicable(ast::MethodDecl const* method,
                                     const ty_array& argtys) const;
    bool isAccessible(ast::Modifiers, ast::DeclContext const*) const;
+   utils::Generator<ast::MethodDecl const*> getInheritedMethods(
+         ast::DeclContext const* ctx) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;

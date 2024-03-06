@@ -9,6 +9,9 @@
 #include "ast/DeclContext.h"
 #include "ast/ExprNode.h"
 #include "ast/Type.h"
+#include "semantic/HierarchyChecker.h"
+#include "semantic/NameResolver.h"
+#include "utils/Generator.h"
 #include "utils/Utils.h"
 
 namespace semantic {
@@ -222,7 +225,8 @@ void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
    if(!mods.isStatic()) {
       throw diag.ReportError(cu_->location())
             << "attempted to access non-static member: "
-            << field->getCanonicalName();
+            << (field->hasCanonicalName() ? field->getCanonicalName()
+                                          : field->name());
    }
    // We've reached here which means the field access is valid
    ast::Type const* fieldty = nullptr;
@@ -393,6 +397,18 @@ bool ER::areParameterTypesApplicable(ast::MethodDecl const* decl,
    return valid;
 }
 
+utils::Generator<ast::MethodDecl const*> ER::getInheritedMethods(
+      ast::DeclContext const* ctx) const {
+   bool isArrayType = ctx == NR->GetArrayPrototype();
+   if(isArrayType) {
+      for(auto method : ctx->decls())
+         if(auto decl = dyn_cast<ast::MethodDecl>(method)) co_yield decl;
+   } else {
+      for(auto method : HC->getInheritedMethods(cast<ast::Decl>(ctx)))
+         co_yield method;
+   }
+}
+
 ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
                                                  std::string_view name,
                                                  const ty_array& argtys,
@@ -412,7 +428,7 @@ ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
       }
    } else {
       // Search the current class and all superclasses
-      for(auto decl : HC->getInheritedMethods(cast<ast::Decl>(ctx))) {
+      for(auto decl : getInheritedMethods(ctx)) {
          if(!decl) continue;
          if(decl->parameters().size() != argtys.size()) continue;
          if(decl->name() != name) continue;
@@ -570,6 +586,10 @@ ast::DeclContext const* ER::getMethodParent(ExprNameWrapper* Q) const {
                << "method call to void-typed declaration: " << declOrType->name();
       }
       ty = GetTypeAsDecl(type, *NR);
+      if(!ty) {
+         throw diag.ReportError(cu_->location())
+               << "method call to non-reference type: " << declOrType->name();
+      }
    }
    assert(ty && "Expected non-null type here");
    return ty;
