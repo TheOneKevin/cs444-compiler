@@ -15,7 +15,10 @@
       "problemMatcher": [
         "$gcc"
       ],
-      "isBackground": true,
+      "presentation": {
+        "reveal": "never",
+        "revealProblems": "onProblem"
+      },
       "icon": {"id": "beaker"}
     },
     {
@@ -25,6 +28,10 @@
       "options": {
         "cwd": "${workspaceFolder}/build-release"
       },
+      "presentation": {
+        "reveal": "never",
+        "revealProblems": "onProblem"
+      },
       "group": {
         "kind": "build",
         "isDefault": false
@@ -32,7 +39,6 @@
       "problemMatcher": [
         "$gcc"
       ],
-      "isBackground": true,
       "icon": {"id": "package"}
     },
     {
@@ -41,7 +47,6 @@
         "Build Debug",
         "Build Release"
       ],
-      "isBackground": true,
       "icon": {"id": "gear"},
       "group": {
         "kind": "build",
