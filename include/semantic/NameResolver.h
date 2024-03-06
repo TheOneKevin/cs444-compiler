@@ -120,6 +120,7 @@ public:
 
    /**
     * @brief Get a struct with all the java.lang.* classes and interfaces.
+    * Also includes java.io.Serializable for some reason.
     * @return auto An anonymous struct with all the java.lang.* types.
     */
    auto GetJavaLang() const { return java_lang_; }
@@ -199,6 +200,7 @@ private:
       ast::ClassDecl* Short;
       ast::ClassDecl* String;
       ast::ClassDecl* System;
+      ast::InterfaceDecl* Serializable;
    } java_lang_;
    // Array class prototype
    ast::ClassDecl* arrayPrototype_;

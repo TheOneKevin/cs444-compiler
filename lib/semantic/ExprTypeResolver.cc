@@ -139,10 +139,9 @@ bool ExprTypeResolver::isAssignableTo(const Type* lhs, const Type* rhs) const {
             return true;
          }
          // Step 3.3.3
-         // Fixme(Kevin, Larry) Add method to get serializable
-         // if ( leftRef->decl() == NR->GetSerializable()) {
-         //    return true;
-         // }
+         if ( leftRef->decl() == NR->GetJavaLang().Serializable) {
+            return true;
+         }
       }
    }
    return false;

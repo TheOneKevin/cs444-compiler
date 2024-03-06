@@ -1,6 +1,7 @@
 #include "semantic/NameResolver.h"
 
 #include <utils/Assert.h>
+
 #include <iostream>
 #include <memory_resource>
 #include <string>
@@ -87,30 +88,33 @@ void NameResolver::populateJavaLangCache() {
    // Resolve java.lang. into Pkg*
    auto javaPkg = std::get<Pkg*>(rootPkg_->children["java"]);
    auto langPkg = std::get<Pkg*>(javaPkg->children["lang"]);
+   auto ioPkg = std::get<Pkg*>(javaPkg->children["io"]);
    // Now we can populate the java.lang.* cache
    // FIXME(kevin): Implement better error handling here?
    java_lang_.Boolean =
-         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Boolean"]));
+         cast<ast::ClassDecl>(std::get<Decl*>(langPkg->children["Boolean"]));
    java_lang_.Byte =
-         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Byte"]));
+         cast<ast::ClassDecl>(std::get<Decl*>(langPkg->children["Byte"]));
    java_lang_.Character =
-         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Character"]));
+         cast<ast::ClassDecl>(std::get<Decl*>(langPkg->children["Character"]));
    java_lang_.Class =
-         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Class"]));
+         cast<ast::ClassDecl>(std::get<Decl*>(langPkg->children["Class"]));
    java_lang_.Cloneable = cast<ast::InterfaceDecl*>(
          std::get<Decl*>(langPkg->children["Cloneable"]));
    java_lang_.Integer =
-         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Integer"]));
+         cast<ast::ClassDecl>(std::get<Decl*>(langPkg->children["Integer"]));
    java_lang_.Number =
-         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Number"]));
+         cast<ast::ClassDecl>(std::get<Decl*>(langPkg->children["Number"]));
    java_lang_.Object =
-         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Object"]));
+         cast<ast::ClassDecl>(std::get<Decl*>(langPkg->children["Object"]));
    java_lang_.Short =
-         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["Short"]));
+         cast<ast::ClassDecl>(std::get<Decl*>(langPkg->children["Short"]));
    java_lang_.String =
-         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["String"]));
+         cast<ast::ClassDecl>(std::get<Decl*>(langPkg->children["String"]));
    java_lang_.System =
-         cast<ast::ClassDecl*>(std::get<Decl*>(langPkg->children["System"]));
+         cast<ast::ClassDecl>(std::get<Decl*>(langPkg->children["System"]));
+   java_lang_.Serializable = cast<ast::InterfaceDecl>(
+         std::get<Decl*>(ioPkg->children["Serializable"]));
    // Make sure they are all non-null
    assert(java_lang_.Boolean && "java.lang.Boolean not valid (expected class)");
    assert(java_lang_.Byte && "java.lang.Byte not valid (expected class)");

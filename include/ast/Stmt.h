@@ -4,6 +4,7 @@
 
 #include "AstNode.h"
 #include "Decl.h"
+#include "diagnostics/Location.h"
 #include "utils/Utils.h"
 
 namespace ast {
