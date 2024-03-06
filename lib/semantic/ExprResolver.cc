@@ -43,13 +43,53 @@ static ast::DeclContext const* GetTypeAsDecl(ast::Type const* type,
 // Functions to resolve names and chains of names
 /* ===--------------------------------------------------------------------=== */
 
+/**
+ * @brief If a unique declaration exists with the given name in the
+ * immediate context, then it is returned. Otherwise, nullptr is returned.
+ *
+ * @param name The name of the declaration to look up.
+ * @return Decl const* The declaration with the given name or nullptr.
+ */
+const ast::Decl* ER::lookupDecl(ast::DeclContext const* ctx,
+                                std::function<bool(ast::Decl const*)> cond) const {
+   const ast::Decl* ret = nullptr;
+   if(auto classDecl = dyn_cast<ast::ClassDecl>(ctx);
+      classDecl && ctx != NR->GetArrayPrototype()) {
+      for(auto decl : HC->getInheritedMembers(classDecl)) {
+         if(cond(decl)) {
+            if(ret) return nullptr; // Ambiguous, cannot resolve
+            ret = decl;
+         }
+      }
+   } else {
+      if(auto methodDecl = dyn_cast<ast::MethodDecl>(ctx)) {
+         if(auto classDecl = dyn_cast<ast::ClassDecl>(methodDecl->parent())) {
+            for(auto decl : HC->getInheritedMembers(classDecl)) {
+               if(cond(decl)) {
+                  if(ret) return nullptr; // Ambiguous, cannot resolve
+                  ret = decl;
+               }
+            }
+         }
+      }
+      for(auto decl : ctx->decls()) {
+         if(cond(decl)) {
+            if(ret) return nullptr; // Ambiguous, cannot resolve
+            ret = decl;
+         }
+      }
+   }
+
+   return ret;
+}
+
 bool ER::tryReclassifyDecl(ExprNameWrapper& data,
                            ast::DeclContext const* ctx) const {
    // Search in this context
    auto cond = [name = data.node->name()](ast::Decl const* d) {
       return d->name() == name && dyn_cast<ast::TypedDecl>(d);
    };
-   if(auto decl = ctx->lookupDecl(cond)) {
+   if(auto decl = lookupDecl(ctx, cond)) {
       if(auto varDecl = dynamic_cast<ast::VarDecl const*>(decl)) {
          data.reclassify(
                ExprNameWrapper::Type::ExpressionName, varDecl, varDecl->type());
@@ -173,7 +213,7 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
       assert(refTy && "Expected non-null type here");
    }
    // Now we check if "name" is a field of "decl"
-   auto field = refTy->lookupDecl([name](ast::Decl const* d) {
+   auto field = lookupDecl(refTy, [name](ast::Decl const* d) {
       bool b1 = d->name() == name;
       bool b2 = dyn_cast<ast::TypedDecl>(d);
       return b1 && b2;
@@ -206,7 +246,7 @@ void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
             << "\" to non-class type: " << typeOrDecl->name();
    }
    // Now we check if "name" is a field of "decl".
-   auto field = type->lookupDecl([name](ast::Decl const* d) {
+   auto field = lookupDecl(type, [name](ast::Decl const* d) {
       return d->name() == name && dyn_cast<ast::TypedDecl>(d);
    });
    if(!field) {

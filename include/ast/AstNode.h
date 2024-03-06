@@ -139,24 +139,6 @@ public:
       }
    }
 
-   /**
-    * @brief If a unique declaration exists with the given name in the
-    * immediate context, then it is returned. Otherwise, nullptr is returned.
-    *
-    * @param name The name of the declaration to look up.
-    * @return Decl const* The declaration with the given name or nullptr.
-    */
-   Decl const* lookupDecl(std::function<bool(Decl const*)> cond) const {
-      Decl const* ret = nullptr;
-      for(auto decl : decls()) {
-         if(cond(decl)) {
-            if(ret) return nullptr; // Ambiguous, cannot resolve
-            ret = decl;
-         }
-      }
-      return ret;
-   }
-
    /// @brief
    virtual Decl const* asDecl() const { return nullptr; }
 };

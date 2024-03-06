@@ -36,6 +36,11 @@ public:
       return methodInheritanceMap_.at(decl);
    }
 
+   auto& getInheritedMembers(ast::Decl const* decl) {
+      // assert(memberInheritancesMap_.find(decl) != memberInheritancesMap_.end());
+      return memberInheritancesMap_[decl];
+   }
+
    void setInheritedMethods(
          ast::Decl const* decl,
          std::pmr::vector<ast::MethodDecl const*>& inheritedMethods) {
@@ -50,6 +55,8 @@ private:
          inheritanceMap_;
    std::pmr::map<ast::Decl const*, std::pmr::vector<ast::MethodDecl const*>>
          methodInheritanceMap_;
+   std::pmr::map<ast::Decl const*, std::pmr::set<ast::TypedDecl const*>>
+         memberInheritancesMap_;
    void checkInheritance();
 
    // Check functions for method
@@ -65,6 +72,8 @@ private:
    void checkMethodInheritance();
    void checkMethodInheritanceHelper(ast::Decl const* node,
                                      std::pmr::set<ast::Decl const*>& visited);
+
+   void setInheritedMembersHelper(ast::Decl const* node, ast::Decl const* parent);
 };
 
 } // namespace semantic

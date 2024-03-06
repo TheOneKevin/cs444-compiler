@@ -38,11 +38,31 @@ bool HierarchyChecker::isSuperInterface(ast::InterfaceDecl const* super,
    return false;
 }
 
+void HierarchyChecker::setInheritedMembersHelper(ast::Decl const* node,
+                                                 ast::Decl const* parent) {
+   for(auto member : getInheritedMembers(parent)) {
+      bool isHidden = false;
+      for(auto memberInherited : memberInheritancesMap_[node]) {
+         if(memberInherited->name() == member->name()) {
+            isHidden = true;
+         }
+      }
+      if(!isHidden) memberInheritancesMap_[node].insert(member);
+   }
+}
+
 void HierarchyChecker::checkMethodInheritanceHelper(
       ast::Decl const* node, std::pmr::set<ast::Decl const*>& visited) {
    // Mark the node as visited
    visited.insert(node);
    std::pmr::vector<ast::MethodDecl const*> inheritedMethods;
+   memberInheritancesMap_[node] = std::pmr::set<ast::TypedDecl const*>{};
+   auto nodeAsClass = dyn_cast<ast::ClassDecl>(node);
+   if(nodeAsClass) {
+      for(auto member : nodeAsClass->fields()) {
+         memberInheritancesMap_[node].insert(member);
+      }
+   }
 
    for(auto super : inheritanceMap_[node]) {
       if(auto superClass = dyn_cast<ast::ClassDecl>(super)) {
@@ -57,6 +77,7 @@ void HierarchyChecker::checkMethodInheritanceHelper(
          for(auto method : getInheritedMethods(superClass)) {
             inheritedMethods.emplace_back(method);
          }
+         setInheritedMembersHelper(node, superClass);
       } else if(auto superInterface = dyn_cast<ast::InterfaceDecl>(super)) {
          if(!visited.count(superInterface)) {
             checkMethodInheritanceHelper(superInterface, visited);
@@ -76,6 +97,13 @@ void HierarchyChecker::checkMethodInheritanceHelper(
    if(auto classDecl = dyn_cast<ast::ClassDecl>(node)) {
       checkClassMethod(classDecl, inheritedMethods);
       checkClassConstructors(classDecl);
+      if(diag.Verbose(2)) {
+         diag.ReportDebug(2) << "Class: " << classDecl->name() << std::endl;
+         diag.ReportDebug(2) << "Inherited fields: " << std::endl;
+         for(auto member : memberInheritancesMap_[node]) {
+            diag.ReportDebug(2) << "\t" << member->name() << std::endl;
+         }
+      }
    } else if(auto interfaceDecl = dyn_cast<ast::InterfaceDecl>(node)) {
       checkInterfaceMethod(interfaceDecl, inheritedMethods);
    }

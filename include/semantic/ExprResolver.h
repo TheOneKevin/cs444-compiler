@@ -256,6 +256,8 @@ private:
    utils::Generator<ast::MethodDecl const*> getInheritedMethods(
          ast::DeclContext const* ctx) const;
 
+   const ast::Decl* lookupDecl(ast::DeclContext const* ctx, std::function<bool(ast::Decl const*)> cond) const;
+
 private:
    diagnostics::DiagnosticEngine& diag;
    ast::CompilationUnit const* cu_;

@@ -127,31 +127,40 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
                                    const Type* castType) const {
    if(*exprType == *castType) return true;
 
-   auto leftPrimitive = dyn_cast<ast::BuiltInType*>(exprType);
-   auto rightPrimitive = dyn_cast<ast::BuiltInType*>(castType);
+   // identity conversion: java.lang.String <-> primitive type string
+   if(isTypeString(exprType) && isTypeString(castType)) return true;
 
-   auto leftRef = dyn_cast<ast::ReferenceType*>(exprType);
-   auto rightRef = dyn_cast<ast::ReferenceType*>(castType);
+   auto exprPrimitive = dyn_cast<ast::BuiltInType*>(exprType);
+   auto castPrimitive = dyn_cast<ast::BuiltInType*>(castType);
+
+   auto exprRef = dyn_cast<ast::ReferenceType*>(exprType);
+   auto castRef = dyn_cast<ast::ReferenceType*>(castType);
 
    // If expr is "null", the type is actually Object
    if(exprType->isNull()) {
-      return rightRef;
+      return castRef;
    } else if(castType->isNull()) {
-      return leftRef;
+      return exprRef;
    }
 
-   auto leftArr = dyn_cast<ast::ArrayType*>(exprType);
-   auto rightArr = dyn_cast<ast::ArrayType*>(castType);
+   auto exprArr = dyn_cast<ast::ArrayType*>(exprType);
+   auto castArr = dyn_cast<ast::ArrayType*>(castType);
 
-   if(leftPrimitive && rightPrimitive) {
-      return isAssignableTo(rightPrimitive, leftPrimitive) ||
-             isAssignableTo(leftPrimitive, rightPrimitive);
-   } else if(leftRef && rightRef) {
-      auto leftInterface = dyn_cast<ast::InterfaceDecl*>(leftRef->decl());
-      auto rightInterface = dyn_cast<ast::InterfaceDecl*>(rightRef->decl());
+   if(exprPrimitive && castPrimitive) {
+      return isAssignableTo(castPrimitive, exprPrimitive) ||
+             isAssignableTo(exprPrimitive, castPrimitive);
+   } else if(exprRef) {
+      if (castArr) {
+         return exprRef->decl() == NR->GetJavaLang().Object;
+      }
+      if (!castRef) {
+         return false;
+      }
+      auto leftInterface = dyn_cast<ast::InterfaceDecl*>(exprRef->decl());
+      auto rightInterface = dyn_cast<ast::InterfaceDecl*>(castRef->decl());
 
-      auto leftClass = dyn_cast<ast::ClassDecl*>(leftRef->decl());
-      auto rightClass = dyn_cast<ast::ClassDecl*>(rightRef->decl());
+      auto leftClass = dyn_cast<ast::ClassDecl*>(exprRef->decl());
+      auto rightClass = dyn_cast<ast::ClassDecl*>(castRef->decl());
 
       if(leftInterface && rightInterface) {
          return true;
@@ -160,14 +169,25 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
       } else if(rightInterface && !leftClass->modifiers().isFinal()) {
          return true;
       } else {
-         return isAssignableTo(leftRef, rightRef) ||
-                isAssignableTo(rightRef, leftRef);
+         return isAssignableTo(exprRef, castRef) ||
+                isAssignableTo(castRef, exprRef);
       }
-   } else if(leftArr && rightArr) {
-      auto leftElem = dyn_cast<ReferenceType>(leftArr->getElementType());
-      auto rightElem = dyn_cast<ReferenceType>(rightArr->getElementType());
-      return leftElem && rightElem &&
-             isValidCast(leftArr->getElementType(), rightArr->getElementType());
+   } else if(exprArr) {
+      if(castArr) {
+         auto leftElem = dyn_cast<ReferenceType>(exprArr->getElementType());
+         auto rightElem = dyn_cast<ReferenceType>(castArr->getElementType());
+         return leftElem && rightElem &&
+                isValidCast(exprArr->getElementType(), castArr->getElementType());
+      } else {
+         if(castRef->decl() == NR->GetJavaLang().Object) {
+            return true;
+         }
+         // Fixme(Kevin, Larry) Add method to get serializable
+         // if ( rightRef->decl() == NR->GetSerializable()) {
+         //    return true;
+         // }
+      }
+
    } else {
       throw diag.ReportError(loc_) << "Invalid cast from " << exprType->toString()
                                    << " to " << castType->toString();
@@ -242,6 +262,8 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
       }
 
       case BinaryOp::OpType::Add: {
+         // FIXME(larry) for primitive types, we need to create a new class
+         // instance.
          if(lhs->isString() || rhs->isString()) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::String));
@@ -287,10 +309,13 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
       }
 
       case BinaryOp::OpType::InstanceOf: {
-         auto lhsType = dynamic_cast<const ast::ReferenceType*>(lhs);
-         auto rhsType = dynamic_cast<const ast::ReferenceType*>(rhs);
+         auto lhsRef = dynamic_cast<const ast::ReferenceType*>(lhs);
+         auto rhsRef = dynamic_cast<const ast::ReferenceType*>(rhs);
 
-         if((lhs->isNull() || lhsType) && !rhs->isNull() && rhsType &&
+         auto lhsArr = dynamic_cast<const ast::ArrayType*>(lhs);
+         auto rhsArr = dynamic_cast<const ast::ArrayType*>(rhs);
+
+         if((lhs->isNull() || lhsRef || lhsArr) && (rhsArr || rhsRef) &&
             isValidCast(rhs, lhs)) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::Boolean));
