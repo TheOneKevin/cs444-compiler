@@ -101,11 +101,16 @@ public:
       }
       return false;
    }
-   bool isNumeric() const override { return kind != BuiltInType::Kind::Boolean; }
+   bool isNumeric() const override {
+      return (kind != BuiltInType::Kind::Boolean) &&
+             (kind != BuiltInType::Kind::NoneType) &&
+             (kind != BuiltInType::Kind::String);
+   }
    bool isBoolean() const override { return kind == BuiltInType::Kind::Boolean; }
    bool isNull() const override { return kind == BuiltInType::Kind::NoneType; }
    bool isString() const override { return kind == BuiltInType::Kind::String; }
    bool isPrimitive() const override { return kind != BuiltInType::Kind::String; }
+   std::ostream& print(std::ostream& os, int indentation = 0) const override;
 };
 
 /**
@@ -125,15 +130,18 @@ public:
       assert(decl && "Declaration cannot be null for reference type");
    }
    /// @brief TODO: Implement this.
-   virtual string_view toString() const override { return "ReferenceType"; }
+   virtual string_view toString() const override {
+      return decl_ ? decl_->getCanonicalName() : "Unresolved";
+   }
    /// @brief The reference type is resolved if it has a declaration.
    bool isResolved() const override { return decl_ != nullptr; }
    Decl const* decl() const { return decl_; }
-   virtual ast::Decl const* getAsDecl() const override { return decl_;}
+   virtual ast::Decl const* getAsDecl() const override { return decl_; }
    /// @brief This does nothing as a reference type is always resolved.
    virtual void resolve(TypeResolver&) override {
       assert(isResolved() && "Type is not resolved");
    }
+   std::ostream& print(std::ostream& os, int indentation = 0) const override;
 
    /// @brief Resolves the type to a declaration if it is an unresolved type.
    void resolveInternal(Decl const* decl) {
@@ -214,6 +222,7 @@ public:
    void invalidate() { valid_ = false; }
 
    std::ostream& operator<<(std::ostream& os) const { return os << toString(); }
+   std::ostream& print(std::ostream& os, int indentation = 0) const override;
 };
 
 /// @brief Represents an (unsized) array type.
@@ -244,6 +253,7 @@ public:
    }
    Type const* getElementType() const { return elementType; }
    bool isArray() const override { return true; }
+   std::ostream& print(std::ostream& os, int indentation = 0) const override;
 };
 
 /**
@@ -278,6 +288,7 @@ public:
    void setReturnType(Type const* type) { returnType_ = type; }
    Type const* returnType() const { return returnType_; }
    pmr_vector<Type const*> paramTypes() const { return paramTypes_; }
+   std::ostream& print(std::ostream& os, int indentation = 0) const override;
 
 private:
    Type const* returnType_;

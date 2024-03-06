@@ -81,17 +81,17 @@ void ExprNodeList::check_invariants() const {
 namespace exprnode {
 
 std::ostream& MemberName::print(std::ostream& os) const {
-   return os << "(Member name:" << name_ << ")";
+   return os << "(MemberName " << name_ << ")";
 }
 
 std::ostream& MethodName::print(std::ostream& os) const {
-   return os << "(Method name:" << name() << ")";
+   return os << "(MethodName " << name() << ")";
 }
 
 std::ostream& ThisNode::print(std::ostream& os) const { return os << "(THIS)"; }
 
 std::ostream& TypeNode::print(std::ostream& os) const {
-   os << "(Type: ";
+   os << "(Type ";
    if(type()) type()->print(os);
    else os << "unresolved ❌";
    return os << ")";

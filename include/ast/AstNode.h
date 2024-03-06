@@ -160,9 +160,8 @@ class Type : public virtual AstNode {
 public:
    Type(SourceRange loc) : loc_{loc} {}
    virtual string_view toString() const = 0;
-   std::ostream& print(std::ostream& os, int indentation = 0) const override {
-      return os << indent(indentation) << toString();
-   }
+   virtual std::ostream& print(std::ostream& os,
+                               int indentation = 0) const override = 0;
    int printDotNode(DotPrinter& dp) const override {
       int id = dp.id();
       dp.printLabel(id, toString());
@@ -353,7 +352,7 @@ private:
 public:
    /**
     * @brief Move on to the next declaration in the given scope.
-    * 
+    *
     * @param alloc The allocator to allocate the new scope
     * @param parent The parent scope
     * @return ScopeID const* The ScopeID for this declaration
