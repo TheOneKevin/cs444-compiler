@@ -1,5 +1,9 @@
 #include "semantic/ExprTypeResolver.h"
 
+#include <algorithm>
+#include <iterator>
+#include <ranges>
+
 #include "ast/AstNode.h"
 #include "ast/DeclContext.h"
 #include "ast/Expr.h"
@@ -150,10 +154,10 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
       return isAssignableTo(castPrimitive, exprPrimitive) ||
              isAssignableTo(exprPrimitive, castPrimitive);
    } else if(exprRef) {
-      if (castArr) {
+      if(castArr) {
          return exprRef->decl() == NR->GetJavaLang().Object;
       }
-      if (!castRef) {
+      if(!castRef) {
          return false;
       }
       auto leftInterface = dyn_cast<ast::InterfaceDecl*>(exprRef->decl());
@@ -187,11 +191,9 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
          //    return true;
          // }
       }
-
-   } else {
-      throw diag.ReportError(loc_) << "Invalid cast from " << exprType->toString()
-                                   << " to " << castType->toString();
    }
+   throw diag.ReportError(loc_) << "Invalid cast from " << exprType->toString()
+                                << " to " << castType->toString();
 }
 
 Type const* ExprTypeResolver::mapValue(ExprValue& node) const {
@@ -376,10 +378,12 @@ Type const* ExprTypeResolver::evalMethodCall(MethodOp& op, const Type* method,
    assert(methodParams.size() == args.size() &&
           "Method params and args size mismatch");
 
-   for(size_t i = 0; i < args.size(); i++) {
-      if(!isAssignableTo(methodParams[i], args[i])) {
+   size_t i = 0;
+   for(auto arg : args | std::views::reverse) {
+      if(!isAssignableTo(methodParams[i], arg)) {
          throw diag.ReportError(loc_) << "Invalid argument type for method call";
       }
+      i++;
    }
 
    // Return nullptr if the method has no return type
@@ -395,12 +399,13 @@ Type const* ExprTypeResolver::evalNewObject(NewOp& op, const Type* object,
    auto constructorParams = constructor->paramTypes();
    assert(constructorParams.size() == args.size() &&
           "Constructor params and args size mismatch");
-
-   for(size_t i = 0; i < args.size(); i++) {
-      if(!isAssignableTo(constructorParams[i], args[i])) {
+   size_t i = 0;
+   for(auto arg : args | std::views::reverse) {
+      if(!isAssignableTo(constructorParams[i], arg)) {
          throw diag.ReportError(loc_)
                << "Invalid argument type for constructor call";
       }
+      i++;
    }
 
    return op.resolveResultType(constructor->returnType());

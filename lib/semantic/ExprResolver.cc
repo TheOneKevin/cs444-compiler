@@ -672,7 +672,7 @@ ETy ER::evalMethodCall(MethodOp& op, const ETy method,
    // Resolve the array of arguments
    ty_array argtys{alloc};
    ast::ExprNodeList arglist{};
-   for(auto& arg : args) {
+   for(auto& arg : args | std::views::reverse) {
       auto tmplist = ResolveExprNode(arg);
       argtys.push_back(TR->EvaluateList(tmplist));
       arglist.concat(tmplist);
@@ -711,7 +711,7 @@ ETy ER::evalNewObject(NewOp& op, const ETy object, const op_array& args) const {
    // Resolve the array of arguments
    ty_array argtys{alloc};
    ast::ExprNodeList arglist{};
-   for(auto& arg : args) {
+   for(auto& arg : args | std::views::reverse) {
       auto tmplist = ResolveExprNode(arg);
       argtys.push_back(TR->EvaluateList(tmplist));
       arglist.concat(tmplist);

@@ -33,6 +33,7 @@ public:
 
    auto& getInheritedMethods(ast::Decl const* decl) {
       assert(isInheritedSet(decl));
+      std::vector<int> x;
       return methodInheritanceMap_.at(decl);
    }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <stack>
 #include <vector>
 
@@ -58,9 +59,8 @@ public:
       std::pmr::vector<T> op_args;
       const auto getArgs = [&op_args, this](int nargs) {
          op_args.clear();
-         for(int i = 0; i < nargs; ++i) {
+         for(int i = 0; i < nargs; ++i)
             op_args.push_back(popSafe());
-         }
       };
 
       // Clear the stack

@@ -102,7 +102,9 @@ LiteralNode::LiteralNode(BumpAllocator& alloc, std::string_view value,
 
 std::ostream& LiteralNode::print(std::ostream& os) const {
    // TODO(kevin): re-implement this
-   return os << "(Literal)";
+   os << "(Literal ";
+   builtinType()->print(os) << ")";
+   return os;
 }
 
 ast::BuiltInType const* LiteralNode::builtinType() const {
