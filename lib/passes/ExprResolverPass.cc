@@ -3,6 +3,8 @@
 #include "ast/Decl.h"
 #include "semantic/AstValidator.h"
 #include "semantic/ExprResolver.h"
+#include "semantic/ExprStaticChecker.h"
+#include "semantic/ExprTypeResolver.h"
 #include "utils/BumpAllocator.h"
 #include "utils/PassManager.h"
 
@@ -13,6 +15,12 @@ using utils::Pass;
 using utils::PassManager;
 
 class ExprResolverPass final : public Pass {
+   struct Data {
+      ExprResolver& ER;
+      ExprTypeResolver& TR;
+      ExprStaticChecker& ESC;
+   };
+
 public:
    ExprResolverPass(PassManager& PM) noexcept : Pass(PM) {}
    string_view Name() const override { return "sema-expr"; }
@@ -24,12 +32,16 @@ public:
       auto& Sema = GetPass<AstContextPass>().Sema();
       ExprResolver ER{PM().Diag(), NewHeap()};
       ExprTypeResolver TR{PM().Diag(), NewHeap(), Sema};
+      ExprStaticChecker ESC{PM().Diag(), NR};
       BumpAllocator alloc{NewHeap()};
       AstChecker AC{alloc, PM().Diag(), TR};
       ER.Init(&TR, &NR, &Sema, &HC);
       TR.Init(&HC, &NR);
+
+      Data data{ER, TR, ESC};
+
       try {
-         resolveRecursive(ER, TR, LU);
+         resolveRecursive(data, LU, false);
          AC.ValidateLU(*LU);
       } catch(const diagnostics::DiagnosticBuilder&) {
          // Print the errors from diag in the next step
@@ -37,7 +49,7 @@ public:
    }
 
 private:
-   void evaluateAsList(ExprResolver& ER, ExprTypeResolver& TR, ast::Expr* expr) {
+   void evaluateAsList(Data d, ast::Expr* expr, bool isStaticContext) {
       if(PM().Diag().Verbose(2)) {
          auto dbg = PM().Diag().ReportDebug(2);
          dbg << "[*] Location: ";
@@ -45,23 +57,29 @@ private:
          dbg << "[*] Printing expression before resolution:\n";
          expr->print(dbg.get(), 1);
       }
-      auto result = ER.Evaluate(expr);
-      ast::ExprNodeList list = ER.ResolveExprNode(result);
+      ast::ExprNodeList list = d.ER.Evaluate(expr);
       if(PM().Diag().Verbose(2)) {
          auto dbg = PM().Diag().ReportDebug(2);
          dbg << "[*] Printing expression after resolution:\n  ";
          list.print(dbg.get());
       }
       expr->replace(list);
-      TR.Evaluate(expr);
-      (void) TR;
+      d.TR.Evaluate(expr);
+      d.ESC.Evaluate(expr, isStaticContext);
    }
 
-   void resolveRecursive(ExprResolver& ER, ExprTypeResolver& TR,
-                         ast::AstNode* node) {
+   void resolveRecursive(Data d, ast::AstNode* node, bool isStaticContext) {
       // Set the CU and context
-      if(auto* cu = dyn_cast<ast::CompilationUnit>(node)) ER.BeginCU(cu);
-      if(auto* ctx = dyn_cast<ast::DeclContext>(node)) ER.BeginContext(ctx);
+      if(auto* cu = dyn_cast<ast::CompilationUnit>(node)) d.ER.BeginCU(cu);
+      if(auto* ctx = dyn_cast<ast::DeclContext>(node)) d.ER.BeginContext(ctx);
+
+      // If we're inside a method or field decl, see if its static
+      if(auto* field = dyn_cast<ast::FieldDecl>(node)) {
+         isStaticContext = field->modifiers().isStatic();
+      } else if(auto* method = dyn_cast<ast::MethodDecl>(node)) {
+         isStaticContext = method->modifiers().isStatic();
+      }
+
       // Visit the expression nodes
       if(auto* decl = dynamic_cast<ast::TypedDecl*>(node)) {
          if(auto* init = decl->mut_init()) {
@@ -69,7 +87,7 @@ private:
                PM().Diag().ReportDebug(2)
                      << "[*] Resolving initializer for variable: " << decl->name();
             }
-            evaluateAsList(ER, TR, init);
+            evaluateAsList(d, init, isStaticContext);
          }
       } else if(auto* stmt = dynamic_cast<ast::Stmt*>(node)) {
          for(auto* expr : stmt->mut_exprs()) {
@@ -78,14 +96,14 @@ private:
                PM().Diag().ReportDebug(2)
                      << "[*] Resolving expression in statement:";
             }
-            evaluateAsList(ER, TR, expr);
+            evaluateAsList(d, expr, isStaticContext);
          }
       }
       // We want to avoid visiting nodes twice
       if(dynamic_cast<ast::DeclStmt*>(node)) return;
       // Visit the children recursively
       for(auto* child : node->mut_children()) {
-         if(child) resolveRecursive(ER, TR, child);
+         if(child) resolveRecursive(d, child, isStaticContext);
       }
    }
 

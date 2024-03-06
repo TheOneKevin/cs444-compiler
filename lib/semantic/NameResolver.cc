@@ -135,7 +135,8 @@ void NameResolver::populateJavaLangCache() {
       std::pmr::vector<ImportDeclaration> emptyImports{alloc};
       Modifiers lengthMod{};
       lengthMod.set(ast::Modifiers::Type::Public);
-      lengthMod.set(ast::Modifiers::Type::Static);
+      // FIXME(kevin): Is this really static?
+      // lengthMod.set(ast::Modifiers::Type::Static);
       lengthMod.set(ast::Modifiers::Type::Final);
       Modifiers pubMod{};
       pubMod.set(ast::Modifiers::Type::Public);

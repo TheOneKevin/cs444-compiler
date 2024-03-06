@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm>
 #include <stack>
 #include <vector>
 
@@ -9,7 +8,6 @@
 
 namespace ast {
 template <typename T>
-   requires std::movable<T>
 class ExprEvaluator {
 protected:
    using op_array = std::pmr::vector<T>;

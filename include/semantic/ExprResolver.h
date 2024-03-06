@@ -168,16 +168,19 @@ public:
    }
    void BeginCU(ast::CompilationUnit const* cu) { cu_ = cu; }
    void BeginContext(ast::DeclContext const* ctx) { lctx_ = ctx; }
+   ast::ExprNodeList Evaluate(ast::Expr* expr) {
+      loc_ = expr->location();
+      auto ret = EvaluateList(expr->list());
+      return resolveExprNode(ret);
+   }
 
+private:
    ETy EvaluateList(ast::ExprNodeList subexpr) override final {
       // Clear the heap
       if(auto h = dyn_cast<utils::CustomBufferResource*>(heap)) h->reset();
       // Call the base class implementation
       return ast::ExprEvaluator<internal::ExprResolverTy>::EvaluateList(subexpr);
    }
-
-   // Resolve an expression node into a list (i.e., removes expr wrapper)
-   ast::ExprNodeList ResolveExprNode(const ETy node) const;
 
 private: // Overriden methods
    using Type = ast::Type;
@@ -208,6 +211,8 @@ private: // Overriden methods
 private:
    using ty_array = std::pmr::vector<ast::Type const*>;
 
+   // Resolve an expression node into a list (i.e., removes expr wrapper)
+   ast::ExprNodeList resolveExprNode(const ETy node) const;
    // Given a single ambiguous name, reclassify it into a package or type name
    internal::ExprNameWrapper* reclassifySingleAmbiguousName(
          internal::ExprNameWrapper* data) const;
@@ -268,6 +273,7 @@ private:
    ast::Semantic* Sema;
    mutable Heap* heap;
    mutable BumpAllocator alloc;
+   SourceRange loc_;
 };
 
 } // namespace semantic

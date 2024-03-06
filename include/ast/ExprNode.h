@@ -4,7 +4,6 @@
 #include <string_view>
 
 #include "ast/AstNode.h"
-#include "ast/DeclContext.h"
 #include "utils/BumpAllocator.h"
 #include "utils/EnumMacros.h"
 #include "utils/Generator.h"
@@ -13,7 +12,6 @@ namespace ast {
 class ExprNodeList;
 
 template <typename T>
-   requires std::movable<T>
 class ExprEvaluator;
 
 /* ===--------------------------------------------------------------------=== */
@@ -36,7 +34,6 @@ public:
 
 private:
    template <typename T>
-      requires std::movable<T>
    friend class ExprEvaluator;
 
    void const_lock() const { locked_ = true; }
@@ -209,8 +206,10 @@ public:
       assert(unres_type_ && "Tried to resolve underlying type twice");
       // Resolve underlying type if it's not already resolved
       if(!unres_type_->isResolved()) unres_type_->resolve(NR);
-      assert(unres_type_->isResolved() && "Underlying type should be resolved");
-      // Move the resolved type to the type_ field
+      
+      // NOTE: We cannot assume that unres_type_ is resolved as import-on-demand
+      // conflicts will result in unresolved types (null), but is valid.
+
       set_type(unres_type_);
    }
    bool isDeclResolved() const override { return true; }

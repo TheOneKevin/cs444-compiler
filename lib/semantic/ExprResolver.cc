@@ -53,34 +53,36 @@ static ast::DeclContext const* GetTypeAsDecl(ast::Type const* type,
 const ast::Decl* ER::lookupDecl(ast::DeclContext const* ctx,
                                 std::function<bool(ast::Decl const*)> cond) const {
    const ast::Decl* ret = nullptr;
-   if(auto classDecl = dyn_cast<ast::ClassDecl>(ctx);
-      classDecl && ctx != NR->GetArrayPrototype()) {
+   auto classDecl = dyn_cast<ast::ClassDecl>(ctx);
+   if(classDecl && ctx != NR->GetArrayPrototype()) {
       for(auto decl : HC->getInheritedMembers(classDecl)) {
          if(cond(decl)) {
             if(ret) return nullptr; // Ambiguous, cannot resolve
             ret = decl;
          }
       }
-   } else {
-      if(auto methodDecl = dyn_cast<ast::MethodDecl>(ctx)) {
-         if(auto classDecl = dyn_cast<ast::ClassDecl>(methodDecl->parent())) {
-            for(auto decl : HC->getInheritedMembers(classDecl)) {
-               if(cond(decl)) {
-                  if(ret) return nullptr; // Ambiguous, cannot resolve
-                  ret = decl;
-               }
-            }
-         }
-      }
+      return ret;
+   } else if(auto methodDecl = dyn_cast<ast::MethodDecl>(ctx)) {
+      auto classDecl = cast<ast::ClassDecl>(methodDecl->parent());
+      // Search locals first
       for(auto decl : ctx->decls()) {
+         if(cond(decl)) return decl;
+      }
+      // Then search instance members
+      for(auto decl : HC->getInheritedMembers(classDecl)) {
          if(cond(decl)) {
             if(ret) return nullptr; // Ambiguous, cannot resolve
             ret = decl;
          }
       }
+      return ret;
+   } else {
+      for(auto decl : ctx->decls()) {
+         if(cond(decl)) return decl;
+      }
    }
-
-   return ret;
+   // Context is probably CU
+   return nullptr;
 }
 
 bool ER::tryReclassifyDecl(ExprNameWrapper& data,
@@ -113,15 +115,13 @@ bool ER::tryReclassifyDecl(ExprNameWrapper& data,
 bool ER::tryReclassifyImport(ExprNameWrapper& data,
                              NameResolver::ConstImportOpt import) const {
    if(!import.has_value()) {
-      throw diag.ReportError(cu_->location())
-            << "cannot resolve name: " << data.node->name();
+      throw diag.ReportError(loc_) << "cannot resolve name: " << data.node->name();
    }
    if(std::holds_alternative<const ast::Decl*>(import.value())) {
       auto decl = std::get<const ast::Decl*>(import.value());
       // If declaration is null, then there is an import-on-demand conflict
       if(!decl) {
-         throw diag.ReportError(cu_->location())
-               << "ambiguous import-on-demand conflict";
+         throw diag.ReportError(loc_) << "ambiguous import-on-demand conflict";
       }
       data.reclassify(
             ExprNameWrapper::Type::TypeName, decl, Sema->BuildReferenceType(decl));
@@ -173,7 +173,7 @@ ExprNameWrapper* ER::reclassifySingleAmbiguousName(ExprNameWrapper* data) const 
       return copy;
 
    // If all else fails, we probably hit criteria 6
-   throw diag.ReportError(cu_->location())
+   throw diag.ReportError(loc_)
          << "Unknown error when attempting to resolve import type";
 }
 
@@ -191,19 +191,19 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
       auto decl = typeOrDecl;
       auto typeddecl = dyn_cast<ast::TypedDecl>(decl);
       if(!typeddecl) {
-         throw diag.ReportError(cu_->location())
+         throw diag.ReportError(loc_)
                << "field access \"" << name
                << "\" to non-typed declaration: " << decl->name();
       }
       auto type = typeddecl->type();
       if(!type) {
-         throw diag.ReportError(cu_->location())
+         throw diag.ReportError(loc_)
                << "field access \"" << name
                << "\" to void-typed declaration: " << decl->name();
       }
       refTy = GetTypeAsDecl(type, *NR);
       if(!refTy) {
-         throw diag.ReportError(cu_->location())
+         throw diag.ReportError(loc_)
                << "field access \"" << name << "\" to non-class type: "
                << (decl->hasCanonicalName() ? decl->getCanonicalName()
                                             : decl->name());
@@ -219,8 +219,7 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
       return b1 && b2;
    });
    if(!field) {
-      throw diag.ReportError(cu_->location())
-            << "field access to undeclared field: " << name;
+      throw diag.ReportError(loc_) << "field access to undeclared field: " << name;
    }
    // Field must be either a FieldDecl or a MethodDecl
    assert(dyn_cast<ast::FieldDecl>(field) || dyn_cast<ast::MethodDecl>(field));
@@ -241,7 +240,7 @@ void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
    // We note this must be a class type or we have a type error
    auto type = dynamic_cast<ast::ClassDecl const*>(typeOrDecl);
    if(!type) {
-      throw diag.ReportError(cu_->location())
+      throw diag.ReportError(loc_)
             << "static member access \"" << name
             << "\" to non-class type: " << typeOrDecl->name();
    }
@@ -250,7 +249,7 @@ void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
       return d->name() == name && dyn_cast<ast::TypedDecl>(d);
    });
    if(!field) {
-      throw diag.ReportError(cu_->location())
+      throw diag.ReportError(loc_)
             << "static member access to undeclared field: " << name;
    }
    // With the additional constraint that the field must be static
@@ -263,7 +262,7 @@ void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
       assert(false && "Field must be either a FieldDecl or a MethodDecl");
    }
    if(!mods.isStatic()) {
-      throw diag.ReportError(cu_->location())
+      throw diag.ReportError(loc_)
             << "attempted to access non-static member: "
             << (field->hasCanonicalName() ? field->getCanonicalName()
                                           : field->name());
@@ -288,7 +287,7 @@ void ER::resolvePackageAccess(internal::ExprNameWrapper* access) const {
    // Now we check if "name" is a package of "pkg"
    auto subpkg = pkg->lookup(name, alloc);
    if(!subpkg.has_value()) {
-      throw diag.ReportError(cu_->location())
+      throw diag.ReportError(loc_)
             << "package access to undeclared member: " << name;
    }
    // Now we can reclassify the access node depending on what we found
@@ -351,9 +350,8 @@ ast::Decl const* ExprNameWrapper::prevAsDecl(ExprTypeResolver& TR,
 
 ast::ExprNodeList ER::recursiveReduce(ExprNameWrapper* node) const {
    if(node->type() != ExprNameWrapper::Type::ExpressionName) {
-      throw diag.ReportError(cu_->location())
-            << "expected an expression name here, got: \"" << node->type_string()
-            << "\" instead";
+      throw diag.ReportError(loc_) << "expected an expression name here, got: \""
+                                   << node->type_string() << "\" instead";
    }
    node->verifyInvariants(ExprNameWrapper::Type::ExpressionName);
    auto decl = std::get<ast::Decl const*>(node->resolution());
@@ -381,7 +379,7 @@ ast::ExprNodeList ER::recursiveReduce(ExprNameWrapper* node) const {
    return list;
 }
 
-ast::ExprNodeList ER::ResolveExprNode(const ETy node) const {
+ast::ExprNodeList ER::resolveExprNode(const ETy node) const {
    ExprNameWrapper* Q = nullptr;
    // 1. If node is an ExprNode, then resolution is only needed for names
    // 2. If the node is a list, then no resolution is needed
@@ -447,6 +445,11 @@ utils::Generator<ast::MethodDecl const*> ER::getInheritedMethods(
       for(auto method : HC->getInheritedMethods(cast<ast::Decl>(ctx)))
          co_yield method;
    }
+   // JLS 9.2: Interfaces should also inherit java.lang.Object methods
+   if(dyn_cast<ast::InterfaceDecl>(ctx)) {
+      for(auto method : NR->GetJavaLang().Object->decls())
+         if(auto decl = dyn_cast<ast::MethodDecl>(method)) co_yield decl;
+   }
 }
 
 ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
@@ -481,8 +484,7 @@ ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
       }
    }
    if(candidates.size() == 0)
-      throw diag.ReportError(cu_->location())
-            << "no method found for name: " << name;
+      throw diag.ReportError(loc_) << "no method found for name: " << name;
    if(candidates.size() == 1) return candidates[0];
 
    // 15.12.2.2 Choose the Most Specific Method
@@ -513,8 +515,7 @@ ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
    // FIXME(kevin): There are more conditions i.e., abstract...
    // Otherwise, we have an ambiguity error
    for(auto cur : maxSpecific) cur->printSignature(std::cerr) << "\n";
-   throw diag.ReportError(cu_->location())
-         << "ambiguous method found for name: " << name;
+   throw diag.ReportError(loc_) << "ambiguous method found for name: " << name;
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -534,10 +535,10 @@ ETy ER::evalMemberAccess(DotOp& op, const ETy lhs, const ETy id) const {
       if(auto simpleName = dyn_cast<ex::MemberName>(node)) {
          Q = resolveSingleName(simpleName);
       } else if(auto thisNode = dyn_cast<ex::ThisNode>(node)) {
-         Q = ResolveExprNode(thisNode);
+         Q = resolveExprNode(thisNode);
       } else if(auto lit = dyn_cast<ex::LiteralNode>(node)) {
          if(!lit->builtinType()->isString()) {
-            throw diag.ReportError(cu_->location())
+            throw diag.ReportError(loc_)
                   << "attempted to access field on non-string literal";
          }
          Q = ast::ExprNodeList{lit};
@@ -600,15 +601,15 @@ ETy ER::evalMemberAccess(DotOp& op, const ETy lhs, const ETy id) const {
 
 ETy ER::evalBinaryOp(BinaryOp& op, const ETy lhs, const ETy rhs) const {
    ast::ExprNodeList list{};
-   list.concat(ResolveExprNode(lhs));
-   list.concat(ResolveExprNode(rhs));
+   list.concat(resolveExprNode(lhs));
+   list.concat(resolveExprNode(rhs));
    list.push_back(&op);
    return list;
 }
 
 ETy ER::evalUnaryOp(UnaryOp& op, const ETy rhs) const {
    ast::ExprNodeList list{};
-   list.concat(ResolveExprNode(rhs));
+   list.concat(resolveExprNode(rhs));
    list.push_back(&op);
    return list;
 }
@@ -622,17 +623,17 @@ ast::DeclContext const* ER::getMethodParent(ExprNameWrapper* Q) const {
    if(Q->prevIfWrapper() && !ty) {
       auto typedDecl = dynamic_cast<ast::TypedDecl const*>(declOrType);
       if(!typedDecl) {
-         throw diag.ReportError(cu_->location())
+         throw diag.ReportError(loc_)
                << "method call to non-typed declaration: " << declOrType->name();
       }
       auto type = typedDecl->type();
       if(!type) {
-         throw diag.ReportError(cu_->location())
+         throw diag.ReportError(loc_)
                << "method call to void-typed declaration: " << declOrType->name();
       }
       ty = GetTypeAsDecl(type, *NR);
       if(!ty) {
-         throw diag.ReportError(cu_->location())
+         throw diag.ReportError(loc_)
                << "method call to non-reference type: " << declOrType->name();
       }
    }
@@ -670,15 +671,14 @@ ETy ER::evalMethodCall(MethodOp& op, const ETy method,
    } else if(std::holds_alternative<ExprNameWrapper*>(method)) {
       Q = std::get<ExprNameWrapper*>(method);
    } else {
-      throw diag.ReportError(cu_->location())
-            << "malformed method call expression";
+      throw diag.ReportError(loc_) << "malformed method call expression";
    }
 
    // Resolve the array of arguments
    ty_array argtys{alloc};
    ast::ExprNodeList arglist{};
    for(auto& arg : args | std::views::reverse) {
-      auto tmplist = ResolveExprNode(arg);
+      auto tmplist = resolveExprNode(arg);
       argtys.push_back(TR->EvaluateList(tmplist));
       arglist.concat(tmplist);
    }
@@ -689,8 +689,18 @@ ETy ER::evalMethodCall(MethodOp& op, const ETy method,
 
    // Check if the method call is legal
    if(!isAccessible(methodDecl->modifiers(), methodDecl->parent())) {
-      throw diag.ReportError(cu_->location())
+      throw diag.ReportError(loc_)
             << "method call to non-accessible method: " << methodDecl->name();
+   }
+
+   // Is the previous a type name?
+   if(Q->prev().has_value() && Q->prevIfWrapper() &&
+      Q->prevAsWrapper()->type() == ExprNameWrapper::Type::TypeName) {
+      // If so, then we are calling a static method, so we should check
+      if(!methodDecl->modifiers().isStatic()) {
+         throw diag.ReportError(loc_)
+               << "attempted to call non-static method: " << methodDecl->name();
+      }
    }
 
    // Reclassify the Q node to be an ExpressionName
@@ -717,7 +727,7 @@ ETy ER::evalNewObject(NewOp& op, const ETy object, const op_array& args) const {
    ty_array argtys{alloc};
    ast::ExprNodeList arglist{};
    for(auto& arg : args | std::views::reverse) {
-      auto tmplist = ResolveExprNode(arg);
+      auto tmplist = resolveExprNode(arg);
       argtys.push_back(TR->EvaluateList(tmplist));
       arglist.concat(tmplist);
    }
@@ -743,7 +753,7 @@ ETy ER::evalNewArray(NewArrayOp& op, const ETy type, const ETy size) const {
    } else {
       assert(false && "Grammar wrong, type must be an atomic ExprNode*");
    }
-   list.concat(ResolveExprNode(size));
+   list.concat(resolveExprNode(size));
    list.push_back(&op);
    return list;
 }
@@ -751,8 +761,8 @@ ETy ER::evalNewArray(NewArrayOp& op, const ETy type, const ETy size) const {
 ETy ER::evalArrayAccess(ArrayAccessOp& op, const ETy array,
                         const ETy index) const {
    ast::ExprNodeList list{};
-   list.concat(ResolveExprNode(array));
-   list.concat(ResolveExprNode(index));
+   list.concat(resolveExprNode(array));
+   list.concat(resolveExprNode(index));
    list.push_back(&op);
    return list;
 }
@@ -765,7 +775,7 @@ ETy ER::evalCast(CastOp& op, const ETy type, const ETy value) const {
    } else {
       assert(false && "Grammar wrong, type must be an atomic ExprNode*");
    }
-   list.concat(ResolveExprNode(value));
+   list.concat(resolveExprNode(value));
    list.push_back(&op);
    return list;
 }
