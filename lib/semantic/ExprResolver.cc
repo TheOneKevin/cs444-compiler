@@ -308,8 +308,8 @@ ast::Decl const* ExprNameWrapper::prevAsDecl(ExprTypeResolver& TR,
 ast::ExprNodeList ER::recursiveReduce(ExprNameWrapper* node) const {
    if(node->type() != ExprNameWrapper::Type::ExpressionName) {
       throw diag.ReportError(cu_->location())
-            << "expected an expression name here, got: \""
-            << node->type_string() << "\" instead";
+            << "expected an expression name here, got: \"" << node->type_string()
+            << "\" instead";
    }
    node->verifyInvariants(ExprNameWrapper::Type::ExpressionName);
    auto decl = std::get<ast::Decl const*>(node->resolution());
@@ -469,16 +469,20 @@ ETy ER::evalMemberAccess(DotOp& op, const ETy lhs, const ETy id) const {
    //    reclassify it. Otherwise, we can continue to resolve recursively.
    PrevTy Q = nullptr;
    if(std::holds_alternative<ast::ExprNode*>(lhs)) {
-      if(auto simpleName =
-               dynamic_cast<ex::MemberName*>(std::get<ast::ExprNode*>(lhs))) {
+      auto node = std::get<ast::ExprNode*>(lhs);
+      if(auto simpleName = dyn_cast<ex::MemberName>(node)) {
          Q = resolveSingleName(simpleName);
-      } else if(auto thisNode =
-                      dynamic_cast<ex::ThisNode*>(std::get<ast::ExprNode*>(lhs))) {
+      } else if(auto thisNode = dyn_cast<ex::ThisNode>(node)) {
          Q = ResolveExprNode(thisNode);
+      } else if(auto lit = dyn_cast<ex::LiteralNode>(node)) {
+         if(!lit->builtinType()->isString()) {
+            throw diag.ReportError(cu_->location())
+                  << "attempted to access field on non-string literal";
+         }
+         Q = ast::ExprNodeList{lit};
       } else {
          assert(false && "Malformed node. Expected MemberName here.");
       }
-
    } else if(std::holds_alternative<ExprNameWrapper*>(lhs)) {
       Q = std::get<ExprNameWrapper*>(lhs);
    } else {
@@ -496,14 +500,14 @@ ETy ER::evalMemberAccess(DotOp& op, const ETy lhs, const ETy id) const {
    // Grab the Id as an expr node
    auto exprNode = std::get<ast::ExprNode*>(id);
    // Special case: If "Id" in Q . Id is a method name, then defer resolution
-   if(auto methodNode = dynamic_cast<ex::MethodName*>(exprNode)) {
+   if(auto methodNode = dyn_cast<ex::MethodName*>(exprNode)) {
       auto newQ = alloc.new_object<ExprNameWrapper>(
             ExprNameWrapper::Type::MethodName, methodNode, &op);
       newQ->setPrev(Q);
       return newQ;
    }
    // Now grab the id and cast it to the appropriate type
-   auto fieldNode = dynamic_cast<ex::MemberName*>(exprNode);
+   auto fieldNode = dyn_cast<ex::MemberName*>(exprNode);
    assert(fieldNode && "Malformed node. Expected MemberName here.");
    // Allocate a new node as the member access to represent "Id" in Lhs . Id
    auto newQ = alloc.new_object<ExprNameWrapper>(
@@ -576,10 +580,9 @@ bool ER::isAccessible(ast::Modifiers mod, ast::DeclContext const* parent) const 
    if(mod.isPublic()) return true;
    // 6.6.2 Details on protected Access
    // If current is a child of parent, then it is accessible
-   if(auto* curClass= dyn_cast<ast::ClassDecl>(cu_->bodyAsDecl())) {
+   if(auto* curClass = dyn_cast<ast::ClassDecl>(cu_->bodyAsDecl())) {
       auto* targetClass = cast<ast::ClassDecl>(parent);
-      if(HC->isSuperClass(targetClass, curClass) && mod.isProtected())
-         return true;
+      if(HC->isSuperClass(targetClass, curClass) && mod.isProtected()) return true;
    }
    return false;
 }
