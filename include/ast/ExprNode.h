@@ -209,9 +209,9 @@ public:
       assert(unres_type_ && "Tried to resolve underlying type twice");
       // Resolve underlying type if it's not already resolved
       if(!unres_type_->isResolved()) unres_type_->resolve(NR);
+      assert(unres_type_->isResolved() && "Underlying type should be resolved");
       // Move the resolved type to the type_ field
       set_type(unres_type_);
-      unres_type_ = nullptr;
    }
    bool isDeclResolved() const override { return true; }
    std::ostream& print(std::ostream& os) const override;

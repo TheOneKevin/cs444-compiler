@@ -1,4 +1,6 @@
 #include "CompilerPasses.h"
+#include "ast/AstNode.h"
+#include "ast/Decl.h"
 #include "semantic/AstValidator.h"
 #include "semantic/ExprResolver.h"
 #include "utils/BumpAllocator.h"
@@ -61,7 +63,7 @@ private:
       if(auto* cu = dyn_cast<ast::CompilationUnit>(node)) ER.BeginCU(cu);
       if(auto* ctx = dyn_cast<ast::DeclContext>(node)) ER.BeginContext(ctx);
       // Visit the expression nodes
-      if(auto* decl = dynamic_cast<ast::VarDecl*>(node)) {
+      if(auto* decl = dynamic_cast<ast::TypedDecl*>(node)) {
          if(auto* init = decl->mut_init()) {
             if(PM().Diag().Verbose(2)) {
                PM().Diag().ReportDebug(2)

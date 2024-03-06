@@ -2,6 +2,7 @@
 #include <string_view>
 
 #include "CompilerPasses.h"
+#include "ast/Decl.h"
 #include "diagnostics/Diagnostics.h"
 #include "semantic/NameResolver.h"
 #include "utils/BumpAllocator.h"
@@ -72,7 +73,7 @@ void NameResolverPass::resolveRecursive(ast::AstNode* node) {
          if(!ty->isResolved()) ty->resolve(*NR);
       } else {
          // Resolve any Type in expressions
-         if(auto decl = dyn_cast<ast::VarDecl*>(child)) {
+         if(auto decl = dyn_cast<ast::TypedDecl*>(child)) {
             resolveExpr(decl->mut_init());
          } else if(auto stmt = dyn_cast<ast::Stmt*>(child)) {
             for(auto expr : stmt->mut_exprs()) resolveExpr(expr);

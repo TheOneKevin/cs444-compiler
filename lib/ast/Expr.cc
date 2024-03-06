@@ -93,6 +93,7 @@ std::ostream& ThisNode::print(std::ostream& os) const { return os << "(THIS)"; }
 std::ostream& TypeNode::print(std::ostream& os) const {
    os << "(Type: ";
    if(type()) type()->print(os);
+   else os << "unresolved ❌";
    return os << ")";
 }
 
