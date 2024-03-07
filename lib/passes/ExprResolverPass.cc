@@ -33,7 +33,7 @@ public:
       auto& Sema = GetPass<AstContextPass>().Sema();
       ExprResolver ER{PM().Diag(), NewHeap()};
       ExprTypeResolver TR{PM().Diag(), NewHeap(), Sema};
-      ExprStaticChecker ESC{PM().Diag(), NR};
+      ExprStaticChecker ESC{PM().Diag(), NR, HC};
       BumpAllocator alloc{NewHeap()};
       AstChecker AC{alloc, PM().Diag(), TR};
       ER.Init(&TR, &NR, &Sema, &HC);

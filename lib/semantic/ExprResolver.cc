@@ -80,7 +80,12 @@ const ast::Decl* ER::lookupNamedDecl(ast::DeclContext const* ctx,
       // Scoping is only meaningful inside methods
       if(sameContext && checkScope)
          scopeVisible = this->lscope_->canView(td->scope());
-      return sameName && scopeVisible;
+      // Check access modifiers for fields
+      bool canAccess = true;
+      if (auto fieldDecl = dyn_cast<ast::FieldDecl>(d)) {
+         canAccess = isAccessible(fieldDecl->modifiers(), fieldDecl->parent());
+      }
+      return sameName && scopeVisible && canAccess;
    };
    return lookupDecl(ctx, cond);
 }
@@ -459,6 +464,7 @@ ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
          if(!ctor) continue;
          if(!ctor->isConstructor()) continue;
          if(ctor->parameters().size() != argtys.size()) continue;
+         if(!isAccessible(ctor->modifiers(), ctor->parent())) continue;
          if(areParameterTypesApplicable(ctor, argtys)) candidates.push_back(ctor);
       }
    } else {

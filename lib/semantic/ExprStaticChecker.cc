@@ -1,8 +1,9 @@
 #include "semantic/ExprStaticChecker.h"
 
 #include "ast/AST.h"
-#include "ast/Decl.h"
+#include "ast/DeclContext.h"
 #include "ast/ExprNode.h"
+#include "ast/Type.h"
 #include "diagnostics/Diagnostics.h"
 #include "utils/Utils.h"
 
@@ -83,6 +84,7 @@ ETy ESC::evalMemberAccess(DotOp& op, ETy lhs, ETy field) const {
    assert(field.isValue && field.decl);
    // Only check if LHS is an instance variable
    checkInstanceVar(lhs);
+   isAccessible(lhs, field);
    // The field must not be static because this is "instance . field"
    if(isDeclStatic(field.decl)) {
       throw diag.ReportError(loc_)
@@ -139,6 +141,30 @@ ETy ESC::evalCast(CastOp& op, ETy type, ETy obj) const {
    assert(op.resultType());
    checkInstanceVar(obj);
    return ETy{nullptr, op.resultType(), true, false};
+}
+
+void ESC::isAccessible(ETy lhs, ETy var) const {
+   if(!var.isInstanceVar) return;
+   auto lhsVar = dyn_cast_or_null<ast::VarDecl>(lhs.decl);
+   if (!lhsVar) return;
+   auto lhsRef = dyn_cast<ast::ReferenceType>(lhsVar->type());
+   if (!lhsRef) return;
+   auto lhsClass = dyn_cast<ast::ClassDecl>(lhsRef->decl());
+   if (!lhsClass) return;
+   if (auto method = dyn_cast<ast::MethodDecl>(var.decl)) {
+      if (method->modifiers().isProtected()) {
+         if (!HC.isSuperClass(state.currentClass, lhsClass)) {
+            throw diag.ReportError(loc_) << "cannot access protected method";
+         }
+      }
+   } else if (auto field = dyn_cast<ast::FieldDecl>(var.decl)) {
+      if (field->modifiers().isProtected()) {
+         if (!HC.isSuperClass(state.currentClass, lhsClass)){
+            throw diag.ReportError(loc_) << "cannot access protected field";
+         }
+      }
+   }
+   return;
 }
 
 void ESC::checkInstanceVar(ETy var, bool checkInitOrder) const {

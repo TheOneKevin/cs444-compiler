@@ -4,6 +4,7 @@
 #include "ast/DeclContext.h"
 #include "ast/ExprEvaluator.h"
 #include "diagnostics/Diagnostics.h"
+#include "semantic/HierarchyChecker.h"
 #include "semantic/NameResolver.h"
 
 namespace semantic {
@@ -34,8 +35,8 @@ class ExprStaticChecker : public ast::ExprEvaluator<ExprStaticCheckerData> {
 
 public:
    ExprStaticChecker(diagnostics::DiagnosticEngine& diag,
-                     semantic::NameResolver& NR)
-         : diag{diag}, NR{NR}, state{}, loc_{} {}
+                     semantic::NameResolver& NR, semantic::HierarchyChecker &HC)
+         : diag{diag}, NR{NR}, state{}, HC{HC}, loc_{} {}
 
 public:
    void Evaluate(ast::Expr* expr, ExprStaticCheckerState state);
@@ -65,11 +66,13 @@ private: // Overriden methods
 
 private:
    void checkInstanceVar(ETy var, bool checkInitOrder = true) const;
+   void isAccessible(ETy lhs, ETy var) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;
    semantic::NameResolver& NR;
    ExprStaticCheckerState state;
+   HierarchyChecker &HC;
    SourceRange loc_;
 };
 
