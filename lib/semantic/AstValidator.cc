@@ -40,6 +40,27 @@ void AstChecker::validateStmt(const ast::Stmt& stmt) {
       validateReturnStmt(*ret);
    } else if(auto decl = dyn_cast<ast::DeclStmt>(stmt)) {
       valdiateTypedDecl(*decl->decl());
+   } else if(auto ifstmt = dyn_cast<ast::IfStmt>(stmt)) {
+      assert(ifstmt->condition());
+      auto* condTy = getTypeFromExpr(ifstmt->condition());
+      if(!condTy || !condTy->isBoolean()) {
+         diag.ReportError(ifstmt->condition()->location())
+               << "if condition expression must be yield a boolean";
+      }
+   } else if(auto forstmt = dyn_cast<ast::ForStmt>(stmt)) {
+      assert(forstmt->condition());
+      auto* condTy = getTypeFromExpr(forstmt->condition());
+      if(!condTy || !condTy->isBoolean()) {
+         diag.ReportError(forstmt->condition()->location())
+               << "for condition expression must be yield a boolean";
+      }
+   } else if(auto whilestmt = dyn_cast<ast::WhileStmt>(stmt)) {
+      assert(whilestmt->condition());
+      auto* condTy = getTypeFromExpr(whilestmt->condition());
+      if(!condTy || !condTy->isBoolean()) {
+         diag.ReportError(whilestmt->condition()->location())
+               << "while condition expression must be yield a boolean";
+      }
    }
    for(auto* child : stmt.children()) {
       if(auto* stmt = dyn_cast_or_null<ast::Stmt>(child)) {
@@ -53,7 +74,6 @@ ast::Type const* AstChecker::getTypeFromExpr(ast::Expr const* expr) const {
    auto lastExpr = expr->list().tail();
    assert(lastExpr);
    if(auto op = dyn_cast<ast::exprnode::ExprOp>(lastExpr)) {
-      assert(op->resultType() && "Expr op result type cannot be null");
       return op->resultType();
    } else if(auto value = dyn_cast<ast::exprnode::ExprValue>(lastExpr)) {
       assert(value->type() && "Expr value type cannot be null");
@@ -67,6 +87,11 @@ void AstChecker::valdiateTypedDecl(const ast::TypedDecl& decl) {
    if(!decl.hasInit()) return;
    auto* declTy = decl.type();
    auto* exprTy = getTypeFromExpr(decl.init());
+   if(!exprTy) {
+      diag.ReportError(decl.init()->location())
+            << "initializer type cannot be void";
+      return;
+   }
    if(!exprTypeResolver.isAssignableTo(declTy, exprTy)) {
       diag.ReportError(decl.location())
             << "initializer type must be assignable to declared type";
@@ -84,6 +109,13 @@ void AstChecker::validateReturnStmt(const ast::ReturnStmt& ret) {
    }
 
    ast::Type const* retTy = getTypeFromExpr(ret.expr());
+   if(!retTy) {
+      diag.ReportError(ret.expr()->location())
+            << "return expression cannot be void, regardless of method return "
+               "type";
+      return;
+   }
+
    if(!methodRetTy) {
       if(retTy) {
          diag.ReportError(ret.location()) << "return must be void";
