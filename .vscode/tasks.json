@@ -19,7 +19,9 @@
         "reveal": "never",
         "revealProblems": "onProblem"
       },
-      "icon": {"id": "beaker"}
+      "icon": {
+        "id": "beaker"
+      }
     },
     {
       "label": "Build Release",
@@ -39,7 +41,9 @@
       "problemMatcher": [
         "$gcc"
       ],
-      "icon": {"id": "package"}
+      "icon": {
+        "id": "package"
+      }
     },
     {
       "label": "Build All",
@@ -47,11 +51,29 @@
         "Build Debug",
         "Build Release"
       ],
-      "icon": {"id": "gear"},
+      "icon": {
+        "id": "gear"
+      },
       "group": {
         "kind": "build",
         "isDefault": true
       }
+    },
+    {
+      "label": "Regenerate Builds",
+      "type": "shell",
+      "command": [
+        "rm -rf ${workspaceFolder}/build ${workspaceFolder}/build-release;",
+        "mkdir -p ${workspaceFolder}/build ${workspaceFolder}/build-release;",
+        "cd ${workspaceFolder}/build;",
+        "cmake -DCMAKE_BUILD_TYPE=Debug ..;",
+        "cd ${workspaceFolder}/build-release;",
+        "cmake -DCMAKE_BUILD_TYPE=Release .."
+      ],
+      "icon": {
+        "id": "sync"
+      },
+      "problemMatcher": []
     }
   ]
 }
