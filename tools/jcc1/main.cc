@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
 
    // If we are compiling, enable the appropriate passes
    if(optCompile) {
-      PM.PO().EnablePass("sema-hier");
+      PM.PO().EnablePass("sema-expr");
    }
 
    // Run the passes
