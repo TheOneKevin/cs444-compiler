@@ -82,7 +82,7 @@ const ast::Decl* ER::lookupNamedDecl(ast::DeclContext const* ctx,
          scopeVisible = this->lscope_->canView(td->scope());
       // Check access modifiers for fields
       bool canAccess = true;
-      if (auto fieldDecl = dyn_cast<ast::FieldDecl>(d)) {
+      if(auto fieldDecl = dyn_cast<ast::FieldDecl>(d)) {
          canAccess = isAccessible(fieldDecl->modifiers(), fieldDecl->parent());
       }
       return sameName && scopeVisible && canAccess;
@@ -458,6 +458,7 @@ ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
    // 15.12.2.1 Find Methods that are Applicable and Accessible
    std::pmr::vector<ast::MethodDecl const*> candidates{alloc};
    if(isCtor) {
+      auto cu = cast<ast::CompilationUnit>(cast<ast::Decl>(ctx)->parent());
       // Only grab the constructors of this type
       for(auto decl : ctx->decls()) {
          auto ctor = dynamic_cast<ast::MethodDecl const*>(decl);
@@ -465,6 +466,14 @@ ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
          if(!ctor->isConstructor()) continue;
          if(ctor->parameters().size() != argtys.size()) continue;
          if(!isAccessible(ctor->modifiers(), ctor->parent())) continue;
+         // If the ctor is private, it must be in the same PACKAGE
+         if(ctor->modifiers().isProtected()) {
+            if(cu->getPackageName() != cu_->getPackageName()) {
+               throw diag.ReportError(loc_)
+                     << "attempted to access protected constructor from different "
+                        "package";
+            }
+         }
          if(areParameterTypesApplicable(ctor, argtys)) candidates.push_back(ctor);
       }
    } else {
