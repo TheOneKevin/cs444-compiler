@@ -56,6 +56,7 @@ public:
       node->setNext(nullptr);
    }
    ExprNodeList() : head_{nullptr}, tail_{nullptr}, size_{0} {}
+   bool isBracketed = false;
 
    /**
     * @brief Pushes a node to the back of the list

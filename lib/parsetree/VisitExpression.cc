@@ -80,7 +80,9 @@ ExprNodeList ptv::visitExprNode(parsetree::Node* node) {
    check_node_type(node, pty::Expression);
    check_num_children(node, 1, 3);
    if(node->num_children() == 1) {
-      return visitExprChild(node->child(0));
+      auto list = visitExprChild(node->child(0));
+      list.isBracketed = true;
+      return list;
    } else if(node->num_children() == 2) {
       // unary expression
       ExprNodeList ops{};
