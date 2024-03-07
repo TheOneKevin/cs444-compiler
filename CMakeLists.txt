@@ -32,7 +32,7 @@ string(CONCAT CMAKE_CXX_FLAGS_DEBUG
     " -O0"
     # Macro to enable debug mode
     " -DDEBUG"
-    "-DENABLE_STACKTRACE"
+    " -DENABLE_STACKTRACE"
     # Add the sanitizers too
     " -fsanitize=undefined"
     " -fsanitize=address"

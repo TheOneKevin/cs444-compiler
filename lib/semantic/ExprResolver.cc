@@ -649,6 +649,9 @@ ETy ER::evalMethodCall(MethodOp& op, const ETy method,
                        const op_array& args) const {
    // Q is the incompletely resolved method name
    ExprNameWrapper* Q = nullptr;
+   // Single name method can never be static, and static methods can
+   // never be single name methods!
+   bool isSingleNameMethod = false;
 
    // 1. It could be a raw ExprNode, in which case is something like Fun()
    // 2. Or it could be a wrapped ExprNameWrapper, in which case is something
@@ -660,6 +663,7 @@ ETy ER::evalMethodCall(MethodOp& op, const ETy method,
       auto name = dynamic_cast<ex::MethodName*>(expr);
       assert(name && "Malformed node. Expected MethodName here.");
       Q = resolveSingleName(name);
+      isSingleNameMethod = true;
    } else if(std::holds_alternative<ExprNameWrapper*>(method)) {
       Q = std::get<ExprNameWrapper*>(method);
    } else {
@@ -683,6 +687,13 @@ ETy ER::evalMethodCall(MethodOp& op, const ETy method,
    if(!isAccessible(methodDecl->modifiers(), methodDecl->parent())) {
       throw diag.ReportError(loc_)
             << "method call to non-accessible method: " << methodDecl->name();
+   }
+
+   // Check static method call
+   if(isSingleNameMethod && methodDecl->modifiers().isStatic()) {
+      throw diag.ReportError(loc_)
+            << "attempted to call static method using single name: "
+            << methodDecl->name();
    }
 
    // Is the previous a type name?
