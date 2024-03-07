@@ -24,6 +24,7 @@ int main(int argc, char** argv) {
    app.add_flag("-c", "Dummy flag for compatibility with ./runtest.py");
    app.add_flag("-v", verbose, "Verbose");
    app.add_flag("--check-file-name", "Dummy flag that's always true")->default_val(true);
+   app.add_flag("--freestanding", "Dummy flag for compatibility with ./runtest.py");
    app.allow_extras();
    CLI11_PARSE(app, argc, argv);
 
@@ -49,8 +50,9 @@ int main(int argc, char** argv) {
       NewLinkerPass(PM);
       NewNameResolverPass(PM);
       NewHierarchyCheckerPass(PM);
+      NewExprResolverPass(PM);
       // Explicitly enable the pass that we want to run
-      PM.PO().EnablePass("sema-hier");
+      PM.PO().EnablePass("sema-expr");
    }
 
    // Run the passes

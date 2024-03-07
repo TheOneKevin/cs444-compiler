@@ -1,10 +1,14 @@
 #include "utils/Error.h"
 
+#ifdef ENABLE_STACKTRACE
 #include <third-party/backward.h>
+#endif
+
 
 namespace utils {
 
 std::string FatalError::get_trace(const std::string& what) {
+#ifdef ENABLE_STACKTRACE
    using namespace backward;
    // Load trace from current location
    StackTrace stackTrace;
@@ -22,9 +26,13 @@ std::string FatalError::get_trace(const std::string& what) {
    if(!what.empty())
       ss << "Error: " << what << std::endl;
    return ss.str();
+#else
+   return what;
+#endif
 }
 
 std::string AssertError::get_trace(const std::string& what) {
+#ifdef ENABLE_STACKTRACE
    using namespace backward;
    // Load trace from current location
    StackTrace stackTrace;
@@ -42,6 +50,9 @@ std::string AssertError::get_trace(const std::string& what) {
    // Print the error at the end for better visibility
    ss << what;
    return ss.str();
+#else
+   return what;
+#endif
 }
 
 } // namespace utils
