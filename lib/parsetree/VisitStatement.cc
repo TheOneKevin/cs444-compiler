@@ -167,13 +167,15 @@ ptv::TmpVarDecl ptv::visitVariableDeclarator(Node* tyNode, Node* declNode) {
 ast::DeclStmt* ptv::visitLocalVariableDeclarationStatement(Node* node) {
    check_node_type(node, pty::LocalVariableDeclaration);
    check_num_children(node, 2, 2);
+   // Get the ID at the beginning
+   auto nextId = sem.NextScopeID();
    // $0: Get the type of the variable
    auto tyNode = node->child(0);
    // $1: Get the variable declarator
    auto declNode = node->child(1);
    auto decl = visitVariableDeclarator(tyNode, declNode);
-   auto astDecl = sem.BuildVarDecl(
-         decl.type, decl.loc, decl.name, sem.NextScopeID(), decl.init);
+   auto astDecl =
+         sem.BuildVarDecl(decl.type, decl.loc, decl.name, nextId, decl.init);
    return sem.BuildDeclStmt(astDecl);
 }
 

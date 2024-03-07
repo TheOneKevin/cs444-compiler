@@ -117,6 +117,7 @@ public:
    utils::Generator<const Expr*> exprs() const override { co_yield condition_; }
    utils::Generator<ast::AstNode const*> children() const override {
       co_yield init_;
+      co_yield update_;
       co_yield body_;
    }
 
