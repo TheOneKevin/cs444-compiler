@@ -64,6 +64,8 @@ ETy ESC::evalBinaryOp(BinaryOp& op, ETy lhs, ETy rhs) const {
             throw diag.ReportError(loc_) << "cannot assign to a final field";
          }
       }
+   } else {
+      checkInstanceVar(lhs, true);
    }
    checkInstanceVar(rhs);
    return ETy{nullptr, op.resultType(), true, false};
