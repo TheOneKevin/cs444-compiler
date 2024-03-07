@@ -19,8 +19,7 @@ class ExprResolverPass final : public Pass {
       ExprResolver& ER;
       ExprTypeResolver& TR;
       ExprStaticChecker& ESC;
-      bool isInstFieldInitializer;
-      bool isStaticContext;
+      semantic::ExprStaticCheckerState state;
    };
 
 public:
@@ -40,7 +39,7 @@ public:
       ER.Init(&TR, &NR, &Sema, &HC);
       TR.Init(&HC, &NR);
 
-      Data data{ER, TR, ESC, false, false};
+      Data data{ER, TR, ESC, semantic::ExprStaticCheckerState{}};
 
       try {
          resolveRecursive(data, LU);
@@ -67,7 +66,7 @@ private:
       }
       expr->replace(list);
       d.TR.Evaluate(expr);
-      d.ESC.Evaluate(expr, d.isStaticContext, d.isInstFieldInitializer);
+      d.ESC.Evaluate(expr, d.state);
    }
 
    void resolveRecursive(Data d, ast::AstNode* node) {
@@ -76,12 +75,16 @@ private:
       if(auto* ctx = dyn_cast<ast::DeclContext>(node)) d.ER.BeginContext(ctx);
 
       // If we're inside a method or field decl, see if its static
-      d.isInstFieldInitializer = false;
+      d.state.isInstFieldInitializer = false;
+      d.state.fieldScope = nullptr;
       if(auto* field = dyn_cast<ast::FieldDecl>(node)) {
-         d.isStaticContext = field->modifiers().isStatic();
-         d.isInstFieldInitializer = !field->modifiers().isStatic();
+         d.state.isStaticContext = field->modifiers().isStatic();
+         if(field->hasInit()) {
+            d.state.isInstFieldInitializer = !field->modifiers().isStatic();
+            d.state.fieldScope = field->init()->scope();
+         }
       } else if(auto* method = dyn_cast<ast::MethodDecl>(node)) {
-         d.isStaticContext = method->modifiers().isStatic();
+         d.state.isStaticContext = method->modifiers().isStatic();
       }
 
       // Visit the expression nodes

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ast/AstNode.h"
 #include "ast/ExprEvaluator.h"
 #include "diagnostics/Diagnostics.h"
 #include "semantic/NameResolver.h"
@@ -15,17 +16,26 @@ struct ExprStaticCheckerData {
    const bool isInstanceVar;
 };
 
+struct ExprStaticCheckerState {
+   bool isStaticContext;
+   bool isInstFieldInitializer;
+   ast::ScopeID const* fieldScope;
+   ExprStaticCheckerState()
+         : isStaticContext{false},
+           isInstFieldInitializer{false},
+           fieldScope{nullptr} {}
+};
+
 class ExprStaticChecker : public ast::ExprEvaluator<ExprStaticCheckerData> {
    using ETy = ExprStaticCheckerData;
 
 public:
    ExprStaticChecker(diagnostics::DiagnosticEngine& diag,
                      semantic::NameResolver& NR)
-         : diag{diag}, NR{NR}, isStaticContext{false}, loc_{} {}
+         : diag{diag}, NR{NR}, state{}, loc_{} {}
 
 public:
-   void Evaluate(ast::Expr* expr, bool isStaticContext,
-                 bool isInstFieldInitializer);
+   void Evaluate(ast::Expr* expr, ExprStaticCheckerState state);
 
 private: // Overriden methods
    using Type = ast::Type;
@@ -56,8 +66,7 @@ private:
 private:
    diagnostics::DiagnosticEngine& diag;
    semantic::NameResolver& NR;
-   bool isStaticContext;
-   bool isInstFieldInitializer;
+   ExprStaticCheckerState state;
    SourceRange loc_;
 };
 

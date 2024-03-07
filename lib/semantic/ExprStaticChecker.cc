@@ -21,10 +21,8 @@ static bool isDeclStatic(ast::Decl const* decl) {
    return false;
 }
 
-void ESC::Evaluate(ast::Expr* expr, bool isStaticContext,
-                   bool isInstFieldInitializer) {
-   this->isStaticContext = isStaticContext;
-   this->isInstFieldInitializer = isInstFieldInitializer;
+void ESC::Evaluate(ast::Expr* expr, ExprStaticCheckerState state) {
+   this->state = state;
    loc_ = expr->location();
    ETy single = this->EvaluateList(expr->list());
    // Handle the case of a single member access
@@ -33,7 +31,7 @@ void ESC::Evaluate(ast::Expr* expr, bool isStaticContext,
 
 ETy ESC::mapValue(ExprValue& node) const {
    // If node is "this", reject immediately
-   if(dyn_cast<ex::ThisNode>(node) && isStaticContext) {
+   if(dyn_cast<ex::ThisNode>(node) && state.isStaticContext) {
       throw diag.ReportError(loc_) << "cannot use 'this' in a static context";
    }
 
@@ -135,13 +133,18 @@ ETy ESC::evalCast(CastOp& op, ETy type, ETy obj) const {
 void ESC::checkInstanceVar(ETy var) const {
    if(!var.isInstanceVar) return;
    // Instance variable must not be accessed in a static context
-   if(isStaticContext) {
+   if(state.isStaticContext) {
       throw diag.ReportError(loc_)
             << "cannot access or invoke instance members in a static context";
    }
    // Instance variable accessed in a field initializer must satisfy
    // lexical order
-   if(isInstFieldInitializer) {
+   if(state.isInstFieldInitializer) {
+      auto fieldDecl = cast<ast::FieldDecl>(var.decl);
+      if(!state.fieldScope->canView(fieldDecl->scope())) {
+         throw diag.ReportError(loc_) << "cannot access instance members in "
+                                         "initializer before they are defined";
+      }
    }
 }
 
