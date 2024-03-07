@@ -21,4 +21,18 @@ std::ostream& ScopeID::print(std::ostream& os) const {
 
 void ScopeID::dump() const { print(std::cerr) << std::endl; }
 
+bool ScopeID::canView(ScopeID const* other) const {
+   assert(other != nullptr && "Can't view the null scope");
+   // If under same scope, we can view other iff we are later position
+   if(this->parent_ == other->parent_) {
+      return this->pos_ >= other->pos_;
+   }
+   // If under different scope, check if other is visible from parent
+   if(this->parent_) {
+      return this->parent_->canView(other);
+   }
+   // If we're the topmost scope, then other is a child we cannot see.
+   return false;
+}
+
 } // namespace ast

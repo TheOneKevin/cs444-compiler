@@ -18,11 +18,6 @@ namespace semantic {
 using namespace ast;
 using namespace ast::exprnode;
 
-void ExprTypeResolver::resolve(ast::Expr* expr) {
-   loc_ = expr->location();
-   this->Evaluate(expr);
-}
-
 // 5.1.2 Widening Primitive Conversion
 static bool isWiderThan(const BuiltInType* type, const BuiltInType* other) {
    using Kind = ast::BuiltInType::Kind;
@@ -240,8 +235,8 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
             return op.resolveResultType(lhs);
          } else {
             throw diag.ReportError(loc_)
-                  << "Invalid assignment, " << lhs->toString()
-                  << " is not assignable to " << rhs->toString() << " side";
+                  << "invalid assignment: " << lhs->toString()
+                  << " is not assignable to " << rhs->toString();
          }
       }
 

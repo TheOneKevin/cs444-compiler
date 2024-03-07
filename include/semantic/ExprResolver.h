@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory_resource>
 #include <variant>
 
@@ -8,6 +9,7 @@
 #include "ast/ExprEvaluator.h"
 #include "ast/ExprNode.h"
 #include "diagnostics/Diagnostics.h"
+#include "diagnostics/Location.h"
 #include "semantic/ExprTypeResolver.h"
 #include "semantic/HierarchyChecker.h"
 #include "semantic/Semantic.h"
@@ -110,7 +112,8 @@ public:
     * @param NR The name resolver
     * @return ast::Decl const* Either a decl or a type represented as decl
     */
-   ast::Decl const* prevAsDecl(ExprTypeResolver& TR, NameResolver& NR) const;
+   ast::Decl const* prevAsDecl(ExprTypeResolver& TR, NameResolver& NR,
+                               SourceRange loc) const;
    // Gets the "type of name" the current particle has been resolved to
    Type type() const { return type_; }
    // Gets the resolution of the name particle (must exist). The resolution
@@ -170,6 +173,7 @@ public:
    void BeginContext(ast::DeclContext const* ctx) { lctx_ = ctx; }
    ast::ExprNodeList Evaluate(ast::Expr* expr) {
       loc_ = expr->location();
+      lscope_ = expr->scope();
       auto ret = EvaluateList(expr->list());
       return resolveExprNode(ret);
    }
@@ -242,7 +246,7 @@ private:
                   node,
                   nullptr));
    }
-   // ???
+   // Recursively reduces the wrapped node into an expression list
    ast::ExprNodeList recursiveReduce(internal::ExprNameWrapper* node) const;
    // Gets the parent context the method is declared under
    ast::DeclContext const* getMethodParent(internal::ExprNameWrapper* node) const;
@@ -257,16 +261,38 @@ private:
    // Checks if the parameter types are applicable
    bool areParameterTypesApplicable(ast::MethodDecl const* method,
                                     const ty_array& argtys) const;
+   // Checks if the method is accessible in the given context
    bool isAccessible(ast::Modifiers, ast::DeclContext const*) const;
+   // Gets the inherited methods of a context
    utils::Generator<ast::MethodDecl const*> getInheritedMethods(
          ast::DeclContext const* ctx) const;
-
-   const ast::Decl* lookupDecl(ast::DeclContext const* ctx, std::function<bool(ast::Decl const*)> cond) const;
+   /**
+    * @brief If a unique declaration exists with the given name in the
+    * immediate context, then it is returned. Otherwise, nullptr is returned.
+    *
+    * @param name The name of the declaration to look up.
+    * @return Decl const* The declaration with the given name or nullptr.
+    */
+   const ast::Decl* lookupDecl(ast::DeclContext const* ctx,
+                               std::function<bool(ast::Decl const*)> cond) const;
+   /**
+    * @brief Finds the unique declaration with the given name that is visible
+    * in the context given. The scope of the declaration is considered IFF
+    * the ctx is exactly equal to the lctx_ state. Then, only the in-scope
+    * declarations are returned, the scope given by lscope_.
+    *
+    * @param ctx
+    * @param name
+    * @return const ast::Decl*
+    */
+   const ast::Decl* lookupNamedDecl(ast::DeclContext const* ctx,
+                                    std::string_view name) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;
    ast::CompilationUnit const* cu_;
    ast::DeclContext const* lctx_;
+   ast::ScopeID const* lscope_;
    semantic::NameResolver* NR;
    semantic::ExprTypeResolver* TR;
    semantic::HierarchyChecker* HC;

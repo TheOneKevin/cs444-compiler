@@ -157,7 +157,7 @@ private:
    ReferenceType* objectSuperclass_;
 };
 
-class MethodDecl final : public DeclContext, public Decl {
+class MethodDecl final : public virtual DeclContext, public virtual Decl {
 public:
    MethodDecl(BumpAllocator& alloc, Modifiers modifiers, SourceRange location,
               string_view name, Type* returnType, array_ref<VarDecl*> parameters,

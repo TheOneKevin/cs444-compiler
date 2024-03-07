@@ -5,6 +5,7 @@
 #include "ast/AstNode.h"
 #include "ast/Expr.h"
 #include "ast/ExprEvaluator.h"
+#include "ast/ExprNode.h"
 #include "diagnostics/Diagnostics.h"
 #include "diagnostics/Location.h"
 #include "semantic/HierarchyChecker.h"
@@ -18,7 +19,7 @@ namespace semantic {
  * @brief Will resolve all types in the Expression. If a type cannot be resolved,
  * then we assume an invalid type error has occurred (i.e., type checking).
  */
-class ExprTypeResolver final : public ast::ExprEvaluator<ast::Type const*> {
+class ExprTypeResolver final : private ast::ExprEvaluator<ast::Type const*> {
    using Heap = std::pmr::memory_resource;
 
 public:
@@ -29,7 +30,16 @@ public:
       this->HC = HC;
       this->NR = NR;
    }
-   void resolve(ast::Expr* expr);
+
+   ast::Type const* EvalList(ast::ExprNodeList& list, const SourceRange& loc) {
+      loc_ = loc;
+      return ast::ExprEvaluator<ast::Type const*>::EvaluateList(list);
+   }
+
+   ast::Type const* Evaluate(ast::Expr* node) {
+      loc_ = node->location();
+      return ast::ExprEvaluator<ast::Type const*>::Evaluate(node);
+   }
 
 protected:
    using Type = ast::Type;
@@ -74,8 +84,9 @@ public:
    /// java.lang.String implicitly.
    bool isTypeString(const Type* type) const;
 
-   /// @brief Check if the type is a reference type or an array type. 
+   /// @brief Check if the type is a reference type or an array type.
    bool isReferenceOrArrType(const Type* type) const;
+
 private:
    diagnostics::DiagnosticEngine& diag;
    HierarchyChecker* HC;

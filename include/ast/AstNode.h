@@ -1,6 +1,5 @@
 #pragma once
 
-#include <functional>
 #include <iostream>
 #include <ranges>
 #include <string>
@@ -349,7 +348,7 @@ private:
  * This captures the position of the lexical scope in the AST to be used
  * after AST construction, when lexical information has been lost.
  */
-class ScopeID {
+class ScopeID final {
 private:
    ScopeID(ScopeID const* parent, int pos) : parent_{parent}, pos_{pos} {}
 
@@ -371,19 +370,7 @@ public:
     *
     * @param other The other scope we want to view
     */
-   bool canView(ScopeID const* other) const {
-      assert(other != nullptr && "Can't view the null scope");
-      // If under same scope, we can view other iff we are later position
-      if(this->parent_ == other->parent_) {
-         return this->pos_ >= other->pos_;
-      }
-      // If under different scope, check if other is visible from parent
-      if(this->parent_) {
-         return this->parent_->canView(other);
-      }
-      // If we're the topmost scope, then other is a child we cannot see.
-      return false;
-   }
+   bool canView(ScopeID const* other) const;
 
    const ScopeID* parent() const { return parent_; }
 

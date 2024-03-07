@@ -1,5 +1,6 @@
 #include "semantic/ExprResolver.h"
 
+#include <functional>
 #include <string_view>
 #include <variant>
 
@@ -9,6 +10,7 @@
 #include "ast/DeclContext.h"
 #include "ast/ExprNode.h"
 #include "ast/Type.h"
+#include "diagnostics/Location.h"
 #include "semantic/HierarchyChecker.h"
 #include "semantic/NameResolver.h"
 #include "utils/Generator.h"
@@ -43,13 +45,6 @@ static ast::DeclContext const* GetTypeAsDecl(ast::Type const* type,
 // Functions to resolve names and chains of names
 /* ===--------------------------------------------------------------------=== */
 
-/**
- * @brief If a unique declaration exists with the given name in the
- * immediate context, then it is returned. Otherwise, nullptr is returned.
- *
- * @param name The name of the declaration to look up.
- * @return Decl const* The declaration with the given name or nullptr.
- */
 const ast::Decl* ER::lookupDecl(ast::DeclContext const* ctx,
                                 std::function<bool(ast::Decl const*)> cond) const {
    const ast::Decl* ret = nullptr;
@@ -85,13 +80,27 @@ const ast::Decl* ER::lookupDecl(ast::DeclContext const* ctx,
    return nullptr;
 }
 
+const ast::Decl* ER::lookupNamedDecl(ast::DeclContext const* ctx,
+                                     std::string_view name) const {
+   auto cond = [name, this](ast::Decl const* d) {
+      auto td = dyn_cast<ast::TypedDecl>(d);
+      if(!td) return false;
+      auto vd = dyn_cast<ast::VarDecl>(d);
+      bool scopeVisible = true;
+      bool sameName = d->name() == name;
+      bool sameContext = d->parent() == this->lctx_;
+      if(sameContext && vd && this->lscope_)
+         scopeVisible = this->lscope_->canView(vd->scope());
+      // same name && (same context -> scope visible)
+      return sameName && scopeVisible;
+   };
+   return lookupDecl(ctx, cond);
+}
+
 bool ER::tryReclassifyDecl(ExprNameWrapper& data,
                            ast::DeclContext const* ctx) const {
    // Search in this context
-   auto cond = [name = data.node->name()](ast::Decl const* d) {
-      return d->name() == name && dyn_cast<ast::TypedDecl>(d);
-   };
-   if(auto decl = lookupDecl(ctx, cond)) {
+   if(auto decl = lookupNamedDecl(ctx, data.node->name())) {
       if(auto varDecl = dynamic_cast<ast::VarDecl const*>(decl)) {
          data.reclassify(
                ExprNameWrapper::Type::ExpressionName, varDecl, varDecl->type());
@@ -184,7 +193,7 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
       p->verifyInvariants(ExprNameWrapper::Type::ExpressionName);
    // Next, fetch the type or declaration
    auto name = access->node->name();
-   auto typeOrDecl = access->prevAsDecl(*TR, *NR);
+   auto typeOrDecl = access->prevAsDecl(*TR, *NR, loc_);
    ast::DeclContext const* refTy = nullptr;
    if(access->prevIfWrapper()) {
       // If the previous node is a wrapper, then we resolve the type
@@ -213,11 +222,7 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
       assert(refTy && "Expected non-null type here");
    }
    // Now we check if "name" is a field of "decl"
-   auto field = lookupDecl(refTy, [name](ast::Decl const* d) {
-      bool b1 = d->name() == name;
-      bool b2 = dyn_cast<ast::TypedDecl>(d);
-      return b1 && b2;
-   });
+   auto field = lookupNamedDecl(refTy, name);
    if(!field) {
       throw diag.ReportError(loc_) << "field access to undeclared field: " << name;
    }
@@ -236,7 +241,7 @@ void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
       p->verifyInvariants(ExprNameWrapper::Type::TypeName);
    // Next, fetch the type or declaration
    auto name = access->node->name();
-   auto typeOrDecl = access->prevAsDecl(*TR, *NR);
+   auto typeOrDecl = access->prevAsDecl(*TR, *NR, loc_);
    // We note this must be a class type or we have a type error
    auto type = dynamic_cast<ast::ClassDecl const*>(typeOrDecl);
    if(!type) {
@@ -245,9 +250,7 @@ void ER::resolveTypeAccess(internal::ExprNameWrapper* access) const {
             << "\" to non-class type: " << typeOrDecl->name();
    }
    // Now we check if "name" is a field of "decl".
-   auto field = lookupDecl(type, [name](ast::Decl const* d) {
-      return d->name() == name && dyn_cast<ast::TypedDecl>(d);
-   });
+   auto field = lookupNamedDecl(type, name);
    if(!field) {
       throw diag.ReportError(loc_)
             << "static member access to undeclared field: " << name;
@@ -339,12 +342,13 @@ void ExprNameWrapper::verifyInvariants(ExprNameWrapper::Type expectedTy) const {
 }
 
 ast::Decl const* ExprNameWrapper::prevAsDecl(ExprTypeResolver& TR,
-                                             NameResolver& NR) const {
+                                             NameResolver& NR,
+                                             SourceRange loc) const {
    // Simple case, the previous node is wrapped so we know the decl
    if(auto p = prevIfWrapper()) return std::get<ast::Decl const*>(p->resolution());
    // Complex case, the previous node is an expression list
    ast::ExprNodeList prevList = std::get<ast::ExprNodeList>(prev_.value());
-   auto type = TR.EvaluateList(prevList);
+   auto type = TR.EvalList(prevList, loc);
    return cast<ast::Decl>(GetTypeAsDecl(type, NR));
 }
 
@@ -618,7 +622,7 @@ ast::DeclContext const* ER::getMethodParent(ExprNameWrapper* Q) const {
    Q->verifyInvariants(ExprNameWrapper::Type::MethodName);
    // If there's no previous, use the current context
    if(!Q->prev().has_value()) return cu_->body();
-   auto declOrType = Q->prevAsDecl(*TR, *NR);
+   auto declOrType = Q->prevAsDecl(*TR, *NR, loc_);
    auto ty = dynamic_cast<ast::DeclContext const*>(declOrType);
    if(Q->prevIfWrapper() && !ty) {
       auto typedDecl = dynamic_cast<ast::TypedDecl const*>(declOrType);
@@ -679,7 +683,7 @@ ETy ER::evalMethodCall(MethodOp& op, const ETy method,
    ast::ExprNodeList arglist{};
    for(auto& arg : args | std::views::reverse) {
       auto tmplist = resolveExprNode(arg);
-      argtys.push_back(TR->EvaluateList(tmplist));
+      argtys.push_back(TR->EvalList(tmplist, loc_));
       arglist.concat(tmplist);
    }
 
@@ -728,7 +732,7 @@ ETy ER::evalNewObject(NewOp& op, const ETy object, const op_array& args) const {
    ast::ExprNodeList arglist{};
    for(auto& arg : args | std::views::reverse) {
       auto tmplist = resolveExprNode(arg);
-      argtys.push_back(TR->EvaluateList(tmplist));
+      argtys.push_back(TR->EvalList(tmplist, loc_));
       arglist.concat(tmplist);
    }
 
