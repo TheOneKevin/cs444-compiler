@@ -73,6 +73,8 @@ private:
       // Set the CU and context
       if(auto* cu = dyn_cast<ast::CompilationUnit>(node)) d.ER.BeginCU(cu);
       if(auto* ctx = dyn_cast<ast::DeclContext>(node)) d.ER.BeginContext(ctx);
+      if(auto* classDecl = dyn_cast<ast::ClassDecl>(node))
+         d.state.currentClass = classDecl;
 
       // If we're inside a method or field decl, see if its static
       d.state.isInstFieldInitializer = false;

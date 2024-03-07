@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast/AstNode.h"
+#include "ast/DeclContext.h"
 #include "ast/ExprEvaluator.h"
 #include "diagnostics/Diagnostics.h"
 #include "semantic/NameResolver.h"
@@ -19,10 +20,12 @@ struct ExprStaticCheckerData {
 struct ExprStaticCheckerState {
    bool isStaticContext;
    bool isInstFieldInitializer;
+   ast::ClassDecl const* currentClass;
    ast::ScopeID const* fieldScope;
    ExprStaticCheckerState()
          : isStaticContext{false},
            isInstFieldInitializer{false},
+           currentClass{nullptr},
            fieldScope{nullptr} {}
 };
 
