@@ -94,7 +94,7 @@ void Pass::RegisterCLI() {
 }
 
 Pass& Pass::GetPass(std::string_view name) {
-   PM().getPass(name);
+   return PM().getPass(name);
 }
 
 /* ===--------------------------------------------------------------------=== */

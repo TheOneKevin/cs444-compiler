@@ -61,7 +61,7 @@ private: // Overriden methods
    ETy evalCast(CastOp& op, ETy type, ETy value) const override;
 
 private:
-   void checkInstanceVar(ETy var) const;
+   void checkInstanceVar(ETy var, bool checkInitOrder = true) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;

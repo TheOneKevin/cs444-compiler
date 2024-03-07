@@ -53,7 +53,10 @@ ETy ESC::mapValue(ExprValue& node) const {
 
 ETy ESC::evalBinaryOp(BinaryOp& op, ETy lhs, ETy rhs) const {
    assert(op.resultType());
-   checkInstanceVar(lhs);
+   if(op.opType() == ast::exprnode::BinaryOp::OpType::Assignment) {
+      // Then we can safely ignore LHS field access
+      checkInstanceVar(lhs, false);
+   }
    checkInstanceVar(rhs);
    return ETy{nullptr, op.resultType(), true, false};
 }
@@ -130,7 +133,7 @@ ETy ESC::evalCast(CastOp& op, ETy type, ETy obj) const {
    return ETy{nullptr, op.resultType(), true, false};
 }
 
-void ESC::checkInstanceVar(ETy var) const {
+void ESC::checkInstanceVar(ETy var, bool checkInitOrder) const {
    if(!var.isInstanceVar) return;
    // Instance variable must not be accessed in a static context
    if(state.isStaticContext) {
@@ -139,7 +142,7 @@ void ESC::checkInstanceVar(ETy var) const {
    }
    // Instance variable accessed in a field initializer must satisfy
    // lexical order
-   if(state.isInstFieldInitializer) {
+   if(state.isInstFieldInitializer && checkInitOrder) {
       auto fieldDecl = cast<ast::FieldDecl>(var.decl);
       if(!state.fieldScope->canView(fieldDecl->scope())) {
          throw diag.ReportError(loc_) << "cannot access instance members in "
