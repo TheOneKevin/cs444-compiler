@@ -6,6 +6,7 @@
 #include "ast/Type.h"
 #include "diagnostics/Diagnostics.h"
 #include "utils/Utils.h"
+#include "ast/Decl.h"
 
 namespace semantic {
 
