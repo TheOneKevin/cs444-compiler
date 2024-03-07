@@ -195,6 +195,13 @@ void ClassDecl::setParent(DeclContext* parent) {
    for(auto& constructor : constructors_) constructor->setParent(this);
 }
 
+bool ClassDecl::hasDefaultCtor() const {
+   for(auto& ctor : constructors_) {
+      if(ctor->parameters().empty()) return true;
+   }
+   return false;
+}
+
 // InterfaceDecl ///////////////////////////////////////////////////////////////
 
 InterfaceDecl::InterfaceDecl(BumpAllocator& alloc, Modifiers modifiers,

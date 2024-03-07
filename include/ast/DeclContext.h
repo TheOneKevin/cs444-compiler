@@ -115,6 +115,7 @@ public:
       for(auto interface : interfaces_) co_yield interface;
       for(auto superClass : superClasses_) co_yield superClass;
    }
+   bool hasDefaultCtor() const;
 
 private:
    Modifiers modifiers_;

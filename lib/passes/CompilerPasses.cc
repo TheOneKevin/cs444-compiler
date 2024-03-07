@@ -3,6 +3,7 @@
 #include <memory>
 #include <string_view>
 
+#include "ast/DeclContext.h"
 #include "diagnostics/Diagnostics.h"
 #include "diagnostics/Location.h"
 #include "diagnostics/SourceManager.h"
@@ -14,6 +15,7 @@
 #include "third-party/CLI11.h"
 #include "utils/BumpAllocator.h"
 #include "utils/PassManager.h"
+#include "utils/Utils.h"
 
 using std::string_view;
 using utils::Pass;
@@ -179,6 +181,25 @@ void LinkerPass::Run() {
 void HierarchyCheckerPass::Run() {
    auto lu = GetPass<LinkerPass>().LinkingUnit();
    checker.Check(lu);
+   for(auto* cu : lu->compliationUnits()) {
+      auto* classDecl = dyn_cast_or_null<ast::ClassDecl>(cu->body());
+      if(!classDecl) continue;
+      // Check for each class in the LU, the super classes have a default ctor
+      for(auto* super : classDecl->superClasses()) {
+         if(!super) continue;
+         if(cast<ast::ClassDecl>(super->decl())->hasDefaultCtor()) continue;
+         PM().Diag().ReportError(super->location())
+               << "super class "
+               << (super->decl()->hasCanonicalName()
+                      ? super->decl()->getCanonicalName()
+                      : super->decl()->name())
+               << " of "
+               << (classDecl->hasCanonicalName() ? classDecl->getCanonicalName()
+                                                 : classDecl->name())
+               << " does not have a default constructor";
+         break;
+      }
+   }
 }
 
 } // namespace joos1
