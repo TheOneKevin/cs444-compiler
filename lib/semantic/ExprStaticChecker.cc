@@ -1,8 +1,10 @@
 #include "semantic/ExprStaticChecker.h"
 
 #include "ast/AST.h"
+#include "ast/Decl.h"
 #include "ast/ExprNode.h"
 #include "diagnostics/Diagnostics.h"
+#include "utils/Utils.h"
 
 namespace semantic {
 
@@ -56,6 +58,12 @@ ETy ESC::evalBinaryOp(BinaryOp& op, ETy lhs, ETy rhs) const {
    if(op.opType() == ast::exprnode::BinaryOp::OpType::Assignment) {
       // Then we can safely ignore LHS field access
       checkInstanceVar(lhs, false);
+      // If the LHS is a field, it must not be final
+      if(auto field = dyn_cast_or_null<ast::FieldDecl>(lhs.decl)) {
+         if(field->modifiers().isFinal()) {
+            throw diag.ReportError(loc_) << "cannot assign to a final field";
+         }
+      }
    }
    checkInstanceVar(rhs);
    return ETy{nullptr, op.resultType(), true, false};
