@@ -735,8 +735,18 @@ ETy ER::evalNewObject(NewOp& op, const ETy object, const op_array& args) const {
       arglist.concat(tmplist);
    }
 
-   // Begin resolution of the method call
+   // Check if the type is abstract
    auto ctx = cast<ast::DeclContext>(expr->type()->getAsDecl());
+   if(auto classDecl = dyn_cast<ast::ClassDecl>(ctx)) {
+      if(classDecl->modifiers().isAbstract()) {
+         throw diag.ReportError(loc_)
+               << "attempted to instantiate abstract class: "
+               << (classDecl->hasCanonicalName() ? classDecl->getCanonicalName()
+                                                 : classDecl->name());
+      }
+   }
+
+   // Begin resolution of the method call
    auto methodDecl = resolveMethodOverload(ctx, "", argtys, true);
    expr->overrideDecl(methodDecl);
 
