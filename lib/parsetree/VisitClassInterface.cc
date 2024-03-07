@@ -10,6 +10,7 @@ using ptv = ParseTreeVisitor;
 // pty::ClassDeclaration ///////////////////////////////////////////////////////
 
 ast::ClassDecl* ptv::visitClassDeclaration(Node* node) {
+   sem.ResetFieldScope();
    check_node_type(node, pty::ClassDeclaration);
    check_num_children(node, 5, 5);
    // $1: Visit the modifiers
@@ -72,6 +73,8 @@ ast::FieldDecl* ptv::visitFieldDeclaration(Node* node) {
    auto modifiers = visitModifierList(node->child(0));
    // $2, $3: Visit the type and declarator
    auto decl = visitVariableDeclarator(node->child(1), node->child(2));
+   // Replace the scope with the field scope
+   if(decl.init) decl.init->setScope(sem.CurrentFieldScopeID());
    return sem.BuildFieldDecl(modifiers, decl.loc, decl.type, decl.name, decl.init);
 }
 
@@ -175,6 +178,7 @@ ast::VarDecl* ptv::visit<pty::FormalParameterList>(Node* node) {
 // pty::InterfaceDeclaration ///////////////////////////////////////////////////
 
 ast::InterfaceDecl* ptv::visitInterfaceDeclaration(Node* node) {
+   sem.ResetFieldScope();
    check_node_type(node, pty::InterfaceDeclaration);
    check_num_children(node, 4, 4);
    // $1: Visit the modifiers

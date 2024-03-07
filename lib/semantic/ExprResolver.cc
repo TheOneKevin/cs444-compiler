@@ -57,24 +57,11 @@ const ast::Decl* ER::lookupDecl(ast::DeclContext const* ctx,
          }
       }
       return ret;
-   } else if(auto methodDecl = dyn_cast<ast::MethodDecl>(ctx)) {
-      auto classDecl = cast<ast::ClassDecl>(methodDecl->parent());
-      // Search locals first
-      for(auto decl : ctx->decls()) {
-         if(cond(decl)) return decl;
-      }
-      // Then search instance members
-      for(auto decl : HC->getInheritedMembers(classDecl)) {
-         if(cond(decl)) {
-            if(ret) return nullptr; // Ambiguous, cannot resolve
-            ret = decl;
-         }
-      }
-      return ret;
    } else {
-      for(auto decl : ctx->decls()) {
+      // Search for the unique local variable
+      for(auto decl : ctx->decls())
          if(cond(decl)) return decl;
-      }
+      return nullptr;
    }
    // Context is probably CU
    return nullptr;
@@ -85,13 +72,14 @@ const ast::Decl* ER::lookupNamedDecl(ast::DeclContext const* ctx,
    auto cond = [name, this](ast::Decl const* d) {
       auto td = dyn_cast<ast::TypedDecl>(d);
       if(!td) return false;
-      auto vd = dyn_cast<ast::VarDecl>(d);
       bool scopeVisible = true;
       bool sameName = d->name() == name;
       bool sameContext = d->parent() == this->lctx_;
-      if(sameContext && vd && this->lscope_)
-         scopeVisible = this->lscope_->canView(vd->scope());
-      // same name && (same context -> scope visible)
+      // Ignore scoping rules for fields
+      bool checkScope = dyn_cast<ast::VarDecl>(d) && this->lscope_;
+      // Scoping is only meaningful inside methods
+      if(sameContext && checkScope)
+         scopeVisible = this->lscope_->canView(td->scope());
       return sameName && scopeVisible;
    };
    return lookupDecl(ctx, cond);

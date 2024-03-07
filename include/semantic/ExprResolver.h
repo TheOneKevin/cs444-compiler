@@ -281,8 +281,8 @@ private:
     * the ctx is exactly equal to the lctx_ state. Then, only the in-scope
     * declarations are returned, the scope given by lscope_.
     *
-    * @param ctx
-    * @param name
+    * @param ctx The context to look up the declaration in.
+    * @param name The name of the declaration to look up.
     * @return const ast::Decl*
     */
    const ast::Decl* lookupNamedDecl(ast::DeclContext const* ctx,

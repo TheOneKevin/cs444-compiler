@@ -24,7 +24,8 @@ public:
          : diag{diag}, NR{NR}, isStaticContext{false}, loc_{} {}
 
 public:
-   void Evaluate(ast::Expr* expr, bool isStaticContext);
+   void Evaluate(ast::Expr* expr, bool isStaticContext,
+                 bool isInstFieldInitializer);
 
 private: // Overriden methods
    using Type = ast::Type;
@@ -39,25 +40,24 @@ private: // Overriden methods
    using ExprValue = ast::exprnode::ExprValue;
 
    ETy mapValue(ExprValue& node) const override;
-   ETy evalBinaryOp(BinaryOp& op, const ETy lhs, const ETy rhs) const override;
-   ETy evalUnaryOp(UnaryOp& op, const ETy rhs) const override;
-   ETy evalMemberAccess(DotOp& op, const ETy lhs, const ETy field) const override;
-   ETy evalMethodCall(MethodOp& op, const ETy method,
+   ETy evalBinaryOp(BinaryOp& op, ETy lhs, ETy rhs) const override;
+   ETy evalUnaryOp(UnaryOp& op, ETy rhs) const override;
+   ETy evalMemberAccess(DotOp& op, ETy lhs, ETy field) const override;
+   ETy evalMethodCall(MethodOp& op, ETy method,
                       const op_array& args) const override;
-   ETy evalNewObject(NewOp& op, const ETy object,
-                     const op_array& args) const override;
-   ETy evalNewArray(NewArrayOp& op, const ETy type, const ETy size) const override;
-   ETy evalArrayAccess(ArrayAccessOp& op, const ETy array,
-                       const ETy index) const override;
-   ETy evalCast(CastOp& op, const ETy type, const ETy value) const override;
+   ETy evalNewObject(NewOp& op, ETy object, const op_array& args) const override;
+   ETy evalNewArray(NewArrayOp& op, ETy type, ETy size) const override;
+   ETy evalArrayAccess(ArrayAccessOp& op, ETy array, ETy index) const override;
+   ETy evalCast(CastOp& op, ETy type, ETy value) const override;
 
 private:
-   diagnostics::DiagnosticBuilder IllegalInstanceAccess() const;
+   void checkInstanceVar(ETy var) const;
 
 private:
    diagnostics::DiagnosticEngine& diag;
    semantic::NameResolver& NR;
    bool isStaticContext;
+   bool isInstFieldInitializer;
    SourceRange loc_;
 };
 

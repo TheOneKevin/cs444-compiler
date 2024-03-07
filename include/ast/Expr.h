@@ -19,11 +19,12 @@ public:
    auto mut_nodes() { return rpn_ops.mut_nodes(); }
    void replace(ExprNodeList new_list) { rpn_ops = new_list; }
    auto scope() const { return scope_; }
+   void setScope(ScopeID const* scope) { scope_ = scope; }
 
 private:
    ExprNodeList rpn_ops;
    SourceRange loc_;
-   ScopeID const* const scope_;
+   ScopeID const* scope_;
 };
 
 } // namespace ast

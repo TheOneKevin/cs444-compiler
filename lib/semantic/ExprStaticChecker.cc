@@ -21,17 +21,14 @@ static bool isDeclStatic(ast::Decl const* decl) {
    return false;
 }
 
-void ESC::Evaluate(ast::Expr* expr, bool isStaticContext) {
+void ESC::Evaluate(ast::Expr* expr, bool isStaticContext,
+                   bool isInstFieldInitializer) {
    this->isStaticContext = isStaticContext;
+   this->isInstFieldInitializer = isInstFieldInitializer;
    loc_ = expr->location();
    ETy single = this->EvaluateList(expr->list());
    // Handle the case of a single member access
-   if(single.isInstanceVar && isStaticContext) throw IllegalInstanceAccess();
-}
-
-DiagnosticBuilder ESC::IllegalInstanceAccess() const {
-   return diag.ReportError(loc_)
-          << "cannot access or invoke instance members in a static context";
+   checkInstanceVar(single);
 }
 
 ETy ESC::mapValue(ExprValue& node) const {
@@ -56,27 +53,27 @@ ETy ESC::mapValue(ExprValue& node) const {
    }
 }
 
-ETy ESC::evalBinaryOp(BinaryOp& op, const ETy lhs, const ETy rhs) const {
+ETy ESC::evalBinaryOp(BinaryOp& op, ETy lhs, ETy rhs) const {
    assert(op.resultType());
-   if((lhs.isInstanceVar || rhs.isInstanceVar) && isStaticContext)
-      throw IllegalInstanceAccess();
+   checkInstanceVar(lhs);
+   checkInstanceVar(rhs);
    return ETy{nullptr, op.resultType(), true, false};
 }
 
-ETy ESC::evalUnaryOp(UnaryOp& op, const ETy val) const {
+ETy ESC::evalUnaryOp(UnaryOp& op, ETy val) const {
    assert(op.resultType());
-   if(val.isInstanceVar && isStaticContext) throw IllegalInstanceAccess();
+   checkInstanceVar(val);
    return ETy{nullptr, op.resultType(), true, false};
 }
 
-ETy ESC::evalMemberAccess(DotOp& op, const ETy lhs, const ETy field) const {
+ETy ESC::evalMemberAccess(DotOp& op, ETy lhs, ETy field) const {
    assert(op.resultType());
    // LHS may never be a type (it might not have a decl for ex. temporaries)
    assert(lhs.isValue);
    // RHS must be a field and have a resolved declaration
    assert(field.isValue && field.decl);
    // Only check if LHS is an instance variable
-   if(lhs.isInstanceVar && isStaticContext) throw IllegalInstanceAccess();
+   checkInstanceVar(lhs);
    // The field must not be static because this is "instance . field"
    if(isDeclStatic(field.decl)) {
       throw diag.ReportError(loc_)
@@ -86,55 +83,66 @@ ETy ESC::evalMemberAccess(DotOp& op, const ETy lhs, const ETy field) const {
    return ETy{field.decl, op.resultType(), true, false};
 }
 
-ETy ESC::evalMethodCall(MethodOp& op, const ETy method,
-                        const op_array& args) const {
+ETy ESC::evalMethodCall(MethodOp& op, ETy method, const op_array& args) const {
    // Method must be value and have a resolved declaration
    assert(method.isValue && method.decl);
    // Accessing instance method in a static context
-   if(method.isInstanceVar && isStaticContext) throw IllegalInstanceAccess();
+   checkInstanceVar(method);
    // And also all the arguments
    for(auto arg : args) {
       assert(arg.isValue);
-      if(arg.isInstanceVar && isStaticContext) throw IllegalInstanceAccess();
+      checkInstanceVar(arg);
    }
-   // ... any other checks ... ?
    // We don't assert op.resultType() because it can be null i.e., void
    return ETy{nullptr, op.resultType(), true, false};
 }
 
-ETy ESC::evalNewObject(NewOp& op, const ETy ty, const op_array& args) const {
+ETy ESC::evalNewObject(NewOp& op, ETy ty, const op_array& args) const {
    assert(!ty.isValue && ty.type);
    for(auto arg : args) {
       assert(arg.isValue);
-      if(arg.isInstanceVar && isStaticContext) throw IllegalInstanceAccess();
+      checkInstanceVar(arg);
    }
    assert(op.resultType());
    return ETy{nullptr, op.resultType(), true, false};
 }
 
-ETy ESC::evalNewArray(NewArrayOp& op, const ETy type, const ETy size) const {
+ETy ESC::evalNewArray(NewArrayOp& op, ETy type, ETy size) const {
    assert(!type.isValue && type.type);
    assert(size.isValue);
-   if(size.isInstanceVar && isStaticContext) throw IllegalInstanceAccess();
+   checkInstanceVar(size);
    assert(op.resultType());
    return ETy{nullptr, op.resultType(), true, false};
 }
 
-ETy ESC::evalArrayAccess(ArrayAccessOp& op, const ETy arr, const ETy idx) const {
+ETy ESC::evalArrayAccess(ArrayAccessOp& op, ETy arr, ETy idx) const {
    assert(arr.isValue);
    assert(idx.isValue);
-   if((arr.isInstanceVar || idx.isInstanceVar) && isStaticContext)
-      throw IllegalInstanceAccess();
+   checkInstanceVar(arr);
+   checkInstanceVar(idx);
    assert(op.resultType());
    return ETy{nullptr, op.resultType(), true, false};
 }
 
-ETy ESC::evalCast(CastOp& op, const ETy type, const ETy obj) const {
+ETy ESC::evalCast(CastOp& op, ETy type, ETy obj) const {
    assert(!type.isValue && type.type);
    assert(obj.isValue);
    assert(op.resultType());
-   if(obj.isInstanceVar && isStaticContext) throw IllegalInstanceAccess();
+   checkInstanceVar(obj);
    return ETy{nullptr, op.resultType(), true, false};
+}
+
+void ESC::checkInstanceVar(ETy var) const {
+   if(!var.isInstanceVar) return;
+   // Instance variable must not be accessed in a static context
+   if(isStaticContext) {
+      throw diag.ReportError(loc_)
+            << "cannot access or invoke instance members in a static context";
+   }
+   // Instance variable accessed in a field initializer must satisfy
+   // lexical order
+   if(isInstFieldInitializer) {
+   }
 }
 
 } // namespace semantic

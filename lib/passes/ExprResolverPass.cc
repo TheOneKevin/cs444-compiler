@@ -19,6 +19,8 @@ class ExprResolverPass final : public Pass {
       ExprResolver& ER;
       ExprTypeResolver& TR;
       ExprStaticChecker& ESC;
+      bool isInstFieldInitializer;
+      bool isStaticContext;
    };
 
 public:
@@ -38,10 +40,10 @@ public:
       ER.Init(&TR, &NR, &Sema, &HC);
       TR.Init(&HC, &NR);
 
-      Data data{ER, TR, ESC};
+      Data data{ER, TR, ESC, false, false};
 
       try {
-         resolveRecursive(data, LU, false);
+         resolveRecursive(data, LU);
          AC.ValidateLU(*LU);
       } catch(const diagnostics::DiagnosticBuilder&) {
          // Print the errors from diag in the next step
@@ -49,7 +51,7 @@ public:
    }
 
 private:
-   void evaluateAsList(Data d, ast::Expr* expr, bool isStaticContext) {
+   void evaluateAsList(Data d, ast::Expr* expr) {
       if(PM().Diag().Verbose(2)) {
          auto dbg = PM().Diag().ReportDebug(2);
          dbg << "[*] Location: ";
@@ -65,19 +67,21 @@ private:
       }
       expr->replace(list);
       d.TR.Evaluate(expr);
-      d.ESC.Evaluate(expr, isStaticContext);
+      d.ESC.Evaluate(expr, d.isStaticContext, d.isInstFieldInitializer);
    }
 
-   void resolveRecursive(Data d, ast::AstNode* node, bool isStaticContext) {
+   void resolveRecursive(Data d, ast::AstNode* node) {
       // Set the CU and context
       if(auto* cu = dyn_cast<ast::CompilationUnit>(node)) d.ER.BeginCU(cu);
       if(auto* ctx = dyn_cast<ast::DeclContext>(node)) d.ER.BeginContext(ctx);
 
       // If we're inside a method or field decl, see if its static
+      d.isInstFieldInitializer = false;
       if(auto* field = dyn_cast<ast::FieldDecl>(node)) {
-         isStaticContext = field->modifiers().isStatic();
+         d.isStaticContext = field->modifiers().isStatic();
+         d.isInstFieldInitializer = !field->modifiers().isStatic();
       } else if(auto* method = dyn_cast<ast::MethodDecl>(node)) {
-         isStaticContext = method->modifiers().isStatic();
+         d.isStaticContext = method->modifiers().isStatic();
       }
 
       // Visit the expression nodes
@@ -87,7 +91,7 @@ private:
                PM().Diag().ReportDebug(2)
                      << "[*] Resolving initializer for variable: " << decl->name();
             }
-            evaluateAsList(d, init, isStaticContext);
+            evaluateAsList(d, init);
          }
       } else if(auto* stmt = dynamic_cast<ast::Stmt*>(node)) {
          for(auto* expr : stmt->mut_exprs()) {
@@ -96,14 +100,14 @@ private:
                PM().Diag().ReportDebug(2)
                      << "[*] Resolving expression in statement:";
             }
-            evaluateAsList(d, expr, isStaticContext);
+            evaluateAsList(d, expr);
          }
       }
       // We want to avoid visiting nodes twice
       if(dynamic_cast<ast::DeclStmt*>(node)) return;
       // Visit the children recursively
       for(auto* child : node->mut_children()) {
-         if(child) resolveRecursive(d, child, isStaticContext);
+         if(child) resolveRecursive(d, child);
       }
    }
 

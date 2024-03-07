@@ -141,6 +141,17 @@ public:
 
    ast::ScopeID const* CurrentScopeID() const { return currentScope_; }
 
+   ast::ScopeID const* NextFieldScopeID() {
+      currentFieldScope_ = currentFieldScope_->next(alloc, currentFieldScope_);
+      return currentFieldScope_;
+   }
+
+   ast::ScopeID const* CurrentFieldScopeID() const { return currentFieldScope_; }
+
+   void ResetFieldScope() {
+      currentFieldScope_ = ScopeID::New(alloc);
+   }
+
 private:
    BumpAllocator& alloc;
    diagnostics::DiagnosticEngine& diag;
@@ -149,8 +160,10 @@ private:
    std::unordered_set<std::string> lexicalLocalScope;
    // java.lang.Object type
    ast::ReferenceType* objectType_;
-   // Current scope
+   // Current lexical local scope
    ast::ScopeID const* currentScope_;
+   // Current field scope
+   ast::ScopeID const* currentFieldScope_;
 };
 
 } // namespace ast

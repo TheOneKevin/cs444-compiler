@@ -89,7 +89,8 @@ FieldDecl* Semantic::BuildFieldDecl(Modifiers modifiers, SourceRange loc,
    if(!modifiers.isPublic() && !modifiers.isProtected()) {
       diag.ReportError(loc) << "field must have a visibility modifier.";
    }
-   return alloc.new_object<FieldDecl>(alloc, loc, modifiers, type, name, init);
+   return alloc.new_object<FieldDecl>(
+         alloc, loc, modifiers, type, name, init, NextFieldScopeID());
 }
 
 /* ===--------------------------------------------------------------------=== */
