@@ -1,5 +1,6 @@
 #include <utils/Error.h>
 
+#include "diagnostics/Location.h"
 #include "parsetree/ParseTreeVisitor.h"
 
 namespace parsetree {
@@ -13,58 +14,58 @@ using namespace ast::exprnode;
 // NOTE: This is a hack because we want to get the semantic's allocator
 #define sem_alloc sem.allocator().new_object
 
-UnaryOp* ptv::convertToUnaryOp(Operator::Type type) {
+UnaryOp* ptv::convertToUnaryOp(Operator::Type type, SourceRange loc) {
    using oty = Operator::Type;
    switch(type) {
       case oty::Not:
-         return sem_alloc<UnaryOp>(UnaryOp::OpType::Not);
+         return sem_alloc<UnaryOp>(UnaryOp::OpType::Not, loc);
       case oty::Minus:
-         return sem_alloc<UnaryOp>(UnaryOp::OpType::Minus);
+         return sem_alloc<UnaryOp>(UnaryOp::OpType::Minus, loc);
       default:
          throw utils::FatalError("Invalid operator type");
    }
 }
 
-BinaryOp* ptv::convertToBinaryOp(Operator::Type type) {
+BinaryOp* ptv::convertToBinaryOp(Operator::Type type, SourceRange loc) {
    using oty = Operator::Type;
    switch(type) {
       case oty::Assign:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::Assignment);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::Assignment, loc);
       case oty::Or:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::Or);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::Or, loc);
       case oty::And:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::And);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::And, loc);
       case oty::BitwiseOr:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::BitwiseOr);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::BitwiseOr, loc);
       case oty::BitwiseXor:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::BitwiseXor);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::BitwiseXor, loc);
       case oty::BitwiseAnd:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::BitwiseAnd);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::BitwiseAnd, loc);
       case oty::Equal:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::Equal);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::Equal, loc);
       case oty::NotEqual:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::NotEqual);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::NotEqual, loc);
       case oty::LessThan:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::LessThan);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::LessThan, loc);
          break;
       case oty::LessThanOrEqual:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::LessThanOrEqual);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::LessThanOrEqual, loc);
       case oty::GreaterThan:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::GreaterThan);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::GreaterThan, loc);
       case oty::GreaterThanOrEqual:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::GreaterThanOrEqual);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::GreaterThanOrEqual, loc);
       case oty::InstanceOf:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::InstanceOf);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::InstanceOf, loc);
       case oty::Plus:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::Add);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::Add, loc);
       case oty::Minus:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::Subtract);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::Subtract, loc);
       case oty::Multiply:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::Multiply);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::Multiply, loc);
       case oty::Divide:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::Divide);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::Divide, loc);
       case oty::Modulo:
-         return sem_alloc<BinaryOp>(BinaryOp::OpType::Modulo);
+         return sem_alloc<BinaryOp>(BinaryOp::OpType::Modulo, loc);
       default:
          assert(false && "Invalid operator type");
    }
@@ -89,7 +90,7 @@ ExprNodeList ptv::visitExprNode(parsetree::Node* node) {
       auto right = visitExprChild(node->child(1));
       ops.concat(right);
       auto op = cast<parsetree::Operator>(node->child(0));
-      ops.push_back(convertToUnaryOp(op->get_type()));
+      ops.push_back(convertToUnaryOp(op->get_type(), op->location()));
       return ops;
 
    } else if(node->num_children() == 3) {
@@ -100,7 +101,7 @@ ExprNodeList ptv::visitExprNode(parsetree::Node* node) {
       ops.concat(left);
       ops.concat(right);
       auto op = cast<parsetree::Operator*>(node->child(1));
-      ops.push_back(convertToBinaryOp(op->get_type()));
+      ops.push_back(convertToBinaryOp(op->get_type(), op->location()));
       return ops;
    }
    unreachable();
@@ -124,9 +125,10 @@ ExprNodeList ptv::visitExprChild(Node* node) {
       case pty::Identifier: {
          auto name = visitIdentifier(node);
          if(name == "this") {
-            return ExprNodeList(sem_alloc<ThisNode>());
+            return ExprNodeList(sem_alloc<ThisNode>(node->location()));
          }
-         return ExprNodeList(sem_alloc<MemberName>(sem.allocator(), name));
+         return ExprNodeList(
+               sem_alloc<MemberName>(sem.allocator(), name, node->location()));
       }
       case pty::QualifiedIdentifier:
          return visitQualifiedIdentifierInExpr(node);
@@ -156,20 +158,24 @@ ExprNodeList ptv::visitQualifiedIdentifierInExpr(Node* node,
    if(node->num_children() == 1) {
       if(isMethodInvocation) {
          ops.push_back(sem_alloc<MethodName>(sem.allocator(),
-                                             visitIdentifier(node->child(0))));
+                                             visitIdentifier(node->child(0)),
+                                             node->child(0)->location()));
       } else {
          ops.push_back(sem_alloc<MemberName>(sem.allocator(),
-                                             visitIdentifier(node->child(0))));
+                                             visitIdentifier(node->child(0)),
+                                             node->child(0)->location()));
       }
 
    } else if(node->num_children() == 2) {
       ops = visitQualifiedIdentifierInExpr(node->child(0));
       if(isMethodInvocation) {
          ops.push_back(sem_alloc<MethodName>(sem.allocator(),
-                                             visitIdentifier(node->child(1))));
+                                             visitIdentifier(node->child(1)),
+                                             node->child(1)->location()));
       } else {
          ops.push_back(sem_alloc<MemberName>(sem.allocator(),
-                                             visitIdentifier(node->child(1))));
+                                             visitIdentifier(node->child(1)),
+                                             node->child(1)->location()));
       }
       ops.push_back(sem_alloc<MemberAccess>());
    }
@@ -192,7 +198,8 @@ ExprNodeList ptv::visitMethodInvocation(Node* node) {
    } else if(node->num_children() == 3) {
       ops.concat(visitExprChild(node->child(0)));
       ops.push_back(sem_alloc<MethodName>(sem.allocator(),
-                                          visitIdentifier(node->child(1))));
+                                          visitIdentifier(node->child(1)),
+                                          node->child(1)->location()));
       ops.push_back(sem_alloc<MemberAccess>());
 
       ExprNodeList args{};
@@ -210,8 +217,9 @@ ExprNodeList ptv::visitFieldAccess(Node* node) {
    check_num_children(node, 2, 2);
    ExprNodeList ops{};
    ops.concat(visitExprChild(node->child(0)));
-   ops.push_back(
-         sem_alloc<MemberName>(sem.allocator(), visitIdentifier(node->child(1))));
+   ops.push_back(sem_alloc<MemberName>(sem.allocator(),
+                                       visitIdentifier(node->child(1)),
+                                       node->child(1)->location()));
    ops.push_back(sem_alloc<MemberAccess>());
    return ops;
 }
@@ -221,7 +229,7 @@ ExprNodeList ptv::visitClassCreation(Node* node) {
    check_num_children(node, 2, 2);
    ExprNodeList ops{};
    auto type = visitReferenceType(node->child(0));
-   ops.push_back(sem_alloc<TypeNode>(type));
+   ops.push_back(sem_alloc<TypeNode>(type, node->child(0)->location()));
    ExprNodeList args{};
    auto size = visitArgumentList(node->child(1), args) + 1;
    ops.concat(args);
@@ -252,11 +260,11 @@ ExprNodeList ptv::visitCastExpression(Node* node) {
       if(dims) {
          type = sem.BuildArrayType(type, type->location());
       }
-      ops.push_back(sem_alloc<TypeNode>(type));
+      ops.push_back(sem_alloc<TypeNode>(type, node->child(0)->location()));
       expr = node->child(2);
    } else {
       auto type = visitType(node->child(0));
-      ops.push_back(sem_alloc<TypeNode>(type));
+      ops.push_back(sem_alloc<TypeNode>(type, node->child(0)->location()));
       expr = node->child(1);
    }
    ops.concat(visitExprChild(expr));
@@ -275,19 +283,21 @@ ExprNodeList ptv::visitArrayCreation(Node* node) {
 }
 
 ExprNode* ptv::visitRegularType(Node* node) {
-   return sem_alloc<TypeNode>(visitType(node));
+   return sem_alloc<TypeNode>(visitType(node), node->location());
 }
 
 ExprNode* ptv::visitArrayType(Node* node) {
    check_node_type(node, pty::ArrayType);
-   return sem_alloc<TypeNode>(visitType(node));
+   return sem_alloc<TypeNode>(visitType(node), node->location());
 }
 
 LiteralNode* ptv::visitLiteral(Node* node) {
    check_node_type(node, pty::Literal);
    auto lit = cast<parsetree::Literal>(node);
-   return sem_alloc<LiteralNode>(
-         sem.allocator(), lit->get_value(), sem.BuildBuiltInType(lit->get_type()));
+   return sem_alloc<LiteralNode>(sem.allocator(),
+                                 lit->get_value(),
+                                 sem.BuildBuiltInType(lit->get_type()),
+                                 node->location());
 }
 
 int ptv::visitArgumentList(Node* node, ExprNodeList& ops) {

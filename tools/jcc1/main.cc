@@ -6,8 +6,8 @@
 #include <passes/AllPasses.h>
 #include <semantic/HierarchyChecker.h>
 #include <semantic/NameResolver.h>
-#include <utils/BumpAllocator.h>
 #include <third-party/CLI11.h>
+#include <utils/BumpAllocator.h>
 #include <utils/PassManager.h>
 
 #include <filesystem>
@@ -15,7 +15,10 @@
 #include <iterator>
 #include <string>
 
+#include "diagnostics/Diagnostics.h"
+
 enum class InputMode { File, Stdin };
+void pretty_print_errors(SourceManager& SM, diagnostics::DiagnosticEngine& diag);
 
 int main(int argc, char** argv) {
    InputMode optInputMode = InputMode::Stdin;
@@ -67,8 +70,7 @@ int main(int argc, char** argv) {
    CLI11_PARSE(app, argc, argv);
 
    // Disable heap reuse if requested
-   if(optHeapReuse)
-      PM.setHeapReuse(false);
+   if(optHeapReuse) PM.setHeapReuse(false);
 
    // Validate the command line options
    {
@@ -170,10 +172,7 @@ int main(int argc, char** argv) {
    if(!PM.Run()) {
       std::cerr << "Error running pass: " << PM.LastRun()->Desc() << std::endl;
       if(PM.Diag().hasErrors()) {
-         for(auto m : PM.Diag().errors()) {
-            m.emit(std::cerr);
-            std::cerr << std::endl;
-         }
+         pretty_print_errors(SM, PM.Diag());
       }
       return 42;
    }

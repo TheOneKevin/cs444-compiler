@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "ast/AstNode.h"
+#include "diagnostics/Location.h"
 #include "utils/BumpAllocator.h"
 #include "utils/EnumMacros.h"
 #include "utils/Generator.h"
@@ -20,6 +21,7 @@ class ExprEvaluator;
 
 class ExprNode {
 public:
+   explicit ExprNode(SourceRange loc) : next_{nullptr}, loc_{loc} {}
    virtual std::ostream& print(std::ostream& os) const { return os << "ExprNode"; }
    virtual ~ExprNode() = default;
 
@@ -31,6 +33,7 @@ public:
    const ExprNode* next() const { return next_; }
    ExprNode* mut_next() const { return next_; }
    void dump() const;
+   SourceRange location() const { return loc_; }
 
 private:
    template <typename T>
@@ -47,6 +50,8 @@ private:
 
    // The lock for the previous node.
    mutable bool locked_ = false;
+
+   SourceRange loc_;
 };
 
 /// @brief A list of ExprNodes* that can be iterated and concatenated
@@ -149,8 +154,8 @@ namespace ast::exprnode {
 
 class ExprValue : public ExprNode {
 public:
-   ExprValue() : decl_{nullptr}, type_{nullptr} {}
-   explicit ExprValue(ast::Type const* type) : decl_{nullptr}, type_{type} {}
+   explicit ExprValue(SourceRange loc, ast::Type const* type = nullptr)
+         : ExprNode{loc}, decl_{nullptr}, type_{type} {}
    ast::Decl const* decl() { return decl_; }
    virtual bool isDeclResolved() const { return decl_ != nullptr; }
    bool isTypeResolved() const { return type_ != nullptr; }
@@ -162,9 +167,7 @@ public:
              "Tried to resolve expression with unresolved type");
       type_ = type;
    }
-   void overrideDecl(ast::Decl const* decl) {
-      decl_ = decl;
-   }
+   void overrideDecl(ast::Decl const* decl) { decl_ = decl; }
    ast::Type const* type() const { return type_; }
 
 protected:
@@ -181,7 +184,8 @@ private:
 
 class MemberName : public ExprValue {
 public:
-   MemberName(BumpAllocator& alloc, std::string_view name) : name_{name, alloc} {}
+   MemberName(BumpAllocator& alloc, std::string_view name, SourceRange loc)
+         : ExprValue{loc}, name_{name, alloc} {}
    std::ostream& print(std::ostream& os) const;
    std::string_view name() const { return name_; }
 
@@ -191,23 +195,25 @@ private:
 
 class MethodName : public MemberName {
 public:
-   MethodName(BumpAllocator& alloc, std::string_view name)
-         : MemberName{alloc, name} {}
+   MethodName(BumpAllocator& alloc, std::string_view name, SourceRange loc)
+         : MemberName{alloc, name, loc} {}
    std::ostream& print(std::ostream& os) const override;
 };
 
 class ThisNode final : public ExprValue {
+public:
+   ThisNode(SourceRange loc) : ExprValue{loc} {}
    std::ostream& print(std::ostream& os) const override;
 };
 
 class TypeNode final : public ExprValue {
 public:
-   TypeNode(Type* type) : ExprValue{nullptr}, unres_type_{type} {}
+   TypeNode(Type* type, SourceRange loc) : ExprValue{loc}, unres_type_{type} {}
    void resolveUnderlyingType(TypeResolver& NR) {
       assert(unres_type_ && "Tried to resolve underlying type twice");
       // Resolve underlying type if it's not already resolved
       if(!unres_type_->isResolved()) unres_type_->resolve(NR);
-      
+
       // NOTE: We cannot assume that unres_type_ is resolved as import-on-demand
       // conflicts will result in unresolved types (null), but is valid.
 
@@ -222,7 +228,8 @@ private:
 
 class LiteralNode final : public ExprValue {
 public:
-   LiteralNode(BumpAllocator&, std::string_view value, ast::BuiltInType* type);
+   LiteralNode(BumpAllocator&, std::string_view value, ast::BuiltInType* type,
+               SourceRange loc);
    bool isDeclResolved() const override { return true; }
    std::ostream& print(std::ostream& os) const override;
    ast::BuiltInType const* builtinType() const;
@@ -237,7 +244,8 @@ private:
 
 class ExprOp : public ExprNode {
 protected:
-   ExprOp(int num_args) : num_args_{num_args}, result_type_{nullptr} {}
+   ExprOp(int num_args, SourceRange loc)
+         : ExprNode{loc}, num_args_{num_args}, result_type_{nullptr} {}
 
 public:
    auto nargs() const { return num_args_; }
@@ -258,37 +266,37 @@ private:
 
 class MemberAccess final : public ExprOp {
 public:
-   MemberAccess() : ExprOp(1) {}
+   MemberAccess() : ExprOp(1, SourceRange{}) {}
    std::ostream& print(std::ostream& os) const override;
 };
 
 class MethodInvocation final : public ExprOp {
 public:
-   MethodInvocation(int num_args) : ExprOp(num_args) {}
+   MethodInvocation(int num_args) : ExprOp(num_args, SourceRange{}) {}
    std::ostream& print(std::ostream& os) const override;
 };
 
 class ClassInstanceCreation final : public ExprOp {
 public:
-   ClassInstanceCreation(int num_args) : ExprOp(num_args) {}
+   ClassInstanceCreation(int num_args) : ExprOp(num_args, SourceRange{}) {}
    std::ostream& print(std::ostream& os) const override;
 };
 
 class ArrayInstanceCreation final : public ExprOp {
 public:
-   ArrayInstanceCreation() : ExprOp(2) {}
+   ArrayInstanceCreation() : ExprOp(2, SourceRange{}) {}
    std::ostream& print(std::ostream& os) const override;
 };
 
 class ArrayAccess final : public ExprOp {
 public:
-   ArrayAccess() : ExprOp(2) {}
+   ArrayAccess() : ExprOp(2, SourceRange{}) {}
    std::ostream& print(std::ostream& os) const override;
 };
 
 class Cast final : public ExprOp {
 public:
-   Cast() : ExprOp(2) {}
+   Cast() : ExprOp(2, SourceRange{}) {}
    std::ostream& print(std::ostream& os) const override;
 };
 
@@ -308,7 +316,7 @@ private:
    OpType type;
 
 public:
-   UnaryOp(OpType type) : ExprOp(1), type{type} {}
+   UnaryOp(OpType type, SourceRange loc) : ExprOp(1, loc), type{type} {}
    std::ostream& print(std::ostream& os) const override;
    OpType opType() const { return type; }
 };
@@ -342,7 +350,7 @@ private:
    OpType type;
 
 public:
-   BinaryOp(OpType type) : ExprOp(2), type{type} {}
+   BinaryOp(OpType type, SourceRange loc) : ExprOp(2, loc), type{type} {}
    std::ostream& print(std::ostream& os) const override;
    OpType opType() const { return type; }
 };

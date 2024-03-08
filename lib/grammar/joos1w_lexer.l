@@ -276,8 +276,14 @@ void Joos1WLexer::comment(void) {
     // so we can update the line number
     int c;
     while ((c = yyinput()) != 0) {
+        yycolumn++;
+        if (c == '\n') {
+            yylloc.last_line++;
+            yycolumn = 1;
+        }
         if (c == '*') {
-            while ((c = yyinput()) == '*');
+            while ((c = yyinput()) == '*') { yycolumn++; }
+            yycolumn++;
             if (c == '/') return;
             if (c == 0) break;
         }

@@ -92,14 +92,16 @@ std::ostream& ThisNode::print(std::ostream& os) const { return os << "(THIS)"; }
 
 std::ostream& TypeNode::print(std::ostream& os) const {
    os << "(Type ";
-   if(type()) type()->print(os);
-   else os << "unresolved ❌";
+   if(type())
+      type()->print(os);
+   else
+      os << "unresolved ❌";
    return os << ")";
 }
 
 LiteralNode::LiteralNode(BumpAllocator& alloc, std::string_view value,
-                         ast::BuiltInType* type)
-      : ExprValue{reinterpret_cast<ast::Type*>(type)}, value_{value, alloc} {}
+                         ast::BuiltInType* type, SourceRange loc)
+      : ExprValue{loc, reinterpret_cast<ast::Type*>(type)}, value_{value, alloc} {}
 
 std::ostream& LiteralNode::print(std::ostream& os) const {
    // TODO(kevin): re-implement this

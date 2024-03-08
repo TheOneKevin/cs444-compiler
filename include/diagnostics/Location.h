@@ -35,6 +35,10 @@ public:
    /// @brief Returns true if the SourceLocation was not default constructed.
    bool isValid() const { return line_ != -1; }
 
+   SourceFile file() const { return file_; }
+   int line() const { return line_; }
+   int column() const { return column_; }
+
 private:
    SourceFile file_;
    int line_;
@@ -74,6 +78,9 @@ public:
       print(os);
       return os.str();
    }
+
+   SourceLocation range_start() const { return begin_; }
+   SourceLocation range_end() const { return end_; }
 
 private:
    SourceLocation begin_;

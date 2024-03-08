@@ -1,5 +1,6 @@
 #pragma once
 
+#include "diagnostics/Location.h"
 #include "parsetree/ParseTree.h"
 #include "semantic/Semantic.h"
 #include <utils/Error.h>
@@ -171,8 +172,8 @@ public:
 
    ast::exprnode::LiteralNode* visitLiteral(Node* node);
 
-   ast::exprnode::UnaryOp* convertToUnaryOp(Operator::Type type);
-   ast::exprnode::BinaryOp* convertToBinaryOp(Operator::Type type);
+   ast::exprnode::UnaryOp* convertToUnaryOp(Operator::Type type, SourceRange loc);
+   ast::exprnode::BinaryOp* convertToBinaryOp(Operator::Type type, SourceRange loc);
    int visitArgumentList(Node* node, ast::ExprNodeList& ops);
 
    template <>

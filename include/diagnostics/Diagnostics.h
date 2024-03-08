@@ -23,31 +23,34 @@ class DiagnosticStorage {
 
 public:
    DiagnosticStorage(SourceRange loc)
-         : ranges{loc, SourceRange{}, SourceRange{}} {}
+         : ranges_{loc, SourceRange{}, SourceRange{}} {}
 
    void addArgument(std::string_view arg) {
       assert(argIndex < MaxArguments && "too many arguments");
-      arguments[argIndex++] = arg;
+      arguments_[argIndex++] = arg;
    }
 
    void addArgument(uint64_t arg) {
       assert(argIndex < MaxArguments && "too many arguments");
-      arguments[argIndex++] = arg;
+      arguments_[argIndex++] = arg;
    }
 
    void addRange(SourceRange range) {
       assert(rangeIndex < MaxSourceRanges && "too many ranges");
-      ranges[rangeIndex++] = range;
+      ranges_[rangeIndex++] = range;
    }
 
+   auto ranges() const { return std::views::all(ranges_); }
+   auto args() const { return std::views::all(arguments_); }
+
    std::ostream& emit(std::ostream& os) const {
-      for(auto& range : ranges) {
+      for(auto& range : ranges_) {
          if(range.isValid()) {
             range.print(os);
          }
       }
       os << ": ";
-      for(auto& arg : arguments) {
+      for(auto& arg : arguments_) {
          if(std::holds_alternative<std::string_view>(arg)) {
             os << std::get<std::string_view>(arg);
          } else {
@@ -62,10 +65,10 @@ private:
    int rangeIndex = 0;
 
    static constexpr int MaxSourceRanges = 3;
-   SourceRange ranges[MaxSourceRanges];
+   SourceRange ranges_[MaxSourceRanges];
 
    static constexpr int MaxArguments = 10;
-   std::variant<std::string_view, uint64_t> arguments[MaxArguments];
+   std::variant<std::string_view, uint64_t> arguments_[MaxArguments];
 };
 
 /* ===--------------------------------------------------------------------=== */

@@ -232,6 +232,7 @@ add_tool(
 add_tool(
     jcc1
     "tools/jcc1/main.cc"
+    "tools/jcc1/msgprinter.cc"
 )
 
 add_tool(
