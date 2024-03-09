@@ -39,6 +39,11 @@ struct Line {
    std::vector<Highlight> highlights;
 };
 
+static constexpr char const* RED_BOLD = "\x1b[1;31m";
+static constexpr char const* BLUE = "\x1b[0;94m";
+static constexpr char const* MAGENTA = "\x1b[0;35m";
+static constexpr char const* RESET = "\x1b[0m";
+
 /**
  * @brief Used to contain some state that can easily be passed around
  */
@@ -117,13 +122,13 @@ struct PrettyPrinter final {
       // Now print the error message
       std::ostringstream oss;
       auto posStart = std::get<SourceRange>(DS.args()[0]).range_start();
-      oss << "╭─[Error] " << msgs[0].second.str() << "\n";
+      oss << "╭─[" << RED_BOLD << "Error" << RESET << "] " << msgs[0].second.str()
+          << "\n";
       oss << "╵" << padding << " ╷ \n";
-      for(auto& line : lines)
-         renderLine(oss, line, &line == &lines.back());
+      for(auto& line : lines) renderLine(oss, line, &line == &lines.back());
       oss << "│\n"
-          << "╰─[" << SM.getFileName(posStart.file()) << ":" << posStart.line()
-          << ":" << posStart.column() << "]\n";
+          << "╰─[" << BLUE << SM.getFileName(posStart.file()) << ":"
+          << posStart.line() << ":" << posStart.column() << RESET << "]\n";
       // Print the error message
       std::cerr << oss.str();
    }
@@ -190,7 +195,7 @@ private:
       lineStr.insert(lineStr.begin(), padding.length() + 1 - lineStr.size(), ' ');
       // 1. Render the source code line
       int skip = 0;
-      os << lineStr << " │ ";
+      os << BLUE << lineStr << RESET << " │ ";
       printCodeLine(line.lineNo, os, skip) << "\n";
       // 2. Render the highlights layer, consisting of '~' where the each of the
       //    highlights start/end. Note, the highlights are sorted and do not
@@ -198,6 +203,7 @@ private:
       int col = skip + 1;
       std::string stems;
       renderPadding(os, isLast, line.highlights.size() < 2);
+      os << MAGENTA;
       for(auto& highlight : line.highlights) {
          for(; col < highlight.st; col++) {
             os << " ";
@@ -211,6 +217,7 @@ private:
             os << "~";
          }
       }
+      os << RESET;
       // 3. Print the last highlight label, it's special
       if(!line.highlights.empty()) {
          auto& highlight = line.highlights.back();
