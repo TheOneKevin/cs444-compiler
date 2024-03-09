@@ -130,16 +130,20 @@ private:
 
 class ReturnStmt final : public Stmt {
 public:
-   ReturnStmt(Expr* expr) : expr_{expr} {}
+   ReturnStmt(SourceRange loc, Expr* expr) : expr_{expr}, loc_{loc} {}
 
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
 
    auto expr() const { return expr_; }
    utils::Generator<const Expr*> exprs() const override { co_yield expr_; }
+   SourceRange location() const {
+      return loc_;
+   }
 
 private:
    Expr* expr_;
+   SourceRange loc_;
 };
 
 class NullStmt final : public Stmt {

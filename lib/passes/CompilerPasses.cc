@@ -187,12 +187,13 @@ void HierarchyCheckerPass::Run() {
       // Check for each class in the LU, the super classes have a default ctor
       for(auto* super : classDecl->superClasses()) {
          if(!super) continue;
+         if(!dyn_cast_or_null<ast::ClassDecl>(super->decl())) continue;
          if(cast<ast::ClassDecl>(super->decl())->hasDefaultCtor()) continue;
          PM().Diag().ReportError(super->location())
                << "super class "
                << (super->decl()->hasCanonicalName()
-                      ? super->decl()->getCanonicalName()
-                      : super->decl()->name())
+                         ? super->decl()->getCanonicalName()
+                         : super->decl()->name())
                << " of "
                << (classDecl->hasCanonicalName() ? classDecl->getCanonicalName()
                                                  : classDecl->name())

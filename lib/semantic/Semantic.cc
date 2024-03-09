@@ -61,8 +61,11 @@ VarDecl* Semantic::BuildVarDecl(Type* type, SourceRange loc, string_view name,
                                 ScopeID const* scope, Expr* init) {
    auto decl = alloc.new_object<VarDecl>(alloc, loc, type, name, init, scope);
    if(!AddLexicalLocal(decl)) {
-      diag.ReportError(loc) << "local variable \"" << name
-                            << "\" already declared in this scope.";
+      diag.ReportError(loc)
+            << "local variable \"" << name << "\" already declared in this scope"
+            << loc << "local declared here"
+            << lexicalLocalScope[std::string{name.data()}]->location()
+            << "previous declaration here";
    }
    return decl;
 }
@@ -107,7 +110,7 @@ LinkingUnit* Semantic::BuildLinkingUnit(
 
       if(names.count(name) > 0) {
          diag.ReportError(cu->location())
-               << "No two classes or interfaces can have the same canonical name.";
+               << "No two classes or interfaces can have the same canonical name";
       }
 
       names.insert(name);
@@ -179,7 +182,9 @@ ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers, SourceRange loc,
    for(auto constructor : node->constructors()) {
       if(loc.isValid() /* is decl synthetic? */ && constructor->name() != name) {
          diag.ReportError(constructor->location())
-               << "constructor name must be the same as the class name";
+               << "constructor name must be the same as the class name"
+               << constructor->location() << "constructor here" << loc
+               << "must match class declared here";
       }
    }
    // Check if multiple fields have the same name
@@ -187,7 +192,9 @@ ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers, SourceRange loc,
       for(auto other : node->fields()) {
          if(field != other && field->name() == other->name()) {
             diag.ReportError(field->location())
-                  << "field \"" << field->name() << "\" is already declared.";
+                  << "field \"" << field->name() << "\" is already declared"
+                  << field->location() << "field here" << other->location()
+                  << "previous declaration here";
          }
       }
    }
@@ -195,8 +202,11 @@ ClassDecl* Semantic::BuildClassDecl(Modifiers modifiers, SourceRange loc,
    for(auto interface : node->interfaces()) {
       for(auto other : node->interfaces()) {
          if(interface != other && interface->toString() == other->toString()) {
-            diag.ReportError(loc) << "interface \"" << interface->toString()
-                                  << "\" is already implemented.";
+            diag.ReportError(loc)
+                  << "interface \"" << interface->toString()
+                  << "\" is already implemented" << interface->location()
+                  << "interface here" << other->location()
+                  << "previous implementation here";
          }
       }
    }
@@ -226,8 +236,11 @@ InterfaceDecl* Semantic::BuildInterfaceDecl(Modifiers modifiers, SourceRange loc
    for(auto interface : extends) {
       for(auto other : extends) {
          if(interface != other && interface->toString() == other->toString()) {
-            diag.ReportError(loc) << "interface \"" << interface->toString()
-                                  << "\" is already implemented.";
+            diag.ReportError(loc)
+                  << "interface \"" << interface->toString()
+                  << "\" is already implemented" << interface->location()
+                  << "interface here" << other->location()
+                  << "previous implementation here";
          }
       }
    }
@@ -314,8 +327,8 @@ ForStmt* Semantic::BuildForStmt(Stmt* init, Expr* condition, Stmt* update,
    return alloc.new_object<ForStmt>(init, condition, update, body);
 }
 
-ReturnStmt* Semantic::BuildReturnStmt(Expr* expr) {
-   return alloc.new_object<ReturnStmt>(expr);
+ReturnStmt* Semantic::BuildReturnStmt(SourceRange loc, Expr* expr) {
+   return alloc.new_object<ReturnStmt>(loc, expr);
 }
 
 } // namespace ast

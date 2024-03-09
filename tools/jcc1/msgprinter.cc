@@ -119,7 +119,8 @@ struct PrettyPrinter final {
       auto posStart = std::get<SourceRange>(DS.args()[0]).range_start();
       oss << "╭─[Error] " << msgs[0].second.str() << "\n";
       oss << "╵" << padding << " ╷ \n";
-      for(auto& line : lines) renderLine(oss, line);
+      for(auto& line : lines)
+         renderLine(oss, line, &line == &lines.back());
       oss << "│\n"
           << "╰─[" << SM.getFileName(posStart.file()) << ":" << posStart.line()
           << ":" << posStart.column() << "]\n";
@@ -173,15 +174,17 @@ private:
       return digits;
    }
 
-   void renderPadding(std::ostream& os, bool isLast = false) {
-      if(isLast)
+   void renderPadding(std::ostream& os, bool isLastVariant, bool isLast) {
+      if(isLastVariant && isLast)
          os << "╷" << padding << " ╵ ";
+      else if(isLast && !isLastVariant)
+         os << "." << padding << " │ ";
       else
          os << padding << "  │ ";
    }
 
    // Renders a single Line struct
-   void renderLine(std::ostream& os, Line& line) {
+   void renderLine(std::ostream& os, Line& line, bool isLast) {
       // 0. Pad out line number
       auto lineStr = std::to_string(line.lineNo);
       lineStr.insert(lineStr.begin(), padding.length() + 1 - lineStr.size(), ' ');
@@ -194,7 +197,7 @@ private:
       //    overlap. Also print out the stems for the arrows.
       int col = skip + 1;
       std::string stems;
-      renderPadding(os, line.highlights.size() < 2);
+      renderPadding(os, isLast, line.highlights.size() < 2);
       for(auto& highlight : line.highlights) {
          for(; col < highlight.st; col++) {
             os << " ";
@@ -227,7 +230,7 @@ private:
                         std::views::reverse;
       size_t nth = line.highlights.size() - 1;
       for(auto highlight : highlights) {
-         renderPadding(os, nth == 1);
+         renderPadding(os, isLast, nth == 1);
          size_t stemsSeen = 1;
          for(char c : stems) {
             if(c == ' ') {
@@ -258,7 +261,9 @@ private:
 };
 
 void pretty_print_errors(SourceManager& SM, DiagnosticEngine& diag) {
+   std::cerr << "\n";
    for(auto& diag : diag.errors()) {
       PrettyPrinter{SM, diag}.printSingleError();
+      std::cerr << "\n";
    }
 }

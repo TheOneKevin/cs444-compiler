@@ -217,7 +217,9 @@ void ER::resolveFieldAccess(ExprNameWrapper* access) const {
    // Now we check if "name" is a field of "decl"
    auto field = lookupNamedDecl(refTy, name);
    if(!field) {
-      throw diag.ReportError(loc_) << "field access to undeclared field: " << name;
+      throw diag.ReportError(loc_)
+            << "cannot access field: " << name << access->node->location()
+            << "inaccessible member";
    }
    // Field must be either a FieldDecl or a MethodDecl
    assert(dyn_cast<ast::FieldDecl>(field) || dyn_cast<ast::MethodDecl>(field));
@@ -490,8 +492,13 @@ ast::MethodDecl const* ER::resolveMethodOverload(ast::DeclContext const* ctx,
          candidates.push_back(decl);
       }
    }
-   if(candidates.size() == 0)
-      throw diag.ReportError(loc_) << "no method found for name: " << name;
+   if(candidates.size() == 0) {
+      if(isCtor) {
+         throw diag.ReportError(loc_) << "no method found for " << name;
+      } else {
+         throw diag.ReportError(loc_) << "no constructor found for " << name;
+      }
+   }
    if(candidates.size() == 1) return candidates[0];
 
    // 15.12.2.2 Choose the Most Specific Method
@@ -546,7 +553,8 @@ ETy ER::evalMemberAccess(DotOp& op, const ETy lhs, const ETy id) const {
       } else if(auto lit = dyn_cast<ex::LiteralNode>(node)) {
          if(!lit->builtinType()->isString()) {
             throw diag.ReportError(loc_)
-                  << "attempted to access field on non-string literal";
+                  << "attempted to access field on non-string literal"
+                  << node->location() << "is a non-string literal";
          }
          Q = ast::ExprNodeList{lit};
       } else {

@@ -103,7 +103,9 @@ void AstChecker::validateReturnStmt(const ast::ReturnStmt& ret) {
    auto methodRetTy = currentMethod->returnTy().type;
    if(!ret.expr()) {
       if(methodRetTy) {
-         diag.ReportError(ret.location()) << "return must be non-void";
+         diag.ReportError(ret.location())
+               << "return must be non-void" << ret.location() << "return is here"
+               << currentMethod->location() << "method declared here";
       }
       return;
    }
@@ -118,14 +120,18 @@ void AstChecker::validateReturnStmt(const ast::ReturnStmt& ret) {
 
    if(!methodRetTy) {
       if(retTy) {
-         diag.ReportError(ret.location()) << "return must be void";
+         diag.ReportError(ret.location())
+               << "return must be void" << ret.location() << "return is here"
+               << currentMethod->location() << "method declared here";
       }
       return;
    }
 
    if(!exprTypeResolver.isAssignableTo(methodRetTy, retTy)) {
       diag.ReportError(ret.location())
-            << "return type must be assignable to method return type";
+            << "return type must be assignable to method return type"
+            << ret.location() << "return is type " << retTy->toString()
+            << currentMethod->location() << "method declared here";
    }
 }
 

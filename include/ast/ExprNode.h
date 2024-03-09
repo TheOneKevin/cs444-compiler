@@ -266,7 +266,7 @@ private:
 
 class MemberAccess final : public ExprOp {
 public:
-   MemberAccess() : ExprOp(1, SourceRange{}) {}
+   MemberAccess() : ExprOp(2, SourceRange{}) {}
    std::ostream& print(std::ostream& os) const override;
 };
 

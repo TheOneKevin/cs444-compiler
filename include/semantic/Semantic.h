@@ -71,7 +71,7 @@ public:
    IfStmt* BuildIfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt = nullptr);
    WhileStmt* BuildWhileStmt(Expr* condition, Stmt* body);
    ForStmt* BuildForStmt(Stmt* init, Expr* condition, Stmt* update, Stmt* body);
-   ReturnStmt* BuildReturnStmt(Expr* expr);
+   ReturnStmt* BuildReturnStmt(SourceRange loc, Expr* expr);
    NullStmt* BuildNullStmt() { return alloc.new_object<NullStmt>(); }
 
 public:
@@ -96,7 +96,7 @@ public:
    bool AddLexicalLocal(VarDecl* decl) {
       std::string nameCpy{decl->name()};
       if(lexicalLocalScope.find(nameCpy) != lexicalLocalScope.end()) return false;
-      lexicalLocalScope.insert(std::move(nameCpy));
+      lexicalLocalScope[nameCpy] = decl;
       lexicalLocalDecls.push_back(decl);
       lexicalLocalDeclStack.push_back(decl);
       return true;
@@ -157,7 +157,7 @@ private:
    diagnostics::DiagnosticEngine& diag;
    std::vector<VarDecl*> lexicalLocalDeclStack;
    std::vector<VarDecl*> lexicalLocalDecls;
-   std::unordered_set<std::string> lexicalLocalScope;
+   std::unordered_map<std::string, VarDecl const*> lexicalLocalScope;
    // java.lang.Object type
    ast::ReferenceType* objectType_;
    // Current lexical local scope

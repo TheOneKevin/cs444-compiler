@@ -129,10 +129,10 @@ ast::ReturnStmt* ptv::visitReturnStatement(Node* node) {
    check_node_type(node, pty::ReturnStatement);
    check_num_children(node, 0, 1);
    if(node->child(0) == nullptr) {
-      return sem.BuildReturnStmt(nullptr);
+      return sem.BuildReturnStmt(node->location(), nullptr);
    }
    auto expr = visitExpr(node->child(0));
-   return sem.BuildReturnStmt(expr);
+   return sem.BuildReturnStmt(node->location(), expr);
 }
 
 // pty::ExpressionStatement ////////////////////////////////////////////////////

@@ -202,14 +202,16 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
          if(castRef->decl() == NR->GetJavaLang().Object) {
             return true;
          }
-         // Fixme(Kevin, Larry) Add method to get serializable
-         // if ( rightRef->decl() == NR->GetSerializable()) {
-         //    return true;
-         // }
+         if(castRef->decl() == NR->GetJavaLang().Serializable) {
+            return true;
+         }
       }
    }
-   throw diag.ReportError(loc_) << "Invalid cast from " << exprType->toString()
-                                << " to " << castType->toString();
+   throw diag.ReportError(loc_)
+         << "invalid cast from " << exprType->toString() << " to "
+         << castType->toString() << argLocation(0) << "is type "
+         << exprType->toString() << argLocation(1) << "is type "
+         << castType->toString();
 }
 
 Type const* ExprTypeResolver::mapValue(ExprValue& node) const {
@@ -232,13 +234,12 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
       case BinaryOp::OpType::Assignment: {
          if(isAssignableTo(lhs, rhs)) {
             return op.resolveResultType(lhs);
-         } else {
-            throw diag.ReportError(loc_)
-                  << "invalid assignment: " << lhs->toString()
-                  << " is not assignable to " << rhs->toString()
-                  << argLocation(1) << "is type " << rhs->toString()
-                  << argLocation(0) << "is type " << lhs->toString();
          }
+         throw diag.ReportError(loc_)
+               << "invalid assignment: " << lhs->toString()
+               << " is not assignable to " << rhs->toString() << argLocation(1)
+               << "is type " << rhs->toString() << argLocation(0) << "is type "
+               << lhs->toString();
       }
 
       case BinaryOp::OpType::GreaterThan:
@@ -248,12 +249,13 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
          if(lhs->isNumeric() && rhs->isNumeric()) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::Boolean));
-         } else {
-            throw diag.ReportError(loc_)
-                  << "Invalid types for "
-                  << BinaryOp::OpType_to_string(op.opType(), "??")
-                  << " operation, operands are non-numeric";
          }
+         throw diag.ReportError(loc_)
+               << "invalid types for "
+               << BinaryOp::OpType_to_string(op.opType(), "??")
+               << " operation, operands are non-numeric" << argLocation(1)
+               << "is type " << rhs->toString() << argLocation(0) << "is type "
+               << lhs->toString();
       }
 
       case BinaryOp::OpType::Equal:
@@ -273,12 +275,13 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
             (isValidCast(lhs, rhs) || isValidCast(rhs, lhs))) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::Boolean));
-         } else {
-            throw diag.ReportError(loc_)
-                  << "Invalid types for "
-                  << BinaryOp::OpType_to_string(op.opType(), "??")
-                  << " operation, operands are not of the same type";
          }
+         throw diag.ReportError(loc_)
+               << "invalid types for "
+               << BinaryOp::OpType_to_string(op.opType(), "??")
+               << " operation, operands are not of the same type" << argLocation(1)
+               << "is type " << rhs->toString() << argLocation(0) << "is type "
+               << lhs->toString();
       }
 
       case BinaryOp::OpType::Add: {
@@ -290,29 +293,33 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
          } else if(lhs->isNumeric() && rhs->isNumeric()) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::Int));
-         } else {
-            throw diag.ReportError(loc_)
-                  << "Invalid types for arithmetic "
-                  << BinaryOp::OpType_to_string(op.opType(), "??") << " operation";
          }
+         throw diag.ReportError(loc_)
+               << "invalid types for arithmetic "
+               << BinaryOp::OpType_to_string(op.opType(), "??") << " operation"
+               << argLocation(1) << "is type " << rhs->toString() << argLocation(0)
+               << "is type " << lhs->toString();
       }
 
       case BinaryOp::OpType::And:
-      case BinaryOp::OpType::Or:
-      case BinaryOp::OpType::BitwiseAnd:
-      case BinaryOp::OpType::BitwiseOr:
-      case BinaryOp::OpType::BitwiseXor: {
+      case BinaryOp::OpType::Or: {
          if(lhs->isBoolean() && rhs->isBoolean()) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::Boolean));
-         } else {
-            throw diag.ReportError(loc_)
-                  << "Invalid types for "
-                  << BinaryOp::OpType_to_string(op.opType(), "??")
-                  << " operation, operands are non-boolean";
          }
+         throw diag.ReportError(loc_)
+               << "invalid types for "
+               << BinaryOp::OpType_to_string(op.opType(), "??")
+               << " operation, operands are non-boolean" << argLocation(1)
+               << "is type " << rhs->toString() << argLocation(0) << "is type "
+               << lhs->toString();
       }
-
+      case BinaryOp::OpType::BitwiseAnd:
+      case BinaryOp::OpType::BitwiseOr:
+      case BinaryOp::OpType::BitwiseXor: {
+         throw diag.ReportError(op.location())
+               << "no bitwise operations are supported in this language";
+      }
       case BinaryOp::OpType::Subtract:
       case BinaryOp::OpType::Multiply:
       case BinaryOp::OpType::Divide:
@@ -320,12 +327,13 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
          if(lhs->isNumeric() && rhs->isNumeric()) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::Int));
-         } else {
-            throw diag.ReportError(loc_)
-                  << "Invalid types for "
-                  << BinaryOp::OpType_to_string(op.opType(), "??")
-                  << " operation, operands are non-numeric";
          }
+         throw diag.ReportError(loc_)
+               << "invalid types for "
+               << BinaryOp::OpType_to_string(op.opType(), "??")
+               << " operation, operands are non-numeric" << argLocation(1)
+               << "is type " << rhs->toString() << argLocation(0) << "is type "
+               << lhs->toString();
       }
 
       case BinaryOp::OpType::InstanceOf: {
@@ -333,17 +341,18 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
             (isReferenceOrArrType(rhs)) && isValidCast(rhs, lhs)) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::Boolean));
-         } else {
-            throw diag.ReportError(loc_)
-                  << "Invalid types for "
-                  << BinaryOp::OpType_to_string(op.opType(), "??")
-                  << " operation, operands are null or reference types that can't "
-                     "be casted";
          }
+         throw diag.ReportError(loc_)
+               << "invalid types for "
+               << BinaryOp::OpType_to_string(op.opType(), "??")
+               << " operation, operands are null or reference types that can't "
+                  "be casted"
+               << argLocation(1) << "is type " << rhs->toString() << argLocation(0)
+               << "is type " << lhs->toString();
       }
 
       default:
-         throw diag.ReportError(loc_) << "Invalid binary operation";
+         assert(false && "invalid binary operation");
    }
 }
 
@@ -356,22 +365,21 @@ Type const* ExprTypeResolver::evalUnaryOp(UnaryOp& op, const Type* rhs) const {
          if(rhs->isNumeric()) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::Int));
-         } else {
-            throw diag.ReportError(loc_)
-                  << "Invalid type for unary "
-                  << UnaryOp::OpType_to_string(op.opType(), "??")
-                  << " non-numeric";
          }
+         throw diag.ReportError(loc_)
+               << "invalid type for unary "
+               << UnaryOp::OpType_to_string(op.opType(), "??") << " non-numeric"
+               << argLocation(0) << "is type " << rhs->toString();
       case UnaryOp::OpType::Not:
          if(rhs->isBoolean()) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::Boolean));
-         } else {
-            throw diag.ReportError(loc_)
-                  << "Invalid type for unary not, non-boolean";
          }
+         throw diag.ReportError(loc_)
+               << "invalid type for unary not, non-boolean" << argLocation(0)
+               << "is type " << rhs->toString();
       default:
-         throw diag.ReportError(loc_) << "Invalid unary operation";
+         assert(false && "invalid unary operation");
    }
 }
 
@@ -394,7 +402,10 @@ Type const* ExprTypeResolver::evalMethodCall(MethodOp& op, const Type* method,
    size_t i = 0;
    for(auto arg : args | std::views::reverse) {
       if(!isAssignableTo(methodParams[i], arg)) {
-         throw diag.ReportError(loc_) << "invalid argument type for method call";
+         throw diag.ReportError(loc_)
+               << "invalid argument type for method call" << argLocation(i + 1)
+               << "expected " << methodParams[i]->toString() << " but got "
+               << arg->toString();
       }
       i++;
    }
@@ -417,8 +428,8 @@ Type const* ExprTypeResolver::evalNewObject(NewOp& op, const Type* object,
       if(!isAssignableTo(constructorParams[i], arg)) {
          throw diag.ReportError(loc_)
                << "invalid argument type for constructor call"
-               << argLocation(i+1)
-               << "expected " << constructorParams[i]->toString() << " but got "
+               << argLocation(i + 1) << "expected "
+               << constructorParams[i]->toString() << " but got "
                << arg->toString();
       }
       i++;
@@ -431,7 +442,9 @@ Type const* ExprTypeResolver::evalNewArray(NewArrayOp& op, const Type* array,
                                            const Type* size) const {
    if(op.resultType()) return op.resultType();
    if(!size->isNumeric()) {
-      throw diag.ReportError(loc_) << "invalid type for array size, non-numeric";
+      throw diag.ReportError(loc_)
+            << "invalid type for array size, non-numeric" << argLocation(0)
+            << "is type " << size->toString();
    }
    return op.resolveResultType(array);
 }
@@ -443,7 +456,9 @@ Type const* ExprTypeResolver::evalArrayAccess(ArrayAccessOp& op, const Type* arr
    assert(arrayType && "Not an array type");
 
    if(!index->isNumeric()) {
-      throw diag.ReportError(loc_) << "invalid type for array index, non-numeric";
+      throw diag.ReportError(loc_)
+            << "invalid type for array index, non-numeric" << argLocation(0)
+            << "is type " << index->toString();
    }
 
    return op.resolveResultType(arrayType->getElementType());
@@ -453,8 +468,11 @@ Type const* ExprTypeResolver::evalCast(CastOp& op, const Type* type,
                                        const Type* value) const {
    if(op.resultType()) return op.resultType();
    if(!isValidCast(value, type)) {
-      throw diag.ReportError(loc_) << "Invalid cast from " << value->toString()
-                                   << " to " << type->toString();
+      throw diag.ReportError(loc_)
+            << "invalid cast from " << value->toString() << " to "
+            << type->toString() << argLocation(1) << "is type "
+            << value->toString() << argLocation(0) << "is type "
+            << type->toString();
    }
 
    return op.resolveResultType(type);

@@ -211,9 +211,6 @@ public:
    utils::Generator<Expr*> mut_exprs() {
       for(auto const* expr : exprs()) co_yield const_cast<Expr*>(expr);
    }
-   SourceRange location() const {
-      return SourceRange{};
-   }
 };
 
 /* ===--------------------------------------------------------------------=== */

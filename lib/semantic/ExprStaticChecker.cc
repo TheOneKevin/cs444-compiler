@@ -1,12 +1,12 @@
 #include "semantic/ExprStaticChecker.h"
 
 #include "ast/AST.h"
+#include "ast/Decl.h"
 #include "ast/DeclContext.h"
 #include "ast/ExprNode.h"
 #include "ast/Type.h"
 #include "diagnostics/Diagnostics.h"
 #include "utils/Utils.h"
-#include "ast/Decl.h"
 
 namespace semantic {
 
@@ -36,7 +36,8 @@ void ESC::Evaluate(ast::Expr* expr, ExprStaticCheckerState state) {
 ETy ESC::mapValue(ExprValue& node) const {
    // If node is "this", reject immediately
    if(dyn_cast<ex::ThisNode>(node) && state.isStaticContext) {
-      throw diag.ReportError(loc_) << "cannot use 'this' in a static context";
+      throw diag.ReportError(node.location())
+            << "cannot use 'this' in a static context";
    }
 
    // 1. This node is a pure type node
@@ -91,7 +92,8 @@ ETy ESC::evalMemberAccess(DotOp& op, ETy lhs, ETy field) const {
    // The field must not be static because this is "instance . field"
    if(isDeclStatic(field.decl)) {
       throw diag.ReportError(loc_)
-            << "cannot access a static field through an instance variable";
+            << "cannot access a static field through an instance variable"
+            << argLocation(1) << "field is static";
    }
    // See NOTE in ETy on why instance var is false here!
    return ETy{field.decl, op.resultType(), true, false};
@@ -149,21 +151,27 @@ ETy ESC::evalCast(CastOp& op, ETy type, ETy obj) const {
 void ESC::isAccessible(ETy lhs, ETy var) const {
    if(!var.isInstanceVar) return;
    auto lhsVar = dyn_cast_or_null<ast::VarDecl>(lhs.decl);
-   if (!lhsVar) return;
+   if(!lhsVar) return;
    auto lhsRef = dyn_cast<ast::ReferenceType>(lhsVar->type());
-   if (!lhsRef) return;
+   if(!lhsRef) return;
    auto lhsClass = dyn_cast<ast::ClassDecl>(lhsRef->decl());
-   if (!lhsClass) return;
-   if (auto method = dyn_cast<ast::MethodDecl>(var.decl)) {
-      if (method->modifiers().isProtected()) {
-         if (!HC.isSuperClass(state.currentClass, lhsClass)) {
-            throw diag.ReportError(loc_) << "cannot access protected method";
+   if(!lhsClass) return;
+   if(auto method = dyn_cast<ast::MethodDecl>(var.decl)) {
+      if(method->modifiers().isProtected()) {
+         if(!HC.isSuperClass(state.currentClass, lhsClass)) {
+            throw diag.ReportError(loc_)
+                  << "cannot access protected method" << argLocation(0)
+                  << "instance of " << lhsClass->name() << argLocation(1)
+                  << "protected member";
          }
       }
-   } else if (auto field = dyn_cast<ast::FieldDecl>(var.decl)) {
-      if (field->modifiers().isProtected()) {
-         if (!HC.isSuperClass(state.currentClass, lhsClass)){
-            throw diag.ReportError(loc_) << "cannot access protected field";
+   } else if(auto field = dyn_cast<ast::FieldDecl>(var.decl)) {
+      if(field->modifiers().isProtected()) {
+         if(!HC.isSuperClass(state.currentClass, lhsClass)) {
+            throw diag.ReportError(loc_)
+                  << "cannot access protected field" << argLocation(0)
+                  << "instance of " << lhsClass->name() << argLocation(1)
+                  << "protected member";
          }
       }
    }
