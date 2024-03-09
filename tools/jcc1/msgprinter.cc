@@ -11,16 +11,24 @@
 using namespace diagnostics;
 using std::string_view;
 
-/*
+#ifdef COLORS
+static constexpr char const* RED_BOLD = "\x1b[1;31m";
+static constexpr char const* BLUE = "\x1b[0;94m";
+static constexpr char const* MAGENTA = "\x1b[0;35m";
+static constexpr char const* RESET = "\x1b[0m";
+#else
+static constexpr char const* RED_BOLD = "";
+static constexpr char const* BLUE = "";
+static constexpr char const* MAGENTA = "";
+static constexpr char const* RESET = "";
+#endif
 
-╭─[Error] initializer type must be assignable to declared type
-╵  ╷
-14 │  int i = (1==2);
-   │  ~~~     ~~~~~~ this is Bool
-╷  ╵  └> this is Int
-╰─[/u/cs444/pub/assignment_testcases/a3/Je_6_Equality_int.java:14:6]
-
-*/
+// Gets the number of digits in an integer
+static int numdigits(int n) {
+   int digits = 0;
+   while(n) n /= 10, digits++;
+   return digits;
+}
 
 /**
  * @brief Describes a highlight label, which is a section of the source line
@@ -36,13 +44,54 @@ struct Highlight {
  */
 struct Line {
    int lineNo;
+   SourceFile file;
    std::vector<Highlight> highlights;
+
+   // Sorts the highlights by start position
+   void sortHighlights() {
+      std::sort(highlights.begin(), highlights.end(), [](auto& a, auto& b) {
+         return a.st < b.st;
+      });
+   }
 };
 
-static constexpr char const* RED_BOLD = "\x1b[1;31m";
-static constexpr char const* BLUE = "\x1b[0;94m";
-static constexpr char const* MAGENTA = "\x1b[0;35m";
-static constexpr char const* RESET = "\x1b[0m";
+/**
+ * @brief Describes a source file with multiple lines and highlights
+ */
+struct File {
+   SourceFile file;
+   std::vector<Line> lines;
+
+   // Finds the Line struct with the given line number, or creates a new one
+   Line& findOrCreateLine(int lineNo) {
+      auto it = std::find_if(lines.begin(), lines.end(), [lineNo](auto& line) {
+         return line.lineNo == lineNo;
+      });
+      if(it == lines.end()) {
+         lines.emplace_back(Line{lineNo, file, {}});
+         return lines.back();
+      }
+      return *it;
+   }
+
+   // Sorts the highlights for each line
+   void sortHighlights() {
+      // Sort the highlights for each line
+      for(auto& line : lines) line.sortHighlights();
+      // Now sort the lines by line number
+      std::sort(lines.begin(), lines.end(), [](auto& a, auto& b) {
+         return a.lineNo < b.lineNo;
+      });
+   }
+
+   // Returns the maximum number of digits in the line numbers
+   int maxDigits() {
+      int maxDigits = 0;
+      for(auto& line : lines)
+         maxDigits = std::max(maxDigits, numdigits(line.lineNo));
+      return maxDigits;
+   }
+};
 
 /**
  * @brief Used to contain some state that can easily be passed around
@@ -55,7 +104,6 @@ struct PrettyPrinter final {
    void printSingleError() {
       // The first element is always the location
       SourceRange curPos = std::get<SourceRange>(DS.args()[0]);
-      file = curPos.range_start().file();
       msgs.emplace_back(curPos, std::ostringstream{});
       for(size_t i = 1; i < DS.args().size(); i++) {
          auto& arg = DS.args()[i];
@@ -82,23 +130,12 @@ struct PrettyPrinter final {
          printInsaneError();
          return;
       }
-      // We should sort the messages by position, but leave the first intact
-      // The layout after sorting is: [
-      //   { loc, main error message },
-      //   { loc, first/leftmost label },
-      //   ...
-      //   { loc, last/rightmost label }
-      // ]
-      if(msgs.size() > 1) {
-         std::sort(msgs.begin() + 1, msgs.end(), [](auto& a, auto& b) {
-            return a.first.range_start().column() < b.first.range_start().column();
-         });
-      }
       // Now build the lines vector, iterate through msgs except the first one
       for(auto it = msgs.begin() + 1; it != msgs.end(); it++) {
          auto& [pos, os] = *it;
          auto lineNo = pos.range_start().line();
-         auto& line = findOrCreateLine(lineNo);
+         auto& file = findOrCreateFile(pos.range_start().file());
+         auto& line = file.findOrCreateLine(lineNo);
          line.highlights.emplace_back(
                Highlight{static_cast<int>(pos.range_start().column()),
                          static_cast<int>(pos.range_end().column()),
@@ -108,26 +145,25 @@ struct PrettyPrinter final {
       if(msgs.size() == 1) {
          auto& [pos, os] = msgs[0];
          auto lineNo = pos.range_start().line();
-         auto& line = findOrCreateLine(lineNo);
+         auto& file = findOrCreateFile(pos.range_start().file());
+         auto& line = file.findOrCreateLine(lineNo);
          line.highlights.emplace_back(
                Highlight{static_cast<int>(pos.range_start().column()),
                          static_cast<int>(pos.range_end().column()),
                          ""});
       }
-      // Compute the max line number size
+      // Compute the max gutter width
       int maxDigits = 0;
-      for(auto& line : lines)
-         maxDigits = std::max(maxDigits, numdigits(line.lineNo));
-      padding = std::string(maxDigits - 1, ' ');
+      for(auto& file : files) maxDigits = std::max(maxDigits, file.maxDigits());
+      padding = std::string(maxDigits, ' ');
       // Now print the error message
       std::ostringstream oss;
       auto posStart = std::get<SourceRange>(DS.args()[0]).range_start();
       oss << "╭─[" << RED_BOLD << "Error" << RESET << "] " << msgs[0].second.str()
           << "\n";
-      oss << "╵" << padding << " ╷ \n";
-      for(auto& line : lines) renderLine(oss, line, &line == &lines.back());
-      oss << "│\n"
-          << "╰─[" << BLUE << SM.getFileName(posStart.file()) << ":"
+      for(auto& file : files) renderFile(oss, file, files.size() == 1);
+      if(files.size() > 1) oss << "│\n";
+      oss << "╰─[" << BLUE << SM.getFileName(posStart.file()) << ":"
           << posStart.line() << ":" << posStart.column() << RESET << "]\n";
       // Print the error message
       std::cerr << oss.str();
@@ -135,11 +171,11 @@ struct PrettyPrinter final {
 
 private:
    // Grabs the line from the source range and prints it to os
-   std::ostream& printCodeLine(int line, std::ostream& os, int& skipped) {
-      // Now we have to count the lines until we reach the correct one
-      auto buf = SM.getBuffer(file);
+   std::ostream& printCodeLine(Line ll, std::ostream& os, int& skipped) {
+      auto buf = SM.getBuffer(ll.file);
       size_t i = 0;
-      for(int l = 1; i < buf.length() && (l != line); i++) {
+      // Count the lines until we reach the correct one
+      for(int l = 1; i < buf.length() && (l != ll.lineNo); i++) {
          if(buf[i] == '\n') l++;
       }
       // Skip whitespace at the beginning of the line
@@ -158,51 +194,57 @@ private:
    }
 
    // Prints a bland unformatted error message
-   void printInsaneError() { std::cerr << "Error: Insane source ranges\n"; }
+   void printInsaneError() { std::cerr << "Error: Insane source ranges"; }
 
-   // Finds the Line struct with the given line number, or creates a new one
-   Line& findOrCreateLine(int lineNo) {
-      auto it = std::find_if(lines.begin(), lines.end(), [lineNo](auto& line) {
-         return line.lineNo == lineNo;
+   // Finds the File struct with the given source file, or creates a new one
+   File& findOrCreateFile(SourceFile file) {
+      auto it = std::find_if(files.begin(), files.end(), [file](auto& f) {
+         return f.file == file;
       });
-      if(it == lines.end()) {
-         lines.emplace_back(Line{lineNo, {}});
-         return lines.back();
+      if(it == files.end()) {
+         files.emplace_back(File{file, {}});
+         return files.back();
       }
       return *it;
    }
 
-   // Gets the number of digits in an integer
-   int numdigits(int n) {
-      int digits = 0;
-      while(n) n /= 10, digits++;
-      return digits;
+   void renderGutter(std::ostream& os, int lineNo = -1) {
+      if(lineNo > 0) {
+         // Pad the line number with spaces
+         auto str = std::to_string(lineNo);
+         str.insert(str.begin(), padding.length() - str.size(), ' ');
+         // Render it in the gutter
+         os << "│ " << BLUE << str << RESET << " │ ";
+      } else {
+         // There is no line number, just render the padding
+         os << "│ " << padding << " │ ";
+      }
    }
 
-   void renderPadding(std::ostream& os, bool isLastVariant, bool isLast) {
-      if(isLastVariant && isLast)
-         os << "╷" << padding << " ╵ ";
-      else if(isLast && !isLastVariant)
-         os << "." << padding << " │ ";
-      else
-         os << padding << "  │ ";
+   // Renders a single File struct
+   void renderFile(std::ostream& os, File& file, bool isOnly) {
+      // 1. Sort the highlights for each line
+      file.sortHighlights();
+      // 2. Render each line
+      os << "│ " << padding << " ╷\n";
+      for(auto& line : file.lines) renderLine(os, line);
+      os << "│ " << padding << " ╵\n";
+      // 3. If this is not the only file, print the file name
+      if(!isOnly) os << "├─(in " << SM.getFileName(file.file) << ")\n";
    }
 
    // Renders a single Line struct
-   void renderLine(std::ostream& os, Line& line, bool isLast) {
-      // 0. Pad out line number
-      auto lineStr = std::to_string(line.lineNo);
-      lineStr.insert(lineStr.begin(), padding.length() + 1 - lineStr.size(), ' ');
+   void renderLine(std::ostream& os, Line& line) {
       // 1. Render the source code line
       int skip = 0;
-      os << BLUE << lineStr << RESET << " │ ";
-      printCodeLine(line.lineNo, os, skip) << "\n";
+      renderGutter(os, line.lineNo);
+      printCodeLine(line, os, skip) << "\n";
       // 2. Render the highlights layer, consisting of '~' where the each of the
       //    highlights start/end. Note, the highlights are sorted and do not
       //    overlap. Also print out the stems for the arrows.
       int col = skip + 1;
       std::string stems;
-      renderPadding(os, isLast, line.highlights.size() < 2);
+      renderGutter(os);
       os << MAGENTA;
       for(auto& highlight : line.highlights) {
          for(; col < highlight.st; col++) {
@@ -237,7 +279,7 @@ private:
                         std::views::reverse;
       size_t nth = line.highlights.size() - 1;
       for(auto highlight : highlights) {
-         renderPadding(os, isLast, nth == 1);
+         renderGutter(os);
          size_t stemsSeen = 1;
          for(char c : stems) {
             if(c == ' ') {
@@ -259,12 +301,10 @@ private:
    DiagnosticStorage const& DS;
    // A pair of { position, message } for the error message
    std::vector<std::pair<SourceRange, std::ostringstream>> msgs;
-   // A vector of lines to render, after msgs have been processed
-   std::vector<Line> lines;
-   // Padding for the left margin
+   // A vector of files to render, after msgs have been processed
+   std::vector<File> files;
+   // Padding for the gutter
    std::string padding;
-   // The source file this error is in
-   SourceFile file;
 };
 
 void pretty_print_errors(SourceManager& SM, DiagnosticEngine& diag) {

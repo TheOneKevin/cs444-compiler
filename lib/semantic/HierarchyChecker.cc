@@ -305,9 +305,15 @@ void HierarchyChecker::checkClassMethod(
       }
       if(!isImplemented && !classDecl->modifiers().isAbstract()) {
          diag.ReportError(classDecl->location())
-               << "An abstract method must be implemented in an "
+               << "an abstract method must be implemented in a "
                   "non-abstract class "
-               << method->name();
+               << method->name()
+               << classDecl->location()
+               << "does not implement " << method->name()
+               << cast<ast::Decl>(method->parent())->location()
+               << "method is inherited from here"
+               << method->location()
+               << "abstract method is declared here";
       } else if(isImplemented == !method->modifiers().isAbstract()) {
          allMethods.emplace_back(method);
       }
