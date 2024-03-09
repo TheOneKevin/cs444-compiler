@@ -39,9 +39,11 @@
   "C_Cpp.codeAnalysis.runAutomatically": false,
   "C_Cpp.errorSquiggles": "disabled",
   "clangd.arguments": [
-    "-pretty",
-    "--background-index",
     "--compile-commands-dir=${workspaceFolder}/build",
+    "--completion-style=detailed",
+  ],
+  "clangd.fallbackFlags": [
+    "-I${workspaceFolder}/include",
   ],
   "extensions.ignoreRecommendations": true,
   "C_Cpp.inlayHints.parameterNames.enabled": false,

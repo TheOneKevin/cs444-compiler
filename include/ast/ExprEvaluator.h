@@ -5,6 +5,7 @@
 
 #include "ast/Expr.h"
 #include "ast/ExprNode.h"
+#include "diagnostics/Location.h"
 
 namespace ast {
 template <typename T>
@@ -57,8 +58,7 @@ public:
       std::pmr::vector<T> op_args;
       const auto getArgs = [&op_args, this](int nargs) {
          op_args.clear();
-         for(int i = 0; i < nargs; ++i)
-            op_args.push_back(popSafe());
+         for(int i = 0; i < nargs; ++i) op_args.push_back(popSafe());
       };
 
       // Clear the stack
@@ -72,6 +72,8 @@ public:
       // Evaluate the RPN expression
       auto* node = subexpr.mut_head();
       for(size_t i = 0; i < subexpr.size(); ++i) {
+         // Push on the location of the current node if it's a value
+         if(dyn_cast<ExprValue*>(node)) arg_locs_.push_back(node->location());
          // We grab the next node because we will unlock the current node
          auto next_node = node->mut_next();
          node->const_unlock();
@@ -114,6 +116,7 @@ public:
          }
          assert(validate(op_stack_.top()));
          node = next_node;
+         if(cur_op) mergeLocations(cur_op->nargs());
       }
 
       // Return the result
@@ -126,6 +129,18 @@ protected:
    virtual bool validate(T const&) const { return true; }
    virtual bool validatePop(T const&) const { return true; }
    int opStackSize() const { return op_stack_.size(); }
+   /**
+    * @brief Gets the location of the argument at the given index.
+    * Note the 0th argument is the first argument, not the operator.
+    *
+    * @param argno The index of the argument.
+    * @return SourceRange The location of the argument.
+    */
+   SourceRange argLocation(int argno) const {
+      assert(argno < cur_op->nargs() && argno >= 0);
+      // Arguments are offset from the top of the stack
+      return arg_locs_[arg_locs_.size() - cur_op->nargs() + argno];
+   }
 
 private:
    inline T popSafe() {
@@ -135,9 +150,19 @@ private:
       assert(validatePop(value));
       return value;
    }
+   void mergeLocations(int num) {
+      SourceRange loc = arg_locs_.back();
+      arg_locs_.pop_back();
+      for(int i = 1; i < num; i++) {
+         loc = SourceRange::merge(loc, arg_locs_.back());
+         arg_locs_.pop_back();
+      }
+      arg_locs_.push_back(loc);
+   }
 
 private:
    std::stack<T> op_stack_;
+   std::vector<SourceRange> arg_locs_;
    ast::exprnode::ExprOp* cur_op;
 };
 } // namespace ast

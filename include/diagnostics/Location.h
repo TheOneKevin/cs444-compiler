@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utils/Assert.h>
+
 #include <iostream>
 #include <sstream>
 
@@ -81,6 +82,23 @@ public:
 
    SourceLocation range_start() const { return begin_; }
    SourceLocation range_end() const { return end_; }
+
+   static SourceRange merge(SourceRange const& a, SourceRange const& b) {
+      assert(a.begin_.file_ == b.begin_.file_ &&
+             "Tried to merge SourceRanges from different files");
+      auto file = a.begin_.file_;
+      if(!a.isValid()) return b;
+      if(!b.isValid()) return a;
+      return SourceRange{
+            // Grab the smallest line & col
+            SourceLocation{file,
+                           std::min(a.begin_.line_, b.begin_.line_),
+                           std::min(a.begin_.column_, b.begin_.column_)},
+            // Grab the largest line & col
+            SourceLocation{file,
+                           std::max(a.end_.line_, b.end_.line_),
+                           std::max(a.end_.column_, b.end_.column_)}};
+   }
 
 private:
    SourceLocation begin_;

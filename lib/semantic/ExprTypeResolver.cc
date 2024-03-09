@@ -134,7 +134,7 @@ bool ExprTypeResolver::isAssignableTo(const Type* lhs, const Type* rhs) const {
             return true;
          }
          // Step 3.3.3
-         if ( leftRef->decl() == NR->GetJavaLang().Serializable) {
+         if(leftRef->decl() == NR->GetJavaLang().Serializable) {
             return true;
          }
       }
@@ -149,9 +149,8 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
    // identity conversion: java.lang.String <-> primitive type string
    if(isTypeString(exprType) && isTypeString(castType)) return true;
 
-   if(isAssignableTo(exprType, castType) || 
-      isAssignableTo(castType, exprType)) {
-         return true;
+   if(isAssignableTo(exprType, castType) || isAssignableTo(castType, exprType)) {
+      return true;
    }
 
    auto exprRef = dyn_cast<ast::ReferenceType*>(exprType);
@@ -236,7 +235,9 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
          } else {
             throw diag.ReportError(loc_)
                   << "invalid assignment: " << lhs->toString()
-                  << " is not assignable to " << rhs->toString();
+                  << " is not assignable to " << rhs->toString()
+                  << argLocation(1) << "is type " << rhs->toString()
+                  << argLocation(0) << "is type " << lhs->toString();
          }
       }
 
@@ -376,7 +377,7 @@ Type const* ExprTypeResolver::evalUnaryOp(UnaryOp& op, const Type* rhs) const {
 
 Type const* ExprTypeResolver::evalMemberAccess(DotOp& op, const Type*,
                                                const Type* field) const {
-   if (op.resultType()) return op.resultType();
+   if(op.resultType()) return op.resultType();
    return op.resolveResultType(field);
 }
 
@@ -393,7 +394,7 @@ Type const* ExprTypeResolver::evalMethodCall(MethodOp& op, const Type* method,
    size_t i = 0;
    for(auto arg : args | std::views::reverse) {
       if(!isAssignableTo(methodParams[i], arg)) {
-         throw diag.ReportError(loc_) << "Invalid argument type for method call";
+         throw diag.ReportError(loc_) << "invalid argument type for method call";
       }
       i++;
    }
@@ -415,7 +416,10 @@ Type const* ExprTypeResolver::evalNewObject(NewOp& op, const Type* object,
    for(auto arg : args | std::views::reverse) {
       if(!isAssignableTo(constructorParams[i], arg)) {
          throw diag.ReportError(loc_)
-               << "Invalid argument type for constructor call";
+               << "invalid argument type for constructor call"
+               << argLocation(i+1)
+               << "expected " << constructorParams[i]->toString() << " but got "
+               << arg->toString();
       }
       i++;
    }
@@ -427,7 +431,7 @@ Type const* ExprTypeResolver::evalNewArray(NewArrayOp& op, const Type* array,
                                            const Type* size) const {
    if(op.resultType()) return op.resultType();
    if(!size->isNumeric()) {
-      throw diag.ReportError(loc_) << "Invalid type for array size, non-numeric";
+      throw diag.ReportError(loc_) << "invalid type for array size, non-numeric";
    }
    return op.resolveResultType(array);
 }
@@ -439,7 +443,7 @@ Type const* ExprTypeResolver::evalArrayAccess(ArrayAccessOp& op, const Type* arr
    assert(arrayType && "Not an array type");
 
    if(!index->isNumeric()) {
-      throw diag.ReportError(loc_) << "Invalid type for array index, non-numeric";
+      throw diag.ReportError(loc_) << "invalid type for array index, non-numeric";
    }
 
    return op.resolveResultType(arrayType->getElementType());

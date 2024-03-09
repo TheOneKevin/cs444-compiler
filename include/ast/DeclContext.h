@@ -40,7 +40,7 @@ public:
       // Package must be unresolved type
       auto package = cast<UnresolvedType*>(package_);
       if(package->parts().size() > 0) return package_->toString();
-      return "unnamed package";
+      return "[default package]";
    }
    SourceRange location() const { return location_; }
    auto const* package() const { return package_; }
