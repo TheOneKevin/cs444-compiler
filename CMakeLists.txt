@@ -121,6 +121,7 @@ add_library(OLKCompilerLib
     "lib/semantic/ExprResolver.cc"
     "lib/semantic/AstValidator.cc"
     "lib/semantic/ExprStaticChecker.cc"
+    "lib/semantic/DataflowAnalysis.cc"
     # grammar
     "lib/grammar/Joos1W.cc"
     # parsetree
@@ -141,6 +142,7 @@ add_library(OLKCompilerLib
     "lib/passes/NameResolverPass.cc"
     "lib/passes/ExprResolverPass.cc"
     "lib/passes/PrintASTPass.cc"
+    "lib/passes/DFAPass.cc"
 )
 target_include_directories(
     OLKCompilerLib

@@ -63,6 +63,7 @@ int main(int argc, char** argv) {
       NewNameResolverPass(PM);
       NewHierarchyCheckerPass(PM);
       NewExprResolverPass(PM);
+      NewDFAPass(PM);
       PM.PO().AddAllOptions();
    }
 

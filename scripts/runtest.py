@@ -49,10 +49,12 @@ if args.l:
     print("\n".join(test_names))
     sys.exit(0)
 invalid_files = [x for x in test_names if x.startswith("Je_")]
-valid_files = [x for x in test_names if x not in invalid_files]
+warning_files = [x for x in test_names if x.startswith("Jw_")]
+valid_files = [x for x in test_names if x not in invalid_files and x not in warning_files]
 
 # Sort the files alphabetically
 valid_files.sort()
+warning_files.sort()
 invalid_files.sort()
 
 # Calculate the number of failures
@@ -60,7 +62,8 @@ valid_failures = sum([run_test(test, 0) for test in valid_files])
 print("---")
 invalid_failures = sum([run_test(test, 42) for test in invalid_files])
 print("---")
-failures = valid_failures + invalid_failures
+warning_failures = sum([run_test(test, 43) for test in warning_files])
+failures = valid_failures + invalid_failures + warning_failures
 
 # Print the summary report
 print(
@@ -69,4 +72,5 @@ print(
 )
 print(f"Incorrectly rejected {valid_failures}/{len(valid_files)} valid tests")
 print(f"Incorrectly accepted {invalid_failures}/{len(invalid_files)} invalid tests")
+print(f"No warnings issued on {warning_failures}/{len(warning_files)} tests")
 print(f"Crashed on {num_crashes}/{len(test_names)} tests")

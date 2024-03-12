@@ -13,3 +13,4 @@ DECLARE_PASS(LinkerPass);
 DECLARE_PASS(NameResolverPass);
 DECLARE_PASS(PrintASTPass);
 DECLARE_PASS(ExprResolverPass);
+DECLARE_PASS(DFAPass);
