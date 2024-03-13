@@ -1,0 +1,173 @@
+digraph G {
+  compound=true;
+  node0 [shape=none margin=0.01 label=<
+    <table border="0" cellborder="1" cellspacing="0" cellpadding="1" margin="0">
+      <tr>
+        <td colspan="3" height="0" bgcolor="lightblue">LinkingUnit</td>
+      </tr>
+    </table>
+  >];
+  node1 [shape=none margin=0.01 label=<
+    <table border="0" cellborder="1" cellspacing="0" cellpadding="1" margin="0">
+      <tr>
+        <td colspan="3" height="0" bgcolor="lightblue">CompilationUnit</td>
+      </tr>
+      <tr>
+        <td height="0" width="70">package</td>
+        <td height="0" width="70" colspan="2"></td>
+      </tr>
+      <tr>
+        <td height="0" width="70">imports</td>
+        <td height="0" width="70" colspan="2">java.lang.*<br/></td>
+      </tr>
+    </table>
+  >];
+  node2 [shape=none margin=0.01 label=<
+    <table border="0" cellborder="1" cellspacing="0" cellpadding="1" margin="0">
+      <tr>
+        <td colspan="3" height="0" bgcolor="lightblue">ClassDecl</td>
+      </tr>
+      <tr>
+        <td height="0" width="70">modifiers</td>
+        <td height="0" width="70" colspan="2">public </td>
+      </tr>
+      <tr>
+        <td height="0" width="70">name</td>
+        <td height="0" width="70" colspan="2">Main</td>
+      </tr>
+      <tr>
+        <td height="0" width="70">interfaces</td>
+        <td height="0" width="70" colspan="2"></td>
+      </tr>
+      <tr>
+        <td width="70" port="fields">fields</td>
+        <td width="70" port="constructors">ctors</td>
+        <td width="70" port="methods">methods</td>
+      </tr>
+    </table>
+  >];
+  node3 [shape=none margin=0.01 label=<
+    <table border="0" cellborder="1" cellspacing="0" cellpadding="1" margin="0">
+      <tr>
+        <td colspan="3" height="0" bgcolor="lightblue">MethodDecl</td>
+      </tr>
+      <tr>
+        <td height="0" width="70">modifiers</td>
+        <td height="0" width="70" colspan="2">public </td>
+      </tr>
+      <tr>
+        <td height="0" width="70">name</td>
+        <td height="0" width="70" colspan="2">Main</td>
+      </tr>
+      <tr>
+        <td height="0" width="70">returnType</td>
+        <td height="0" width="70" colspan="2">null</td>
+      </tr>
+      <tr>
+        <td height="0" width="70" port="parameters">Params</td>
+        <td height="0" width="70" colspan="2" port="body">Body</td>
+      </tr>
+    </table>
+  >];
+  subgraph cluster_4 {
+  }
+  subgraph cluster_5 {
+    label="Statement body"
+    color=lightblue
+    node6 [shape=rect label=<Empty Body>];
+  }
+  node3:body:c -> node6 [lhead=cluster_5]
+  node2:constructors:c -> node3
+  node7 [shape=none margin=0.01 label=<
+    <table border="0" cellborder="1" cellspacing="0" cellpadding="1" margin="0">
+      <tr>
+        <td colspan="3" height="0" bgcolor="lightblue">MethodDecl</td>
+      </tr>
+      <tr>
+        <td height="0" width="70">modifiers</td>
+        <td height="0" width="70" colspan="2">public static </td>
+      </tr>
+      <tr>
+        <td height="0" width="70">name</td>
+        <td height="0" width="70" colspan="2">test</td>
+      </tr>
+      <tr>
+        <td height="0" width="70">returnType</td>
+        <td height="0" width="70" colspan="2">Int</td>
+      </tr>
+      <tr>
+        <td height="0" width="70" port="parameters">Params</td>
+        <td height="0" width="70" colspan="2" port="body">Body</td>
+      </tr>
+    </table>
+  >];
+  subgraph cluster_8 {
+    label="Parameters"
+    color=lightcoral
+    node9 [shape=none margin=0.01 label=<
+      <table border="0" cellborder="1" cellspacing="0" cellpadding="1" margin="0">
+        <tr>
+          <td colspan="3" height="0" bgcolor="lightblue">VarDecl</td>
+        </tr>
+        <tr>
+          <td height="0" width="70">type</td>
+          <td height="0" width="70" colspan="2">Int</td>
+        </tr>
+        <tr>
+          <td height="0" width="70">name</td>
+          <td height="0" width="70" colspan="2">j</td>
+        </tr>
+        <tr>
+          <td height="0" width="70" port="init">init</td>
+          <td height="0" width="70" colspan="2" balign="left"></td>
+        </tr>
+      </table>
+    >];
+  }
+  node7:parameters -> node9 [lhead=cluster_8]
+  subgraph cluster_10 {
+    label="Statement body"
+    color=lightblue
+    node11 [shape=none margin=0.01 label=<
+      <table border="0" cellborder="1" cellspacing="0" cellpadding="1" margin="0">
+        <tr>
+          <td colspan="3" height="0" bgcolor="lightblue">VarDecl</td>
+        </tr>
+        <tr>
+          <td height="0" width="70">type</td>
+          <td height="0" width="70" colspan="2">Int</td>
+        </tr>
+        <tr>
+          <td height="0" width="70">name</td>
+          <td height="0" width="70" colspan="2">i</td>
+        </tr>
+        <tr>
+          <td height="0" width="70" port="init">init</td>
+          <td height="0" width="70" colspan="2" balign="left">(Literal BasicTy:Int)<br/></td>
+        </tr>
+      </table>
+    >];
+  }
+  node7:body:c -> node11 [lhead=cluster_10]
+  node9 -> node7 [weight=0, style=dashed, color=red];
+  node11 -> node7 [weight=0, style=dashed, color=red];
+  node2:methods:e -> node7
+  node1 -> node2;
+  node0 -> node1;
+  node12 [shape=none margin=0.01 label=<
+    <table border="0" cellborder="1" cellspacing="0" cellpadding="1" margin="0">
+      <tr>
+        <td colspan="3" height="0" bgcolor="lightblue">CompilationUnit</td>
+      </tr>
+      <tr>
+        <td height="0" width="70">package</td>
+        <td height="0" width="70" colspan="2">java.lang</td>
+      </tr>
+      <tr>
+        <td height="0" width="70">imports</td>
+        <td height="0" width="70" colspan="2">java.lang.*<br/></td>
+      </tr>
+    </table>
+  >];
+  node0 -> node12;
+}

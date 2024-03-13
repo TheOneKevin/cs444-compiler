@@ -122,6 +122,7 @@ add_library(OLKCompilerLib
     "lib/semantic/AstValidator.cc"
     "lib/semantic/ExprStaticChecker.cc"
     "lib/semantic/DataflowAnalysis.cc"
+    "lib/semantic/CFGBuilder.cc"
     # grammar
     "lib/grammar/Joos1W.cc"
     # parsetree
