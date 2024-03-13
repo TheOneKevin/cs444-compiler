@@ -30,16 +30,12 @@ class CFGBuilder {
 
 private:
    CFGNode* buildIteratively(const ast::Stmt* stmt, CFGNode* parent = nullptr);
-   CFGNode* buildForStmt(const ast::ForStmt* forStmt, CFGNode* parent = nullptr);
-   CFGNode* buildIfStmt(const ast::IfStmt* ifStmt, CFGNode* parent = nullptr);
-   CFGNode* buildDeclStmt(const ast::DeclStmt* declStmt,
-                          CFGNode* parent = nullptr);
-   CFGNode* buildExprStmt(const ast::ExprStmt* exprStmt,
-                          CFGNode* parent = nullptr);
-   CFGNode* buildReturnStmt(const ast::ReturnStmt* returnStmt,
-                            CFGNode* parent = nullptr);
-   CFGNode* buildWhileStmt(const ast::WhileStmt* whileStmt,
-                           CFGNode* parent = nullptr);
+   CFGNode* buildForStmt(const ast::ForStmt* forStmt);
+   CFGNode* buildIfStmt(const ast::IfStmt* ifStmt);
+   CFGNode* buildDeclStmt(const ast::DeclStmt* declStmt);
+   CFGNode* buildExprStmt(const ast::ExprStmt* exprStmt);
+   CFGNode* buildReturnStmt(const ast::ReturnStmt* returnStmt);
+   CFGNode* buildWhileStmt(const ast::WhileStmt* whileStmt);
 
 public:
    CFGBuilder(Heap* heap, ast::Semantic& sema)

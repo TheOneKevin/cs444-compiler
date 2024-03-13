@@ -1,7 +1,8 @@
-public abstract class Main {
+public class Main {
     public Main() {}
     public static int test(int j) {
         if (j == 0) {
+            { int i = 0; j = 1; }
             { return 7; }
         } else {
             int k = 6;

@@ -181,8 +181,15 @@ std::ostream& ReturnStmt::print(std::ostream& os, int indentation) const {
 
 int ReturnStmt::printDotNode(DotPrinter& dp) const {
    auto id = dp.id();
-   dp.printLabel(id, "ReturnStmt");
-   if(expr_) dp.printConnection(id, expr_->printDotNode(dp));
+   dp.startTLabel(id);
+   dp.printTableSingleRow("ReturnStmt", {"bgcolor", "lightblue"});
+   if(expr_) {
+      std::ostringstream expr;
+      expr_->print(expr, -1);
+      dp.printTableDoubleRow(
+            "expr", expr.str(), {"port", "condition"}, {"balign", "left"});
+   }
+   dp.endTLabel();
    return id;
 }
 
