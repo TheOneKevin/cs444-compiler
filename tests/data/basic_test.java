@@ -2,22 +2,7 @@ public class Main {
     public Main() {}
     public static int test(int j) {
         if (j == 0) {
-            int i = 0;
-            if (1 == 0) {
-                int x = 0;
-            } else {
-                int x = 1;
-            }
-        } else {
-            int i = 1;
-        }
-        int a = 123;
-        while (a == 123) {
-            a = 0;
-            for (int i = 0; i < 10; i = i + 1) {
-                a = a + 1;
-                int x = 10;
-            }
+            return 1;
         }
         return 0;
         

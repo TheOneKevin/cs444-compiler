@@ -8,6 +8,7 @@
 #include "ast/Decl.h"
 #include "ast/DeclContext.h"
 #include "ast/Stmt.h"
+#include "diagnostics/Location.h"
 #include "semantic/ConstantTypeResolver.h"
 #include "semantic/Semantic.h"
 #include "utils/BumpAllocator.h"
@@ -23,12 +24,17 @@ class CFGNode {
    std::pmr::vector<CFGNode*> parents;
    std::variant<const ast::Expr*, const ast::VarDecl*, EmptyExpr> data;
    bool isReturn;
+   bool start;
+   bool isInfinite;
 
 public:
    CFGNode(BumpAllocator& alloc,
            std::variant<const ast::Expr*, const ast::VarDecl*, EmptyExpr> data,
            bool isReturn = false)
-         : children{alloc}, parents{alloc}, data{data}, isReturn{isReturn} {}
+         : children{alloc}, parents{alloc}, data{data}, isReturn{isReturn} {
+      start = false;
+      isInfinite = false;
+   }
 
    std::ostream& printDot(std::ostream& os) const {
       std::pmr::unordered_map<const CFGNode*, int> visited;
@@ -40,6 +46,34 @@ public:
       return os;
    }
 
+   utils::Generator<const CFGNode*> getChildren() const {
+      for(auto child : children) {
+         co_yield child;
+      }
+   }
+
+   utils::Generator<const CFGNode*> getParents() const {
+      for(auto parent : parents) {
+         co_yield parent;
+      }
+   }
+
+   std::optional<SourceRange> location() const {
+      if(std::holds_alternative<const ast::Expr*>(data)) {
+         return std::get<const ast::Expr*>(data)->location();
+      } else if(std::holds_alternative<const ast::VarDecl*>(data)) {
+         return std::get<const ast::VarDecl*>(data)->location();
+      } else {
+         return std::nullopt;
+      }
+   }
+   std::variant<const ast::Expr*, const ast::VarDecl*, EmptyExpr> getData() const {
+      return data;
+   }
+   bool isReturnNode() const { return isReturn; }
+   bool isStart() const { return start; }
+   bool isInfiniteLoop() const { return isInfinite; }
+
 private:
    int printDotNode(utils::DotPrinter& dp,
                     std::pmr::unordered_map<const CFGNode*, int>& visited) const {
@@ -48,6 +82,9 @@ private:
       }
       int id = dp.id();
       dp.startTLabel(id);
+      if(start) {
+         dp.printTableSingleRow("Start", {"bgcolor", "lightblue"});
+      }
       if(isReturn) {
          dp.printTableSingleRow("Return Statement", {"bgcolor", "lightblue"});
       }
@@ -80,18 +117,12 @@ class CFGBuilder {
       CFGNode* head;
       std::pmr::vector<CFGNode*> leafs;
       // Constructor for 1 leaf
-      CFGInfo(
-         BumpAllocator& alloc,
-         CFGNode* head, CFGNode* firstLeaf
-      ) : head{head}, leafs{alloc} {
+      CFGInfo(BumpAllocator& alloc, CFGNode* head, CFGNode* firstLeaf)
+            : head{head}, leafs{alloc} {
          leafs.push_back(firstLeaf);
       }
       // Constructor for no leaves
-      CFGInfo(
-         BumpAllocator& alloc,
-         CFGNode* head
-      ) : head{head}, leafs{alloc} {
-      }
+      CFGInfo(BumpAllocator& alloc, CFGNode* head) : head{head}, leafs{alloc} {}
    };
 
 private:
@@ -105,6 +136,7 @@ private:
    CFGInfo buildBlockStmt(const ast::BlockStatement* blockStmt);
 
    void connectCFGNode(CFGNode* parent, CFGNode* child);
+   void cononectLeafsToChild(CFGInfo parent, CFGNode* child);
 
 public:
    CFGBuilder(diagnostics::DiagnosticEngine& diag,
@@ -115,7 +147,11 @@ public:
            heap{heap},
            sema{sema},
            constTypeResolver{constTypeResolver} {}
-   CFGNode* build(const ast::Stmt* stmt) { return buildIteratively(stmt).head; }
+   CFGNode* build(const ast::Stmt* stmt) {
+      CFGInfo info = buildIteratively(stmt);
+      info.head->start = true;
+      return info.head;
+   }
 
 private:
    diagnostics::DiagnosticEngine& diag;

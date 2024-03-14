@@ -1,9 +1,9 @@
 #include "semantic/CFGBuilder.h"
+
 #include <cassert>
 
-#include "ast/Stmt.h"
 #include "ast/AstNode.h"
-#include "diagnostics/Location.h"
+#include "ast/Stmt.h"
 #include "utils/Utils.h"
 
 namespace semantic {
@@ -12,7 +12,7 @@ CFGBuilder::CFGInfo CFGBuilder::buildIteratively(const ast::Stmt* stmt,
                                                  CFGNode* parent) {
    using CFGInfo = CFGBuilder::CFGInfo;
    assert(stmt && "stmt is nullptr");
-   CFGInfo node = {nullptr, {}};
+   CFGInfo node = {alloc, nullptr};
    if(auto forStmt = dyn_cast<ast::ForStmt>(stmt)) {
       node = buildForStmt(forStmt);
    } else if(auto ifStmt = dyn_cast<ast::IfStmt>(stmt)) {
@@ -29,11 +29,11 @@ CFGBuilder::CFGInfo CFGBuilder::buildIteratively(const ast::Stmt* stmt,
       node = buildBlockStmt(blockStmt);
       if(!node.head) {
          CFGNode* empty = alloc.new_object<CFGNode>(alloc, CFGNode::EmptyExpr{});
-         return CFGInfo{empty, {empty}};
+         return CFGInfo{alloc, empty};
       }
    } else {
       CFGNode* empty = alloc.new_object<CFGNode>(alloc, CFGNode::EmptyExpr{});
-      return CFGInfo{empty, {empty}};
+      return CFGInfo{alloc, empty};
    }
 
    assert(node.head && "node is nullptr");
@@ -47,7 +47,8 @@ CFGBuilder::CFGInfo CFGBuilder::buildIteratively(const ast::Stmt* stmt,
 
 CFGBuilder::CFGInfo CFGBuilder::buildBlockStmt(
       const ast::BlockStatement* blockStmt) {
-   CFGInfo node, parent, head;
+   CFGInfo node = {alloc, nullptr}, parent = {alloc, nullptr},
+           head = {alloc, nullptr};
    for(auto stmt : blockStmt->stmts()) {
       if(parent.head == nullptr) {
          parent = buildIteratively(stmt);
@@ -60,82 +61,81 @@ CFGBuilder::CFGInfo CFGBuilder::buildBlockStmt(
          parent = node;
       }
    }
-   return CFGInfo{head.head, parent.leafs};
+   CFGInfo info = CFGInfo{alloc, head.head};
+   for(auto leaf : parent.leafs) {
+      info.leafs.push_back(leaf);
+   }
+   return info;
 }
 
 CFGBuilder::CFGInfo CFGBuilder::buildDeclStmt(const ast::DeclStmt* declStmt) {
    CFGNode* node = alloc.new_object<CFGNode>(alloc, declStmt->decl());
-   return CFGInfo{node, {node}};
+   return CFGInfo{alloc, node, node};
 }
 
 CFGBuilder::CFGInfo CFGBuilder::buildExprStmt(const ast::ExprStmt* exprStmt) {
    CFGNode* node = alloc.new_object<CFGNode>(alloc, exprStmt->expr());
-   return CFGInfo{node, {node}};
+   return CFGInfo{alloc, node, node};
 }
 
 CFGBuilder::CFGInfo CFGBuilder::buildForStmt(const ast::ForStmt* forStmt) {
-   CFGNode *condition = nullptr;
-   CFGInfo init;
+   CFGNode* condition = nullptr;
+   CFGInfo init = {alloc, nullptr};
    if(forStmt->init()) {
       init = buildIteratively(forStmt->init());
-   } 
-   
+   }
+
    if(forStmt->condition()) {
       condition = alloc.new_object<CFGNode>(alloc, forStmt->condition());
-      ConstantReturnType const* ret = constTypeResolver->Evaluate(forStmt->condition());
+      ConstantReturnType const* ret =
+            constTypeResolver->Evaluate(forStmt->condition());
 
-      if (ret->constantType == ConstantReturnType::type::BOOL) {
-         if (ret->value == 0) {
-            diag.ReportError(forStmt->condition()->location()) << "Unreachable statement in for loop body";
-            return CFGInfo{condition, {condition}}; // TODO(Owen): Double check this logic
-         } else if (ret->value != 1){
-            assert(false && "invalid boolean value");
+      if(ret->constantType == ConstantReturnType::type::BOOL) {
+         if(ret->value == 0) {
+            diag.ReportError(forStmt->condition()->location())
+                  << "Unreachable statement in for loop body";
+         } else {
+            assert(ret->value == 1 && "invalid boolean value");
          }
       }
    } else {
       condition = alloc.new_object<CFGNode>(alloc, CFGNode::EmptyExpr{});
    }
 
-   if (init.head) connectCFGNode(init.head, condition);
+   if(init.head) connectCFGNode(init.head, condition);
    CFGInfo body = buildIteratively(forStmt->body(), condition);
    if(forStmt->update()) {
       CFGInfo update = buildIteratively(forStmt->update());
       for(auto leaf : body.leafs) {
          connectCFGNode(leaf, update.head);
       }
-      connectCFGNode(update.head, condition); // update loops back to condition
+      for(auto leaf : update.leafs) {
+         connectCFGNode(leaf, condition);
+      }
    } else {
       for(auto leaf : body.leafs) {
          connectCFGNode(leaf, condition);
       }
    }
-   if (init.head) return CFGInfo{init.head, {condition}};
-   return CFGInfo{condition, {condition}};
+   if(init.head) return CFGInfo{alloc, init.head, condition};
+   return CFGInfo{alloc, condition, condition};
 }
 
 CFGBuilder::CFGInfo CFGBuilder::buildIfStmt(const ast::IfStmt* ifStmt) {
    CFGNode* condition = alloc.new_object<CFGNode>(alloc, ifStmt->condition());
-   ConstantReturnType const* ret = constTypeResolver->Evaluate(ifStmt->condition());
 
-   if (ret->constantType == ConstantReturnType::type::BOOL) {
-      if (ret->value == 1 && ifStmt->elseStmt()) {
-         CFGInfo ifNode = buildIteratively(ifStmt->thenStmt(), condition);
-         diag.ReportError(ifStmt->condition()->location()) << "Unreachable else statement";
-      } else if (ret->value == 0) {
-         CFGInfo elseNode = buildIteratively(ifStmt->elseStmt(), condition);
-         diag.ReportError(ifStmt->condition()->location()) << "Unreachable then statement";
-      } else {
-         assert(false && "invalid boolean value");
-      }
-   }
-
+   CFGInfo info = {alloc, condition};
+   // by java rules, we allow if statements to have a constant condition
    CFGInfo ifNode = buildIteratively(ifStmt->thenStmt(), condition);
+   info.leafs.insert(info.leafs.end(), ifNode.leafs.begin(), ifNode.leafs.end());
    if(ifStmt->elseStmt()) {
       CFGInfo elseNode = buildIteratively(ifStmt->elseStmt(), condition);
-      ifNode.leafs.insert(
-            ifNode.leafs.end(), elseNode.leafs.begin(), elseNode.leafs.end());
+      info.leafs.insert(
+            info.leafs.end(), elseNode.leafs.begin(), elseNode.leafs.end());
+   } else {
+      info.leafs.push_back(condition);
    }
-   return CFGInfo{condition, ifNode.leafs};
+   return info;
 }
 
 CFGBuilder::CFGInfo CFGBuilder::buildReturnStmt(
@@ -145,26 +145,33 @@ CFGBuilder::CFGInfo CFGBuilder::buildReturnStmt(
       node = alloc.new_object<CFGNode>(alloc, CFGNode::EmptyExpr{}, true);
    }
    node = alloc.new_object<CFGNode>(alloc, returnStmt->expr(), true);
-   return CFGInfo{node, {node}};
+   return CFGInfo{alloc, node, node};
 }
 
 CFGBuilder::CFGInfo CFGBuilder::buildWhileStmt(const ast::WhileStmt* whileStmt) {
    CFGNode* condition = alloc.new_object<CFGNode>(alloc, whileStmt->condition());
-   ConstantReturnType const* ret = constTypeResolver->Evaluate(whileStmt->condition());
+   ConstantReturnType const* ret =
+         constTypeResolver->Evaluate(whileStmt->condition());
 
-   if (ret->constantType == ConstantReturnType::type::BOOL) { // TODO(Owen): Double check this logic
-      if (ret->value == 0) {
-         diag.ReportError(whileStmt->condition()->location()) << "Unreachable statement in while loop body";
-      } else if (ret->value != 1){
-         assert(false && "invalid boolean value");
+   if(ret->constantType ==
+      ConstantReturnType::type::BOOL) {
+      if(ret->value == 0) {
+         diag.ReportError(whileStmt->condition()->location())
+               << "Unreachable statement in while loop body";
+      } else {
+         assert(ret->value == 1 && "invalid boolean value");
+
       }
    }
 
-   CFGInfo body = buildIteratively(whileStmt->body(), condition);
-   for(auto leaf : body.leafs) {
-      connectCFGNode(leaf, condition);
+   if(whileStmt->body()) {
+      CFGInfo body = buildIteratively(whileStmt->body(), condition);
+      for(auto leaf : body.leafs) {
+         connectCFGNode(leaf, condition);
+      }
    }
-   return CFGInfo{condition, {condition}};
+
+   return CFGInfo{alloc, condition, condition};
 }
 
 void CFGBuilder::connectCFGNode(CFGNode* parent, CFGNode* child) {

@@ -11,6 +11,7 @@
 #include "ast/ExprNode.h"
 #include "ast/Type.h"
 #include "diagnostics/Location.h"
+#include "joos1w.parser.tab.h"
 #include "semantic/NameResolver.h"
 #include "utils/Utils.h"
 
@@ -26,7 +27,11 @@ ConstantReturnType const* ConstantTypeResolver::mapValue(ExprValue& node) const 
       if (type->isNumeric()) {
          std::pmr::string pmrString = literal->get_value();
          std::string stdString(pmrString.data(), pmrString.size());
-         int value = std::stoi(stdString);
+         int value = 0;
+         // TODO (Larry & Owen): broken for characters, do we need to fix?
+         try {
+            value = std::stoi(stdString);
+         } catch (std::invalid_argument& e) {}
 
          return alloc.new_object<ConstantReturnType>(ConstantReturnType::type::INT, value);
       } else if (type->isBoolean()) {

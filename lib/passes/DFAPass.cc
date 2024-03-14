@@ -23,7 +23,7 @@ public:
       DFA.init(&builder);
 
       try {
-         DFA.LiveVariableAnalysis();
+         DFA.Check();
       } catch(const diagnostics::DiagnosticBuilder&) {
          // Print the errors from diag in the next step
       }
