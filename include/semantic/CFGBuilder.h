@@ -79,6 +79,19 @@ class CFGBuilder {
    struct CFGInfo {
       CFGNode* head;
       std::pmr::vector<CFGNode*> leafs;
+      // Constructor for 1 leaf
+      CFGInfo(
+         BumpAllocator& alloc,
+         CFGNode* head, CFGNode* firstLeaf
+      ) : head{head}, leafs{alloc} {
+         leafs.push_back(firstLeaf);
+      }
+      // Constructor for no leaves
+      CFGInfo(
+         BumpAllocator& alloc,
+         CFGNode* head
+      ) : head{head}, leafs{alloc} {
+      }
    };
 
 private:
