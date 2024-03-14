@@ -8,10 +8,10 @@
 #include "ast/Decl.h"
 #include "ast/DeclContext.h"
 #include "ast/Stmt.h"
+#include "semantic/ConstantTypeResolver.h"
 #include "semantic/Semantic.h"
 #include "utils/BumpAllocator.h"
 #include "utils/DotPrinter.h"
-#include "semantic/ConstantTypeResolver.h"
 
 namespace semantic {
 
@@ -25,12 +25,10 @@ class CFGNode {
    bool isReturn;
 
 public:
-   CFGNode(std::variant<const ast::Expr*, const ast::VarDecl*, EmptyExpr> data,
+   CFGNode(BumpAllocator& alloc,
+           std::variant<const ast::Expr*, const ast::VarDecl*, EmptyExpr> data,
            bool isReturn = false)
-         : data(data), isReturn(isReturn) {
-      children = std::pmr::vector<CFGNode*>();
-      parents = std::pmr::vector<CFGNode*>();
-   }
+         : children{alloc}, parents{alloc}, data{data}, isReturn{isReturn} {}
 
    std::ostream& printDot(std::ostream& os) const {
       std::pmr::unordered_map<const CFGNode*, int> visited;
@@ -96,8 +94,14 @@ private:
    void connectCFGNode(CFGNode* parent, CFGNode* child);
 
 public:
-   CFGBuilder(diagnostics::DiagnosticEngine& diag, ConstantTypeResolver* constTypeResolver, Heap* heap, ast::Semantic& sema)
-      : diag{diag}, constTypeResolver{constTypeResolver}, alloc{heap},  heap{heap}, sema(sema) {}
+   CFGBuilder(diagnostics::DiagnosticEngine& diag,
+              ConstantTypeResolver* constTypeResolver, Heap* heap,
+              ast::Semantic& sema)
+         : diag{diag},
+           alloc{heap},
+           heap{heap},
+           sema{sema},
+           constTypeResolver{constTypeResolver} {}
    CFGNode* build(const ast::Stmt* stmt) { return buildIteratively(stmt).head; }
 
 private:

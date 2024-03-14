@@ -28,11 +28,11 @@ CFGBuilder::CFGInfo CFGBuilder::buildIteratively(const ast::Stmt* stmt,
    } else if(auto blockStmt = dyn_cast<ast::BlockStatement>(stmt)) {
       node = buildBlockStmt(blockStmt);
       if(!node.head) {
-         CFGNode* empty = alloc.new_object<CFGNode>(CFGNode::EmptyExpr{});
+         CFGNode* empty = alloc.new_object<CFGNode>(alloc, CFGNode::EmptyExpr{});
          return CFGInfo{empty, {empty}};
       }
    } else {
-      CFGNode* empty = alloc.new_object<CFGNode>(CFGNode::EmptyExpr{});
+      CFGNode* empty = alloc.new_object<CFGNode>(alloc, CFGNode::EmptyExpr{});
       return CFGInfo{empty, {empty}};
    }
 
@@ -64,12 +64,12 @@ CFGBuilder::CFGInfo CFGBuilder::buildBlockStmt(
 }
 
 CFGBuilder::CFGInfo CFGBuilder::buildDeclStmt(const ast::DeclStmt* declStmt) {
-   CFGNode* node = alloc.new_object<CFGNode>(declStmt->decl());
+   CFGNode* node = alloc.new_object<CFGNode>(alloc, declStmt->decl());
    return CFGInfo{node, {node}};
 }
 
 CFGBuilder::CFGInfo CFGBuilder::buildExprStmt(const ast::ExprStmt* exprStmt) {
-   CFGNode* node = alloc.new_object<CFGNode>(exprStmt->expr());
+   CFGNode* node = alloc.new_object<CFGNode>(alloc, exprStmt->expr());
    return CFGInfo{node, {node}};
 }
 
@@ -81,7 +81,7 @@ CFGBuilder::CFGInfo CFGBuilder::buildForStmt(const ast::ForStmt* forStmt) {
    } 
    
    if(forStmt->condition()) {
-      condition = alloc.new_object<CFGNode>(forStmt->condition());
+      condition = alloc.new_object<CFGNode>(alloc, forStmt->condition());
       ConstantReturnType const* ret = constTypeResolver->Evaluate(forStmt->condition());
 
       if (ret->constantType == ConstantReturnType::type::BOOL) {
@@ -93,7 +93,7 @@ CFGBuilder::CFGInfo CFGBuilder::buildForStmt(const ast::ForStmt* forStmt) {
          }
       }
    } else {
-      condition = alloc.new_object<CFGNode>(CFGNode::EmptyExpr{});
+      condition = alloc.new_object<CFGNode>(alloc, CFGNode::EmptyExpr{});
    }
 
    if (init.head) connectCFGNode(init.head, condition);
@@ -114,7 +114,7 @@ CFGBuilder::CFGInfo CFGBuilder::buildForStmt(const ast::ForStmt* forStmt) {
 }
 
 CFGBuilder::CFGInfo CFGBuilder::buildIfStmt(const ast::IfStmt* ifStmt) {
-   CFGNode* condition = alloc.new_object<CFGNode>(ifStmt->condition());
+   CFGNode* condition = alloc.new_object<CFGNode>(alloc, ifStmt->condition());
    ConstantReturnType const* ret = constTypeResolver->Evaluate(ifStmt->condition());
 
    if (ret->constantType == ConstantReturnType::type::BOOL) {
@@ -142,14 +142,14 @@ CFGBuilder::CFGInfo CFGBuilder::buildReturnStmt(
       const ast::ReturnStmt* returnStmt) {
    CFGNode* node = nullptr;
    if(returnStmt->expr() == nullptr) {
-      node = alloc.new_object<CFGNode>(CFGNode::EmptyExpr{}, true);
+      node = alloc.new_object<CFGNode>(alloc, CFGNode::EmptyExpr{}, true);
    }
-   node = alloc.new_object<CFGNode>(returnStmt->expr(), true);
+   node = alloc.new_object<CFGNode>(alloc, returnStmt->expr(), true);
    return CFGInfo{node, {node}};
 }
 
 CFGBuilder::CFGInfo CFGBuilder::buildWhileStmt(const ast::WhileStmt* whileStmt) {
-   CFGNode* condition = alloc.new_object<CFGNode>(whileStmt->condition());
+   CFGNode* condition = alloc.new_object<CFGNode>(alloc, whileStmt->condition());
    ConstantReturnType const* ret = constTypeResolver->Evaluate(whileStmt->condition());
 
    if (ret->constantType == ConstantReturnType::type::BOOL) { // TODO(Owen): Double check this logic
