@@ -31,9 +31,11 @@ ast::Stmt* ptv::visit<pty::BlockStatementList>(Node* node) {
 
 ast::Stmt* ptv::visitStatement(Node* node) {
    check_node_type(node, pty::Statement);
-   if(node->child(0) == nullptr) return sem.BuildNullStmt();
+   check_num_children(node, 0, 1);
+   if(node->num_children() == 0) return sem.BuildNullStmt();
    check_num_children(node, 1, 1);
    auto child = node->child(0);
+   assert(child);
    auto nodety = child->get_node_type();
    switch(nodety) {
       case pty::Block:

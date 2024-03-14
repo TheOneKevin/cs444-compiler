@@ -102,8 +102,8 @@ public:
 
 private:
    mutable BumpAllocator alloc;
-   ConstantTypeResolver* constTypeResolver;
    Heap* heap;
    ast::Semantic& sema;
+   ConstantTypeResolver* constTypeResolver;
 };
 } // namespace semantic
