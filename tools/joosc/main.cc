@@ -51,8 +51,9 @@ int main(int argc, char** argv) {
       NewNameResolverPass(PM);
       NewHierarchyCheckerPass(PM);
       NewExprResolverPass(PM);
+      NewDFAPass(PM);
       // Explicitly enable the pass that we want to run
-      PM.PO().EnablePass("sema-expr");
+      PM.PO().EnablePass("dfa");
    }
 
    // Run the passes

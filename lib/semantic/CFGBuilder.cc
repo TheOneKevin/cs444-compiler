@@ -1,6 +1,10 @@
 #include "semantic/CFGBuilder.h"
+#include <cassert>
 
 #include "ast/Stmt.h"
+#include "ast/AstNode.h"
+#include "diagnostics/Location.h"
+#include "utils/Utils.h"
 
 namespace semantic {
 
@@ -75,12 +79,23 @@ CFGBuilder::CFGInfo CFGBuilder::buildForStmt(const ast::ForStmt* forStmt) {
    if(forStmt->init()) {
       init = buildIteratively(forStmt->init());
    } 
-   // TODO(Larry): look into literal expression
+   
    if(forStmt->condition()) {
       condition = alloc.new_object<CFGNode>(forStmt->condition());
+      ConstantReturnType const* ret = constTypeResolver->Evaluate(forStmt->condition());
+
+      if (ret->constantType == ConstantReturnType::type::BOOL) {
+         if (ret->value == 0) {
+            diag.ReportError(forStmt->condition()->location()) << "Unreachable statement in for loop body";
+            return CFGInfo{condition, {condition}}; // TODO(Owen): Double check this logic
+         } else if (ret->value != 1){
+            assert(false && "invalid boolean value");
+         }
+      }
    } else {
       condition = alloc.new_object<CFGNode>(CFGNode::EmptyExpr{});
    }
+
    if (init.head) connectCFGNode(init.head, condition);
    CFGInfo body = buildIteratively(forStmt->body(), condition);
    if(forStmt->update()) {
@@ -103,12 +118,12 @@ CFGBuilder::CFGInfo CFGBuilder::buildIfStmt(const ast::IfStmt* ifStmt) {
    ConstantReturnType const* ret = constTypeResolver->Evaluate(ifStmt->condition());
 
    if (ret->constantType == ConstantReturnType::type::BOOL) {
-      if (ret->value == 1) {
+      if (ret->value == 1 && ifStmt->elseStmt()) {
          CFGInfo ifNode = buildIteratively(ifStmt->thenStmt(), condition);
-         return CFGInfo{condition, ifNode.leafs};
+         diag.ReportError(ifStmt->condition()->location()) << "Unreachable else statement";
       } else if (ret->value == 0) {
          CFGInfo elseNode = buildIteratively(ifStmt->elseStmt(), condition);
-         return CFGInfo{condition, elseNode.leafs};
+         diag.ReportError(ifStmt->condition()->location()) << "Unreachable then statement";
       } else {
          assert(false && "invalid boolean value");
       }
@@ -135,7 +150,16 @@ CFGBuilder::CFGInfo CFGBuilder::buildReturnStmt(
 
 CFGBuilder::CFGInfo CFGBuilder::buildWhileStmt(const ast::WhileStmt* whileStmt) {
    CFGNode* condition = alloc.new_object<CFGNode>(whileStmt->condition());
-   // TODO(Larry): look into literal expression
+   ConstantReturnType const* ret = constTypeResolver->Evaluate(whileStmt->condition());
+
+   if (ret->constantType == ConstantReturnType::type::BOOL) { // TODO(Owen): Double check this logic
+      if (ret->value == 0) {
+         diag.ReportError(whileStmt->condition()->location()) << "Unreachable statement in while loop body";
+      } else if (ret->value != 1){
+         assert(false && "invalid boolean value");
+      }
+   }
+
    CFGInfo body = buildIteratively(whileStmt->body(), condition);
    for(auto leaf : body.leafs) {
       connectCFGNode(leaf, condition);

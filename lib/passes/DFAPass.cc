@@ -19,7 +19,7 @@ public:
       auto& Sema = GetPass<AstContextPass>().Sema();
       ConstantTypeResolver CTR{NewHeap()};
       DataflowAnalysis DFA{PM().Diag(), NewHeap(), Sema, LU};
-      CFGBuilder builder{NewHeap(), Sema, &CTR};
+      CFGBuilder builder{PM().Diag(), &CTR, NewHeap(), Sema};
       DFA.init(&builder);
 
       try {

@@ -96,11 +96,13 @@ private:
    void connectCFGNode(CFGNode* parent, CFGNode* child);
 
 public:
-   CFGBuilder(Heap* heap, ast::Semantic& sema, ConstantTypeResolver* constTypeResolver)
-      : alloc{heap}, heap{heap}, sema(sema), constTypeResolver{constTypeResolver} {}
+   CFGBuilder(diagnostics::DiagnosticEngine& diag, ConstantTypeResolver* constTypeResolver, Heap* heap, ast::Semantic& sema)
+      : diag{diag}, constTypeResolver{constTypeResolver}, alloc{heap},  heap{heap}, sema(sema) {}
    CFGNode* build(const ast::Stmt* stmt) { return buildIteratively(stmt).head; }
 
 private:
+   diagnostics::DiagnosticEngine& diag;
+   SourceRange loc_;
    mutable BumpAllocator alloc;
    Heap* heap;
    ast::Semantic& sema;
