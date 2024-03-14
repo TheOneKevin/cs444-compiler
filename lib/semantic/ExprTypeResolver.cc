@@ -302,7 +302,9 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
       }
 
       case BinaryOp::OpType::And:
-      case BinaryOp::OpType::Or: {
+      case BinaryOp::OpType::Or:
+      case BinaryOp::OpType::BitwiseAnd:
+      case BinaryOp::OpType::BitwiseOr: {
          if(lhs->isBoolean() && rhs->isBoolean()) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::Boolean));
@@ -314,12 +316,10 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
                << "is type " << rhs->toString() << argLocation(0) << "is type "
                << lhs->toString();
       }
-      case BinaryOp::OpType::BitwiseAnd:
-      case BinaryOp::OpType::BitwiseOr:
-      case BinaryOp::OpType::BitwiseXor: {
-         throw diag.ReportError(op.location())
-               << "no bitwise operations are supported in this language";
-      }
+      
+      case BinaryOp::OpType::BitwiseXor:  
+         assert(false && "We don't support bitwise xor operations");
+
       case BinaryOp::OpType::Subtract:
       case BinaryOp::OpType::Multiply:
       case BinaryOp::OpType::Divide:

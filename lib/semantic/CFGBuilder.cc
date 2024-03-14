@@ -100,7 +100,20 @@ CFGBuilder::CFGInfo CFGBuilder::buildForStmt(const ast::ForStmt* forStmt) {
 
 CFGBuilder::CFGInfo CFGBuilder::buildIfStmt(const ast::IfStmt* ifStmt) {
    CFGNode* condition = alloc.new_object<CFGNode>(ifStmt->condition());
-   // TODO(Larry): look into literal expression
+   ConstantReturnType const* ret = constTypeResolver->Evaluate(ifStmt->condition());
+
+   if (ret->constantType == ConstantReturnType::type::BOOL) {
+      if (ret->value == 1) {
+         CFGInfo ifNode = buildIteratively(ifStmt->thenStmt(), condition);
+         return CFGInfo{condition, ifNode.leafs};
+      } else if (ret->value == 0) {
+         CFGInfo elseNode = buildIteratively(ifStmt->elseStmt(), condition);
+         return CFGInfo{condition, elseNode.leafs};
+      } else {
+         assert(false && "invalid boolean value");
+      }
+   }
+
    CFGInfo ifNode = buildIteratively(ifStmt->thenStmt(), condition);
    if(ifStmt->elseStmt()) {
       CFGInfo elseNode = buildIteratively(ifStmt->elseStmt(), condition);

@@ -11,6 +11,7 @@
 #include "semantic/Semantic.h"
 #include "utils/BumpAllocator.h"
 #include "utils/DotPrinter.h"
+#include "semantic/ConstantTypeResolver.h"
 
 namespace semantic {
 
@@ -95,12 +96,13 @@ private:
    void connectCFGNode(CFGNode* parent, CFGNode* child);
 
 public:
-   CFGBuilder(Heap* heap, ast::Semantic& sema)
-         : alloc{heap}, heap{heap}, sema(sema) {}
+   CFGBuilder(Heap* heap, ast::Semantic& sema, ConstantTypeResolver* constTypeResolver)
+      : alloc{heap}, heap{heap}, sema(sema), constTypeResolver{constTypeResolver} {}
    CFGNode* build(const ast::Stmt* stmt) { return buildIteratively(stmt).head; }
 
 private:
    mutable BumpAllocator alloc;
+   ConstantTypeResolver* constTypeResolver;
    Heap* heap;
    ast::Semantic& sema;
 };

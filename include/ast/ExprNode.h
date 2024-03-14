@@ -232,6 +232,7 @@ public:
                SourceRange loc);
    bool isDeclResolved() const override { return true; }
    std::ostream& print(std::ostream& os) const override;
+   std::pmr::string const get_value() { return value_; } 
    ast::BuiltInType const* builtinType() const;
 
 private:

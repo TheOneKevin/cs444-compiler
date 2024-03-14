@@ -1,4 +1,5 @@
 #include "CompilerPasses.h"
+#include "semantic/ConstantTypeResolver.h"
 #include "semantic/DataflowAnalysis.h"
 #include "utils/PassManager.h"
 
@@ -16,8 +17,9 @@ public:
    void Run() override {
       auto LU = GetPass<LinkerPass>().LinkingUnit();
       auto& Sema = GetPass<AstContextPass>().Sema();
+      ConstantTypeResolver CTR{NewHeap()};
       DataflowAnalysis DFA{PM().Diag(), NewHeap(), Sema, LU};
-      CFGBuilder builder{NewHeap(), Sema};
+      CFGBuilder builder{NewHeap(), Sema, &CTR};
       DFA.init(&builder);
 
       try {

@@ -118,6 +118,7 @@ add_library(OLKCompilerLib
     "lib/semantic/NameResolver.cc"
     "lib/semantic/HierarchyChecker.cc"
     "lib/semantic/ExprTypeResolver.cc"
+    "lib/semantic/ConstantTypeResolver.cc"
     "lib/semantic/ExprResolver.cc"
     "lib/semantic/AstValidator.cc"
     "lib/semantic/ExprStaticChecker.cc"

@@ -19,6 +19,19 @@ public class Main {
                 int x = 10;
             }
         }
+
+        if ((10 != 0) && (true || false)) { // false
+            x = 0;
+        } else {
+            y = 0;
+        }
+
+        if ((!true || (3 <= 2)) && ((7 % 2) == 0)) { // true
+            x = 0;
+        } else {
+            y = 0;
+        }
+        
         return 0;
         
     }
