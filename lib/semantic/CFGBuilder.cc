@@ -152,6 +152,9 @@ CFGBuilder::CFGInfo CFGBuilder::buildWhileStmt(const ast::WhileStmt* whileStmt) 
       if(ret->value == 0) {
          diag.ReportError(whileStmt->condition()->location())
                << "Unreachable statement in while loop body";
+      } else if(ret->value == 1) {
+         condition->setVisited(true);
+         leafNode = nullptr;
       } else {
          assert(ret->value == 1 && "invalid boolean value");
          leafNode = nullptr;

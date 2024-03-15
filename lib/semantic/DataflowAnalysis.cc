@@ -46,9 +46,9 @@ void DFA::FiniteLengthReturn(const CFGNode* node) const {
    
    if (node->getChildren().begin() == node->getChildren().end()) {
       if (std::holds_alternative<CFGNode::EmptyExpr>(node->getData())) {
-         diag.ReportError(SourceRange {}) << "Missing return statement here.";
+         diag.ReportError(SourceRange {}) << " Missing return statement here.";
       } else {
-         diag.ReportError(node->location().value()) << "Missing return statement here.";
+         diag.ReportError(node->location().value()) << " Missing return statement here.";
       }
       
       return;
