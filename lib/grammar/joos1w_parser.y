@@ -620,8 +620,11 @@ LocalVariableDeclarationStatement
     ;
 
 LocalVariableDeclaration                                                        
-    : Type VariableDeclarator                                                   { $$ = jl.make_node(@$, pty::LocalVariableDeclaration, $1, $2); }
+    : Type LocalVariableDeclarator                                              { $$ = jl.make_node(@$, pty::LocalVariableDeclaration, $1, $2); }
     ;
+
+LocalVariableDeclarator
+    : IDENTIFIER OP_ASSIGN Expression                                           { $$ = jl.make_node(@$, pty::VariableDeclarator, $1, $3); }
 
 VariableDeclarator
     : IDENTIFIER                                                                { $$ = jl.make_node(@$, pty::VariableDeclarator, $1); }

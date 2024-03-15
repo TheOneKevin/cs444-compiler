@@ -136,7 +136,7 @@ private:
    CFGInfo buildBlockStmt(const ast::BlockStatement* blockStmt);
 
    void connectCFGNode(CFGNode* parent, CFGNode* child);
-   void cononectLeafsToChild(CFGInfo parent, CFGNode* child);
+   void connectLeafsToChild(CFGInfo parent, CFGNode* child);
 
 public:
    CFGBuilder(diagnostics::DiagnosticEngine& diag,

@@ -13,7 +13,7 @@ void DFA::Check() const {
          for(auto method : classDecl->methods()) {
             if(method->body()) {
                auto cfg = cfgBuilder->build(method->body());
-               // cfg->printDot(std::cout);
+               cfg->printDot(std::cout);
                ReachabilityCheck(cfg);
             }
          }

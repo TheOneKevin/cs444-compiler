@@ -29,11 +29,11 @@ CFGBuilder::CFGInfo CFGBuilder::buildIteratively(const ast::Stmt* stmt,
       node = buildBlockStmt(blockStmt);
       if(!node.head) {
          CFGNode* empty = alloc.new_object<CFGNode>(alloc, CFGNode::EmptyExpr{});
-         return CFGInfo{alloc, empty};
+         return CFGInfo{alloc, empty, empty};
       }
    } else {
       CFGNode* empty = alloc.new_object<CFGNode>(alloc, CFGNode::EmptyExpr{});
-      return CFGInfo{alloc, empty};
+      return CFGInfo{alloc, empty, empty};
    }
 
    assert(node.head && "node is nullptr");
@@ -55,9 +55,7 @@ CFGBuilder::CFGInfo CFGBuilder::buildBlockStmt(
          head = parent;
       } else {
          node = buildIteratively(stmt);
-         for(auto leaf : parent.leafs) {
-            connectCFGNode(leaf, node.head);
-         }
+         connectLeafsToChild(parent, node.head);
          parent = node;
       }
    }
@@ -106,16 +104,10 @@ CFGBuilder::CFGInfo CFGBuilder::buildForStmt(const ast::ForStmt* forStmt) {
    CFGInfo body = buildIteratively(forStmt->body(), condition);
    if(forStmt->update()) {
       CFGInfo update = buildIteratively(forStmt->update());
-      for(auto leaf : body.leafs) {
-         connectCFGNode(leaf, update.head);
-      }
-      for(auto leaf : update.leafs) {
-         connectCFGNode(leaf, condition);
-      }
+      connectLeafsToChild(body, update.head);
+      connectLeafsToChild(update, condition);
    } else {
-      for(auto leaf : body.leafs) {
-         connectCFGNode(leaf, condition);
-      }
+      connectLeafsToChild(body, condition);
    }
    if(init.head) return CFGInfo{alloc, init.head, condition};
    return CFGInfo{alloc, condition, condition};
@@ -143,8 +135,9 @@ CFGBuilder::CFGInfo CFGBuilder::buildReturnStmt(
    CFGNode* node = nullptr;
    if(returnStmt->expr() == nullptr) {
       node = alloc.new_object<CFGNode>(alloc, CFGNode::EmptyExpr{}, true);
+   } else {
+      node = alloc.new_object<CFGNode>(alloc, returnStmt->expr(), true);
    }
-   node = alloc.new_object<CFGNode>(alloc, returnStmt->expr(), true);
    return CFGInfo{alloc, node, node};
 }
 
@@ -152,31 +145,43 @@ CFGBuilder::CFGInfo CFGBuilder::buildWhileStmt(const ast::WhileStmt* whileStmt) 
    CFGNode* condition = alloc.new_object<CFGNode>(alloc, whileStmt->condition());
    ConstantReturnType const* ret =
          constTypeResolver->Evaluate(whileStmt->condition());
-
-   if(ret->constantType ==
-      ConstantReturnType::type::BOOL) {
+   CFGNode* leafNode = condition;
+   if(ret->constantType == ConstantReturnType::type::BOOL) {
       if(ret->value == 0) {
          diag.ReportError(whileStmt->condition()->location())
                << "Unreachable statement in while loop body";
       } else {
          assert(ret->value == 1 && "invalid boolean value");
-
+         leafNode = nullptr;
       }
    }
 
    if(whileStmt->body()) {
       CFGInfo body = buildIteratively(whileStmt->body(), condition);
-      for(auto leaf : body.leafs) {
-         connectCFGNode(leaf, condition);
-      }
+      connectLeafsToChild(body, condition);
    }
-
-   return CFGInfo{alloc, condition, condition};
+   if(leafNode) {
+      return CFGInfo{alloc, condition, leafNode};
+   }
+   return CFGInfo{alloc, condition};
 }
 
 void CFGBuilder::connectCFGNode(CFGNode* parent, CFGNode* child) {
    parent->children.push_back(child);
    child->parents.push_back(parent);
+}
+
+void CFGBuilder::connectLeafsToChild(CFGInfo parent, CFGNode* child) {
+   for(auto leaf : parent.leafs) {
+      connectCFGNode(leaf, child);
+   }
+   if(child->parents.empty()) {
+      if(child->location()) {
+         diag.ReportError(child->location().value()) << "Unreachable statement";
+      } else {
+         diag.ReportError(parent.head->location().value()) << "Unreachable statement";
+      }
+   }
 }
 
 } // namespace semantic
