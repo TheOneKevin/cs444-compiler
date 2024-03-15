@@ -53,6 +53,7 @@ int main(int argc, char** argv) {
       NewExprResolverPass(PM);
       NewDFAPass(PM);
       // Explicitly enable the pass that we want to run
+      PM.PO().EnablePass("sema-expr");
       PM.PO().EnablePass("dfa");
    }
 
@@ -64,9 +65,14 @@ int main(int argc, char** argv) {
             m.emit(std::cerr);
             std::cerr << std::endl;
          }
+         return 42;
+      } else if (PM.Diag().hasWarnings()) {
+         for(auto m : PM.Diag().warnings()) {
+            m.emit(std::cerr);
+            std::cerr << std::endl;
+         }
+         return 43;
       }
-      return 42;
    }
-   
    return 0;
 }
