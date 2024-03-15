@@ -313,4 +313,8 @@ void pretty_print_errors(SourceManager& SM, DiagnosticEngine& diag) {
       PrettyPrinter{SM, diag}.printSingleError();
       std::cerr << "\n";
    }
+   for(auto& diag : diag.warnings()) {
+      PrettyPrinter{SM, diag}.printSingleError();
+      std::cerr << "\n";
+   }
 }

@@ -109,6 +109,10 @@ public:
       errors_.emplace_after(errors_.before_begin(), loc);
       return DiagnosticBuilder{errors_.front()};
    }
+   DiagnosticBuilder ReportWarning(SourceRange loc) {
+      warnings_.emplace_after(warnings_.before_begin(), loc);
+      return DiagnosticBuilder{warnings_.front()};
+   }
    DiagnosticStream ReportDebug(int level = 1) {
       assert(Verbose(level) &&
              "Debug messages not available. Did you forget to check for Verbose?");
@@ -118,6 +122,8 @@ public:
    void setVerbose(int verbose) { verbose_ = verbose; }
    bool hasErrors() const { return !errors_.empty(); }
    auto errors() const { return std::views::all(errors_); }
+   bool hasWarnings() const { return !warnings_.empty(); }
+   auto warnings() const { return std::views::all(warnings_); }
 
 public:
    bool Verbose(int level = 1) const { return verbose_ >= level; }
@@ -125,6 +131,7 @@ public:
 private:
    int verbose_ = 0;
    std::forward_list<DiagnosticStorage> errors_;
+   std::forward_list<DiagnosticStorage> warnings_;
 };
 
 /* ===--------------------------------------------------------------------=== */

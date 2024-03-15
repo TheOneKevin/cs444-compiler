@@ -2,6 +2,8 @@
 #include "ast/AstNode.h"
 #include "ast/Decl.h"
 #include "semantic/AstValidator.h"
+#include "semantic/ConstantTypeResolver.h"
+#include "semantic/DataflowAnalysis.h"
 #include "semantic/ExprResolver.h"
 #include "semantic/ExprStaticChecker.h"
 #include "semantic/ExprTypeResolver.h"
@@ -124,4 +126,33 @@ private:
    }
 };
 
+class DFAPass final : public Pass {
+public:
+   DFAPass(PassManager& PM) noexcept : Pass(PM) {}
+   string_view Name() const override { return "dfa"; }
+   string_view Desc() const override { return "Dataflow Analysis"; }
+   void Run() override {
+      auto LU = GetPass<LinkerPass>().LinkingUnit();
+      auto& Sema = GetPass<AstContextPass>().Sema();
+      ConstantTypeResolver CTR{NewHeap()};
+      DataflowAnalysis DFA{PM().Diag(), NewHeap(), Sema, LU};
+      CFGBuilder builder{PM().Diag(), &CTR, NewHeap(), Sema};
+      DFA.init(&builder);
+
+      try {
+         DFA.Check();
+      } catch(const diagnostics::DiagnosticBuilder&) {
+         // Print the errors from diag in the next step
+      }
+   }
+
+private:
+   void computeDependencies() override {
+      ComputeDependency(GetPass<AstContextPass>());
+      ComputeDependency(GetPass<LinkerPass>());
+      ComputeDependency(GetPass<ExprResolverPass>());
+   }
+};
+
 REGISTER_PASS(ExprResolverPass);
+REGISTER_PASS(DFAPass);

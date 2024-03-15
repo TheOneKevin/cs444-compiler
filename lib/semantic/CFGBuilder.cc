@@ -41,7 +41,6 @@ CFGBuilder::CFGInfo CFGBuilder::buildIteratively(const ast::Stmt* stmt,
    if(parent) {
       connectCFGNode(parent, node.head);
    }
-
    return node;
 }
 

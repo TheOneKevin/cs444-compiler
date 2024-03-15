@@ -178,10 +178,16 @@ int main(int argc, char** argv) {
             m.emit(std::cerr);
             std::cerr << std::endl;
          }
-
+         return 42;
          // pretty_print_errors(SM, PM.Diag()); TODO(owen): uncomment this after handling empty cfg nodes
+      } else if (PM.Diag().hasWarnings()) {
+         for(auto m : PM.Diag().warnings()) {
+            m.emit(std::cerr);
+            std::cerr << std::endl;
+         }
+         // pretty_print_errors(SM, PM.Diag());
+         return 43;
       }
-      return 42;
    }
    return 0;
 }
