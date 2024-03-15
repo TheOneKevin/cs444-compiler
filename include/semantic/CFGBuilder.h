@@ -18,7 +18,10 @@ namespace semantic {
 
 using utils::DotPrinter;
 class CFGNode {
+public:
    struct EmptyExpr {};
+
+private:
    friend class CFGBuilder;
    std::pmr::vector<CFGNode*> children;
    std::pmr::vector<CFGNode*> parents;
@@ -26,6 +29,7 @@ class CFGNode {
    bool isReturn;
    bool start;
    bool isInfinite;
+   mutable bool isVisited;
 
 public:
    CFGNode(BumpAllocator& alloc,
@@ -34,6 +38,7 @@ public:
          : children{alloc}, parents{alloc}, data{data}, isReturn{isReturn} {
       start = false;
       isInfinite = false;
+      isVisited = false;
    }
 
    std::ostream& printDot(std::ostream& os) const {
@@ -73,6 +78,8 @@ public:
    bool isReturnNode() const { return isReturn; }
    bool isStart() const { return start; }
    bool isInfiniteLoop() const { return isInfinite; }
+   bool hasBeenVisited() const { return isVisited; }
+   void setVisited(bool val) const { isVisited = val; }
 
 private:
    int printDotNode(utils::DotPrinter& dp,

@@ -174,7 +174,12 @@ int main(int argc, char** argv) {
    if(!PM.Run()) {
       std::cerr << "Error running pass: " << PM.LastRun()->Desc() << std::endl;
       if(PM.Diag().hasErrors()) {
-         pretty_print_errors(SM, PM.Diag());
+         for(auto m : PM.Diag().errors()) {
+            m.emit(std::cerr);
+            std::cerr << std::endl;
+         }
+
+         // pretty_print_errors(SM, PM.Diag()); TODO(owen): uncomment this after handling empty cfg nodes
       }
       return 42;
    }

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <unordered_map>
+#include "diagnostics/Location.h"
 
 namespace semantic {
 
@@ -15,6 +16,10 @@ void DFA::Check() const {
                auto cfg = cfgBuilder->build(method->body());
                cfg->printDot(std::cout);
                ReachabilityCheck(cfg);
+
+               if (method->returnTy().type) {
+                  FiniteLengthReturn(cfg);
+               }
             }
          }
          for(auto method : classDecl->constructors()) {
@@ -25,6 +30,32 @@ void DFA::Check() const {
             }
          }
       }
+   }
+}
+
+void DFA::FiniteLengthReturn(const CFGNode* node) const {
+   if (node->hasBeenVisited()) {
+      return;
+   }
+
+   node->setVisited(true);
+
+   if (node->isReturnNode()) {
+      return;
+   }
+   
+   if (node->getChildren().begin() == node->getChildren().end()) {
+      if (std::holds_alternative<CFGNode::EmptyExpr>(node->getData())) {
+         diag.ReportError(SourceRange {}) << "Missing return statement here.";
+      } else {
+         diag.ReportError(node->location().value()) << "Missing return statement here.";
+      }
+      
+      return;
+   }
+   
+   for (auto child : node->getChildren()) {
+      FiniteLengthReturn(child);
    }
 }
 
