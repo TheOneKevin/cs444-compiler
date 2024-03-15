@@ -125,7 +125,9 @@ CFGBuilder::CFGInfo CFGBuilder::buildIfStmt(const ast::IfStmt* ifStmt) {
       info.leafs.insert(
             info.leafs.end(), elseNode.leafs.begin(), elseNode.leafs.end());
    } else {
-      info.leafs.push_back(condition);
+      CFGNode* empty = alloc.new_object<CFGNode>(alloc, CFGNode::EmptyExpr{});
+      info.leafs.push_back(empty);
+      connectCFGNode(condition, empty);
    }
    return info;
 }
