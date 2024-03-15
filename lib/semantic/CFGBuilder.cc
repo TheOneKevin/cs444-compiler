@@ -156,8 +156,7 @@ CFGBuilder::CFGInfo CFGBuilder::buildWhileStmt(const ast::WhileStmt* whileStmt) 
          condition->setVisited(true);
          leafNode = nullptr;
       } else {
-         assert(ret->value == 1 && "invalid boolean value");
-         leafNode = nullptr;
+         assert(false && "invalid boolean value");
       }
    }
 
