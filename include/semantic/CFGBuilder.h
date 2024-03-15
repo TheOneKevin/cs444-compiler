@@ -51,7 +51,7 @@ public:
       return os;
    }
 
-   utils::Generator<const CFGNode*> getChildren() const {
+   utils::Generator<const CFGNode*> getChildren() const { 
       for(auto child : children) {
          co_yield child;
       }

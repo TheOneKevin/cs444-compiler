@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "ast/AstNode.h"
+#include "ast/Decl.h"
 #include "diagnostics/Location.h"
 #include "utils/BumpAllocator.h"
 #include "utils/EnumMacros.h"
@@ -156,7 +157,7 @@ class ExprValue : public ExprNode {
 public:
    explicit ExprValue(SourceRange loc, ast::Type const* type = nullptr)
          : ExprNode{loc}, decl_{nullptr}, type_{type} {}
-   ast::Decl const* decl() { return decl_; }
+   ast::Decl const* decl() const { return decl_; }
    virtual bool isDeclResolved() const { return decl_ != nullptr; }
    bool isTypeResolved() const { return type_ != nullptr; }
    void resolveDeclAndType(ast::Decl const* decl, ast::Type const* type) {
@@ -349,11 +350,18 @@ public:
 
 private:
    OpType type;
+   // the variable using assigned, only used for assignment
+   const ast::VarDecl* varAssigned = nullptr;
 
 public:
    BinaryOp(OpType type, SourceRange loc) : ExprOp(2, loc), type{type} {}
    std::ostream& print(std::ostream& os) const override;
    OpType opType() const { return type; }
+   void setVarAssigned(const ast::VarDecl* var) { 
+      assert(!varAssigned && "Tried to set varAssigned twice");
+      varAssigned = var; 
+   }
+   const ast::VarDecl* getVarAssigned() const { return varAssigned; }
 };
 
 } // namespace ast::exprnode

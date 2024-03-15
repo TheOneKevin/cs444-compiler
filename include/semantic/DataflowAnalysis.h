@@ -22,6 +22,13 @@ private:
    ast::LinkingUnit* lu;
 
    void LiveVariableAnalysis(const CFGNode* node) const;
+   void LiveVariableAnalysisHelper(
+         std::unordered_map<const CFGNode*, std::pmr::set<const ast::VarDecl*>>&
+               in,
+         std::pmr::set<const CFGNode*>& cur,
+         std::pmr::set<const CFGNode*>& next) const;
+   int getLiveVariables(const ast::Expr* expr,
+                         std::pmr::set<const ast::VarDecl*>& live_vars, const ast::VarDecl* decl = nullptr) const;
    void FiniteLengthReturn(const CFGNode* node) const;
    void ReachabilityCheck(const CFGNode* node) const;
    void ReachabilityCheckHelper(std::unordered_map<const CFGNode*, bool>& out,

@@ -66,6 +66,8 @@ ETy ESC::evalBinaryOp(BinaryOp& op, ETy lhs, ETy rhs) const {
          if(field->modifiers().isFinal()) {
             throw diag.ReportError(loc_) << "cannot assign to a final field";
          }
+      } else if (auto var = dyn_cast_or_null<ast::VarDecl>(lhs.decl)) {
+         op.setVarAssigned(var);
       }
    } else {
       checkInstanceVar(lhs, true);

@@ -203,7 +203,10 @@ bool PassManager::Run() {
       if(Diag().hasErrors()) {
          pass->state = Pass::Invalid;
          return false;
-      }
+      } else if (Diag().hasWarnings()) {
+         pass->state = Pass::Invalid;
+         return false;
+      } 
       // If the pass is running, we can free the heaps by calling
       // computeDependencies again
       pass->state = Pass::Cleanup;

@@ -13,6 +13,7 @@ public:
    std::ostream& print(std::ostream& os, int indentation) const;
    int printDotNode(DotPrinter& dp) const;
    auto nodes() const { return rpn_ops.nodes(); }
+   auto tail() const { return rpn_ops.tail(); }
    auto list() const { return rpn_ops; }
    auto location() const { return loc_; }
    void dump() const;

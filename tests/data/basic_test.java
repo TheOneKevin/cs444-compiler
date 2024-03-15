@@ -1,11 +1,10 @@
 public class Main {
     public Main() {}
     public static int test(int j) {
-        if (j == 0) {
-            return 1;
-        }
-        return 0;
-        
+        int ax = 0;
+        int bx = ax = 123;
+        ax = 456; // dead assignment to ax
+        return bx;
     }
 }
 
