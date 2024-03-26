@@ -34,7 +34,7 @@ int main() {
    // Build the "int main()" function
    Function* fn_main;
    {
-      auto fnty = FunctionType::get(ctx, Type::getVoidTy(ctx), {});
+      auto fnty = FunctionType::get(ctx, Type::getInt32Ty(ctx), {});
       fn_main = cu.CreateFunction(fnty, "main");
       IRBuilder builder{ctx};
       auto bb0 = builder.createBasicBlock(fn_main);

@@ -8,6 +8,7 @@ static std::ostream& printNameOrConst(std::ostream& os, Value* val) {
    if(auto* ci = dyn_cast<ConstantInt>(val)) {
       os << *ci;
    } else {
+      os << *val->type() << " ";
       val->printName(os);
    }
    return os;
