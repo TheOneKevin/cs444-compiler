@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ranges>
 #include <type_traits>
 #include <vector>
 
@@ -166,3 +167,119 @@ static_assert(std::is_same_v<canonicalize_t<int const*, int*>, int const>);
 static_assert(std::is_same_v<canonicalize_t<int const, int*>, int const>);
 static_assert(std::is_same_v<canonicalize_t<int, int const*>, int const>);
 static_assert(std::is_same_v<canonicalize_t<int*, int const*>, int const>);
+
+/* ===--------------------------------------------------------------------=== */
+// function_ref taken from here:
+// https://vittorioromeo.info/index/blog/passing_functions_to_functions.html
+/* ===--------------------------------------------------------------------=== */
+
+namespace utils::details {
+
+template <typename...>
+using void_t = void;
+
+template <class T, class R = void, class = void>
+struct is_callable : std::false_type {};
+
+template <class T>
+struct is_callable<T, void, void_t<std::result_of_t<T>>> : std::true_type {};
+
+template <class T, class R>
+struct is_callable<T, R, void_t<std::result_of_t<T>>>
+      : std::is_convertible<std::result_of_t<T>, R> {};
+
+template <typename TSignature>
+struct signature_helper;
+
+template <typename TReturn, typename... TArgs>
+struct signature_helper<TReturn(TArgs...)> {
+   using fn_ptr_type = TReturn (*)(TArgs...);
+};
+
+template <typename TSignature>
+using fn_ptr = typename signature_helper<TSignature>::fn_ptr_type;
+
+template <typename T>
+struct dependent_false : std::false_type {};
+
+template <typename TSignature>
+class function_ref;
+
+template <typename TReturn, typename... TArgs>
+class function_ref<TReturn(TArgs...)> final {
+private:
+   using signature_type = TReturn(void*, TArgs...);
+   void* _ptr;
+   TReturn (*_erased_fn)(void*, TArgs...);
+
+public:
+   template <typename T, typename = std::enable_if_t<
+                               is_callable<T&(TArgs...)>{} &&
+                               !std::is_same<std::decay_t<T>, function_ref>{}>>
+   function_ref(T&& x) noexcept : _ptr{(void*)std::addressof(x)} {
+      _erased_fn = [](void* ptr, TArgs... xs) -> TReturn {
+         return (*reinterpret_cast<std::add_pointer_t<T>>(ptr))(
+               std::forward<TArgs>(xs)...);
+      };
+   }
+   decltype(auto) operator()(TArgs... xs) const
+         noexcept(noexcept(_erased_fn(_ptr, std::forward<TArgs>(xs)...))) {
+      return _erased_fn(_ptr, std::forward<TArgs>(xs)...);
+   }
+};
+
+} // namespace utils::details
+
+namespace utils {
+
+/**
+ * @brief A non-owning, lightweight view of a range whose element types are
+ * convertible to T
+ *
+ * @tparam T The type of the elements in the range
+ */
+template <typename T>
+class range_ref {
+public:
+   range_ref() {
+      range_ = nullptr;
+      foreach_ = nullptr;
+      sz_ = 0;
+   }
+
+   template<typename U, class Tp>
+   requires std::convertible_to<U, T>
+   range_ref(std::vector<U, Tp>& vec) {
+      range_ = const_cast<void*>(static_cast<void const*>(&vec));
+      foreach_ = [](void* r, details::function_ref<void(T)> callback) {
+         for(auto&& v : *reinterpret_cast<decltype(&vec)>(r)) callback(v);
+      };
+      sz_ = vec.size();
+   }
+
+   template<std::ranges::view R>
+   requires std::convertible_to<std::ranges::range_value_t<R>, T>
+   range_ref(R&& range) {
+      range_ = const_cast<void*>(static_cast<void const*>(&range));
+      foreach_ = [](void* r, details::function_ref<void(T)> callback) {
+         for(auto&& v : *reinterpret_cast<decltype(&range)>(r)) callback(v);
+      };
+      sz_ = std::ranges::size(range);
+   }
+
+   inline void for_each(details::function_ref<void(T)> callback) {
+      if(foreach_) foreach_(range_, callback);
+   }
+
+   inline std::size_t size() const {
+      return sz_;
+   }
+
+private:
+   using range_fun_t = void (*)(void*, details::function_ref<void(T)>);
+   void* range_ = nullptr;
+   range_fun_t foreach_ = nullptr;
+   std::size_t sz_ = 0;
+};
+
+} // namespace utils

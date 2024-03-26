@@ -1,0 +1,238 @@
+#pragma once
+
+#include <stdint.h>
+#include <utils/Assert.h>
+
+#include <span>
+
+#include "tir/Context.h"
+#include "utils/Utils.h"
+
+namespace tir {
+
+/**
+ * @brief Type is the base class for all types in the TIR. It is immutable
+ * once created and is uniqued within a Context. The uniquing means that
+ * two types in the same context are equal if and only if they have the same
+ * address in memory.
+ */
+class Type {
+public:
+   static Type* getVoidTy(Context& ctx) { return ctx.pimpl().voidType; }
+   static Type* getPointerTy(Context& ctx) { return ctx.pimpl().pointerType; }
+   static Type* getLabelTy(Context& ctx) { return ctx.pimpl().labelType; }
+   static Type* getInt1Ty(Context& ctx);
+
+public:
+   virtual bool isIntegerType() const { return false; }
+   virtual bool isFunctionType() const { return false; }
+   virtual bool isPointerType() const { return false; }
+   virtual bool isArrayType() const { return false; }
+   virtual bool isStructType() const { return false; }
+
+protected:
+   struct ChildTypeArray {
+      Type** array;
+      uint32_t size;
+   };
+
+protected:
+   friend class Context;
+   Type() : Type{0, {}} {}
+   Type(uint32_t data) : Type{data, {}} {}
+   Type(ChildTypeArray subtypes) : Type{0, subtypes} {}
+   Type(uint32_t data, ChildTypeArray subtypes)
+         : data_{data}, subtypes_{subtypes} {}
+   /**
+    * @brief Gets the data associated with this type.
+    */
+   uint32_t getData() const { return data_; }
+   /**
+    * @brief Gets the array of child types associated with this type.
+    */
+   ChildTypeArray getChildTypes() const { return subtypes_; }
+
+private:
+   const uint32_t data_;
+   const ChildTypeArray subtypes_;
+};
+
+/**
+ * @brief
+ */
+class IntegerType final : public Type {
+private:
+   IntegerType(uint32_t bitwidth) : Type{bitwidth} {}
+
+public:
+   /**
+    * @brief Gets an IntegerType with the specified bitwidth. If the type does
+    * not exist within the context, a new IntegerType is created and added to
+    * the context. Otherwise, the unique IntegerType is returned.
+    *
+    * @param ctx The context in which this type is uniqued.
+    * @param bitwidth The bitwidth of the integer type.
+    * @return IntegerType* The unique integer type with the specified bitwidth.
+    */
+   static IntegerType* get(Context& ctx, uint32_t bitwidth) {
+      // First, search ctx for existing IntegerType with bitwidth.
+      for(auto* type : ctx.pimpl().integerTypes) {
+         if(type->getData() == bitwidth) {
+            return type;
+         }
+      }
+      // If not found, create a new IntegerType with bitwidth.
+      void* buf =
+            ctx.alloc().allocate_bytes(sizeof(IntegerType), alignof(IntegerType));
+      auto* type = new(buf) IntegerType{bitwidth};
+      ctx.pimpl().integerTypes.push_back(type);
+      return type;
+   }
+
+public:
+   bool isIntegerType() const override { return true; }
+   uint32_t getBitWidth() const { return getData(); }
+};
+static_assert(sizeof(IntegerType) == sizeof(Type));
+
+/**
+ * @brief
+ */
+class FunctionType final : public Type {
+private:
+   FunctionType(Type** types, uint32_t numTypes)
+         : Type{Type::ChildTypeArray{types, numTypes}} {}
+
+public:
+   static FunctionType* get(Context& ctx, Type* returnTy,
+                            utils::range_ref<Type*> types) {
+      // Grab the array size
+      uint32_t size = 1;
+      types.for_each([&](Type*) { size++; });
+      // First, search ctx for existing FunctionType with types.
+      for(auto* type : ctx.pimpl().functionTypes) {
+         auto data = type->getChildTypes();
+         assert(data.size > 0 && "FunctionType has no return type");
+         bool typesEqual = returnTy == data.array[0];
+         uint32_t i = 1;
+         types.for_each([&](Type* ty) {
+            if(data.array[i++] != ty) typesEqual = false;
+         });
+         if(size == data.size && typesEqual) {
+            return type;
+         }
+      }
+      // If not found, create a new FunctionType with types.
+      void* buf = ctx.alloc().allocate_bytes(
+            sizeof(FunctionType) + size * sizeof(Type*), alignof(FunctionType));
+      // Types are stored after the FunctionType object in memory.
+      auto* typesBuf = reinterpret_cast<Type**>(static_cast<uint8_t*>(buf) +
+                                                sizeof(FunctionType));
+      // Copy the types into the buffer.
+      {
+         uint32_t i = 0;
+         types.for_each([&](Type* ty) { typesBuf[i++] = ty; });
+      }
+      // Create the FunctionType object.
+      auto* type = new(buf) FunctionType{typesBuf, size};
+      ctx.pimpl().functionTypes.push_back(type);
+      return type;
+   }
+
+public:
+   bool isFunctionType() const override { return true; }
+   Type* getReturnType() const { return getChildTypes().array[0]; }
+   auto getParamTypes() const {
+      auto data = getChildTypes();
+      return std::span{data.array + 1, data.size - 1};
+   }
+   auto numParams() const { return getChildTypes().size - 1; }
+   auto getParamType(int index) const { return getChildTypes().array[index + 1]; }
+};
+static_assert(sizeof(FunctionType) == sizeof(Type));
+
+/**
+ * @brief
+ */
+class ArrayType : public Type {
+private:
+   ArrayType(Type** elementType, uint32_t numElements)
+         : Type{numElements, Type::ChildTypeArray{elementType, 1}} {}
+
+public:
+   static ArrayType* get(Context& ctx, Type* elementType, uint32_t numElements) {
+      // First, search ctx for existing ArrayType with elementType and numElements.
+      for(auto* type : ctx.pimpl().arrayTypes) {
+         auto data = type->getChildTypes();
+         if(data.size == 1 && data.array[0] == elementType &&
+            type->getData() == numElements) {
+            return type;
+         }
+      }
+      // If not found, create a new ArrayType with elementType and numElements.
+      void* buf = ctx.alloc().allocate_bytes(sizeof(ArrayType) + sizeof(Type*),
+                                             alignof(ArrayType));
+      auto* typeBuf = reinterpret_cast<Type**>(static_cast<uint8_t*>(buf) +
+                                               sizeof(ArrayType));
+      typeBuf[0] = elementType;
+      auto* type = new(buf) ArrayType{typeBuf, numElements};
+      ctx.pimpl().arrayTypes.push_back(type);
+      return type;
+   }
+
+public:
+   bool isArrayType() const override { return true; }
+   Type* getElementType() const { return getChildTypes().array[0]; }
+   uint32_t getArraySize() const { return getData(); }
+};
+static_assert(sizeof(ArrayType) == sizeof(Type));
+
+/**
+ * @brief
+ */
+class StructType : public Type {
+private:
+   StructType(Type** elementTypes, uint32_t numElements)
+         : Type{numElements, Type::ChildTypeArray{elementTypes, numElements}} {}
+
+public:
+   static StructType* get(Context& ctx, utils::range_ref<Type*> elementTypes) {
+      uint32_t size = 0;
+      elementTypes.for_each([&](Type*) { size++; });
+      // First, search ctx for existing StructType with elementTypes.
+      for(auto* type : ctx.pimpl().structTypes) {
+         auto data = type->getChildTypes();
+         if(data.size == size) {
+            bool typesEqual = true;
+            uint32_t i = 0;
+            elementTypes.for_each([&](Type* ty) {
+               if(data.array[i++] != ty) typesEqual = false;
+            });
+            if(typesEqual) return type;
+         }
+      }
+      // If not found, create a new StructType with elementTypes.
+      void* buf = ctx.alloc().allocate_bytes(
+            sizeof(StructType) + size * sizeof(Type*), alignof(StructType));
+      auto* typeBuf = reinterpret_cast<Type**>(static_cast<uint8_t*>(buf) +
+                                               sizeof(StructType));
+      {
+         uint32_t i = 0;
+         elementTypes.for_each([&](Type* ty) { typeBuf[i++] = ty; });
+      }
+      auto* type = new(buf) StructType{typeBuf, size};
+      ctx.pimpl().structTypes.push_back(type);
+      return type;
+   }
+
+public:
+   bool isStructType() const override { return true; }
+   auto getElements() const {
+      auto data = getChildTypes();
+      return std::span{data.array, data.size};
+   }
+   uint32_t numElements() const { return getChildTypes().size; }
+};
+static_assert(sizeof(StructType) == sizeof(Type));
+
+} // namespace tir

@@ -101,49 +101,13 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
 # Create a library target for our compiler with sources under lib/
+file(GLOB_RECURSE LIB_SOURCES "lib/*.cc")
 add_library(OLKCompilerLib
     # flex bison
     "${LEXER_OUT}"
     "${PARSER_OUT}"
-    # ast
-    "lib/ast/Decl.cc"
-    "lib/ast/DeclContext.cc"
-    "lib/ast/Expr.cc"
-    "lib/ast/Stmt.cc"
-    "lib/ast/Modifiers.cc"
-    "lib/ast/Type.cc"
-    "lib/ast/ScopeID.cc"
-    # semantic
-    "lib/semantic/Semantic.cc"
-    "lib/semantic/NameResolver.cc"
-    "lib/semantic/HierarchyChecker.cc"
-    "lib/semantic/ExprTypeResolver.cc"
-    "lib/semantic/ConstantTypeResolver.cc"
-    "lib/semantic/ExprResolver.cc"
-    "lib/semantic/AstValidator.cc"
-    "lib/semantic/ExprStaticChecker.cc"
-    "lib/semantic/DataflowAnalysis.cc"
-    "lib/semantic/CFGBuilder.cc"
-    # grammar
-    "lib/grammar/Joos1W.cc"
-    # parsetree
-    "lib/parsetree/ParseTree.cc"
-    "lib/parsetree/ParseTreeVisitor.cc"
-    "lib/parsetree/VisitClassInterface.cc"
-    "lib/parsetree/VisitExpression.cc"
-    "lib/parsetree/VisitLeaf.cc"
-    "lib/parsetree/VisitStatement.cc"
-    # utils
-    "lib/utils/DotPrinter.cc"
-    "lib/utils/PassManager.cc"
-    "lib/utils/BumpAllocator.cc"
-    "lib/utils/Assert.cc"
-    "lib/utils/Error.cc"
-    # passes
-    "lib/passes/CompilerPasses.cc"
-    "lib/passes/NameResolverPass.cc"
-    "lib/passes/ExprResolverPass.cc"
-    "lib/passes/PrintASTPass.cc"
+    # the rest of the library sources
+    ${LIB_SOURCES}
 )
 target_include_directories(
     OLKCompilerLib
@@ -241,4 +205,9 @@ add_tool(
 add_tool(
     crashtest
     "tools/crashtest/main.cc"
+)
+
+add_tool(
+    tirtest
+    "tools/tirtest/main.cc"
 )

@@ -41,6 +41,7 @@
   "clangd.arguments": [
     "--compile-commands-dir=${workspaceFolder}/build",
     "--completion-style=detailed",
+    "--background-index"
   ],
   "clangd.fallbackFlags": [
     "-I${workspaceFolder}/include",
