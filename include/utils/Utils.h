@@ -1,5 +1,6 @@
 #pragma once
 
+#include <initializer_list>
 #include <ranges>
 #include <type_traits>
 #include <vector>
@@ -265,6 +266,16 @@ public:
          for(auto&& v : *reinterpret_cast<decltype(&range)>(r)) callback(v);
       };
       sz_ = std::ranges::size(range);
+   }
+
+   template<typename U>
+   requires std::convertible_to<U, T>
+   range_ref(std::initializer_list<U>&& list) {
+      range_ = const_cast<void*>(static_cast<void const*>(&list));
+      foreach_ = [](void* r, details::function_ref<void(T)> callback) {
+         for(auto&& v : *reinterpret_cast<decltype(&list)>(r)) callback(v);
+      };
+      sz_ = list.size();
    }
 
    inline void for_each(details::function_ref<void(T)> callback) {

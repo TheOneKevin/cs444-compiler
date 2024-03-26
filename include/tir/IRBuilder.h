@@ -48,7 +48,7 @@ public:
     * @return BinaryInst* A pointer to the instruction
     */
    Instruction* createBinaryInstr(Instruction::BinOp op, Value* lhs, Value* rhs) {
-      return BinaryInst::Create(ctx_, op, lhs, rhs);
+      return insert(BinaryInst::Create(ctx_, op, lhs, rhs));
    }
 
    /**

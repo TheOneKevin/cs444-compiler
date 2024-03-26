@@ -15,6 +15,10 @@ public:
    ContextPImpl(BumpAllocator* alloc, Type* const pointerType,
                 Type* const voidType, Type* const labelType)
          : alloc(alloc),
+           functionTypes(*alloc),
+           arrayTypes(*alloc),
+           integerTypes(*alloc),
+           structTypes(*alloc),
            pointerType(pointerType),
            voidType(voidType),
            labelType(labelType) {}
@@ -33,11 +37,19 @@ public:
 class Context {
 public:
    Context(BumpAllocator& alloc);
+   Context(const Context&) = delete;
+   Context(Context&&) = delete;
+   Context& operator=(const Context&) = delete;
+   Context& operator=(Context&&) = delete;
+
    BumpAllocator& alloc() { return *pimpl().alloc; }
    ContextPImpl& pimpl() { return *pimpl_; }
+   ContextPImpl const& pimpl() const { return *pimpl_; }
+   unsigned getNextValueID() { return value_counter++; }
 
 private:
    ContextPImpl* pimpl_;
+   unsigned value_counter = 0;
 };
 
 } // namespace tir

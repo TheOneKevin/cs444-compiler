@@ -7,7 +7,67 @@ namespace tir {
 class Instruction;
 class Function;
 
-class BasicBlock : public Value {
+class BasicBlock final : public Value {
+   friend class Instruction;
+private:
+   // Private implementation of the iterator
+   struct iterator_pimpl {
+      // True if this iterator is after the last instruction in the list
+      bool isEnd;
+      // True if this iterator is before the first instruction in the list
+      bool isBegin;
+      // The current instruction, this is never nullptr unless list is empty
+      Instruction* inst;
+      void next();
+      void prev();
+      bool equal(const iterator_pimpl& other) const {
+         // if(isEnd)
+         //    return other.isEnd;
+         return isEnd == other.isEnd && isBegin == other.isBegin &&
+                inst == other.inst;
+      }
+   };
+
+   // The iterator template to support both const and non-const iterators
+   template <typename T>
+   class iterator_impl {
+   private:
+      friend class Instruction;
+      friend class BasicBlock;
+      iterator_impl(Instruction* inst, T bb, bool isEnd, bool isBegin)
+            : pimpl_{isEnd, isBegin, inst}, bb_{bb} {}
+
+   public:
+      iterator_impl() : pimpl_{true, false, nullptr} {}
+
+   public:
+      Instruction* operator*() const { return pimpl_.inst; }
+      Instruction* operator->() const { return pimpl_.inst; }
+      iterator_impl& operator++() {
+         pimpl_.next();
+         return *this;
+      }
+      iterator_impl& operator--() {
+         pimpl_.prev();
+         return *this;
+      }
+      bool operator==(const iterator_impl& other) const {
+         return pimpl_.equal(other.pimpl_);
+      }
+      bool operator!=(const iterator_impl& other) const {
+         return !(*this == other);
+      }
+      T getBB() const { return bb_; }
+      bool isBeforeFirst() const { return pimpl_.isBegin; }
+      bool isAfterLast() const { return pimpl_.isEnd; }
+
+   private:
+      // Private implementation of the iterator
+      iterator_pimpl pimpl_;
+      // The parent basic block, in case this iterator is nullptr
+      T bb_;
+   };
+
 public:
    /**
     * @brief The iterator class for instructions in a basic block allows us to
@@ -21,40 +81,10 @@ public:
     * The minimum iterator is therefore the one before the first instruction,
     * and the maximum iterator is the one after the last instruction.
     */
-   class iterator {
-   private:
-      friend class Instruction;
-      friend class BasicBlock;
-      iterator(Instruction* inst, BasicBlock* bb, bool isEnd, bool isBegin)
-            : isEnd_{isEnd}, isBegin_{isBegin}, inst_{inst}, bb_{bb} {}
+   using iterator = iterator_impl<BasicBlock*>;
 
-   public:
-      iterator() : isEnd_{true}, isBegin_{false}, inst_{nullptr} {}
-
-   public:
-      Instruction* operator*() const { return inst_; }
-      Instruction* operator->() const { return inst_; }
-      iterator& operator++();
-      iterator& operator--();
-      bool operator==(const iterator& other) const {
-         return inst_ == other.inst_ && isEnd_ == other.isEnd_ &&
-                isBegin_ == other.isBegin_;
-      }
-      bool operator!=(const iterator& other) const { return !(*this == other); }
-      BasicBlock* getBB() const { return bb_; }
-      bool isBeforeFirst() const { return isBegin_; }
-      bool isAfterLast() const { return isEnd_; }
-
-   private:
-      // True if this iterator is after the last instruction in the list
-      bool isEnd_;
-      // True if this iterator is before the first instruction in the list
-      bool isBegin_;
-      // The current instruction, this is never nullptr unless list is empty
-      Instruction* inst_;
-      // The parent basic block, in case this iterator is nullptr
-      BasicBlock* bb_;
-   };
+   // See BasicBlock::iterator
+   using const_iterator = iterator_impl<const BasicBlock*>;
 
 private:
    BasicBlock(Context& ctx, Function* parent);
@@ -68,13 +98,22 @@ public:
    // Gets the parent function of this basic block
    auto* parent() const { return parent_; }
    // Gets the begin iterator for the instructions in this basic block
-   iterator begin() { return iterator{first_, this, first_ == nullptr, false}; }
+   auto begin() { return iterator{first_, this, first_ == nullptr, false}; }
    // Gets the end iterator for the instructions in this basic block
-   iterator end() { return iterator{last_, this, true, false}; }
+   auto end() { return iterator{last_, this, true, false}; }
+   // Const iterator
+   auto begin() const {
+      return const_iterator{first_, this, first_ == nullptr, false};
+   }
+   // Const iterator
+   auto end() const { return const_iterator{last_, this, true, false}; }
    // Append an instruction to the end of the basic block
    void appendAfterEnd(Instruction* instr);
    // Insert an instruction before the first instruction in the basic block
    void insertBeforeBegin(Instruction* instr);
+   // Print the basic block to the given output stream
+   std::ostream& print(std::ostream& os) const override;
+
 private:
    Instruction* first_;
    Instruction* last_;

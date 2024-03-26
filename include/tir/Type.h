@@ -18,17 +18,24 @@ namespace tir {
  */
 class Type {
 public:
-   static Type* getVoidTy(Context& ctx) { return ctx.pimpl().voidType; }
-   static Type* getPointerTy(Context& ctx) { return ctx.pimpl().pointerType; }
-   static Type* getLabelTy(Context& ctx) { return ctx.pimpl().labelType; }
+   static Type* getVoidTy(Context const& ctx) { return ctx.pimpl().voidType; }
+   static Type* getPointerTy(Context const& ctx) {
+      return ctx.pimpl().pointerType;
+   }
+   static Type* getLabelTy(Context const& ctx) { return ctx.pimpl().labelType; }
    static Type* getInt1Ty(Context& ctx);
+   static Type* getInt8Ty(Context& ctx);
+   static Type* getInt32Ty(Context& ctx);
 
 public:
    virtual bool isIntegerType() const { return false; }
    virtual bool isFunctionType() const { return false; }
-   virtual bool isPointerType() const { return false; }
    virtual bool isArrayType() const { return false; }
    virtual bool isStructType() const { return false; }
+   bool isVoidType() const { return ctx_ && (this == getVoidTy(*ctx_)); }
+   bool isPointerType() const { return ctx_ && (this == getPointerTy(*ctx_)); }
+   bool isLabelType() const { return ctx_ && (this == getLabelTy(*ctx_)); }
+   std::ostream& print(std::ostream& os) const;
 
 protected:
    struct ChildTypeArray {
@@ -38,11 +45,12 @@ protected:
 
 protected:
    friend class Context;
-   Type() : Type{0, {}} {}
-   Type(uint32_t data) : Type{data, {}} {}
-   Type(ChildTypeArray subtypes) : Type{0, subtypes} {}
-   Type(uint32_t data, ChildTypeArray subtypes)
-         : data_{data}, subtypes_{subtypes} {}
+   explicit Type(Context* ctx) : Type{0, {}, ctx} {}
+   explicit Type(uint32_t data) : Type{data, {}} {}
+   explicit Type(ChildTypeArray subtypes) : Type{0, subtypes} {}
+   Type(uint32_t data, ChildTypeArray subtypes) : Type{data, subtypes, nullptr} {}
+   Type(uint32_t data, ChildTypeArray subtypes, Context* ctx)
+         : ctx_{ctx}, data_{data}, subtypes_{subtypes} {}
    /**
     * @brief Gets the data associated with this type.
     */
@@ -53,9 +61,11 @@ protected:
    ChildTypeArray getChildTypes() const { return subtypes_; }
 
 private:
+   Context const* ctx_ = nullptr;
    const uint32_t data_;
    const ChildTypeArray subtypes_;
 };
+std::ostream& operator<<(std::ostream& os, const Type& type);
 
 /**
  * @brief
@@ -123,14 +133,16 @@ public:
          }
       }
       // If not found, create a new FunctionType with types.
-      void* buf = ctx.alloc().allocate_bytes(
-            sizeof(FunctionType) + size * sizeof(Type*), alignof(FunctionType));
+      void* buf = ctx.alloc().allocate_bytes(sizeof(FunctionType),
+                                             alignof(FunctionType));
       // Types are stored after the FunctionType object in memory.
-      auto* typesBuf = reinterpret_cast<Type**>(static_cast<uint8_t*>(buf) +
-                                                sizeof(FunctionType));
+      void* buf2 =
+            ctx.alloc().allocate_bytes(size * sizeof(Type*), alignof(Type*));
+      auto* typesBuf = reinterpret_cast<Type**>(buf2);
       // Copy the types into the buffer.
       {
-         uint32_t i = 0;
+         uint32_t i = 1;
+         typesBuf[0] = returnTy;
          types.for_each([&](Type* ty) { typesBuf[i++] = ty; });
       }
       // Create the FunctionType object.
@@ -170,10 +182,10 @@ public:
          }
       }
       // If not found, create a new ArrayType with elementType and numElements.
-      void* buf = ctx.alloc().allocate_bytes(sizeof(ArrayType) + sizeof(Type*),
-                                             alignof(ArrayType));
-      auto* typeBuf = reinterpret_cast<Type**>(static_cast<uint8_t*>(buf) +
-                                               sizeof(ArrayType));
+      void* buf =
+            ctx.alloc().allocate_bytes(sizeof(ArrayType), alignof(ArrayType));
+      void* buf2 = ctx.alloc().allocate_bytes(sizeof(Type*), alignof(Type*));
+      auto* typeBuf = reinterpret_cast<Type**>(buf2);
       typeBuf[0] = elementType;
       auto* type = new(buf) ArrayType{typeBuf, numElements};
       ctx.pimpl().arrayTypes.push_back(type);
@@ -183,7 +195,7 @@ public:
 public:
    bool isArrayType() const override { return true; }
    Type* getElementType() const { return getChildTypes().array[0]; }
-   uint32_t getArraySize() const { return getData(); }
+   uint32_t getLength() const { return getData(); }
 };
 static_assert(sizeof(ArrayType) == sizeof(Type));
 
@@ -212,10 +224,11 @@ public:
          }
       }
       // If not found, create a new StructType with elementTypes.
-      void* buf = ctx.alloc().allocate_bytes(
-            sizeof(StructType) + size * sizeof(Type*), alignof(StructType));
-      auto* typeBuf = reinterpret_cast<Type**>(static_cast<uint8_t*>(buf) +
-                                               sizeof(StructType));
+      void* buf =
+            ctx.alloc().allocate_bytes(sizeof(StructType), alignof(StructType));
+      void* buf2 =
+            ctx.alloc().allocate_bytes(size * sizeof(Type*), alignof(Type*));
+      auto* typeBuf = reinterpret_cast<Type**>(buf2);
       {
          uint32_t i = 0;
          elementTypes.for_each([&](Type* ty) { typeBuf[i++] = ty; });

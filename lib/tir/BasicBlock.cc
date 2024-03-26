@@ -12,28 +12,27 @@ BasicBlock::BasicBlock(Context& ctx, Function* parent)
         last_{nullptr},
         parent_{parent} {
    parent->addBlock(this);
+   setName("bb");
 }
 
-BasicBlock::iterator& BasicBlock::iterator::operator++() {
-   isBegin_ = false;
-   auto* next = inst_->next();
+void BasicBlock::iterator_pimpl::next() {
+   isBegin = false;
+   auto* next = inst->next();
    if(next) {
-      inst_ = next;
+      inst = next;
    } else {
-      isEnd_ = true;
+      isEnd = true;
    }
-   return *this;
 }
 
-BasicBlock::iterator& BasicBlock::iterator::operator--() {
-   isEnd_ = false;
-   auto* prev = inst_->prev();
+void BasicBlock::iterator_pimpl::prev() {
+   isEnd = false;
+   auto* prev = inst->prev();
    if(prev) {
-      inst_ = prev;
+      inst = prev;
    } else {
-      isBegin_ = true;
+      isBegin = true;
    }
-   return *this;
 }
 
 void BasicBlock::appendAfterEnd(Instruction* instr) {
@@ -43,6 +42,7 @@ void BasicBlock::appendAfterEnd(Instruction* instr) {
    } else {
       first_ = last_ = instr;
    }
+   instr->parent_ = this;
 }
 
 void BasicBlock::insertBeforeBegin(Instruction* instr) {
@@ -52,6 +52,16 @@ void BasicBlock::insertBeforeBegin(Instruction* instr) {
    } else {
       first_ = last_ = instr;
    }
+   instr->parent_ = this;
+}
+
+std::ostream& BasicBlock::print(std::ostream& os) const {
+   printName(os) << ":";
+   for(auto inst : *this) {
+      os << "\n    ";
+      inst->print(os);
+   }
+   return os;
 }
 
 } // namespace tir

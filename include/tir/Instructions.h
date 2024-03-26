@@ -17,6 +17,7 @@ namespace tir {
  * @brief
  */
 class Instruction : public User {
+   friend class BasicBlock;
    // Public enum definitions //////////////////////////////////////////////////
 public:
 #define BINOP_KINDS(F) \
@@ -27,7 +28,7 @@ public:
    F(DIV)              \
    F(REM)
    DECLARE_ENUM(BinOp, BINOP_KINDS)
-private:
+protected:
    DECLARE_STRING_TABLE(BinOp, binop_strtab_, BINOP_KINDS)
 #undef BINOP_KINDS
 
@@ -56,6 +57,10 @@ public:
       }
       inst->prev_ = this;
       parent_ = inst->parent_;
+      // If this is the first instruction in the BB, update the BB's first pointer
+      if(!prev_ && parent_) {
+         parent_->first_ = this;
+      }
    }
    // Inserts this after the given instruction, setting the parent of this
    void insertAfter(Instruction* inst) {
@@ -66,6 +71,10 @@ public:
       }
       inst->next_ = this;
       parent_ = inst->parent_;
+      // If this is the last instruction in the BB, update the BB's last pointer
+      if(!next_ && parent_) {
+         parent_->last_ = this;
+      }
    }
    // Gets the parent BB of this instruction, or nullptr if it has no parent
    auto* parent() const { return parent_; }
@@ -85,6 +94,8 @@ public:
    auto iter() {
       return BasicBlock::iterator{this, this->parent_, false, false};
    }
+   // Gets the binary operator of this instruction
+   auto binop() const { return binop_; }
 
    // Private data members /////////////////////////////////////////////////////
 private:
@@ -101,7 +112,7 @@ private:
 /**
  * @brief
  */
-class BranchInst : public Instruction {
+class BranchInst final : public Instruction {
 private:
    BranchInst(Context& ctx, Value* cond, BasicBlock* trueBB, BasicBlock* falseBB);
 
@@ -112,12 +123,16 @@ public:
             ctx.alloc().allocate_bytes(sizeof(BranchInst), alignof(BranchInst));
       return new(buf) BranchInst{ctx, cond, trueBB, falseBB};
    }
+
+public:
+   bool isTerminator() const override { return true; }
+   std::ostream& print(std::ostream& os) const override;
 };
 
 /**
  * @brief
  */
-class ReturnInst : public Instruction {
+class ReturnInst final : public Instruction {
 private:
    ReturnInst(Context& ctx, Value* ret);
 
@@ -128,7 +143,10 @@ public:
       return new(buf) ReturnInst{ctx, ret};
    }
 
+public:
    bool isReturnVoid() const { return numChildren() == 0; }
+   bool isTerminator() const override { return true; }
+   std::ostream& print(std::ostream& os) const override;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -138,7 +156,7 @@ public:
 /**
  * @brief
  */
-class StoreInst : public Instruction {
+class StoreInst final : public Instruction {
 private:
    StoreInst(Context& ctx, Value* val, Value* ptr);
 
@@ -147,12 +165,15 @@ public:
       auto buf = ctx.alloc().allocate_bytes(sizeof(StoreInst), alignof(StoreInst));
       return new(buf) StoreInst{ctx, val, ptr};
    }
+
+public:
+   std::ostream& print(std::ostream& os) const override;
 };
 
 /**
  * @brief
  */
-class LoadInst : public Instruction {
+class LoadInst final : public Instruction {
 private:
    LoadInst(Context& ctx, Type* type, Value* ptr);
 
@@ -161,6 +182,9 @@ public:
       auto buf = ctx.alloc().allocate_bytes(sizeof(LoadInst), alignof(LoadInst));
       return new(buf) LoadInst{ctx, type, ptr};
    }
+
+public:
+   std::ostream& print(std::ostream& os) const override;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -170,7 +194,7 @@ public:
 /**
  * @brief
  */
-class CallInst : public Instruction {
+class CallInst final : public Instruction {
 private:
    CallInst(Context& ctx, Value* callee, utils::range_ref<Value*> args);
 
@@ -180,6 +204,9 @@ public:
       auto buf = ctx.alloc().allocate_bytes(sizeof(CallInst), alignof(CallInst));
       return new(buf) CallInst{ctx, callee, args};
    }
+
+public:
+   std::ostream& print(std::ostream& os) const override;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -189,7 +216,7 @@ public:
 /**
  * @brief
  */
-class BinaryInst : public Instruction {
+class BinaryInst final : public Instruction {
 private:
    BinaryInst(Context& ctx, BinOp binop, Value* lhs, Value* rhs);
 
@@ -199,6 +226,34 @@ public:
             ctx.alloc().allocate_bytes(sizeof(BinaryInst), alignof(BinaryInst));
       return new(buf) BinaryInst{ctx, binop, lhs, rhs};
    }
+
+public:
+   std::ostream& print(std::ostream& os) const override;
+};
+
+/* ===--------------------------------------------------------------------=== */
+// Alloca instruction
+/* ===--------------------------------------------------------------------=== */
+
+/**
+ * @brief
+ */
+class AllocaInst final : public Instruction {
+private:
+   AllocaInst(Context& ctx, Type* type);
+
+public:
+   static AllocaInst* Create(Context& ctx, Type* type) {
+      auto buf =
+            ctx.alloc().allocate_bytes(sizeof(AllocaInst), alignof(AllocaInst));
+      return new(buf) AllocaInst{ctx, type};
+   }
+
+public:
+   std::ostream& print(std::ostream& os) const override;
+
+private:
+   Type* allocType_;
 };
 
 } // namespace tir

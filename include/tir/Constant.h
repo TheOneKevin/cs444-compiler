@@ -39,6 +39,8 @@ public:
       return new(buf) ConstantInt{ctx, type, value};
    }
 
+public:
+   std::ostream& print(std::ostream& os) const override;
    uint64_t value() const { return value_; }
 
 private:
@@ -56,7 +58,10 @@ protected:
 /**
  * @brief
  */
-class GlobalVariable final : public GlobalObject {};
+class GlobalVariable final : public GlobalObject {
+public:
+   std::ostream& print(std::ostream& os) const override;
+};
 
 /**
  * @brief
@@ -68,6 +73,7 @@ private:
    Argument(Function* parent, Type* type, unsigned index);
 
 public:
+   std::ostream& print(std::ostream& os) const override;
    auto* parent() const { return parent_; }
    auto index() const { return index_; }
 
@@ -99,6 +105,7 @@ private:
    }
 
 public:
+   std::ostream& print(std::ostream& os) const override;
    auto* parent() const { return parent_; }
    auto args() const {
       return std::views::transform(
@@ -116,6 +123,7 @@ public:
       if(body_.empty()) return nullptr;
       return body_.front();
    }
+   auto body() const { return std::views::all(body_); }
 
 private:
    void addBlock(BasicBlock* block) { body_.push_back(block); }

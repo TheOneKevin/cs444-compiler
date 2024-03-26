@@ -1,16 +1,20 @@
 #pragma once
 
-#include <memory_resource>
 #include <unordered_map>
 
 #include "tir/Constant.h"
 #include "tir/Context.h"
+#include "utils/Generator.h"
 
 namespace tir {
 
 class CompilationUnit {
 public:
-   CompilationUnit(Context& ctx) : ctx_{ctx}, functions_{ctx.alloc()} {}
+   CompilationUnit(Context& ctx) : ctx_{ctx}, globals_{ctx.alloc()} {}
+   CompilationUnit(const CompilationUnit&) = delete;
+   CompilationUnit(CompilationUnit&&) = delete;
+   CompilationUnit& operator=(const CompilationUnit&) = delete;
+   CompilationUnit& operator=(CompilationUnit&&) = delete;
 
    /**
     * @brief Create a new function with the given type and name.
@@ -20,10 +24,10 @@ public:
     * @return Function* The function, or nullptr if it already exists
     */
    Function* CreateFunction(FunctionType* type, const std::string_view name) {
-      if(functions_.find(std::string{name}) != functions_.end()) return nullptr;
+      if(GetFunction(std::string{name})) return nullptr;
       auto* buf = ctx_.alloc().allocate_bytes(sizeof(Function), alignof(Function));
       auto* func = new(buf) Function{ctx_, this, type, name};
-      functions_.emplace(name, func);
+      globals_.emplace(name, func);
       return func;
    }
 
@@ -34,16 +38,41 @@ public:
     * @return Function* The function, or nullptr if it does not exist
     */
    Function* GetFunction(const std::string_view name) {
-      auto it = functions_.find(std::string{name});
-      if(it == functions_.end()) {
-         return nullptr;
+      auto it = globals_.find(std::string{name});
+      if(it == globals_.end()) return nullptr;
+      auto go = it->second;
+      return dyn_cast<Function>(go);
+   }
+
+   // Print the compilation unit to the given output stream.
+   std::ostream& print(std::ostream& os) const;
+   void dump() const;
+
+   /// @brief Filters through the global objects and yields just the functions
+   utils::Generator<Function*> functions() const {
+      for(auto& [name, func] : globals_) {
+         if(auto* f = dyn_cast<Function>(func)) co_yield f;
       }
-      return it->second;
+   }
+
+   /// @brief Yields all global objects in the compilation unit
+   utils::Generator<GlobalObject*> global_objects() const {
+      for(auto& [name, go] : globals_) co_yield go;
+   }
+
+   /// @brief Get the context associated with this compilation unit
+   auto& ctx() { return ctx_; }
+
+   /// @brief Filters through the global objects and yields just the variables
+   utils::Generator<GlobalVariable*> global_variables() const {
+      for(auto& [name, go] : globals_) {
+         if(auto* gv = dyn_cast<GlobalVariable>(go)) co_yield gv;
+      }
    }
 
 private:
    Context& ctx_;
-   std::pmr::unordered_map<std::string, Function*> functions_;
+   std::pmr::unordered_map<std::string, GlobalObject*> globals_;
 };
 
 } // namespace tir
