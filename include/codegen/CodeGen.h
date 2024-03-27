@@ -9,7 +9,10 @@
 
 namespace codegen {
 
+class CGExprEvaluator;
+
 class CodeGenerator {
+   friend class CGExprEvaluator;
 public:
    CodeGenerator(tir::Context& ctx, tir::CompilationUnit& cu)
          : ctx{ctx}, cu{cu} {}

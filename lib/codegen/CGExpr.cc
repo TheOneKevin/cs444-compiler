@@ -1,6 +1,8 @@
 #include "codegen/CGExpr.h"
+
 #include <utility>
 
+#include "ast/Decl.h"
 #include "codegen/CodeGen.h"
 #include "utils/Utils.h"
 
@@ -15,11 +17,35 @@ namespace codegen {
 
 tir::Value* CGExprEvaluator::mapValue(ast::exprnode::ExprValue& node) const {
    if(auto memberName = dyn_cast<ex::MemberName>(node)) {
-      assert(false && "Not implemented yet");
+      // 1. If it's a field decl, handle the static and non-static cases
+      if(auto* fieldDecl = dyn_cast<ast::FieldDecl>(memberName->decl())) {
+         // 1. If it's static, then grab the GV
+         if(fieldDecl->modifiers().isStatic()) {
+            return cu.findGlobalVariable(fieldDecl->getCanonicalName());
+         }
+         // 2. Otherwise... it's complicated
+         else {
+            assert(false && "Not implemented yet");
+         }
+      }
+      // 2. If it's a local (var) decl, grab the alloca inst
+      else {
+         auto* localDecl = cast<ast::VarDecl>(memberName->decl());
+         return cg.valueMap[localDecl];
+      }
    } else if(auto thisNode = dyn_cast<ex::ThisNode>(node)) {
-      assert(false && "Not implemented yet");
+      // "this" will be the first argument of the function
+      return curFn.args().front();
    } else if(auto methodName = dyn_cast<ex::MethodName>(node)) {
-      assert(false && "Not implemented yet");
+      auto* methodDecl = cast<ast::MethodDecl>(methodName->decl());
+      // 1. If it's static, then grab the GV
+      if(methodDecl->modifiers().isStatic()) {
+         return cu.findFunction(methodDecl->getCanonicalName());
+      }
+      // 2. Otherwise... it's complicated
+      else {
+         assert(false && "Not implemented yet");
+      }
    } else if(auto literal = dyn_cast<ex::LiteralNode>(node)) {
       if(literal->builtinType()->isNumeric()) {
          return Constant::CreateInt32(ctx, literal->getAsInt());
@@ -30,7 +56,7 @@ tir::Value* CGExprEvaluator::mapValue(ast::exprnode::ExprValue& node) const {
          assert(false && "Not implemented yet");
       } else {
          // Null type
-         assert(false && "Not implemented yet");
+         return Constant::CreateNullPointer(ctx);
       }
    }
    std::unreachable();

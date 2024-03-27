@@ -24,7 +24,7 @@ public:
     * @return Function* The function, or nullptr if it already exists
     */
    Function* CreateFunction(FunctionType* type, const std::string_view name) {
-      if(GetFunction(std::string{name})) return nullptr;
+      if(findFunction(std::string{name})) return nullptr;
       auto* buf = ctx_.alloc().allocate_bytes(sizeof(Function), alignof(Function));
       auto* func = new(buf) Function{ctx_, this, type, name};
       globals_.emplace(name, func);
@@ -37,11 +37,24 @@ public:
     * @param name The name of the function
     * @return Function* The function, or nullptr if it does not exist
     */
-   Function* GetFunction(const std::string_view name) {
+   Function* findFunction(const std::string_view name) {
       auto it = globals_.find(std::string{name});
       if(it == globals_.end()) return nullptr;
       auto go = it->second;
       return dyn_cast<Function>(go);
+   }
+
+   /**
+    * @brief Find the global variable with the given name.
+    *
+    * @param name The name of the global variable
+    * @return GlobalVariable* The global variable, or nullptr if it does not exist
+    */
+   GlobalVariable* findGlobalVariable(const std::string_view name) {
+      auto it = globals_.find(std::string{name});
+      if(it == globals_.end()) return nullptr;
+      auto go = it->second;
+      return dyn_cast<GlobalVariable>(go);
    }
 
    // Print the compilation unit to the given output stream.

@@ -33,6 +33,7 @@ public:
    virtual bool isFunctionType() const { return false; }
    virtual bool isArrayType() const { return false; }
    virtual bool isStructType() const { return false; }
+   virtual bool isBooleanType() const { return false; }
    bool isVoidType() const { return ctx_ && (this == getVoidTy(*ctx_)); }
    bool isPointerType() const { return ctx_ && (this == getPointerTy(*ctx_)); }
    bool isLabelType() const { return ctx_ && (this == getLabelTy(*ctx_)); }
@@ -102,6 +103,7 @@ public:
 
 public:
    bool isIntegerType() const override { return true; }
+   bool isBooleanType() const override { return getData() == 1; }
    uint32_t getBitWidth() const { return getData(); }
 };
 static_assert(sizeof(IntegerType) == sizeof(Type));

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ast/ExprEvaluator.h"
+#include "codegen/CodeGen.h"
+#include "tir/Constant.h"
 #include "tir/Context.h"
 #include "tir/TIR.h"
 
@@ -8,7 +10,7 @@ namespace codegen {
 
 class CGExprEvaluator final : public ast::ExprEvaluator<tir::Value*> {
 public:
-   explicit CGExprEvaluator(tir::Context& ctx) : ctx{ctx} {}
+   explicit CGExprEvaluator(CodeGenerator& cg) : cg{cg} {}
 
 private:
    tir::Value* mapValue(ast::exprnode::ExprValue& node) const override;
@@ -32,7 +34,10 @@ private:
                         tir::Value* value) const override;
 
 private:
-   tir::Context& ctx;
+   CodeGenerator& cg;
+   tir::Context& ctx{cg.ctx};
+   tir::CompilationUnit& cu{cg.cu};
+   tir::Function& curFn{*cg.curFn};
 };
 
 } // namespace codegen

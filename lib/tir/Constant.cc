@@ -14,6 +14,10 @@ ConstantInt* Constant::CreateInt32(Context& ctx, uint32_t value) {
    return ConstantInt::Create(ctx, Type::getInt32Ty(ctx), value);
 }
 
+ConstantNullPointer* Constant::CreateNullPointer(Context& ctx) {
+   return ConstantNullPointer::Create(ctx);
+}
+
 std::ostream& ConstantInt::print(std::ostream& os) const {
    os << *type() << " " << value();
    return os;

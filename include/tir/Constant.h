@@ -19,10 +19,14 @@ class ConstantInt;
 class Constant : public User {
 protected:
    Constant(Context& ctx, Type* type) : User{ctx, type} {}
+   virtual bool isNullPointer() const { return false; }
+   virtual bool isNumeric() const { return false; }
+   virtual bool isBoolean() const { return false; }
 
 public:
    static ConstantInt* CreateBool(Context& ctx, bool value);
    static ConstantInt* CreateInt32(Context& ctx, uint32_t value);
+   static ConstantNullPointer* CreateNullPointer(Context& ctx);
 };
 
 /**
@@ -43,9 +47,29 @@ public:
 public:
    std::ostream& print(std::ostream& os) const override;
    uint64_t value() const { return value_; }
+   bool isNumeric() const override { return true; }
+   bool isBoolean() const override { return type()->isBooleanType(); }
 
 private:
    uint64_t value_;
+};
+
+/**
+ * @brief 
+ */
+class ConstantNullPointer final : public Constant {
+private:
+   friend class Context;
+   ConstantNullPointer(Context& ctx) : Constant{ctx, Type::getPointerTy(ctx)} {}
+
+public:
+   static ConstantNullPointer* Create(Context& ctx) {
+      return ctx.pimpl().nullPointer;
+   }
+
+public:
+   std::ostream& print(std::ostream& os) const override;
+   bool isNullPointer() const override { return true; }
 };
 
 /**

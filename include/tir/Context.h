@@ -5,6 +5,7 @@
 namespace tir {
 
 class Type;
+class ConstantNullPointer;
 class FunctionType;
 class ArrayType;
 class IntegerType;
@@ -13,7 +14,8 @@ class StructType;
 struct ContextPImpl {
 public:
    ContextPImpl(BumpAllocator* alloc, Type* const pointerType,
-                Type* const voidType, Type* const labelType)
+                Type* const voidType, Type* const labelType,
+                ConstantNullPointer* const nullPointer)
          : alloc(alloc),
            functionTypes(*alloc),
            arrayTypes(*alloc),
@@ -21,7 +23,8 @@ public:
            structTypes(*alloc),
            pointerType(pointerType),
            voidType(voidType),
-           labelType(labelType) {}
+           labelType(labelType),
+           nullPointer(nullPointer) {}
 
 public:
    BumpAllocator* alloc;
@@ -32,6 +35,7 @@ public:
    Type* const pointerType;
    Type* const voidType;
    Type* const labelType;
+   ConstantNullPointer* const nullPointer;
 };
 
 class Context {
