@@ -25,6 +25,7 @@ void CodeGenerator::emitFunction(ast::MethodDecl const* decl) {
    for(auto arg : func->args()) {
       arg->setName(paramNames[arg->index()]);
    }
+   curFn = func;
    // 3. Emit the function body and add the allocas for the locals
    tir::IRBuilder builder{ctx};
    auto entry = builder.createBasicBlock(func);
@@ -37,6 +38,8 @@ void CodeGenerator::emitFunction(ast::MethodDecl const* decl) {
       valueMap[local] = cast<tir::AllocaInst>(val);
    }
    emitStmt(decl->body());
+   // 4. End the function by clearing the curFn
+   curFn = nullptr;
 }
 
 } // namespace codegen

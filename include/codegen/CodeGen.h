@@ -2,6 +2,7 @@
 
 #include "ast/AST.h"
 #include "ast/Stmt.h"
+#include "tir/Constant.h"
 #include "tir/IRBuilder.h"
 #include "tir/Instructions.h"
 #include "tir/TIR.h"
@@ -28,6 +29,7 @@ private:
 private:
    tir::Context& ctx;
    tir::CompilationUnit& cu;
+   tir::Function* curFn{nullptr};
    std::pmr::unordered_map<ast::Decl const*, tir::AllocaInst*> valueMap{ctx.alloc()};
    tir::IRBuilder builder{ctx};
 };
