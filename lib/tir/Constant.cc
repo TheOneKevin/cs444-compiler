@@ -10,6 +10,10 @@ ConstantInt* Constant::CreateBool(Context& ctx, bool value) {
    return ConstantInt::Create(ctx, Type::getInt1Ty(ctx), value);
 }
 
+ConstantInt* Constant::CreateInt32(Context& ctx, uint32_t value) {
+   return ConstantInt::Create(ctx, Type::getInt32Ty(ctx), value);
+}
+
 std::ostream& ConstantInt::print(std::ostream& os) const {
    os << *type() << " " << value();
    return os;

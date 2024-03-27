@@ -23,7 +23,7 @@ def run_test(test: str, exp_rc: int) -> int:
     cmd = get_joosc_command(args.args, test_path, stdlib_dir)
     ret, _, _ = run_test_case(cmd)
     print(" " * 80, end="\r", flush=True)
-    if ret != 0 and ret != 42:
+    if ret != 0 and ret != 42 and ret != 43:
         num_crashes += 1
     if ret != exp_rc:
         print(f"{test} failed with return code {ret}, expected {exp_rc}")

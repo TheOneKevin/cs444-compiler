@@ -25,6 +25,7 @@ public:
    static Type* getLabelTy(Context const& ctx) { return ctx.pimpl().labelType; }
    static Type* getInt1Ty(Context& ctx);
    static Type* getInt8Ty(Context& ctx);
+   static Type* getInt16Ty(Context& ctx);
    static Type* getInt32Ty(Context& ctx);
 
 public:

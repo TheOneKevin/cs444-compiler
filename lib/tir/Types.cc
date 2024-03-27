@@ -5,6 +5,7 @@ namespace tir {
 
 Type* Type::getInt1Ty(Context& ctx) { return IntegerType::get(ctx, 1); }
 Type* Type::getInt8Ty(Context& ctx) { return IntegerType::get(ctx, 8); }
+Type* Type::getInt16Ty(Context& ctx) { return IntegerType::get(ctx, 16); }
 Type* Type::getInt32Ty(Context& ctx) { return IntegerType::get(ctx, 32); }
 
 std::ostream& Type::print(std::ostream& os) const {

@@ -131,6 +131,17 @@ public:
       return insert(BranchInst::Create(ctx_, cond, true_target, false_target));
    }
 
+   /**
+    * @brief Create an alloca instruction with the given type and name.
+    *
+    * @param type The type of the value to allocate
+    * @param name The name of the value to allocate
+    * @return AllocaInst* A pointer to the instruction
+    */
+   Instruction* createAlloca(Type* type) {
+      return insert(AllocaInst::Create(ctx_, type));
+   }
+
 private:
    Instruction* insert(Instruction* instr) {
       if(insertPoint_.isAfterLast()) {

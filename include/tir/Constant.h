@@ -22,6 +22,7 @@ protected:
 
 public:
    static ConstantInt* CreateBool(Context& ctx, bool value);
+   static ConstantInt* CreateInt32(Context& ctx, uint32_t value);
 };
 
 /**
