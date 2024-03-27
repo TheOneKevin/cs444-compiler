@@ -133,6 +133,8 @@ static uint8_t parseChar(std::string_view value) {
          return '\\';
       case '\'':
          return '\'';
+      case '\"':
+         return '\"';
       default:
          assert(false && "Invalid escape sequence");
    }
