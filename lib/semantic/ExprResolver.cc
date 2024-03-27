@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <string_view>
+#include <utility>
 #include <variant>
 
 #include "ast/AST.h"
@@ -606,7 +607,7 @@ ETy ER::evalMemberAccess(DotOp& op, const ETy lhs, const ETy id) const {
             resolvePackageAccess(newQ);
             break;
          default:
-            assert(false && "Not reached");
+            std::unreachable();
       }
    } else {
       resolveFieldAccess(newQ);

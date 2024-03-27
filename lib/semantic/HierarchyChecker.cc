@@ -1,6 +1,7 @@
 #include "semantic/HierarchyChecker.h"
 
 #include <set>
+#include <utility>
 #include "ast/AstNode.h"
 #include "ast/DeclContext.h"
 #include "utils/Utils.h"
@@ -94,7 +95,7 @@ void HierarchyChecker::checkMethodInheritanceHelper(
             inheritedMethods.emplace_back(method);
          }
       } else if(super != nullptr) {
-         assert(false && "Unreachable");
+         std::unreachable();
       }
    }
    if(auto classDecl = dyn_cast<ast::ClassDecl>(node)) {

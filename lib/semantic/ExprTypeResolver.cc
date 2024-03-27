@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iterator>
 #include <ranges>
+#include <utility>
 
 #include "ast/AstNode.h"
 #include "ast/DeclContext.h"
@@ -102,7 +103,7 @@ bool ExprTypeResolver::isAssignableTo(const Type* lhs, const Type* rhs) const {
                          dyn_cast<InterfaceDecl const*>(leftRef->decl())) {
             return HC->isSuperInterface(leftInterface, rightClass);
          } else {
-            assert(false && "Unreachable");
+            std::unreachable();
          }
       } else if(auto rightInterface =
                       dyn_cast<InterfaceDecl const*>(rightRef->decl())) {
@@ -113,7 +114,7 @@ bool ExprTypeResolver::isAssignableTo(const Type* lhs, const Type* rhs) const {
                          dyn_cast<InterfaceDecl const*>(leftRef->decl())) {
             return HC->isSuperInterface(leftInterface, rightInterface);
          } else {
-            assert(false && "Unreachable");
+            std::unreachable();
          }
       }
    }

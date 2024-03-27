@@ -1,4 +1,5 @@
 #include <utils/Error.h>
+#include <utility>
 
 #include "ast/AST.h"
 #include "parsetree/ParseTree.h"
@@ -53,9 +54,8 @@ ast::Stmt* ptv::visitStatement(Node* node) {
       case pty::StatementExpression:
          return visitExpressionStatement(child);
       default:
-         unreachable();
+         std::unreachable();
    }
-   return nullptr;
 }
 
 // pty::IfThenStatement ////////////////////////////////////////////////////////

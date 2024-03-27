@@ -53,10 +53,6 @@ private:
       }
    }
 
-   [[noreturn]] static inline void unreachable() {
-      throw utils::FatalError("Unreachable code reached!");
-   }
-
    // Templated visitor patterns ///////////////////////////////////////////////
 
    // NOTE(kevin): Technically we can re-implement all our visitors using the

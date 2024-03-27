@@ -1,3 +1,4 @@
+#include <utility>
 #include "ast/AST.h"
 #include "parsetree/ParseTree.h"
 #include "parsetree/ParseTreeVisitor.h"
@@ -60,7 +61,7 @@ ast::Decl* ptv::visit<pty::ClassBodyDeclarationList>(Node* node) {
       case pty::ConstructorDeclaration:
          return visitConstructorDeclaration(node);
       default:
-         unreachable();
+         std::unreachable();
    }
 }
 

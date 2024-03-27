@@ -1,4 +1,5 @@
 #include <utils/Error.h>
+#include <utility>
 
 #include "diagnostics/Location.h"
 #include "parsetree/ParseTreeVisitor.h"
@@ -69,7 +70,7 @@ BinaryOp* ptv::convertToBinaryOp(Operator::Type type, SourceRange loc) {
       default:
          assert(false && "Invalid operator type");
    }
-   unreachable();
+   std::unreachable();
 }
 
 Expr* ptv::visitExpr(Node* node) {
@@ -104,7 +105,7 @@ ExprNodeList ptv::visitExprNode(parsetree::Node* node) {
       ops.push_back(convertToBinaryOp(op->get_type(), op->location()));
       return ops;
    }
-   unreachable();
+   std::unreachable();
 }
 
 // expression can have different types of children, so we need to visit them
@@ -147,7 +148,7 @@ ExprNodeList ptv::visitExprChild(Node* node) {
       default:
          assert(false && "Invalid node type");
    }
-   unreachable();
+   std::unreachable();
 }
 
 ExprNodeList ptv::visitQualifiedIdentifierInExpr(Node* node,
@@ -209,7 +210,7 @@ ExprNodeList ptv::visitMethodInvocation(Node* node) {
       ops.push_back(sem_alloc<MethodInvocation>(size));
       return ops;
    }
-   unreachable();
+   std::unreachable();
 }
 
 ExprNodeList ptv::visitFieldAccess(Node* node) {
@@ -279,7 +280,7 @@ ExprNodeList ptv::visitArrayCreation(Node* node) {
    ops.concat(visitExprChild(node->child(1)));
    ops.push_back(sem_alloc<ArrayInstanceCreation>());
    return ops;
-   unreachable();
+   std::unreachable();
 }
 
 ExprNode* ptv::visitRegularType(Node* node) {

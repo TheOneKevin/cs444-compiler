@@ -1,6 +1,7 @@
 #include "parsetree/ParseTree.h"
 #include "parsetree/ParseTreeVisitor.h"
 #include <utils/Error.h>
+#include <utility>
 
 namespace parsetree {
 
@@ -22,7 +23,7 @@ ast::UnresolvedType* ptv::visitReferenceType(Node* node,
       ast_node->addIdentifier(visitIdentifier(node->child(1)));
       return ast_node;
    }
-   unreachable();
+   std::unreachable();
 }
 
 std::string_view ptv::visitIdentifier(Node* node) {
@@ -44,7 +45,7 @@ ast::Modifiers ptv::visitModifierList(Node* node, ast::Modifiers modifiers) {
       modifiers.set(visitModifier(node->child(1)));
       return modifiers;
    }
-   unreachable();
+   std::unreachable();
 }
 
 Modifier ptv::visitModifier(Node* node) {

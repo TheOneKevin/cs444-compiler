@@ -1,6 +1,7 @@
 #include "semantic/AstValidator.h"
 
 #include <cassert>
+#include <utility>
 
 #include "ast/Decl.h"
 #include "ast/ExprNode.h"
@@ -79,8 +80,7 @@ ast::Type const* AstChecker::getTypeFromExpr(ast::Expr const* expr) const {
       assert(value->type() && "Expr value type cannot be null");
       return value->type();
    }
-   assert(false);
-   return nullptr;
+   std::unreachable();
 }
 
 void AstChecker::valdiateTypedDecl(const ast::TypedDecl& decl) {
