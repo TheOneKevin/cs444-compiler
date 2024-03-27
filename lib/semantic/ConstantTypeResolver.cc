@@ -1,18 +1,8 @@
 #include "semantic/ConstantTypeResolver.h"
 
-#include <algorithm>
-#include <iterator>
-#include <ranges>
-#include <string>
-
 #include "ast/AstNode.h"
-#include "ast/DeclContext.h"
-#include "ast/Expr.h"
 #include "ast/ExprNode.h"
 #include "ast/Type.h"
-#include "diagnostics/Location.h"
-#include "joos1w.parser.tab.h"
-#include "semantic/NameResolver.h"
 #include "utils/Utils.h"
 
 namespace semantic {
@@ -21,27 +11,12 @@ using namespace ast;
 using namespace ast::exprnode;
 
 ConstantReturnType const* ConstantTypeResolver::mapValue(ExprValue& node) const {
-   if(auto literal = dyn_cast_or_null<LiteralNode>(&node)) {
+   if(auto literal = dyn_cast<LiteralNode>(&node)) {
       ast::BuiltInType const* type = literal->builtinType();
-
       if (type->isNumeric()) {
-         std::pmr::string pmrString = literal->get_value();
-         std::string stdString(pmrString.data(), pmrString.size());
-         int value = 0;
-         // TODO (Larry & Owen): broken for characters, do we need to fix?
-         try {
-            value = std::stoi(stdString);
-         } catch (std::invalid_argument& e) {}
-
-         return alloc.new_object<ConstantReturnType>(ConstantReturnType::type::INT, value);
+         return alloc.new_object<ConstantReturnType>(ConstantReturnType::type::INT, literal->getAsInt());
       } else if (type->isBoolean()) {
-         if (literal->get_value() == "true") {
-            return alloc.new_object<ConstantReturnType>(ConstantReturnType::type::BOOL, 1);
-         } else if (literal->get_value() == "false") {
-            return alloc.new_object<ConstantReturnType>(ConstantReturnType::type::BOOL, 0);
-         } else {
-            assert(false && "invalid boolean value");
-         }
+         return alloc.new_object<ConstantReturnType>(ConstantReturnType::type::BOOL, literal->getAsInt());
       }
    }
 

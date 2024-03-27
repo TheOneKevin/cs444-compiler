@@ -295,7 +295,7 @@ LiteralNode* ptv::visitLiteral(Node* node) {
    check_node_type(node, pty::Literal);
    auto lit = cast<parsetree::Literal>(node);
    return sem_alloc<LiteralNode>(sem.allocator(),
-                                 lit->get_value(),
+                                 lit,
                                  sem.BuildBuiltInType(lit->get_type()),
                                  node->location());
 }

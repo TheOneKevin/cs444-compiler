@@ -205,14 +205,15 @@ private:
            char const* value)
          : Node{loc, Node::Type::Literal},
            type{type},
-           isNegative{false},
+           isNegative_{false},
            value{value, alloc} {}
 
 public:
    // Override printing for this leaf node
    std::ostream& print(std::ostream& os) const override;
    // Set the value of the literal to negative
-   void setNegative() { isNegative = true; }
+   void setNegative() { isNegative_ = true; }
+   bool isNegative() const { return isNegative_; }
    // Check if the literal is valid
    bool isValid() const;
    // Get the type of the literal
@@ -225,7 +226,7 @@ protected:
 
 private:
    Type type;
-   bool isNegative;
+   bool isNegative_;
    std::pmr::string value;
 };
 

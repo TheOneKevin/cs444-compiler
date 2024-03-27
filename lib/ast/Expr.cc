@@ -1,6 +1,7 @@
 #include <ast/AST.h>
 #include <ast/Expr.h>
 
+#include <cctype>
 #include <ostream>
 
 #include "ast/ExprNode.h"
@@ -99,9 +100,104 @@ std::ostream& TypeNode::print(std::ostream& os) const {
    return os << ")";
 }
 
-LiteralNode::LiteralNode(BumpAllocator& alloc, std::string_view value,
+static uint8_t parseChar(std::string_view value) {
+   // Consume ' first, next value is either \ or a character
+   // If it is a character, just return that character
+   if(value.at(1) != '\\') return (uint8_t)value.at(1);
+   // Here, we have an escape sequence, let's first handle the octal case
+   if(isdigit(value.at(2))) {
+      // We have an octal escape sequence of 1 to 3 digits
+      uint8_t octal[3] = {0, 0, 0};
+      // 1 digit '\0
+      octal[0] = value.at(2) - '0';
+      // 2 digits '\00
+      if(value.length() >= 4) octal[1] = value.at(3) - '0';
+      // 3 digits '\000
+      if(value.length() >= 5) octal[2] = value.at(4) - '0';
+      // Must consume ' then return the character
+      return (uint8_t)((octal[0] << 6) | (octal[1] << 3) | octal[2]);
+   }
+   // Here, we have a non-octal escape sequence
+   switch(value.at(2)) {
+      case 'n':
+         return '\n';
+      case 't':
+         return '\t';
+      case 'r':
+         return '\r';
+      case 'b':
+         return '\b';
+      case 'f':
+         return '\f';
+      case '\\':
+         return '\\';
+      case '\'':
+         return '\'';
+      default:
+         assert(false && "Invalid escape sequence");
+   }
+}
+
+static void unescapeString(std::string_view in, std::pmr::string& out) {
+   // FIXME(kevin): String literals are broken for now :)
+   for(size_t i = 1; i < in.length(); i++) {
+      char c = in.at(i);
+      if(c == '\"') {
+         break;
+      } else {
+         out.push_back(c);
+      }
+   }
+}
+
+LiteralNode::LiteralNode(BumpAllocator& alloc, parsetree::Literal const* node,
                          ast::BuiltInType* type, SourceRange loc)
-      : ExprValue{loc, reinterpret_cast<ast::Type*>(type)}, value_{value, alloc} {}
+      : ExprValue{loc, reinterpret_cast<ast::Type*>(type)} {
+   auto str = node->get_value();
+
+   // 1. Check if the type is numeric
+   if(type->isNumeric()) {
+      uint32_t value = 0;
+      if(type->getKind() == ast::BuiltInType::Kind::Char) {
+         value = parseChar(str);
+      } else {
+         // Convert the string to an integer
+         try {
+            if(node->isNegative())
+               value = std::stoi("-" + std::string(str));
+            else
+               value = std::stoi(std::string(str));
+         } catch(std::invalid_argument& e) {
+            assert(false && "Invalid integer literal");
+         }
+      }
+      value_ = value;
+   }
+   // 2. Otherwise, check if the type is boolean
+   else if(type->isBoolean()) {
+      if(str == "true") {
+         value_ = 1U;
+      } else if(str == "false") {
+         value_ = 0U;
+      } else {
+         assert(false && "Invalid boolean literal");
+      }
+   }
+   // 3. Otherwise, its a string
+   else if(type->isString()) {
+      // Unescape the string
+      value_ = std::pmr::string{alloc};
+      unescapeString(str, std::get<std::pmr::string>(value_));
+   }
+   // 4. Maybe it's a NoneType (i.e., NULL)
+   else if(type->getKind() == ast::BuiltInType::Kind::NoneType) {
+      value_ = 0U;
+   }
+   // 5. Otherwise, it's an invalid type
+   else {
+      assert(false && "Invalid type for literal node");
+   }
+}
 
 std::ostream& LiteralNode::print(std::ostream& os) const {
    // TODO(kevin): re-implement this

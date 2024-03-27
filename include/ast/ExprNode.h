@@ -2,6 +2,7 @@
 
 #include <string>
 #include <string_view>
+#include <variant>
 
 #include "ast/AstNode.h"
 #include "ast/Decl.h"
@@ -229,15 +230,16 @@ private:
 
 class LiteralNode final : public ExprValue {
 public:
-   LiteralNode(BumpAllocator&, std::string_view value, ast::BuiltInType* type,
-               SourceRange loc);
+   LiteralNode(BumpAllocator&, parsetree::Literal const* node,
+               ast::BuiltInType* type, SourceRange loc);
    bool isDeclResolved() const override { return true; }
    std::ostream& print(std::ostream& os) const override;
-   std::pmr::string const get_value() { return value_; } 
    ast::BuiltInType const* builtinType() const;
+   uint32_t getAsInt() const { return std::get<uint32_t>(value_); }
+   auto const& getAsString() const { return std::get<std::pmr::string>(value_); }
 
 private:
-   std::pmr::string value_;
+   std::variant<uint32_t, std::pmr::string> value_;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -357,9 +359,9 @@ public:
    BinaryOp(OpType type, SourceRange loc) : ExprOp(2, loc), type{type} {}
    std::ostream& print(std::ostream& os) const override;
    OpType opType() const { return type; }
-   void setVarAssigned(const ast::VarDecl* var) { 
+   void setVarAssigned(const ast::VarDecl* var) {
       assert(!varAssigned && "Tried to set varAssigned twice");
-      varAssigned = var; 
+      varAssigned = var;
    }
    const ast::VarDecl* getVarAssigned() const { return varAssigned; }
 };
