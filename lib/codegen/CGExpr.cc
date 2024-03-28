@@ -169,6 +169,8 @@ T CGExprEvaluator::evalBinaryOp(ex::BinaryOp& op, T lhs, T rhs) const {
          auto tmp = cg.curFn->createAlloca(Type::getInt1Ty(ctx));
          auto bb1 = cg.builder.createBasicBlock(&curFn);
          auto bb2 = cg.builder.createBasicBlock(&curFn);
+         bb1->setName("and.true");
+         bb2->setName("and.false");
          auto v0 = lhs.asRValue(cg.builder);
          cg.builder.createStoreInstr(v0, tmp);
          cg.builder.createBranchInstr(v0, bb1, bb2);
@@ -195,6 +197,8 @@ T CGExprEvaluator::evalBinaryOp(ex::BinaryOp& op, T lhs, T rhs) const {
          auto tmp = cg.curFn->createAlloca(Type::getInt1Ty(ctx));
          auto bb1 = cg.builder.createBasicBlock(&curFn);
          auto bb2 = cg.builder.createBasicBlock(&curFn);
+         bb1->setName("or.true");
+         bb2->setName("or.false");
          auto v0 = lhs.asRValue(cg.builder);
          cg.builder.createStoreInstr(v0, tmp);
          cg.builder.createBranchInstr(v0, bb2, bb1);
