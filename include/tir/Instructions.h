@@ -14,7 +14,10 @@ namespace tir {
 /* ===--------------------------------------------------------------------=== */
 
 /**
- * @brief
+ * @brief Base class for all instructions in the TIR. Instructions are
+ * also Values, but they are not constants. Instructions are stored as a linked
+ * list, possibly belonging to a BasicBlock, or not. Instructions are also
+ * Users, meaning they can have other Values as operands (children).
  */
 class Instruction : public User {
    friend class BasicBlock;
@@ -113,7 +116,9 @@ private:
 /* ===--------------------------------------------------------------------=== */
 
 /**
- * @brief
+ * @brief Conditional branch instruction. This instruction is a terminator
+ * and branches to one of two basic blocks based on the condition. The
+ * condition value must be an i1 type.
  */
 class BranchInst final : public Instruction {
 private:
@@ -133,7 +138,8 @@ public:
 };
 
 /**
- * @brief
+ * @brief Return instruction. This instruction is a terminator and returns
+ * either a value or nothing (void).
  */
 class ReturnInst final : public Instruction {
 private:
@@ -157,7 +163,7 @@ public:
 /* ===--------------------------------------------------------------------=== */
 
 /**
- * @brief
+ * @brief Store instruction. This instruction stores a value to a pointer.
  */
 class StoreInst final : public Instruction {
 private:
@@ -174,7 +180,9 @@ public:
 };
 
 /**
- * @brief
+ * @brief Load instruction. This instruction loads a value from a pointer.
+ * The size of the value loaded is determined by the type of the load instr,
+ * not by the type of the pointer. Pointer types are opaque.
  */
 class LoadInst final : public Instruction {
 private:
@@ -195,7 +203,8 @@ public:
 /* ===--------------------------------------------------------------------=== */
 
 /**
- * @brief
+ * @brief Call instruction. This instruction calls a function with the given
+ * arguments. It returns the result of the function call.
  */
 class CallInst final : public Instruction {
 private:
@@ -213,11 +222,13 @@ public:
 };
 
 /* ===--------------------------------------------------------------------=== */
-// Binary operators
+// Arithmetic and logic operators
 /* ===--------------------------------------------------------------------=== */
 
 /**
- * @brief
+ * @brief Binary instruction. This instruction performs a binary operation
+ * on two values. The type of the result is the same as the type of the
+ * two operands (which must be the same type also).
  */
 class BinaryInst final : public Instruction {
 private:
@@ -234,6 +245,10 @@ public:
    std::ostream& print(std::ostream& os) const override;
 };
 
+/**
+ * @brief Compare instruction. This instruction compares two values (of the same
+ * type) and returns a boolean value (i1) based on the comparison.
+ */
 class CmpInst final : public Instruction {
 public:
 #define PREDICATE_KINDS(F) \
@@ -265,12 +280,45 @@ private:
    Predicate pred_;
 };
 
+/**
+ * @brief Integer cast instruction. This instruction can either truncate,
+ * zero-extend, or sign-extend an integer value to a different integer type.
+ */
+class ICastInst final : public Instruction {
+public:
+#define CAST_KINDS(F) \
+   F(Trunc)           \
+   F(ZExt)            \
+   F(SExt)
+   DECLARE_ENUM(CastOp, CAST_KINDS)
+private:
+   DECLARE_STRING_TABLE(CastOp, castop_strtab_, CAST_KINDS)
+#undef CAST_KINDS
+
+private:
+   ICastInst(Context& ctx, CastOp op, Value* val, Type* destTy);
+
+public:
+   static ICastInst* Create(Context& ctx, CastOp op, Value* val, Type* destTy) {
+      auto buf = ctx.alloc().allocate_bytes(sizeof(ICastInst), alignof(ICastInst));
+      return new(buf) ICastInst{ctx, op, val, destTy};
+   }
+
+public:
+   std::ostream& print(std::ostream& os) const override;
+   CastOp castop() const { return castop_; }
+
+private:
+   CastOp castop_;
+};
+
 /* ===--------------------------------------------------------------------=== */
 // Alloca instruction
 /* ===--------------------------------------------------------------------=== */
 
 /**
- * @brief
+ * @brief Alloca instruction. This instruction allocates memory on the stack.
+ * This is equivalent to the TIR TEMP() node.
  */
 class AllocaInst final : public Instruction {
 private:
@@ -288,6 +336,33 @@ public:
 
 private:
    Type* allocType_;
+};
+
+/* ===--------------------------------------------------------------------=== */
+// GetElementPtr instruction
+/* ===--------------------------------------------------------------------=== */
+
+class GetElementPtrInst final : public Instruction {
+private:
+   GetElementPtrInst(Context& ctx, Value* ptr, StructType* structTy,
+                     utils::range_ref<Value*> indices);
+
+public:
+   static GetElementPtrInst* Create(Context& ctx, Value* ptr, StructType* structTy,
+                                    utils::range_ref<Value*> indices) {
+      auto buf = ctx.alloc().allocate_bytes(sizeof(GetElementPtrInst),
+                                            alignof(GetElementPtrInst));
+      return new(buf) GetElementPtrInst{ctx, ptr, structTy, indices};
+   }
+
+public:
+   std::ostream& print(std::ostream& os) const override;
+   Type* getIndexedType(utils::range_ref<Value*> indices) const {
+      return structTy_->getIndexedType(indices);
+   }
+
+private:
+   StructType* structTy_;
 };
 
 } // namespace tir

@@ -24,7 +24,7 @@ std::ostream& ConstantNullPointer::print(std::ostream& os) const {
 }
 
 std::ostream& ConstantInt::print(std::ostream& os) const {
-   os << *type() << " " << value();
+   os << *type() << " " << zextValue();
    return os;
 }
 

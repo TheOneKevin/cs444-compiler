@@ -189,18 +189,10 @@ int main(int argc, char** argv) {
    if(!FEPM.Run()) {
       std::cerr << "Error running pass: " << FEPM.LastRun()->Desc() << std::endl;
       if(FEPM.Diag().hasErrors()) {
-         for(auto m : FEPM.Diag().errors()) {
-            m.emit(std::cerr);
-            std::cerr << std::endl;
-         }
+         pretty_print_errors(SM, FEPM.Diag());
          return 42;
-         // pretty_print_errors(SM, PM.Diag()); TODO(owen): uncomment this after handling empty cfg nodes
       } else if (FEPM.Diag().hasWarnings()) {
-         for(auto m : FEPM.Diag().warnings()) {
-            m.emit(std::cerr);
-            std::cerr << std::endl;
-         }
-         // pretty_print_errors(SM, PM.Diag());
+         pretty_print_errors(SM, FEPM.Diag());
          return 43;
       }
    }
@@ -216,7 +208,8 @@ int main(int argc, char** argv) {
       BumpAllocator Alloc{&Heap};
       tir::Context CGContext{Alloc};
       tir::CompilationUnit CU{CGContext};
-      codegen::CodeGenerator CG{CGContext, CU};
+      auto& NR = FEPM.FindPass<joos1::NameResolverPass>();
+      codegen::CodeGenerator CG{CGContext, CU, NR.Resolver()};
       auto& pass = FEPM.FindPass<joos1::LinkerPass>();
       try {
          CG.run(pass.LinkingUnit());

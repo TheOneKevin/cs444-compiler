@@ -126,7 +126,7 @@ struct PrettyPrinter final {
          isSane &= posStart.line() == posEnd.line();
       }
       // If it's not sane, then print the message in a different way
-      if(!isSane) {
+      if(!isSane || !curPos.isValid()) {
          printInsaneError();
          return;
       }

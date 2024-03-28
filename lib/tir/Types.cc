@@ -1,5 +1,8 @@
-#include "tir/Type.h"
+#include <iostream>
 #include <ostream>
+
+#include "tir/Constant.h"
+#include "tir/Type.h"
 
 namespace tir {
 
@@ -19,16 +22,16 @@ std::ostream& Type::print(std::ostream& os) const {
       auto ty = static_cast<const ArrayType*>(this);
       os << "[" << ty->getLength() << " x " << *ty->getElementType() << "]";
    } else if(isStructType()) {
-      auto ty = static_cast<const StructType*>(this);
-      os << "{";
-      bool isFirst = true;
-      for(auto& elem : ty->getElements()) {
-         if(!isFirst)
-            os << ", ";
-         isFirst = false;
-         elem->print(os);
+      // Get the struct name in the context
+      os << "struct";
+      int i = 0;
+      for(auto ty : ctx_->pimpl().structTypes) {
+         if(ty == this) {
+            os << "." << i;
+            break;
+         }
+         i++;
       }
-      os << "}";
    } else if(isVoidType()) {
       os << "void";
    } else {
@@ -37,8 +40,43 @@ std::ostream& Type::print(std::ostream& os) const {
    return os;
 }
 
+void Type::dump() const {
+   print(std::cerr);
+   std::cerr << std::endl;
+}
+
+std::ostream& StructType::printDetail(std::ostream& os) const {
+   os << "type " << *this << " = ";
+   os << "struct {";
+   bool isFirst = true;
+   for(auto& elem : this->getElements()) {
+      if(!isFirst) os << ", ";
+      isFirst = false;
+      elem->print(os);
+   }
+   os << "}";
+   return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const Type& type) {
    return type.print(os);
+}
+
+Type* StructType::getIndexedType(utils::range_ref<Value*> indices) {
+   int i = 0;
+   Type* subTy = this;
+   indices.for_each([&](auto* idx) {
+      if(subTy->isStructType()) {
+         subTy = cast<StructType>(subTy)->getTypeAtIndex(
+               cast<ConstantInt>(idx)->zextValue());
+      } else if(subTy->isArrayType()) {
+         subTy = cast<ArrayType>(subTy)->getElementType();
+      } else {
+         assert(false && "Invalid index for GEP");
+      }
+      i++;
+   });
+   return subTy;
 }
 
 } // namespace tir

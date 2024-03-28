@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utils/Assert.h>
+#include <utility>
 
 #include "ast/AstNode.h"
 #include "parsetree/ParseTree.h"
@@ -110,6 +111,22 @@ public:
    bool isNull() const override { return kind == BuiltInType::Kind::NoneType; }
    bool isString() const override { return kind == BuiltInType::Kind::String; }
    bool isPrimitive() const override { return kind != BuiltInType::Kind::String; }
+   // If the type is numeric, return the size of the type in bits.
+   unsigned typeSizeBits() const {
+      assert(isNumeric() && "Type is not numeric");
+      switch(kind) {
+         case Kind::Byte:
+            return 8;
+         case Kind::Short:
+            return 16;
+         case Kind::Int:
+            return 32;
+         case Kind::Char:
+            return 16;
+         default:
+            std::unreachable();
+      }
+   }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
 };
 

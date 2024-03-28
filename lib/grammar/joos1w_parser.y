@@ -378,8 +378,10 @@ UnaryExpression
         if($2->get_node_type() == pty::Literal) {
             auto* literal = static_cast<pt::Literal*>($2);
             literal->setNegative();
+            $$ = literal;
+        } else {
+            $$ = jl.make_node(@$, pty::Expression, $1, $2);
         }
-        $$ = jl.make_node(@$, pty::Expression, $1, $2);
     }
     | UnaryExpressionNotPlusMinus
     ;

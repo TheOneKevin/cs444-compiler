@@ -8,8 +8,7 @@ static std::ostream& printNameOrConst(std::ostream& os, Value* val) {
    if(auto* ci = dyn_cast<ConstantInt>(val)) {
       os << *ci;
    } else {
-      if(!val->type()->isLabelType())
-         os << *val->type() << " ";
+      if(!val->type()->isLabelType()) os << *val->type() << " ";
       val->printName(os);
    }
    return os;
@@ -130,7 +129,7 @@ std::ostream& BinaryInst::print(std::ostream& os) const {
 }
 
 /* ===--------------------------------------------------------------------=== */
-//
+// CmpInst implementation
 /* ===--------------------------------------------------------------------=== */
 
 CmpInst::CmpInst(Context& ctx, Predicate pred, Value* lhs, Value* rhs)
@@ -160,7 +159,52 @@ AllocaInst::AllocaInst(Context& ctx, Type* type)
       : Instruction{ctx, Type::getPointerTy(ctx)}, allocType_{type} {}
 
 std::ostream& AllocaInst::print(std::ostream& os) const {
-   return printName(os) << " = " << "alloca " << *allocType_;
+   return printName(os) << " = "
+                        << "alloca " << *allocType_;
+}
+
+/* ===--------------------------------------------------------------------=== */
+// ICastInst implementation
+/* ===--------------------------------------------------------------------=== */
+
+ICastInst::ICastInst(Context& ctx, CastOp op, Value* val, Type* destTy)
+      : Instruction{ctx, destTy}, castop_(op) {
+   addChild(val);
+}
+
+std::ostream& ICastInst::print(std::ostream& os) const {
+   printName(os) << " = ";
+   os << "icast ";
+   const char* name = CastOp_to_string(castop_, "unknown");
+   // Print name lower case
+   for(unsigned i = 0; name[i] != '\0'; ++i)
+      os << static_cast<char>(tolower(name[i]));
+   os << " ";
+   printNameOrConst(os, getChild(0)) << " to " << *type() << "";
+   return os;
+}
+
+/* ===--------------------------------------------------------------------=== */
+// GetElementPtrInst implementation
+/* ===--------------------------------------------------------------------=== */
+
+GetElementPtrInst::GetElementPtrInst(Context& ctx, Value* ptr,
+                                     StructType* structTy,
+                                     utils::range_ref<Value*> indices)
+      : Instruction{ctx, Type::getPointerTy(ctx)}, structTy_{structTy} {
+   addChild(ptr);
+   indices.for_each([this](auto* idx) { addChild(idx); });
+}
+
+std::ostream& GetElementPtrInst::print(std::ostream& os) const {
+   printName(os) << " = ";
+   os << "getelementptr " << *structTy_ << ", ";
+   printNameOrConst(os, getChild(0));
+   for(unsigned i = 1; i < numChildren(); ++i) {
+      os << ", ";
+      printNameOrConst(os, getChild(i));
+   }
+   return os;
 }
 
 } // namespace tir

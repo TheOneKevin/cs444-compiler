@@ -1,6 +1,7 @@
 #include "codegen/CodeGen.h"
 #include "ast/AstNode.h"
 #include "ast/Type.h"
+#include "tir/Type.h"
 
 namespace codegen {
 
@@ -20,21 +21,35 @@ tir::Type* CodeGenerator::emitType(ast::Type const* type) {
          case Kind::Byte:
             return tir::Type::getInt8Ty(ctx);
          case Kind::String:
-            assert(false && "String type not supported yet");
+            // TODO: Implement this
+            return tir::Type::getPointerTy(ctx);
          default:
-            assert(false && "None type not supported");
+            // NONE type is just a null pointer
+            return tir::Type::getPointerTy(ctx);
       }
    } else if(type->isArray()) {
-      auto ty = cast<ast::ArrayType>(type);
-      assert(false && "Array type not supported yet");
+      return tir::StructType::get(
+         ctx, {
+            // Length
+            tir::Type::getInt32Ty(ctx),
+            // Pointer
+            tir::Type::getPointerTy(ctx)
+         }
+      );
    } else {
-      auto ty = cast<ast::ReferenceType>(type);
-      assert(false && "Reference type not supported yet");
+      // TODO: Implement this
+      return tir::Type::getPointerTy(ctx);
    }
 }
 
 void CodeGenerator::run(ast::LinkingUnit const* lu) {
-   // We only care about emitting the classes
+   for(auto* cu : lu->compliationUnits()) {
+      for(auto* decl : cu->decls()) {
+         if(auto* classDecl = dyn_cast<ast::ClassDecl>(decl)) {
+            emitClassDecl(classDecl);
+         }
+      }
+   }
    for(auto* cu : lu->compliationUnits()) {
       for(auto* decl : cu->decls()) {
          if(auto* classDecl = dyn_cast<ast::ClassDecl>(decl)) {
@@ -44,19 +59,27 @@ void CodeGenerator::run(ast::LinkingUnit const* lu) {
    }
 }
 
-void CodeGenerator::emitClass(ast::ClassDecl const* decl) {
+void CodeGenerator::emitClassDecl(ast::ClassDecl const* decl) {
    for(auto* method : decl->methods()) {
       if(method->modifiers().isStatic()) {
-         emitFunction(method);
+         emitFunctionDecl(method);
       }
    }
    for(auto* field : decl->fields()) {
       if(field->modifiers().isStatic()) {
-         cu.CreateGlobalVariable(
+         auto value = cu.CreateGlobalVariable(
             emitType(field->type()),
             field->name()
          );
-         // TODO: Emit initializers!
+         gvMap[field] = value;
+      }
+   }
+}
+
+void CodeGenerator::emitClass(ast::ClassDecl const* decl) {
+   for(auto* method : decl->methods()) {
+      if(method->modifiers().isStatic()) {
+         emitFunction(method);
       }
    }
 }

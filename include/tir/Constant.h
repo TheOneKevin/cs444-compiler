@@ -54,7 +54,14 @@ public:
 
 public:
    std::ostream& print(std::ostream& os) const override;
-   uint64_t value() const { return value_; }
+   uint64_t zextValue() const {
+      return value_ & cast<IntegerType>(type())->getMask();
+   }
+   uint64_t sextValue() const {
+      auto mask = cast<IntegerType>(type())->getMask();
+      return (value_ & mask) |
+             ((value_ & (1ULL << (type()->getSizeInBits() - 1))) ? ~mask : 0);
+   }
    bool isNumeric() const override { return true; }
    bool isBoolean() const override { return type()->isBooleanType(); }
 
@@ -93,6 +100,7 @@ protected:
  */
 class GlobalVariable final : public GlobalObject {
    friend class CompilationUnit;
+
 private:
    GlobalVariable(Context& ctx, Type* type) : GlobalObject{ctx, type} {}
 

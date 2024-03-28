@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utils/Assert.h>
+
 #include <optional>
 #include <ostream>
 #include <ranges>
@@ -7,7 +9,6 @@
 #include <vector>
 
 #include "tir/Context.h"
-#include "tir/Type.h"
 
 namespace tir {
 

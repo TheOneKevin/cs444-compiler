@@ -10,6 +10,8 @@
 
 namespace tir {
 
+class Value;
+
 /**
  * @brief Type is the base class for all types in the TIR. It is immutable
  * once created and is uniqued within a Context. The uniquing means that
@@ -38,6 +40,11 @@ public:
    bool isPointerType() const { return ctx_ && (this == getPointerTy(*ctx_)); }
    bool isLabelType() const { return ctx_ && (this == getLabelTy(*ctx_)); }
    std::ostream& print(std::ostream& os) const;
+   // Get the size of the type in bits
+   virtual uint32_t getSizeInBits() const {
+      assert(false && "Type does not have a size");
+   }
+   void dump() const;
 
 protected:
    struct ChildTypeArray {
@@ -48,9 +55,6 @@ protected:
 protected:
    friend class Context;
    explicit Type(Context* ctx) : Type{0, {}, ctx} {}
-   explicit Type(uint32_t data) : Type{data, {}} {}
-   explicit Type(ChildTypeArray subtypes) : Type{0, subtypes} {}
-   Type(uint32_t data, ChildTypeArray subtypes) : Type{data, subtypes, nullptr} {}
    Type(uint32_t data, ChildTypeArray subtypes, Context* ctx)
          : ctx_{ctx}, data_{data}, subtypes_{subtypes} {}
    /**
@@ -70,11 +74,25 @@ private:
 std::ostream& operator<<(std::ostream& os, const Type& type);
 
 /**
+ * @brief The type of a pointer to an opaque type.
+ */
+class OpaquePointerType final : public Type {
+   friend class Context;
+
+private:
+   OpaquePointerType(Context* ctx) : Type{ctx} {}
+
+public:
+   // FIXME(kevin): Pointer size should depend on architecture...
+   uint32_t getSizeInBits() const override { return 64; }
+};
+
+/**
  * @brief
  */
 class IntegerType final : public Type {
 private:
-   IntegerType(uint32_t bitwidth) : Type{bitwidth} {}
+   IntegerType(Context& ctx, uint32_t bitwidth) : Type{bitwidth, {}, &ctx} {}
 
 public:
    /**
@@ -96,7 +114,7 @@ public:
       // If not found, create a new IntegerType with bitwidth.
       void* buf =
             ctx.alloc().allocate_bytes(sizeof(IntegerType), alignof(IntegerType));
-      auto* type = new(buf) IntegerType{bitwidth};
+      auto* type = new(buf) IntegerType{ctx, bitwidth};
       ctx.pimpl().integerTypes.push_back(type);
       return type;
    }
@@ -105,6 +123,8 @@ public:
    bool isIntegerType() const override { return true; }
    bool isBooleanType() const override { return getData() == 1; }
    uint32_t getBitWidth() const { return getData(); }
+   uint32_t getSizeInBits() const override { return getBitWidth(); }
+   uint64_t getMask() const { return (1ULL << getBitWidth()) - 1; }
 };
 static_assert(sizeof(IntegerType) == sizeof(Type));
 
@@ -113,8 +133,8 @@ static_assert(sizeof(IntegerType) == sizeof(Type));
  */
 class FunctionType final : public Type {
 private:
-   FunctionType(Type** types, uint32_t numTypes)
-         : Type{Type::ChildTypeArray{types, numTypes}} {}
+   FunctionType(Context& ctx, Type** types, uint32_t numTypes)
+         : Type{0, Type::ChildTypeArray{types, numTypes}, &ctx} {}
 
 public:
    static FunctionType* get(Context& ctx, Type* returnTy,
@@ -149,7 +169,7 @@ public:
          types.for_each([&](Type* ty) { typesBuf[i++] = ty; });
       }
       // Create the FunctionType object.
-      auto* type = new(buf) FunctionType{typesBuf, size};
+      auto* type = new(buf) FunctionType{ctx, typesBuf, size};
       ctx.pimpl().functionTypes.push_back(type);
       return type;
    }
@@ -163,6 +183,9 @@ public:
    }
    auto numParams() const { return getChildTypes().size - 1; }
    auto getParamType(int index) const { return getChildTypes().array[index + 1]; }
+   uint32_t getSizeInBits() const override {
+      assert(false && "Function type does not have a size");
+   }
 };
 static_assert(sizeof(FunctionType) == sizeof(Type));
 
@@ -171,8 +194,8 @@ static_assert(sizeof(FunctionType) == sizeof(Type));
  */
 class ArrayType : public Type {
 private:
-   ArrayType(Type** elementType, uint32_t numElements)
-         : Type{numElements, Type::ChildTypeArray{elementType, 1}} {}
+   ArrayType(Context& ctx, Type** elementType, uint32_t numElements)
+         : Type{numElements, Type::ChildTypeArray{elementType, 1}, &ctx} {}
 
 public:
    static ArrayType* get(Context& ctx, Type* elementType, uint32_t numElements) {
@@ -190,7 +213,7 @@ public:
       void* buf2 = ctx.alloc().allocate_bytes(sizeof(Type*), alignof(Type*));
       auto* typeBuf = reinterpret_cast<Type**>(buf2);
       typeBuf[0] = elementType;
-      auto* type = new(buf) ArrayType{typeBuf, numElements};
+      auto* type = new(buf) ArrayType{ctx, typeBuf, numElements};
       ctx.pimpl().arrayTypes.push_back(type);
       return type;
    }
@@ -199,16 +222,21 @@ public:
    bool isArrayType() const override { return true; }
    Type* getElementType() const { return getChildTypes().array[0]; }
    uint32_t getLength() const { return getData(); }
+   uint32_t getSizeInBits() const override {
+      return getLength() * getElementType()->getSizeInBits();
+   }
 };
 static_assert(sizeof(ArrayType) == sizeof(Type));
 
 /**
  * @brief
  */
-class StructType : public Type {
+class StructType final : public Type {
 private:
-   StructType(Type** elementTypes, uint32_t numElements)
-         : Type{numElements, Type::ChildTypeArray{elementTypes, numElements}} {}
+   StructType(Context& ctx, Type** elementTypes, uint32_t numElements)
+         : Type{numElements,
+                Type::ChildTypeArray{elementTypes, numElements},
+                &ctx} {}
 
 public:
    static StructType* get(Context& ctx, utils::range_ref<Type*> elementTypes) {
@@ -236,7 +264,7 @@ public:
          uint32_t i = 0;
          elementTypes.for_each([&](Type* ty) { typeBuf[i++] = ty; });
       }
-      auto* type = new(buf) StructType{typeBuf, size};
+      auto* type = new(buf) StructType{ctx, typeBuf, size};
       ctx.pimpl().structTypes.push_back(type);
       return type;
    }
@@ -248,6 +276,18 @@ public:
       return std::span{data.array, data.size};
    }
    uint32_t numElements() const { return getChildTypes().size; }
+   std::ostream& printDetail(std::ostream& os) const;
+   uint32_t getSizeInBits() const override {
+      uint32_t size = 0;
+      for(auto* ty : getElements()) {
+         size += ty->getSizeInBits();
+      }
+      return size;
+   }
+   Type* getIndexedType(utils::range_ref<Value*> indices);
+   Type* getTypeAtIndex(uint32_t index) {
+      return getChildTypes().array[index];
+   }
 };
 static_assert(sizeof(StructType) == sizeof(Type));
 

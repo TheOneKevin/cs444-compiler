@@ -3,6 +3,7 @@
 #include "ast/AST.h"
 #include "ast/DeclContext.h"
 #include "ast/Stmt.h"
+#include "semantic/NameResolver.h"
 #include "tir/Constant.h"
 #include "tir/IRBuilder.h"
 #include "tir/Instructions.h"
@@ -15,16 +16,18 @@ class CGExprEvaluator;
 class CodeGenerator {
    friend class CGExprEvaluator;
 public:
-   CodeGenerator(tir::Context& ctx, tir::CompilationUnit& cu)
-         : ctx{ctx}, cu{cu} {}
+   CodeGenerator(tir::Context& ctx, tir::CompilationUnit& cu, semantic::NameResolver& nr)
+         : ctx{ctx}, cu{cu}, nr{nr} {}
    void run(ast::LinkingUnit const* lu);
+   tir::Type* emitType(ast::Type const* type);
 
 private:
    void emitStmt(ast::Stmt const* stmt);
    tir::Value* emitExpr(ast::Expr const* expr);
    void emitFunction(ast::MethodDecl const* decl);
+   void emitFunctionDecl(ast::MethodDecl const* decl);
+   void emitClassDecl(ast::ClassDecl const* decl);
    void emitClass(ast::ClassDecl const* decl);
-   tir::Type* emitType(ast::Type const* type);
 
 private:
    void emitReturnStmt(ast::ReturnStmt const* stmt);
@@ -40,7 +43,9 @@ private:
    tir::CompilationUnit& cu;
    tir::Function* curFn{nullptr};
    std::pmr::unordered_map<ast::Decl const*, tir::AllocaInst*> valueMap{ctx.alloc()};
+   std::pmr::unordered_map<ast::Decl const*, tir::Value*> gvMap{ctx.alloc()};
    tir::IRBuilder builder{ctx};
+   semantic::NameResolver& nr;
 };
 
 } // namespace codegen

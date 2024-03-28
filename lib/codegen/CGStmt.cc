@@ -1,4 +1,5 @@
 #include "ast/Stmt.h"
+#include "codegen/CGExpr.h"
 #include "codegen/CodeGen.h"
 #include "tir/IRBuilder.h"
 
@@ -11,8 +12,8 @@ using CG = codegen::CodeGenerator;
 
 namespace codegen {
 
-void CG::emitForStmt(ast::ForStmt const* stmt) { 
-   if (stmt->init()) {
+void CG::emitForStmt(ast::ForStmt const* stmt) {
+   if(stmt->init()) {
       emitStmt(stmt->init());
    }
    auto cond = builder.createBasicBlock(curFn);
@@ -20,7 +21,7 @@ void CG::emitForStmt(ast::ForStmt const* stmt) {
    auto afterFor = builder.createBasicBlock(curFn);
    builder.createBranchInstr(cond);
    builder.setInsertPoint(cond->begin());
-   if (stmt->condition()) {
+   if(stmt->condition()) {
       auto* condVal = emitExpr(stmt->condition());
       builder.createBranchInstr(condVal, body, afterFor);
    } else {
@@ -28,7 +29,7 @@ void CG::emitForStmt(ast::ForStmt const* stmt) {
    }
    builder.setInsertPoint(body->begin());
    emitStmt(stmt->body());
-   if (stmt->update()) {
+   if(stmt->update()) {
       emitStmt(stmt->update());
    }
    builder.createBranchInstr(cond);
@@ -64,7 +65,8 @@ void CG::emitDeclStmt(ast::DeclStmt const* stmt) {
 }
 
 void CG::emitExprStmt(ast::ExprStmt const* stmt) {
-   emitExpr(stmt->expr());
+   CGExprEvaluator eval{*this};
+   eval.EvaluateList(stmt->expr()->list());
 }
 
 void CG::emitIfStmt(ast::IfStmt const* stmt) {
@@ -81,7 +83,7 @@ void CG::emitIfStmt(ast::IfStmt const* stmt) {
 
    // build the else block
    builder.setInsertPoint(elseBB->begin());
-   if (stmt->elseStmt()) {
+   if(stmt->elseStmt()) {
       emitStmt(stmt->elseStmt());
    }
    builder.createBranchInstr(afterIf);
@@ -110,8 +112,6 @@ void CG::emitWhileStmt(ast::WhileStmt const* stmt) {
    builder.setInsertPoint(afterWhile->begin());
 }
 
-
-
 } // namespace codegen
 
 /* ===--------------------------------------------------------------------=== */
@@ -129,13 +129,13 @@ void CG::emitStmt(ast::Stmt const* stmt) {
       emitBlockStmt(blockStmt);
    } else if(auto* declStmt = dyn_cast<ast::DeclStmt>(stmt)) {
       emitDeclStmt(declStmt);
-   } else if (auto* exprStmt = dyn_cast<ast::ExprStmt>(stmt)) {
+   } else if(auto* exprStmt = dyn_cast<ast::ExprStmt>(stmt)) {
       emitExprStmt(exprStmt);
-   } else if (auto* ifStmt = dyn_cast<ast::IfStmt>(stmt)) {
+   } else if(auto* ifStmt = dyn_cast<ast::IfStmt>(stmt)) {
       emitIfStmt(ifStmt);
-   } else if (auto* whileStmt = dyn_cast<ast::WhileStmt>(stmt)) {
+   } else if(auto* whileStmt = dyn_cast<ast::WhileStmt>(stmt)) {
       emitWhileStmt(whileStmt);
-   } else if (auto* nullStmt = dyn_cast<ast::NullStmt>(stmt)) {
+   } else if(auto* nullStmt = dyn_cast<ast::NullStmt>(stmt)) {
       // Do nothing
    } else {
       assert(false && "Unknown statement type");

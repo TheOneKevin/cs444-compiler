@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ast/AstNode.h"
 #include "ast/ExprEvaluator.h"
 #include "codegen/CodeGen.h"
 #include "tir/Constant.h"
@@ -21,29 +22,93 @@ namespace details {
  * The tir::Value can then be unwrapped using a conversion function.
  */
 class ValueWrapper {
+   struct TirWrapped {
+      ast::Type const* astType;
+      tir::Type* type;
+      tir::Value* value;
+   };
+
 public:
-   enum class Kind { StaticFn, MemberFn, L, R };
-   // Wrap a value as an RValue
-   explicit ValueWrapper(tir::Value* value, Kind kind = Kind::R)
-         : kind_{kind}, type_{value->type()}, value_{value} {
-      assert(kind != Kind::L && !type_->isPointerType());
-   }
-   // Wrap a (pointer) value as an LValue
-   explicit ValueWrapper(tir::Type* type, tir::Value* value)
-         : kind_{Kind::L}, type_{type}, value_{value} {
-      assert(value_->type()->isPointerType());
+   enum class Kind { StaticFn, MemberFn, AstType, AstDecl, L, R };
+
+   /**
+    * @brief Wrap an AST Type node. This can not be an IR value.
+    *
+    * @param aty The AST type node to wrap.
+    */
+   explicit ValueWrapper(ast::Type const* aty)
+         : kind_{Kind::AstType}, data_{aty} {}
+
+   /**
+    * @brief Wrap an AST FieldDecl node. This can not be an IR value.
+    *
+    * @param decl The AST field declaration node to wrap.
+    */
+   explicit ValueWrapper(ast::Decl const* decl)
+         : kind_{Kind::AstDecl}, data_{decl} {}
+
+private:
+   // Private constructor for wrapping IR values
+   explicit ValueWrapper(Kind kind, TirWrapped wrappedIr)
+         : kind_{kind}, data_{wrappedIr} {}
+
+public:
+   /**
+    * @brief Create an L-value wrapper for a pointer value.
+    *
+    * @param aty The AST type of the reference.
+    * @param elemTy The dereferenced IR type.
+    * @param value The pointer value to wrap.
+    * @return ValueWrapper
+    */
+   static ValueWrapper L(ast::Type const* aty, tir::Type* elemTy,
+                         tir::Value* value) {
+      return ValueWrapper{Kind::L, {aty, elemTy, value}};
    }
 
+   /**
+    * @brief Create an R-value wrapper for a non-pointer value.
+    *
+    * @param aty The AST type of the value.
+    * @param value The IR value to wrap.
+    * @return ValueWrapper The wrapped value.
+    */
+   static ValueWrapper R(ast::Type const* aty, tir::Value* value) {
+      assert(!value->type()->isPointerType());
+      return ValueWrapper{Kind::R, {aty, value->type(), value}};
+   }
+
+   /**
+    * @brief Wrap a static function value or a member function value.
+    *
+    * @param value The IR function value to wrap.
+    * @return ValueWrapper The wrapped value.
+    */
+   static ValueWrapper Fn(Kind kind, tir::Value* value) {
+      assert(kind == Kind::StaticFn || kind == Kind::MemberFn);
+      return ValueWrapper{kind, {nullptr, nullptr, value}};
+   }
+
+   // Gets the wrapped IR value as an R-value
    tir::Value* asRValue(tir::IRBuilder&) const;
+   // Gets the wrapped IR L-value
    tir::Value* asLValue() const;
-   tir::Value* asValue() const { return value_; }
-   bool isStaticFn() const { return kind_ == Kind::StaticFn; }
-   bool isMemberFn() const { return kind_ == Kind::MemberFn; }
+   // Gets the wrapped IR value as a method/function
+   tir::Value* asFn() const;
+   // Gets the AST type of the IR value or the wrapped AST type
+   ast::Type const* astType() const;
+   // Gets the IR element type of the L-value or the type of the R-value
+   tir::Type* irType() const;
+   // Gets the kind of the wrapped value
+   Kind kind() const { return kind_; }
+   // Validates the wrapped value
+   bool validate(CodeGenerator& cg) const;
+   // Gets the wrapped AST declaration
+   ast::Decl const* asDecl() const;
 
 private:
    Kind kind_;
-   tir::Type* type_;
-   tir::Value* value_;
+   std::variant<TirWrapped, ast::Type const*, ast::Decl const*> data_;
 };
 
 } // namespace details
@@ -72,9 +137,8 @@ private:
    T evalArrayAccess(ast::exprnode::ArrayAccess& op, T array,
                      T index) const override;
    T evalCast(ast::exprnode::Cast& op, T type, T value) const override;
-   bool validate(T const& v) const override {
-      return v.asValue() != nullptr;
-   }
+   bool validate(T const& v) const override { return v.validate(cg); }
+   T castIntegerType(ast::Type const*, tir::Type*, T value) const;
 
 private:
    CodeGenerator& cg;

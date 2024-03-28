@@ -10,7 +10,7 @@ namespace tir {
 
 class CompilationUnit {
 public:
-   CompilationUnit(Context& ctx) : ctx_{ctx}, globals_{ctx.alloc()} {}
+   CompilationUnit(Context& ctx);
    CompilationUnit(const CompilationUnit&) = delete;
    CompilationUnit(CompilationUnit&&) = delete;
    CompilationUnit& operator=(const CompilationUnit&) = delete;
@@ -96,6 +96,14 @@ public:
       for(auto& [name, go] : globals_) {
          if(auto* gv = dyn_cast<GlobalVariable>(go)) co_yield gv;
       }
+   }
+
+public:
+   Function* builtinMalloc() {
+      return findFunction("__malloc");
+   }
+   Function* builtinException() {
+      return findFunction("__exception");
    }
 
 private:

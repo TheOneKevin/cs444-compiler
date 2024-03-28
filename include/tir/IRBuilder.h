@@ -154,6 +154,23 @@ public:
       return insert(CmpInst::Create(ctx_, pred, lhs, rhs));
    }
 
+   /**
+    * @brief Create the generic trunc/zext/sext instruction with the given
+    * operation, value, and destination type.
+    * 
+    * @param op The cast operation to perform
+    * @param val The value to cast
+    * @param destTy The destination type
+    * @return Instruction* The created instruction
+    */
+   Instruction* createICastInstr(ICastInst::CastOp op, Value* val, Type* destTy) {
+      return insert(ICastInst::Create(ctx_, op, val, destTy));
+   }
+
+   Instruction* createGEPInstr(Value* ptr, StructType* t, utils::range_ref<Value*> indices) {
+      return insert(GetElementPtrInst::Create(ctx_, ptr, t, indices));
+   }
+
 private:
    Instruction* insert(Instruction* instr) {
       assert(insertPoint_.getBB() && "No insertion point set");

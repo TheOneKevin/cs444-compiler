@@ -15,8 +15,9 @@ std::ostream& operator<<(std::ostream& os, const Value& value) {
 }
 
 Context::Context(BumpAllocator& alloc) : alloc_{alloc}, pimpl_{nullptr} {
-   void* buf1 = alloc.allocate_bytes(sizeof(Type), alignof(Type));
-   auto* pointerType = new(buf1) Type{this};
+   void* buf1 = alloc.allocate_bytes(sizeof(OpaquePointerType),
+                                     alignof(OpaquePointerType));
+   auto* pointerType = new(buf1) OpaquePointerType{this};
    void* buf2 = alloc.allocate_bytes(sizeof(Type), alignof(Type));
    auto* voidType = new(buf2) Type{this};
    void* buf3 = alloc.allocate_bytes(sizeof(Type), alignof(Type));
