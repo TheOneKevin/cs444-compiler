@@ -251,11 +251,11 @@ public:
    diagnostics::DiagnosticEngine& Diag() { return diag_; }
    /// @brief Gets the pass options
    PassOptions& PO() { return options_; }
-
-private:
+   
+   /// @brief Outside method to get a pass by type
    template <typename T>
       requires PassType<T>
-   T& getPass(Pass& pass) {
+   T& FindPass() {
       T* result = nullptr;
       for(auto& pass : passes_) {
          if(auto* p = dyn_cast<T*>(pass.get())) {
@@ -269,12 +269,20 @@ private:
          throw utils::FatalError("Pass not found: " +
                                  std::string(typeid(T).name()));
       }
+      return *result;
+   }
+
+private:
+   template <typename T>
+      requires PassType<T>
+   T& getPass(Pass& pass) {
+      auto& result = FindPass<T>();
       // If the requester is running, the result must be valid
-      if(pass.state == Pass::Running && result->state != Pass::Valid) {
+      if(pass.state == Pass::Running && result.state != Pass::Valid) {
          throw utils::FatalError("Pass not valid: " +
                                  std::string(typeid(T).name()));
       }
-      return *result;
+      return result;
    }
 
    template <typename T>

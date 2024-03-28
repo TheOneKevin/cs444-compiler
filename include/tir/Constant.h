@@ -2,6 +2,7 @@
 
 #include <string_view>
 
+#include "tir/Instructions.h"
 #include "tir/Type.h"
 #include "tir/Value.h"
 #include "utils/Utils.h"
@@ -39,9 +40,16 @@ private:
 
 public:
    static ConstantInt* Create(Context& ctx, Type* type, uint64_t value) {
+      assert(type->isIntegerType() && "Type must be an integer type");
       auto* buf =
             ctx.alloc().allocate_bytes(sizeof(ConstantInt), alignof(ConstantInt));
       return new(buf) ConstantInt{ctx, type, value};
+   }
+   static ConstantInt* AllOnes(Context& ctx, Type* type) {
+      return Create(ctx, type, ~0ULL);
+   }
+   static ConstantInt* Zero(Context& ctx, Type* type) {
+      return Create(ctx, type, 0);
    }
 
 public:
@@ -55,12 +63,12 @@ private:
 };
 
 /**
- * @brief 
+ * @brief
  */
 class ConstantNullPointer final : public Constant {
 private:
    friend class Context;
-   ConstantNullPointer(Context& ctx) : Constant{ctx, Type::getPointerTy(ctx)} {}
+   ConstantNullPointer(Context& ctx, Type* ty) : Constant{ctx, ty} {}
 
 public:
    static ConstantNullPointer* Create(Context& ctx) {
@@ -84,6 +92,10 @@ protected:
  * @brief
  */
 class GlobalVariable final : public GlobalObject {
+   friend class CompilationUnit;
+private:
+   GlobalVariable(Context& ctx, Type* type) : GlobalObject{ctx, type} {}
+
 public:
    std::ostream& print(std::ostream& os) const override;
 };
@@ -144,11 +156,27 @@ public:
       return cast<FunctionType>(type())->getReturnType();
    }
    bool hasBody() const { return !body_.empty(); }
+   /// @brief Gets the entry BB of the function or nullptr if it doesn't exist.
    BasicBlock* getEntryBlock() const {
       if(body_.empty()) return nullptr;
       return body_.front();
    }
    auto body() const { return std::views::all(body_); }
+
+   /**
+    * @brief Create an alloca instruction for the given type. This will be
+    * at the start of the entry BB of the function. If no entry BB exists,
+    * this will fail.
+    *
+    * @param type The type of the alloca instruction.
+    * @return AllocaInst* The alloca instruction created.
+    */
+   AllocaInst* createAlloca(Type* type) {
+      assert(getEntryBlock());
+      auto* inst = AllocaInst::Create(ctx(), type);
+      getEntryBlock()->insertBeforeBegin(inst);
+      return inst;
+   }
 
 private:
    void addBlock(BasicBlock* block) { body_.push_back(block); }

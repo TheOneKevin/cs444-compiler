@@ -26,10 +26,38 @@ tir::Type* CodeGenerator::emitType(ast::Type const* type) {
       }
    } else if(type->isArray()) {
       auto ty = cast<ast::ArrayType>(type);
-
+      assert(false && "Array type not supported yet");
    } else {
       auto ty = cast<ast::ReferenceType>(type);
+      assert(false && "Reference type not supported yet");
+   }
+}
 
+void CodeGenerator::run(ast::LinkingUnit const* lu) {
+   // We only care about emitting the classes
+   for(auto* cu : lu->compliationUnits()) {
+      for(auto* decl : cu->decls()) {
+         if(auto* classDecl = dyn_cast<ast::ClassDecl>(decl)) {
+            emitClass(classDecl);
+         }
+      }
+   }
+}
+
+void CodeGenerator::emitClass(ast::ClassDecl const* decl) {
+   for(auto* method : decl->methods()) {
+      if(method->modifiers().isStatic()) {
+         emitFunction(method);
+      }
+   }
+   for(auto* field : decl->fields()) {
+      if(field->modifiers().isStatic()) {
+         cu.CreateGlobalVariable(
+            emitType(field->type()),
+            field->name()
+         );
+         // TODO: Emit initializers!
+      }
    }
 }
 

@@ -32,6 +32,21 @@ public:
    }
 
    /**
+    * @brief Create a new global variable with the given type and name.
+    * 
+    * @param type 
+    * @param name 
+    * @return GlobalVariable* 
+    */
+   GlobalVariable* CreateGlobalVariable(Type* type, const std::string_view name) {
+      if(findGlobalVariable(std::string{name})) return nullptr;
+      auto* buf = ctx_.alloc().allocate_bytes(sizeof(GlobalVariable), alignof(GlobalVariable));
+      auto* gv = new(buf) GlobalVariable{ctx_, type};
+      globals_.emplace(name, gv);
+      return gv;
+   }
+
+   /**
     * @brief Get the function with the given name.
     *
     * @param name The name of the function

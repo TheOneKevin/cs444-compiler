@@ -27,9 +27,19 @@ public:
     */
    void setInsertPoint(Instruction* instr) { setInsertPoint(instr->iter()); }
 
+   /**
+    * @brief Set the insertion point to the beginning of the given basic block.
+    *
+    * @param bb The basic block to set the insertion point to
+    */
+   void setInsertPoint(BasicBlock* bb) {
+      insertPoint_ = bb->begin();
+   }
+
 public:
    /**
-    * @brief Create a new basic block within the given function.
+    * @brief Create a new basic block within the given function. This does
+    * not change the insertion point, unlike the other create functions.
     *
     * @param parent The parent function of the basic block
     * @return BasicBlock* The new (empty) basic block
@@ -132,18 +142,21 @@ public:
    }
 
    /**
-    * @brief Create an alloca instruction with the given type and name.
+    * @brief Create a comparison instruction with the given predicate and
+    * left-hand and right-hand operands.
     *
-    * @param type The type of the value to allocate
-    * @param name The name of the value to allocate
-    * @return AllocaInst* A pointer to the instruction
+    * @param pred The comparison predicate
+    * @param lhs The LHS value
+    * @param rhs The RHS value
+    * @return CmpInst* A pointer to the instruction
     */
-   Instruction* createAlloca(Type* type) {
-      return insert(AllocaInst::Create(ctx_, type));
+   Instruction* createCmpInstr(CmpInst::Predicate pred, Value* lhs, Value* rhs) {
+      return insert(CmpInst::Create(ctx_, pred, lhs, rhs));
    }
 
 private:
    Instruction* insert(Instruction* instr) {
+      assert(insertPoint_.getBB() && "No insertion point set");
       if(insertPoint_.isAfterLast()) {
          insertPoint_.getBB()->appendAfterEnd(instr);
       } else if(insertPoint_.isBeforeFirst()) {

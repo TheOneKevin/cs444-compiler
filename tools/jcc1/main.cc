@@ -1,6 +1,5 @@
 #include <ast/AST.h>
-#include <ast/AstNode.h>
-#include <ast/DeclContext.h>
+#include <tir/TIR.h>
 #include <grammar/Joos1WGrammar.h>
 #include <parsetree/ParseTreeVisitor.h>
 #include <passes/AllPasses.h>
@@ -15,7 +14,9 @@
 #include <iterator>
 #include <string>
 
+#include "codegen/CodeGen.h"
 #include "diagnostics/Diagnostics.h"
+#include "passes/CompilerPasses.h"
 
 enum class InputMode { File, Stdin };
 void pretty_print_errors(SourceManager& SM, diagnostics::DiagnosticEngine& diag);
@@ -27,10 +28,12 @@ int main(int argc, char** argv) {
    bool optCompile = false;
    bool optFreestanding = false;
    bool optHeapReuse = true;
+   bool optCodeGen = false;
+   std::string optOutputFile = "";
 
    // Create the pass manager and source manager
    CLI::App app{"Joos1W Compiler Frontend", "jcc1"};
-   utils::PassManager PM{app};
+   utils::PassManager FEPM{app};
    SourceManager SM{};
 
    // clang-format off
@@ -45,7 +48,9 @@ int main(int argc, char** argv) {
    auto optVerboseLevel = app.add_flag("-v", "Set the verbosity level")
       ->expected(0, 1)
       ->check(CLI::Range(0, 3));
-   app.add_flag("-c", optCompile, "Add the passes to compile the input file(s) to an executable");
+   app.add_flag("-c", optCompile, "Compile-only, running only the front-end passes.");
+   app.add_flag("-s", optCodeGen, "Run the front-end passes, then generate IR code. Implies -c.");
+   app.add_option("-o", optOutputFile, "Output the generated code to this file.");
    app.add_option("--stdlib", optStdlibPath, "The path to the standard library to use for compilation")
       ->check(CLI::ExistingDirectory)
       ->expected(0, 1)
@@ -55,23 +60,23 @@ int main(int argc, char** argv) {
    app.allow_extras();
    // clang-format on
 
-   // Build pass pipeline that requires command line options
+   // Build FE (front-end) pass pipeline that requires command line options
    {
-      NewAstContextPass(PM);
-      NewLinkerPass(PM);
-      NewPrintASTPass(PM);
-      NewNameResolverPass(PM);
-      NewHierarchyCheckerPass(PM);
-      NewExprResolverPass(PM);
-      NewDFAPass(PM);
-      PM.PO().AddAllOptions();
+      NewAstContextPass(FEPM);
+      NewLinkerPass(FEPM);
+      NewPrintASTPass(FEPM);
+      NewNameResolverPass(FEPM);
+      NewHierarchyCheckerPass(FEPM);
+      NewExprResolverPass(FEPM);
+      NewDFAPass(FEPM);
+      FEPM.PO().AddAllOptions();
    }
 
    // Parse the command line options
    CLI11_PARSE(app, argc, argv);
 
    // Disable heap reuse if requested
-   if(optHeapReuse) PM.setHeapReuse(false);
+   if(optHeapReuse) FEPM.setHeapReuse(false);
 
    // Validate the command line options
    {
@@ -86,6 +91,17 @@ int main(int argc, char** argv) {
       if(split && !app.count("--print-dot")) {
          std::cerr << "Error: --print-split requires --print-dot" << std::endl;
          return 1;
+      }
+      // If -s is set, -c must be set
+      if(optCodeGen) {
+         optCompile = true;
+      }
+      // If -s is set, -o must be set too
+      if(optCodeGen && optOutputFile.empty()) {
+         std::cerr << "Error: -s requires -o to be set." << std::endl;
+         return 1;
+      } else if(!optCodeGen && !optOutputFile.empty()) {
+         std::cerr << "Warning: -o is set but -s is not set. Ignoring -o." << std::endl;
       }
    }
 
@@ -102,7 +118,7 @@ int main(int argc, char** argv) {
             return 1;
          }
       }
-      PM.Diag().setVerbose(level);
+      FEPM.Diag().setVerbose(level);
    }
 
    // Ensure the remaining arguments are all valid paths
@@ -159,29 +175,28 @@ int main(int argc, char** argv) {
       using utils::Pass;
       Pass* p2 = nullptr;
       for(auto file : SM.files()) {
-         auto* p1 = &NewJoos1WParserPass(PM, file, p2);
-         p2 = &NewAstBuilderPass(PM, p1);
+         auto* p1 = &NewJoos1WParserPass(FEPM, file, p2);
+         p2 = &NewAstBuilderPass(FEPM, p1);
       }
    }
 
    // If we are compiling, enable the appropriate passes
    if(optCompile) {
-      PM.PO().EnablePass("sema-expr");
-      PM.PO().EnablePass("dfa");
+      FEPM.PO().EnablePass("dfa");
    }
 
-   // Run the passes
-   if(!PM.Run()) {
-      std::cerr << "Error running pass: " << PM.LastRun()->Desc() << std::endl;
-      if(PM.Diag().hasErrors()) {
-         for(auto m : PM.Diag().errors()) {
+   // Run the front end passes
+   if(!FEPM.Run()) {
+      std::cerr << "Error running pass: " << FEPM.LastRun()->Desc() << std::endl;
+      if(FEPM.Diag().hasErrors()) {
+         for(auto m : FEPM.Diag().errors()) {
             m.emit(std::cerr);
             std::cerr << std::endl;
          }
          return 42;
          // pretty_print_errors(SM, PM.Diag()); TODO(owen): uncomment this after handling empty cfg nodes
-      } else if (PM.Diag().hasWarnings()) {
-         for(auto m : PM.Diag().warnings()) {
+      } else if (FEPM.Diag().hasWarnings()) {
+         for(auto m : FEPM.Diag().warnings()) {
             m.emit(std::cerr);
             std::cerr << std::endl;
          }
@@ -189,5 +204,30 @@ int main(int argc, char** argv) {
          return 43;
       }
    }
+
+   // If we only want to compile, we are done
+   if(!optCodeGen) {
+      return 0;
+   }
+
+   // Run the code generation now
+   {
+      utils::CustomBufferResource Heap{};
+      BumpAllocator Alloc{&Heap};
+      tir::Context CGContext{Alloc};
+      tir::CompilationUnit CU{CGContext};
+      codegen::CodeGenerator CG{CGContext, CU};
+      auto& pass = FEPM.FindPass<joos1::LinkerPass>();
+      try {
+         CG.run(pass.LinkingUnit());
+      } catch(utils::AssertError& a) {
+         std::cerr << a.what() << std::endl;
+      }
+      // Dump the generated code to the output file
+      std::ofstream out{optOutputFile};
+      CU.print(out);
+      out.close();
+   }
+
    return 0;
 }

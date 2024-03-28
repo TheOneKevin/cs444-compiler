@@ -14,7 +14,7 @@ std::ostream& operator<<(std::ostream& os, const Value& value) {
    return value.print(os);
 }
 
-Context::Context(BumpAllocator& alloc) : pimpl_{nullptr} {
+Context::Context(BumpAllocator& alloc) : alloc_{alloc}, pimpl_{nullptr} {
    void* buf1 = alloc.allocate_bytes(sizeof(Type), alignof(Type));
    auto* pointerType = new(buf1) Type{this};
    void* buf2 = alloc.allocate_bytes(sizeof(Type), alignof(Type));
@@ -23,11 +23,11 @@ Context::Context(BumpAllocator& alloc) : pimpl_{nullptr} {
    auto* labelType = new(buf3) Type{this};
    void* buf4 = alloc.allocate_bytes(sizeof(ConstantNullPointer),
                                      alignof(ConstantNullPointer));
-   auto* nullPointer = new(buf4) ConstantNullPointer{*this};
+   auto* nullPointer = new(buf4) ConstantNullPointer{*this, pointerType};
    // Replace pimpl_ with the new ContextPImpl
    void* buff = alloc.allocate_bytes(sizeof(ContextPImpl), alignof(ContextPImpl));
    pimpl_ = new(buff)
-         ContextPImpl{&alloc, pointerType, voidType, labelType, nullPointer};
+         ContextPImpl{alloc, pointerType, voidType, labelType, nullPointer};
 }
 
 } // namespace tir

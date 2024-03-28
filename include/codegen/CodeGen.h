@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast/AST.h"
+#include "ast/DeclContext.h"
 #include "ast/Stmt.h"
 #include "tir/Constant.h"
 #include "tir/IRBuilder.h"
@@ -16,11 +17,13 @@ class CodeGenerator {
 public:
    CodeGenerator(tir::Context& ctx, tir::CompilationUnit& cu)
          : ctx{ctx}, cu{cu} {}
+   void run(ast::LinkingUnit const* lu);
 
 private:
    void emitStmt(ast::Stmt const* stmt);
    tir::Value* emitExpr(ast::Expr const* expr);
    void emitFunction(ast::MethodDecl const* decl);
+   void emitClass(ast::ClassDecl const* decl);
    tir::Type* emitType(ast::Type const* type);
 
 private:

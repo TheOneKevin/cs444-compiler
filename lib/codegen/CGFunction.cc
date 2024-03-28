@@ -27,14 +27,14 @@ void CodeGenerator::emitFunction(ast::MethodDecl const* decl) {
    }
    curFn = func;
    // 3. Emit the function body and add the allocas for the locals
-   tir::IRBuilder builder{ctx};
    auto entry = builder.createBasicBlock(func);
    builder.setInsertPoint(entry->begin());
    valueMap.clear();
    for(auto* local : decl->decls()) {
       auto* typedLocal = cast<ast::TypedDecl>(local);
       auto* localTy = emitType(typedLocal->type());
-      auto* val = builder.createAlloca(localTy);
+      auto* val = func->createAlloca(localTy);
+      val->setName(typedLocal->name());
       valueMap[local] = cast<tir::AllocaInst>(val);
    }
    emitStmt(decl->body());

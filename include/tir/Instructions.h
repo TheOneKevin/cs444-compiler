@@ -21,12 +21,15 @@ class Instruction : public User {
    // Public enum definitions //////////////////////////////////////////////////
 public:
 #define BINOP_KINDS(F) \
-   F(NONE)             \
-   F(ADD)              \
-   F(SUB)              \
-   F(MUL)              \
-   F(DIV)              \
-   F(REM)
+   F(None)             \
+   F(Add)              \
+   F(Sub)              \
+   F(Mul)              \
+   F(Div)              \
+   F(Rem)              \
+   F(And)              \
+   F(Or)               \
+   F(Xor)
    DECLARE_ENUM(BinOp, BINOP_KINDS)
 protected:
    DECLARE_STRING_TABLE(BinOp, binop_strtab_, BINOP_KINDS)
@@ -35,7 +38,7 @@ protected:
    // Constructors and public member functions //////////////////////////////////
 public:
    Instruction(Context& ctx, tir::Type* resultTy)
-         : Instruction{ctx, resultTy, BinOp::NONE} {}
+         : Instruction{ctx, resultTy, BinOp::None} {}
    Instruction(Context& ctx, tir::Type* resultTy, BinOp op)
          : User{ctx, resultTy},
            next_{nullptr},
@@ -84,16 +87,16 @@ public:
    Instruction* prev() const { return prev_; }
    // Gets the iterator to the next instruction in the BB
    auto nextIter() {
-      return BasicBlock::iterator{next_ ? next_ : this, this->parent_, !next_, false};
+      return BasicBlock::iterator{
+            next_ ? next_ : this, this->parent_, !next_, false};
    }
    // Gets the iterator to the previous instruction in the BB
    auto prevIter() {
-      return BasicBlock::iterator{prev_ ? prev_ : this, this->parent_, false, !prev_};
+      return BasicBlock::iterator{
+            prev_ ? prev_ : this, this->parent_, false, !prev_};
    }
    // Gets the current iterator to this instruction
-   auto iter() {
-      return BasicBlock::iterator{this, this->parent_, false, false};
-   }
+   auto iter() { return BasicBlock::iterator{this, this->parent_, false, false}; }
    // Gets the binary operator of this instruction
    auto binop() const { return binop_; }
 
@@ -229,6 +232,37 @@ public:
 
 public:
    std::ostream& print(std::ostream& os) const override;
+};
+
+class CmpInst final : public Instruction {
+public:
+#define PREDICATE_KINDS(F) \
+   F(EQ)                   \
+   F(NE)                   \
+   F(LT)                   \
+   F(GT)                   \
+   F(LE)                   \
+   F(GE)
+   DECLARE_ENUM(Predicate, PREDICATE_KINDS)
+private:
+   DECLARE_STRING_TABLE(Predicate, predicate_strtab_, PREDICATE_KINDS)
+#undef PREDICATE_KINDS
+
+private:
+   CmpInst(Context& ctx, Predicate pred, Value* lhs, Value* rhs);
+
+public:
+   static CmpInst* Create(Context& ctx, Predicate pred, Value* lhs, Value* rhs) {
+      auto buf = ctx.alloc().allocate_bytes(sizeof(CmpInst), alignof(CmpInst));
+      return new(buf) CmpInst{ctx, pred, lhs, rhs};
+   }
+
+public:
+   std::ostream& print(std::ostream& os) const override;
+   Predicate predicate() const { return pred_; }
+
+private:
+   Predicate pred_;
 };
 
 /* ===--------------------------------------------------------------------=== */

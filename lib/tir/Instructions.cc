@@ -8,7 +8,8 @@ static std::ostream& printNameOrConst(std::ostream& os, Value* val) {
    if(auto* ci = dyn_cast<ConstantInt>(val)) {
       os << *ci;
    } else {
-      os << *val->type() << " ";
+      if(!val->type()->isLabelType())
+         os << *val->type() << " ";
       val->printName(os);
    }
    return os;
@@ -27,7 +28,7 @@ BranchInst::BranchInst(Context& ctx, Value* cond, BasicBlock* trueBB,
 }
 
 std::ostream& BranchInst::print(std::ostream& os) const {
-   os << "br " << *getChild(0)->type() << " ";
+   os << "br ";
    printNameOrConst(os, getChild(0)) << ", ";
    printNameOrConst(os, getChild(1)) << ", ";
    printNameOrConst(os, getChild(2));
@@ -63,8 +64,8 @@ StoreInst::StoreInst(Context& ctx, Value* val, Value* ptr)
 }
 
 std::ostream& StoreInst::print(std::ostream& os) const {
-   os << "store " << *getChild(0)->type() << " ";
-   printNameOrConst(os, getChild(0)) << ", " << *getChild(1)->type();
+   os << "store ";
+   printNameOrConst(os, getChild(0)) << ", ";
    printNameOrConst(os, getChild(1));
    return os;
 }
@@ -129,6 +130,29 @@ std::ostream& BinaryInst::print(std::ostream& os) const {
 }
 
 /* ===--------------------------------------------------------------------=== */
+//
+/* ===--------------------------------------------------------------------=== */
+
+CmpInst::CmpInst(Context& ctx, Predicate pred, Value* lhs, Value* rhs)
+      : Instruction{ctx, Type::getInt1Ty(ctx)}, pred_(pred) {
+   addChild(lhs);
+   addChild(rhs);
+}
+
+std::ostream& CmpInst::print(std::ostream& os) const {
+   printName(os) << " = cmp ";
+   const char* name = Predicate_to_string(pred_, "unknown");
+   // Print name lower case
+   for(unsigned i = 0; name[i] != '\0'; ++i)
+      os << static_cast<char>(tolower(name[i]));
+   // Print operands
+   os << " " << *type() << " ";
+   printNameOrConst(os, getChild(0)) << ", ";
+   printNameOrConst(os, getChild(1));
+   return os;
+}
+
+/* ===--------------------------------------------------------------------=== */
 // AllocaInst implementation
 /* ===--------------------------------------------------------------------=== */
 
@@ -136,8 +160,7 @@ AllocaInst::AllocaInst(Context& ctx, Type* type)
       : Instruction{ctx, Type::getPointerTy(ctx)}, allocType_{type} {}
 
 std::ostream& AllocaInst::print(std::ostream& os) const {
-   os << "alloca " << *allocType_;
-   return os;
+   return printName(os) << " = " << "alloca " << *allocType_;
 }
 
 } // namespace tir

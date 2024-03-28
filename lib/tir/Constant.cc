@@ -18,6 +18,11 @@ ConstantNullPointer* Constant::CreateNullPointer(Context& ctx) {
    return ConstantNullPointer::Create(ctx);
 }
 
+std::ostream& ConstantNullPointer::print(std::ostream& os) const {
+   os << "ptr* null";
+   return os;
+}
+
 std::ostream& ConstantInt::print(std::ostream& os) const {
    os << *type() << " " << value();
    return os;
@@ -50,9 +55,9 @@ std::ostream& Function::print(std::ostream& os) const {
    if(hasBody()) {
       os << " {\n";
       for(auto* bb : body()) {
-         bb->print(os);
+         bb->print(os) << "\n";
       }
-      os << "\n}\n";
+      os << "}\n";
    }
    return os;
 }
