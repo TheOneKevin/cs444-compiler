@@ -148,7 +148,7 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
    if(*exprType == *castType) return true;
 
    // identity conversion: java.lang.String <-> primitive type string
-   if(isTypeString(castType) && (isTypeString(castType) || exprType->isNull())) {
+   if(isTypeString(castType) && (isTypeString(exprType) || exprType->isNull())) {
       return true;
    }
 
