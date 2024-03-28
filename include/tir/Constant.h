@@ -25,8 +25,13 @@ protected:
    virtual bool isBoolean() const { return false; }
 
 public:
-   static ConstantInt* CreateBool(Context& ctx, bool value);
-   static ConstantInt* CreateInt32(Context& ctx, uint32_t value);
+   static ConstantInt* CreateInt(Context& ctx, uint8_t bits, uint32_t value);
+   static ConstantInt* CreateBool(Context& ctx, bool value) {
+      return CreateInt(ctx, 1, value ? 1 : 0);
+   }
+   static ConstantInt* CreateInt32(Context& ctx, uint32_t value) {
+      return CreateInt(ctx, 32, value);
+   }
    static ConstantNullPointer* CreateNullPointer(Context& ctx);
 };
 
@@ -186,12 +191,16 @@ public:
       return inst;
    }
 
+   auto isNoReturn() const { return noReturn_; }
+   void setNoReturn(bool value) { noReturn_ = value; }
+
 private:
    void addBlock(BasicBlock* block) { body_.push_back(block); }
 
 private:
    std::pmr::vector<BasicBlock*> body_;
    tir::CompilationUnit* parent_;
+   bool noReturn_ = false;
 };
 
 } // namespace tir

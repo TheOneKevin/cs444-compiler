@@ -24,7 +24,7 @@ tir::Value* T::asRValue(tir::IRBuilder& builder) const {
    assert(kind_ == Kind::L || kind_ == Kind::R);
    auto [_, type, value] = std::get<TirWrapped>(data_);
    if(kind_ == Kind::L) {
-      // assert(!type->isPointerType());
+      assert(!type->isPointerType() || isAstTypeReference(astType()));
       return builder.createLoadInstr(type, value);
    } else {
       return value;
@@ -38,7 +38,7 @@ tir::Value* T::asLValue() const {
 
 tir::Value* T::asFn() const {
    assert(kind_ == Kind::StaticFn || kind_ == Kind::MemberFn);
-   return std::get<TirWrapped>(data_).value;
+   return std::get<FnWrapped>(data_).fn;
 }
 
 ast::Type const* T::astType() const {
@@ -51,8 +51,11 @@ ast::Type const* T::astType() const {
 }
 
 ast::Decl const* T::asDecl() const {
-   assert(kind_ == Kind::AstDecl);
-   return std::get<ast::Decl const*>(data_);
+   if(kind_ == Kind::AstDecl)
+      return std::get<ast::Decl const*>(data_);
+   else if(kind_ == Kind::StaticFn || kind_ == Kind::MemberFn)
+      return std::get<FnWrapped>(data_).decl;
+   assert(false);
 }
 
 tir::Type* T::irType() const {
@@ -70,7 +73,7 @@ bool T::validate(CodeGenerator& cg) const {
          break;
       case Kind::StaticFn:
       case Kind::MemberFn:
-         assert(std::get<TirWrapped>(data_).value != nullptr);
+         assert(std::get<FnWrapped>(data_).fn != nullptr);
          break;
       case Kind::AstType:
          assert(std::get<ast::Type const*>(data_) != nullptr);
@@ -86,6 +89,35 @@ bool T::validate(CodeGenerator& cg) const {
       assert(type == cg.emitType(astTy));
    }
    return true;
+}
+
+void T::dump() const {
+   switch(kind_) {
+      case Kind::L:
+         std::cout << "L-value: ";
+         std::get<TirWrapped>(data_).value->dump();
+         break;
+      case Kind::R:
+         std::cout << "R-value: ";
+         std::get<TirWrapped>(data_).value->dump();
+         break;
+      case Kind::StaticFn:
+         std::cout << "Static function: ";
+         asFn()->dump();
+         break;
+      case Kind::MemberFn:
+         std::cout << "Member function: ";
+         asFn()->dump();
+         break;
+      case Kind::AstType:
+         std::cout << "AST type: ";
+         astType()->dump();
+         break;
+      case Kind::AstDecl:
+         std::cout << "AST decl: ";
+         asDecl()->dump();
+         break;
+   }
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -189,16 +221,23 @@ namespace codegen {
 
 T CGExprEvaluator::mapValue(ex::ExprValue& node) const {
    auto aTy = node.type();
-   if(auto memberName = dyn_cast<ex::MemberName>(node)) {
+   if(auto methodName = dyn_cast<ex::MethodName>(node)) {
+      auto* methodDecl = cast<ast::MethodDecl>(methodName->decl());
+      auto kind = methodDecl->modifiers().isStatic() ? T::Kind::StaticFn
+                                                     : T::Kind::MemberFn;
+      auto fn = cg.gvMap[methodDecl];
+      // TODO: Virtual functions should be handled somewhere here?
+      return T::Fn(kind, methodDecl, fn);
+   } else if(auto memberName = dyn_cast<ex::MemberName>(node)) {
       auto irTy = cg.emitType(cast<ast::TypedDecl>(memberName->decl())->type());
       // 1. If it's a field decl, handle the static and non-static cases
       if(auto* fieldDecl = dyn_cast<ast::FieldDecl>(memberName->decl())) {
-         // 1. If it's static, then grab the GV
+         // a) If it's static, then grab the GV
          if(fieldDecl->modifiers().isStatic()) {
             auto GV = cg.gvMap[fieldDecl];
             return T::L(aTy, irTy, GV);
          }
-         // 2. Otherwise we need to wrap it to resolve in MemberAccess
+         // b) Otherwise we need to wrap it to resolve in MemberAccess
          else {
             return T{fieldDecl};
          }
@@ -211,25 +250,17 @@ T CGExprEvaluator::mapValue(ex::ExprValue& node) const {
    } else if(auto thisNode = dyn_cast<ex::ThisNode>(node)) {
       // "this" will be the first argument of the function
       return T::L(aTy, cg.emitType(aTy), curFn.args().front());
-   } else if(auto methodName = dyn_cast<ex::MethodName>(node)) {
-      auto* methodDecl = cast<ast::MethodDecl>(methodName->decl());
-      // 1. If it's static, then grab the GV
-      if(methodDecl->modifiers().isStatic()) {
-         auto fn = cg.gvMap[methodDecl];
-         return T::Fn(T::Kind::StaticFn, fn);
-      }
-      // 2. Otherwise... it's complicated
-      else {
-         assert(false && "Not implemented yet");
-      }
    } else if(auto literal = dyn_cast<ex::LiteralNode>(node)) {
       if(literal->builtinType()->isNumeric()) {
-         return T::R(aTy, Constant::CreateInt32(ctx, literal->getAsInt()));
+         auto bits = static_cast<uint8_t>(literal->builtinType()->typeSizeBits());
+         auto val = literal->getAsInt();
+         return T::R(aTy, Constant::CreateInt(ctx, bits, val));
       } else if(literal->builtinType()->isBoolean()) {
          return T::R(aTy, Constant::CreateBool(ctx, literal->getAsInt()));
       } else if(literal->builtinType()->isString()) {
          // TODO: String type
-         return T::L(aTy, Type::getPointerTy(ctx), Constant::CreateNullPointer(ctx));
+         return T::L(
+               aTy, Type::getPointerTy(ctx), Constant::CreateNullPointer(ctx));
       } else {
          // Null type
          return T::R(aTy, Constant::CreateNullPointer(ctx));
@@ -388,39 +419,52 @@ T CGExprEvaluator::evalMemberAccess(ex::MemberAccess& op, T lhs, T field) const 
    auto aTy = op.resultType();
    auto obj = lhs.asRValue(cg.builder);
    auto decl = field.asDecl();
+   // Special case: "field" is actually a function
+   if(field.kind() == T::Kind::MemberFn) {
+      return T::Fn(T::Kind::MemberFn, decl, field.asFn(), obj);
+   }
    // Special case: array.length
-   if(decl == findArrayField(cg.nr)) {
+   else if(decl == findArrayField(cg.nr)) {
       auto arrTy = cast<StructType>(lhs.irType());
-      auto arrSzGep = cg.builder.createGEPInstr(obj, arrTy, {Constant::CreateInt32(ctx, 0)});
+      auto arrSzGep =
+            cg.builder.createGEPInstr(obj, arrTy, {Constant::CreateInt32(ctx, 0)});
       auto arrSz = cg.builder.createLoadInstr(Type::getInt32Ty(ctx), arrSzGep);
       return T::R(aTy, arrSz);
    }
-   assert(false);
+   // Member access
+   else {
+      assert(false);
+   }
 }
 
 T CGExprEvaluator::evalMethodCall(ex::MethodInvocation& op, T method,
                                   const op_array& args) const {
    auto aTy = op.resultType();
-   // Check if the method is static or not
-   if(method.kind() == T::Kind::StaticFn) {
-      std::vector<Value*> argValues;
-      for(auto& arg : args) {
-         argValues.push_back(arg.asRValue(cg.builder));
-      }
-      auto callVal = cg.builder.createCallInstr(method.asFn(), argValues);
-      return T::R(aTy, callVal);
+   std::vector<Value*> argValues;
+   // If this is a member function, push back an extra "this"
+   if(method.kind() == T::Kind::MemberFn) {
+      assert(method.thisRef());
+      argValues.push_back(method.thisRef());
+   } else {
+      assert(method.kind() == T::Kind::StaticFn);
    }
-   // TODO: Implement logic for member function call
-   assert(false);
+   // Now we can push back the arguments
+   for(auto& arg : args) {
+      argValues.push_back(arg.asRValue(cg.builder));
+   }
+   auto callVal = cg.builder.createCallInstr(method.asFn(), argValues);
+   return T::R(aTy, callVal);
 }
 
 T CGExprEvaluator::evalNewObject(ex::ClassInstanceCreation& op, T object,
                                  const op_array& args) const {
-   (void) op;
-   (void) object;
-   (void) args;
+   (void)op;
+   (void)object;
+   (void)args;
    // TODO: Implement this
-   return T::L(op.resultType(), Type::getPointerTy(ctx), Constant::CreateNullPointer(ctx));
+   return T::L(op.resultType(),
+               Type::getPointerTy(ctx),
+               Constant::CreateNullPointer(ctx));
 }
 
 T CGExprEvaluator::evalNewArray(ex::ArrayInstanceCreation& op, T type,
@@ -436,19 +480,13 @@ T CGExprEvaluator::evalNewArray(ex::ArrayInstanceCreation& op, T type,
          Constant::CreateInt32(ctx, elemTy->getSizeInBits() / 8));
    auto arrPtr = cg.builder.createCallInstr(cu.builtinMalloc(), {totalSz});
    auto alloca = curFn.createAlloca(cg.emitType(op.resultType()));
-   auto gepSz =
-         cg.builder.createGEPInstr(arrPtr, arrTy, {Constant::CreateInt32(ctx, 0)});
-   auto gepPtr =
-         cg.builder.createGEPInstr(arrPtr, arrTy, {Constant::CreateInt32(ctx, 1)});
-   cg.builder.createStoreInstr(arrLength, gepSz);
-   cg.builder.createStoreInstr(arrPtr, gepPtr);
+   cg.emitSetArrayPtr(alloca, arrPtr);
+   cg.emitSetArraySz(alloca, arrLength);
    auto loadArr = cg.builder.createLoadInstr(arrTy, arrPtr);
    cg.builder.createStoreInstr(loadArr, alloca);
    totalSz->setName("arr.sz");
    arrPtr->setName("arr.ptr");
    alloca->setName("arr.alloca");
-   gepSz->setName("arr.gep.sz");
-   gepPtr->setName("arr.gep.ptr");
    return T::L(aTy, arrTy, alloca);
 }
 
@@ -456,14 +494,8 @@ T CGExprEvaluator::evalArrayAccess(ex::ArrayAccess& op, T array, T index) const 
    auto arrAlloca = array.asLValue();
    auto elemAstTy = op.resultType();
    auto arrTy = cast<StructType>(array.irType());
-   auto arrSzGep = cg.builder.createGEPInstr(
-         arrAlloca, arrTy, {Constant::CreateInt32(ctx, 0)});
-   auto arrPtrGep = cg.builder.createGEPInstr(
-         arrAlloca, arrTy, {Constant::CreateInt32(ctx, 1)});
-   auto arrSz = cg.builder.createLoadInstr(Type::getInt32Ty(ctx), arrSzGep);
-   arrSz->setName("arr.sz");
-   auto arrPtr = cg.builder.createLoadInstr(Type::getPointerTy(ctx), arrPtrGep);
-   arrPtr->setName("arr.ptr");
+   auto arrPtr = cg.emitGetArrayPtr(arrAlloca);
+   auto arrSz = cg.emitGetArraySz(arrAlloca);
    auto idxVal = index.asRValue(cg.builder);
    auto lengthValid =
          cg.builder.createCmpInstr(CmpInst::Predicate::LT, idxVal, arrSz);
@@ -474,7 +506,6 @@ T CGExprEvaluator::evalArrayAccess(ex::ArrayAccess& op, T array, T index) const 
    cg.builder.createBranchInstr(lengthValid, bb2, bb1);
    cg.builder.setInsertPoint(bb1);
    cg.builder.createCallInstr(cu.builtinException(), {});
-   cg.builder.createBranchInstr(bb2);
    cg.builder.setInsertPoint(bb2);
    auto elemPtr = cg.builder.createGEPInstr(arrPtr, arrTy, {idxVal});
    return T::L(elemAstTy, cg.emitType(elemAstTy), elemPtr);

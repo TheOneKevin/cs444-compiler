@@ -121,6 +121,7 @@ void CG::emitWhileStmt(ast::WhileStmt const* stmt) {
 namespace codegen {
 
 void CG::emitStmt(ast::Stmt const* stmt) {
+   if(!stmt) return;
    if(auto* forStmt = dyn_cast<ast::ForStmt>(stmt)) {
       emitForStmt(forStmt);
    } else if(auto* retStmt = dyn_cast<ast::ReturnStmt>(stmt)) {

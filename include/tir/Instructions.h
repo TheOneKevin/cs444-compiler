@@ -9,6 +9,8 @@
 
 namespace tir {
 
+class Function;
+
 /* ===--------------------------------------------------------------------=== */
 // Instruction base class
 /* ===--------------------------------------------------------------------=== */
@@ -219,6 +221,8 @@ public:
 
 public:
    std::ostream& print(std::ostream& os) const override;
+   bool isTerminator() const override;
+   Function* getCallee() const;
 };
 
 /* ===--------------------------------------------------------------------=== */

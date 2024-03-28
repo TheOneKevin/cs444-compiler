@@ -159,7 +159,7 @@ public:
       assert(isResolved() && "Type is not resolved");
    }
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
-
+   bool isReference() const override { return true; }
    /// @brief Resolves the type to a declaration if it is an unresolved type.
    void resolveInternal(Decl const* decl) {
       assert(!isResolved() && "Type already resolved");

@@ -17,7 +17,8 @@ CompilationUnit::CompilationUnit(Context& ctx) : ctx_{ctx}, globals_{ctx.alloc()
    // Declare the "void __exception()" function
    {
       auto fnty = FunctionType::get(ctx, Type::getVoidTy(ctx), {});
-      CreateFunction(fnty, "__exception");
+      auto fn = CreateFunction(fnty, "__exception");
+      fn->setNoReturn(true);
    }
 }
 

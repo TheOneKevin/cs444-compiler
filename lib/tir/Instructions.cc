@@ -1,5 +1,6 @@
 #include "tir/Instructions.h"
 
+#include "tir/Constant.h"
 #include "tir/TIR.h"
 
 namespace tir {
@@ -95,14 +96,25 @@ CallInst::CallInst(Context& ctx, Value* callee, utils::range_ref<Value*> args)
 }
 
 std::ostream& CallInst::print(std::ostream& os) const {
-   printName(os) << " = ";
+   if(!type()->isVoidType())
+      printName(os) << " = ";
    os << "call " << getChild(0)->name() << "(";
    for(unsigned i = 1; i < numChildren(); ++i) {
       printNameOrConst(os, getChild(i));
       if(i != numChildren() - 1) os << ", ";
    }
    os << ")";
+   if(isTerminator())
+      os << " noreturn";
    return os;
+}
+
+Function* CallInst::getCallee() const {
+   return cast<Function>(getChild(0));
+}
+
+bool CallInst::isTerminator() const {
+   return getCallee()->isNoReturn();
 }
 
 /* ===--------------------------------------------------------------------=== */

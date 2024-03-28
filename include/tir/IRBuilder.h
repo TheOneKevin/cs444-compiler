@@ -36,6 +36,10 @@ public:
       insertPoint_ = bb->begin();
    }
 
+   BasicBlock* currentBlock() {
+      return insertPoint_.getBB();
+   }
+
 public:
    /**
     * @brief Create a new basic block within the given function. This does

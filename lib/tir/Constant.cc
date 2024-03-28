@@ -3,15 +3,12 @@
 #include <iostream>
 
 #include "tir/BasicBlock.h"
+#include "tir/Type.h"
 
 namespace tir {
 
-ConstantInt* Constant::CreateBool(Context& ctx, bool value) {
-   return ConstantInt::Create(ctx, Type::getInt1Ty(ctx), value);
-}
-
-ConstantInt* Constant::CreateInt32(Context& ctx, uint32_t value) {
-   return ConstantInt::Create(ctx, Type::getInt32Ty(ctx), value);
+ConstantInt* Constant::CreateInt(Context& ctx, uint8_t bits, uint32_t value) {
+   return ConstantInt::Create(ctx, IntegerType::get(ctx, bits), value);
 }
 
 ConstantNullPointer* Constant::CreateNullPointer(Context& ctx) {
@@ -44,6 +41,7 @@ std::ostream& Argument::print(std::ostream& os) const {
 std::ostream& Function::print(std::ostream& os) const {
    os << "function ";
    if(!hasBody()) os << "external ";
+   if(isNoReturn()) os << "noreturn ";
    os << *getReturnType() << " " << "@" << name() << "(";
    bool isFirst = true;
    for(auto* arg : args()) {

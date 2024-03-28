@@ -113,6 +113,8 @@ public:
    void insertBeforeBegin(Instruction* instr);
    // Print the basic block to the given output stream
    std::ostream& print(std::ostream& os) const override;
+   // Get the terminator instruction of this basic block
+   auto* terminator() const { return last_; }
 
 private:
    Instruction* first_;

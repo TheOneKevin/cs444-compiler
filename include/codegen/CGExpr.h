@@ -28,6 +28,12 @@ class ValueWrapper {
       tir::Value* value;
    };
 
+   struct FnWrapped {
+      ast::Decl const* decl;
+      tir::Value* refThis;
+      tir::Value* fn;
+   };
+
 public:
    enum class Kind { StaticFn, MemberFn, AstType, AstDecl, L, R };
 
@@ -51,6 +57,9 @@ private:
    // Private constructor for wrapping IR values
    explicit ValueWrapper(Kind kind, TirWrapped wrappedIr)
          : kind_{kind}, data_{wrappedIr} {}
+   // Private constructor for wrapping function values
+   explicit ValueWrapper(Kind kind, FnWrapped wrappedFn)
+         : kind_{kind}, data_{wrappedFn} {}
 
 public:
    /**
@@ -63,7 +72,7 @@ public:
     */
    static ValueWrapper L(ast::Type const* aty, tir::Type* elemTy,
                          tir::Value* value) {
-      return ValueWrapper{Kind::L, {aty, elemTy, value}};
+      return ValueWrapper{Kind::L, TirWrapped{aty, elemTy, value}};
    }
 
    /**
@@ -74,8 +83,8 @@ public:
     * @return ValueWrapper The wrapped value.
     */
    static ValueWrapper R(ast::Type const* aty, tir::Value* value) {
-      assert(!value->type()->isPointerType());
-      return ValueWrapper{Kind::R, {aty, value->type(), value}};
+      assert(!value->type()->isPointerType() || isAstTypeReference(aty));
+      return ValueWrapper{Kind::R, TirWrapped{aty, value->type(), value}};
    }
 
    /**
@@ -84,9 +93,10 @@ public:
     * @param value The IR function value to wrap.
     * @return ValueWrapper The wrapped value.
     */
-   static ValueWrapper Fn(Kind kind, tir::Value* value) {
+   static ValueWrapper Fn(Kind kind, ast::Decl const* fn, tir::Value* value,
+                          tir::Value* refThis = nullptr) {
       assert(kind == Kind::StaticFn || kind == Kind::MemberFn);
-      return ValueWrapper{kind, {nullptr, nullptr, value}};
+      return ValueWrapper{kind, FnWrapped{fn, refThis, value}};
    }
 
    // Gets the wrapped IR value as an R-value
@@ -105,10 +115,17 @@ public:
    bool validate(CodeGenerator& cg) const;
    // Gets the wrapped AST declaration
    ast::Decl const* asDecl() const;
+   // Get the thisRef
+   tir::Value* thisRef() const {
+      assert(kind_ == Kind::MemberFn);
+      return std::get<FnWrapped>(data_).refThis;
+   }
+   // Dump
+   void dump() const;
 
 private:
    Kind kind_;
-   std::variant<TirWrapped, ast::Type const*, ast::Decl const*> data_;
+   std::variant<TirWrapped, FnWrapped, ast::Type const*, ast::Decl const*> data_;
 };
 
 } // namespace details

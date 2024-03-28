@@ -1,13 +1,30 @@
 #include "codegen/CodeGen.h"
+
+#include <utility>
+
 #include "ast/AstNode.h"
 #include "ast/Type.h"
 #include "tir/Type.h"
 
 namespace codegen {
 
-tir::Type* CodeGenerator::emitType(ast::Type const* type) {
+using CG = CodeGenerator;
+
+CG::CodeGenerator(tir::Context& ctx, tir::CompilationUnit& cu,
+                  semantic::NameResolver& nr)
+      : ctx{ctx}, cu{cu}, nr{nr} {
+   arrayType = tir::StructType::get(ctx,
+                                    {// Length
+                                     tir::Type::getInt32Ty(ctx),
+                                     // Pointer
+                                     tir::Type::getPointerTy(ctx)});
+}
+
+tir::Type* CG::emitType(ast::Type const* type) {
    using Kind = ast::BuiltInType::Kind;
-   if(type->isPrimitive()) {
+   if(isAstTypeReference(type)) {
+      return tir::Type::getPointerTy(ctx);
+   } else if(type->isPrimitive()) {
       auto ty = cast<ast::BuiltInType>(type);
       switch(ty->getKind()) {
          case Kind::Boolean:
@@ -20,29 +37,16 @@ tir::Type* CodeGenerator::emitType(ast::Type const* type) {
             return tir::Type::getInt32Ty(ctx);
          case Kind::Byte:
             return tir::Type::getInt8Ty(ctx);
-         case Kind::String:
-            // TODO: Implement this
-            return tir::Type::getPointerTy(ctx);
          default:
-            // NONE type is just a null pointer
-            return tir::Type::getPointerTy(ctx);
+            std::unreachable();
       }
    } else if(type->isArray()) {
-      return tir::StructType::get(
-         ctx, {
-            // Length
-            tir::Type::getInt32Ty(ctx),
-            // Pointer
-            tir::Type::getPointerTy(ctx)
-         }
-      );
-   } else {
-      // TODO: Implement this
-      return tir::Type::getPointerTy(ctx);
+      return arrayType;
    }
+   std::unreachable();
 }
 
-void CodeGenerator::run(ast::LinkingUnit const* lu) {
+void CG::run(ast::LinkingUnit const* lu) {
    for(auto* cu : lu->compliationUnits()) {
       for(auto* decl : cu->decls()) {
          if(auto* classDecl = dyn_cast<ast::ClassDecl>(decl)) {
@@ -59,29 +63,40 @@ void CodeGenerator::run(ast::LinkingUnit const* lu) {
    }
 }
 
-void CodeGenerator::emitClassDecl(ast::ClassDecl const* decl) {
-   for(auto* method : decl->methods()) {
-      if(method->modifiers().isStatic()) {
-         emitFunctionDecl(method);
-      }
-   }
-   for(auto* field : decl->fields()) {
-      if(field->modifiers().isStatic()) {
-         auto value = cu.CreateGlobalVariable(
-            emitType(field->type()),
-            field->name()
-         );
-         gvMap[field] = value;
-      }
-   }
+tir::Value* CG::emitGetArraySz(tir::Value* ptr) {
+   using namespace tir;
+   auto zero = Constant::CreateInt32(ctx, 0);
+   auto gepSz = builder.createGEPInstr(ptr, arrayType, {zero});
+   gepSz->setName("arr.gep.sz");
+   auto sz = builder.createLoadInstr(Type::getInt32Ty(ctx), gepSz);
+   sz->setName("arr.sz");
+   return sz;
 }
 
-void CodeGenerator::emitClass(ast::ClassDecl const* decl) {
-   for(auto* method : decl->methods()) {
-      if(method->modifiers().isStatic()) {
-         emitFunction(method);
-      }
-   }
+tir::Value* CG::emitGetArrayPtr(tir::Value* ptr) {
+   using namespace tir;
+   auto one = Constant::CreateInt32(ctx, 1);
+   auto gepPtr = builder.createGEPInstr(ptr, arrayType, {one});
+   gepPtr->setName("arr.gep.ptr");
+   auto arrPtr = builder.createLoadInstr(Type::getPointerTy(ctx), gepPtr);
+   arrPtr->setName("arr.ptr");
+   return arrPtr;
 }
 
+void CG::emitSetArraySz(tir::Value* ptr, tir::Value* sz) {
+   using namespace tir;
+   auto zero = Constant::CreateInt32(ctx, 0);
+   auto gepSz = builder.createGEPInstr(ptr, arrayType, {zero});
+   gepSz->setName("arr.gep.sz");
+   builder.createStoreInstr(sz, gepSz);
 }
+
+void CG::emitSetArrayPtr(tir::Value* ptr, tir::Value* arr) {
+   using namespace tir;
+   auto one = Constant::CreateInt32(ctx, 1);
+   auto gepPtr = builder.createGEPInstr(ptr, arrayType, {one});
+   gepPtr->setName("arr.gep.ptr");
+   builder.createStoreInstr(arr, gepPtr);
+}
+
+} // namespace codegen

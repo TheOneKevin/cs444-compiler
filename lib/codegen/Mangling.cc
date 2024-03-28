@@ -1,5 +1,4 @@
 #include "codegen/Mangling.h"
-#include <sstream>
 #include <string_view>
 
 #include "ast/AST.h"
