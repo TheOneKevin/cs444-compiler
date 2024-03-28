@@ -183,7 +183,7 @@ void ClassDecl::setParent(DeclContext* parent) {
    // Set the parent of the class
    Decl::setParent(parent);
    // Build the canonical name
-   if(cu->package() != nullptr) {
+   if(!cu->isDefaultPackage()) {
       canonicalName_ = cu->getPackageName();
       canonicalName_ += ".";
    }
@@ -259,8 +259,10 @@ void InterfaceDecl::setParent(DeclContext* parent) {
    // Set the parent of the interface
    Decl::setParent(parent);
    // Build the canonical name
-   canonicalName_ = cu->getPackageName();
-   canonicalName_ += ".";
+   if(!cu->isDefaultPackage()) {
+      canonicalName_ = cu->getPackageName();
+      canonicalName_ += ".";
+   }
    canonicalName_ += name();
    // Propagate the setParent call to the methods
    for(auto& method : methods_) method->setParent(this);

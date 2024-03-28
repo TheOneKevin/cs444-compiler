@@ -40,12 +40,13 @@ public:
       // Package must be unresolved type
       auto package = cast<UnresolvedType*>(package_);
       if(package->parts().size() > 0) return package_->toString();
-      return "[default package]";
+      return "";
    }
    SourceRange location() const { return location_; }
    auto const* package() const { return package_; }
    auto imports() const { return std::views::all(imports_); }
    auto isDefaultPackage() const {
+      if(!package_) return true;
       // Package must be unresolved type
       auto unresTy = cast<UnresolvedType*>(package_);
       return unresTy->parts().size() == 0;
