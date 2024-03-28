@@ -28,6 +28,9 @@ private:
    void emitForStmt(ast::ForStmt const* stmt);
    void emitBlockStmt(ast::BlockStatement const* stmt);
    void emitDeclStmt(ast::DeclStmt const* stmt);
+   void emitExprStmt(ast::ExprStmt const* stmt);
+   void emitIfStmt(ast::IfStmt const* stmt);
+   void emitWhileStmt(ast::WhileStmt const* stmt);
 
 private:
    tir::Context& ctx;
