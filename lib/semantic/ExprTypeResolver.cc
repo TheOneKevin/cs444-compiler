@@ -148,7 +148,9 @@ bool ExprTypeResolver::isValidCast(const Type* exprType,
    if(*exprType == *castType) return true;
 
    // identity conversion: java.lang.String <-> primitive type string
-   if(isTypeString(exprType) && isTypeString(castType)) return true;
+   if(isTypeString(castType) && (isTypeString(castType) || exprType->isNull())) {
+      return true;
+   }
 
    if(isAssignableTo(exprType, castType) || isAssignableTo(castType, exprType)) {
       return true;
@@ -272,8 +274,9 @@ Type const* ExprTypeResolver::evalBinaryOp(BinaryOp& op, const Type* lhs,
          auto lhsType = dynamic_cast<const ast::ReferenceType*>(lhs);
          auto rhsType = dynamic_cast<const ast::ReferenceType*>(rhs);
 
-         if((lhs->isNull() || lhsType) && (rhs->isNull() || rhsType) &&
-            (isValidCast(lhs, rhs) || isValidCast(rhs, lhs))) {
+         if((isTypeString(lhs) && rhs->isNull()) || (isTypeString(rhs) && lhs->isNull()) ||
+            ((lhs->isNull() || lhsType) && (rhs->isNull() || rhsType) &&
+            (isValidCast(lhs, rhs) || isValidCast(rhs, lhs)))) {
             return op.resolveResultType(
                   sema.BuildBuiltInType(ast::BuiltInType::Kind::Boolean));
          }

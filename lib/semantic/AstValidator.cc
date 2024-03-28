@@ -49,11 +49,12 @@ void AstChecker::validateStmt(const ast::Stmt& stmt) {
                << "if condition expression must be yield a boolean";
       }
    } else if(auto forstmt = dyn_cast<ast::ForStmt>(stmt)) {
-      assert(forstmt->condition());
-      auto* condTy = getTypeFromExpr(forstmt->condition());
-      if(!condTy || !condTy->isBoolean()) {
-         diag.ReportError(forstmt->condition()->location())
-               << "for condition expression must be yield a boolean";
+      if (forstmt->condition()) {
+         auto* condTy = getTypeFromExpr(forstmt->condition());
+         if(!condTy || !condTy->isBoolean()) {
+            diag.ReportError(forstmt->condition()->location())
+                  << "for condition expression must be yield a boolean";
+         }
       }
    } else if(auto whilestmt = dyn_cast<ast::WhileStmt>(stmt)) {
       assert(whilestmt->condition());
