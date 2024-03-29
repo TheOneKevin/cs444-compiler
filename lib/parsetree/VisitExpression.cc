@@ -1,4 +1,5 @@
 #include <utils/Error.h>
+
 #include <utility>
 
 #include "diagnostics/Location.h"
@@ -11,6 +12,10 @@ using ptv = ParseTreeVisitor;
 using ast::ExprNodeList;
 using namespace ast;
 using namespace ast::exprnode;
+
+// Check that TmpVarDecl is standard layout and trivially copyable
+static_assert(std::is_standard_layout_v<ptv::TmpVarDecl>);
+static_assert(std::is_trivially_copyable_v<ptv::TmpVarDecl>);
 
 // NOTE: This is a hack because we want to get the semantic's allocator
 #define sem_alloc sem.allocator().new_object

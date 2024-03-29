@@ -137,8 +137,6 @@ public:
       std::string_view name;
       ast::Expr* init;
    };
-   static_assert(std::is_standard_layout_v<TmpVarDecl>);
-   static_assert(std::is_trivially_copyable_v<TmpVarDecl>);
 
    TmpVarDecl visitVariableDeclarator(Node* ty, Node* node);
    ast::DeclStmt* visitLocalVariableDeclarationStatement(Node* node);

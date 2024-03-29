@@ -1,10 +1,16 @@
+#include "tir/Type.h"
+
 #include <iostream>
 #include <ostream>
 
 #include "tir/Constant.h"
-#include "tir/Type.h"
 
 namespace tir {
+
+static_assert(sizeof(IntegerType) == sizeof(Type));
+static_assert(sizeof(FunctionType) == sizeof(Type));
+static_assert(sizeof(ArrayType) == sizeof(Type));
+static_assert(sizeof(StructType) == sizeof(Type));
 
 Type* Type::getInt1Ty(Context& ctx) { return IntegerType::get(ctx, 1); }
 Type* Type::getInt8Ty(Context& ctx) { return IntegerType::get(ctx, 8); }

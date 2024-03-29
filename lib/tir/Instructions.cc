@@ -25,6 +25,7 @@ BranchInst::BranchInst(Context& ctx, Value* cond, BasicBlock* trueBB,
    addChild(cond);
    addChild(trueBB);
    addChild(falseBB);
+   static_assert(sizeof(BranchInst) == sizeof(Instruction));
 }
 
 std::ostream& BranchInst::print(std::ostream& os) const {
@@ -42,6 +43,7 @@ std::ostream& BranchInst::print(std::ostream& os) const {
 ReturnInst::ReturnInst(Context& ctx, Value* ret)
       : Instruction{ctx, ret ? ret->type() : Type::getVoidTy(ctx)} {
    if(ret) addChild(ret);
+   static_assert(sizeof(ReturnInst) == sizeof(Instruction));
 }
 
 std::ostream& ReturnInst::print(std::ostream& os) const {
@@ -61,6 +63,7 @@ StoreInst::StoreInst(Context& ctx, Value* val, Value* ptr)
       : Instruction{ctx, Type::getVoidTy(ctx)} {
    addChild(val);
    addChild(ptr);
+   static_assert(sizeof(StoreInst) == sizeof(Instruction));
 }
 
 std::ostream& StoreInst::print(std::ostream& os) const {
@@ -76,6 +79,7 @@ std::ostream& StoreInst::print(std::ostream& os) const {
 
 LoadInst::LoadInst(Context& ctx, Type* type, Value* ptr) : Instruction{ctx, type} {
    addChild(ptr);
+   static_assert(sizeof(LoadInst) == sizeof(Instruction));
 }
 
 std::ostream& LoadInst::print(std::ostream& os) const {
@@ -93,29 +97,24 @@ CallInst::CallInst(Context& ctx, Value* callee, utils::range_ref<Value*> args)
       : Instruction{ctx, cast<FunctionType>(callee->type())->getReturnType()} {
    addChild(callee);
    args.for_each([this](Value* arg) { addChild(arg); });
+   static_assert(sizeof(CallInst) == sizeof(Instruction));
 }
 
 std::ostream& CallInst::print(std::ostream& os) const {
-   if(!type()->isVoidType())
-      printName(os) << " = ";
+   if(!type()->isVoidType()) printName(os) << " = ";
    os << "call " << getChild(0)->name() << "(";
    for(unsigned i = 1; i < numChildren(); ++i) {
       printNameOrConst(os, getChild(i));
       if(i != numChildren() - 1) os << ", ";
    }
    os << ")";
-   if(isTerminator())
-      os << " noreturn";
+   if(isTerminator()) os << " noreturn";
    return os;
 }
 
-Function* CallInst::getCallee() const {
-   return cast<Function>(getChild(0));
-}
+Function* CallInst::getCallee() const { return cast<Function>(getChild(0)); }
 
-bool CallInst::isTerminator() const {
-   return getCallee()->isNoReturn();
-}
+bool CallInst::isTerminator() const { return getCallee()->isNoReturn(); }
 
 /* ===--------------------------------------------------------------------=== */
 // BinaryInst implementation
@@ -125,6 +124,7 @@ BinaryInst::BinaryInst(Context& ctx, BinOp binop, Value* lhs, Value* rhs)
       : Instruction{ctx, lhs->type(), binop} {
    addChild(lhs);
    addChild(rhs);
+   static_assert(sizeof(BinaryInst) == sizeof(Instruction));
 }
 
 std::ostream& BinaryInst::print(std::ostream& os) const {
@@ -145,14 +145,16 @@ std::ostream& BinaryInst::print(std::ostream& os) const {
 /* ===--------------------------------------------------------------------=== */
 
 CmpInst::CmpInst(Context& ctx, Predicate pred, Value* lhs, Value* rhs)
-      : Instruction{ctx, Type::getInt1Ty(ctx)}, pred_(pred) {
+      : Instruction{ctx, Type::getInt1Ty(ctx), pred} {
    addChild(lhs);
    addChild(rhs);
+   static_assert(sizeof(CmpInst) == sizeof(Instruction));
 }
 
 std::ostream& CmpInst::print(std::ostream& os) const {
    printName(os) << " = cmp ";
-   const char* name = Predicate_to_string(pred_, "unknown");
+   auto pred = get<Predicate>();
+   const char* name = Predicate_to_string(pred, "unknown");
    // Print name lower case
    for(unsigned i = 0; name[i] != '\0'; ++i)
       os << static_cast<char>(tolower(name[i]));
@@ -168,9 +170,12 @@ std::ostream& CmpInst::print(std::ostream& os) const {
 /* ===--------------------------------------------------------------------=== */
 
 AllocaInst::AllocaInst(Context& ctx, Type* type)
-      : Instruction{ctx, Type::getPointerTy(ctx)}, allocType_{type} {}
+      : Instruction{ctx, Type::getPointerTy(ctx), type} {
+   static_assert(sizeof(AllocaInst) == sizeof(Instruction));
+}
 
 std::ostream& AllocaInst::print(std::ostream& os) const {
+   auto allocType_ = get<Type*>();
    return printName(os) << " = "
                         << "alloca " << *allocType_;
 }
@@ -180,14 +185,15 @@ std::ostream& AllocaInst::print(std::ostream& os) const {
 /* ===--------------------------------------------------------------------=== */
 
 ICastInst::ICastInst(Context& ctx, CastOp op, Value* val, Type* destTy)
-      : Instruction{ctx, destTy}, castop_(op) {
+      : Instruction{ctx, destTy, op} {
    addChild(val);
+   static_assert(sizeof(ICastInst) == sizeof(Instruction));
 }
 
 std::ostream& ICastInst::print(std::ostream& os) const {
    printName(os) << " = ";
    os << "icast ";
-   const char* name = CastOp_to_string(castop_, "unknown");
+   const char* name = CastOp_to_string(castop(), "unknown");
    // Print name lower case
    for(unsigned i = 0; name[i] != '\0'; ++i)
       os << static_cast<char>(tolower(name[i]));
@@ -203,14 +209,15 @@ std::ostream& ICastInst::print(std::ostream& os) const {
 GetElementPtrInst::GetElementPtrInst(Context& ctx, Value* ptr,
                                      StructType* structTy,
                                      utils::range_ref<Value*> indices)
-      : Instruction{ctx, Type::getPointerTy(ctx)}, structTy_{structTy} {
+      : Instruction{ctx, Type::getPointerTy(ctx), structTy} {
    addChild(ptr);
    indices.for_each([this](auto* idx) { addChild(idx); });
+   static_assert(sizeof(GetElementPtrInst) == sizeof(Instruction));
 }
 
 std::ostream& GetElementPtrInst::print(std::ostream& os) const {
    printName(os) << " = ";
-   os << "getelementptr " << *structTy_ << ", ";
+   os << "getelementptr " << *getStructType() << ", ";
    printNameOrConst(os, getChild(0));
    for(unsigned i = 1; i < numChildren(); ++i) {
       os << ", ";

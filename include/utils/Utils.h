@@ -160,16 +160,6 @@ dyn_cast_or_null(From from) {
 }
 
 /* ===--------------------------------------------------------------------=== */
-// Static asserts to make sure canonicalize_t is working as expected.
-/* ===--------------------------------------------------------------------=== */
-
-static_assert(std::is_same_v<canonicalize_t<int, int>, int>);
-static_assert(std::is_same_v<canonicalize_t<int const*, int*>, int const>);
-static_assert(std::is_same_v<canonicalize_t<int const, int*>, int const>);
-static_assert(std::is_same_v<canonicalize_t<int, int const*>, int const>);
-static_assert(std::is_same_v<canonicalize_t<int*, int const*>, int const>);
-
-/* ===--------------------------------------------------------------------=== */
 // function_ref taken from here:
 // https://vittorioromeo.info/index/blog/passing_functions_to_functions.html
 /* ===--------------------------------------------------------------------=== */

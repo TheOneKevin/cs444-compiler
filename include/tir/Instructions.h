@@ -1,5 +1,7 @@
 #pragma once
 
+#include <variant>
+
 #include "tir/BasicBlock.h"
 #include "tir/Context.h"
 #include "tir/Type.h"
@@ -40,15 +42,46 @@ protected:
    DECLARE_STRING_TABLE(BinOp, binop_strtab_, BINOP_KINDS)
 #undef BINOP_KINDS
 
-   // Constructors and public member functions //////////////////////////////////
+public:
+#define PREDICATE_KINDS(F) \
+   F(EQ)                   \
+   F(NE)                   \
+   F(LT)                   \
+   F(GT)                   \
+   F(LE)                   \
+   F(GE)
+   DECLARE_ENUM(Predicate, PREDICATE_KINDS)
+protected:
+   DECLARE_STRING_TABLE(Predicate, predicate_strtab_, PREDICATE_KINDS)
+#undef PREDICATE_KINDS
+
+public:
+#define CAST_KINDS(F) \
+   F(Trunc)           \
+   F(ZExt)            \
+   F(SExt)
+   DECLARE_ENUM(CastOp, CAST_KINDS)
+protected:
+   DECLARE_STRING_TABLE(CastOp, castop_strtab_, CAST_KINDS)
+#undef CAST_KINDS
+
+   // Protected data type and getter ///////////////////////////////////////////
+protected:
+   using DataType = std::variant<BinOp, Predicate, CastOp, Type*, StructType*>;
+   template <typename T>
+   constexpr T const& get() const {
+      return std::get<T>(data_);
+   }
+
+   // Constructors and public member functions /////////////////////////////////
 public:
    Instruction(Context& ctx, tir::Type* resultTy)
          : Instruction{ctx, resultTy, BinOp::None} {}
-   Instruction(Context& ctx, tir::Type* resultTy, BinOp op)
+   Instruction(Context& ctx, tir::Type* resultTy, DataType data)
          : User{ctx, resultTy},
            next_{nullptr},
            prev_{nullptr},
-           binop_{op},
+           data_{data},
            parent_{nullptr} {}
    Instruction(const Instruction&) = delete;
    Instruction(Instruction&&) = delete;
@@ -102,8 +135,6 @@ public:
    }
    // Gets the current iterator to this instruction
    auto iter() { return BasicBlock::iterator{this, this->parent_, false, false}; }
-   // Gets the binary operator of this instruction
-   auto binop() const { return binop_; }
    /**
     * @brief Removes this instruction from its parent BB if it exists. Also
     * will unlink this instruction from the list, re-linking the previous and
@@ -130,7 +161,7 @@ public:
 private:
    Instruction* next_;
    Instruction* prev_;
-   const BinOp binop_;
+   const DataType data_;
    BasicBlock* parent_;
 };
 
@@ -268,6 +299,7 @@ public:
 
 public:
    std::ostream& print(std::ostream& os) const override;
+   BinOp binop() const { return get<BinOp>(); }
 };
 
 /**
@@ -275,19 +307,6 @@ public:
  * type) and returns a boolean value (i1) based on the comparison.
  */
 class CmpInst final : public Instruction {
-public:
-#define PREDICATE_KINDS(F) \
-   F(EQ)                   \
-   F(NE)                   \
-   F(LT)                   \
-   F(GT)                   \
-   F(LE)                   \
-   F(GE)
-   DECLARE_ENUM(Predicate, PREDICATE_KINDS)
-private:
-   DECLARE_STRING_TABLE(Predicate, predicate_strtab_, PREDICATE_KINDS)
-#undef PREDICATE_KINDS
-
 private:
    CmpInst(Context& ctx, Predicate pred, Value* lhs, Value* rhs);
 
@@ -299,10 +318,7 @@ public:
 
 public:
    std::ostream& print(std::ostream& os) const override;
-   Predicate predicate() const { return pred_; }
-
-private:
-   Predicate pred_;
+   Predicate predicate() const { return get<Predicate>(); }
 };
 
 /**
@@ -310,16 +326,6 @@ private:
  * zero-extend, or sign-extend an integer value to a different integer type.
  */
 class ICastInst final : public Instruction {
-public:
-#define CAST_KINDS(F) \
-   F(Trunc)           \
-   F(ZExt)            \
-   F(SExt)
-   DECLARE_ENUM(CastOp, CAST_KINDS)
-private:
-   DECLARE_STRING_TABLE(CastOp, castop_strtab_, CAST_KINDS)
-#undef CAST_KINDS
-
 private:
    ICastInst(Context& ctx, CastOp op, Value* val, Type* destTy);
 
@@ -331,10 +337,7 @@ public:
 
 public:
    std::ostream& print(std::ostream& os) const override;
-   CastOp castop() const { return castop_; }
-
-private:
-   CastOp castop_;
+   CastOp castop() const { return get<CastOp>(); }
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -358,9 +361,6 @@ public:
 
 public:
    std::ostream& print(std::ostream& os) const override;
-
-private:
-   Type* allocType_;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -383,11 +383,10 @@ public:
 public:
    std::ostream& print(std::ostream& os) const override;
    Type* getIndexedType(utils::range_ref<Value*> indices) const {
-      return structTy_->getIndexedType(indices);
+      auto structTy = get<StructType*>();
+      return structTy->getIndexedType(indices);
    }
-
-private:
-   StructType* structTy_;
+   auto getStructType() const { return get<StructType*>(); }
 };
 
 } // namespace tir

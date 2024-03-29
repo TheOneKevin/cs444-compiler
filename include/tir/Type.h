@@ -126,7 +126,6 @@ public:
    uint32_t getSizeInBits() const override { return getBitWidth(); }
    uint64_t getMask() const { return (1ULL << getBitWidth()) - 1; }
 };
-static_assert(sizeof(IntegerType) == sizeof(Type));
 
 /**
  * @brief
@@ -187,7 +186,6 @@ public:
       assert(false && "Function type does not have a size");
    }
 };
-static_assert(sizeof(FunctionType) == sizeof(Type));
 
 /**
  * @brief
@@ -226,7 +224,6 @@ public:
       return getLength() * getElementType()->getSizeInBits();
    }
 };
-static_assert(sizeof(ArrayType) == sizeof(Type));
 
 /**
  * @brief
@@ -289,6 +286,5 @@ public:
       return getChildTypes().array[index];
    }
 };
-static_assert(sizeof(StructType) == sizeof(Type));
 
 } // namespace tir
