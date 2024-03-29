@@ -9,13 +9,13 @@ namespace utils {
 /* ===--------------------------------------------------------------------=== */
 
 bool PassOptions::IsPassDisabled(Pass* p) {
-   auto it = pass_enabled_.find(std::string{p->Name()});
-   if(it == pass_enabled_.end()) return false;
+   auto it = pass_descs_.find(std::string{p->Name()});
+   if(it == pass_descs_.end()) return false;
    return !it->second.enabled;
 }
 
 void PassOptions::setPassEnabled(Pass* p, bool enabled) {
-   pass_enabled_[std::string{p->Name()}].enabled = enabled;
+   pass_descs_[std::string{p->Name()}].enabled = enabled;
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -57,7 +57,7 @@ CustomBufferResource* Pass::NewHeap() { return PM().newHeap(*this); }
 
 void Pass::RegisterCLI() {
    auto& PO = PM().PO();
-   PO.pass_enabled_[std::string{Name()}] =
+   PO.pass_descs_[std::string{Name()}] =
          PassOptions::PassDesc{false, std::string{Desc()}};
 }
 
@@ -104,6 +104,20 @@ void PassManager::freeHeap(Heap& h) {
       }
    }
    return;
+}
+
+void PassManager::Reset() {
+   for(auto& heap : heaps_) {
+      heap.owner = nullptr;
+      heap.heap->reset();
+   }
+   depgraph_.clear();
+   lastRun_ = nullptr;
+   passDeps_.clear();
+   for(auto& pass : passes_) {
+      PO().setPassEnabled(pass.get(), false);
+      pass->state = Pass::Uninitialized;
+   }
 }
 
 bool PassManager::Run() {

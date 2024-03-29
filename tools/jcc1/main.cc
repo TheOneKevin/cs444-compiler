@@ -30,6 +30,7 @@ int main(int argc, char** argv) {
    bool optFreestanding = false;
    bool optHeapReuse = true;
    bool optCodeGen = false;
+   int verboseLevel = 0;
    std::string optOutputFile = "";
    std::string optPipeline = "";
 
@@ -64,21 +65,19 @@ int main(int argc, char** argv) {
    app.add_flag("--freestanding", optFreestanding, "Do not include the standard library in the compilation");
    // clang-format on
 
-   // Build part of the pipeline before parsing the command line options
-   // so that we can print the pipeline string in the help text.
-   {
-      NewAstContextPass(FEPM);
-      NewLinkerPass(FEPM);
-      NewPrintASTPass(FEPM);
-      NewNameResolverPass(FEPM);
-      NewHierarchyCheckerPass(FEPM);
-      NewExprResolverPass(FEPM);
-      NewDFAPass(FEPM);
-      FEPM.PreserveAnalysis<joos1::AstContextPass>();
-      FEPM.PreserveAnalysis<joos1::NameResolverPass>();
+   // Build the front-end pipeline
+   NewAstContextPass(FEPM);
+   NewLinkerPass(FEPM);
+   NewPrintASTPass(FEPM);
+   NewNameResolverPass(FEPM);
+   NewHierarchyCheckerPass(FEPM);
+   NewExprResolverPass(FEPM);
+   NewDFAPass(FEPM);
+   FEPM.PreserveAnalysis<joos1::AstContextPass>();
+   FEPM.PreserveAnalysis<joos1::NameResolverPass>();
+   // Build the optimization pipeline
+   NewCleanupTerminatorsPass(OptPM);
 
-      NewCleanupTerminatorsPass(OptPM);
-   }
    {
       std::ostringstream ss;
       ss << "The pipeline string to run. Below is a list of the passes.\n";
@@ -102,7 +101,7 @@ int main(int argc, char** argv) {
       ss << "Optimization passes are run in-order and may be specified more than "
             "once.\n";
       ss << "Frontend passes are always run first, and run only once.";
-      app.add_flag("-p,--pipeline", optPipeline, ss.str());
+      app.add_option("-p,--pipeline", optPipeline, ss.str());
    }
 
    // Parse the command line options
@@ -141,18 +140,18 @@ int main(int argc, char** argv) {
 
    // Set the verbosity of the diagnostic engine
    for(auto r : optVerboseLevel->results()) {
-      int level = 0;
       if(r == "true") {
-         level = 1;
+         verboseLevel = 1;
       } else {
          try {
-            level = std::stoi(r);
+            verboseLevel = std::stoi(r);
          } catch(std::invalid_argument const& e) {
             std::cerr << "Invalid verbosity level: " << r << std::endl;
             return 1;
          }
       }
-      FEPM.Diag().setVerbose(level);
+      FEPM.Diag().setVerbose(verboseLevel);
+      OptPM.Diag().setVerbose(verboseLevel);
    }
 
    // Ensure the remaining arguments are all valid paths
@@ -204,6 +203,41 @@ int main(int argc, char** argv) {
       }
    }
 
+   // Parse the pipeline string by splitting by ","
+   std::vector<std::string> optPassNames;
+   std::unordered_set<std::string> fePasses;
+   {
+      std::istringstream ss{optPipeline};
+      std::string name;
+      while(std::getline(ss, name, ',')) {
+         if(name.empty()) continue;
+         if(FEPM.PO().HasPass(name)) {
+            fePasses.insert(name);
+         } else if(OptPM.PO().HasPass(name)) {
+            optPassNames.push_back(name);
+         } else {
+            std::cerr << "Error: Unknown pass " << name << std::endl;
+            return 1;
+         }
+      }
+      // Print the enabled passes
+      if(!fePasses.empty()) {
+         if(verboseLevel > 0) std::cerr << "Enabled front-end passes (unordered):";
+         for(auto const& pass : fePasses) {
+            if(verboseLevel > 0) std::cerr << " " << pass;
+            FEPM.PO().EnablePass(pass);
+         }
+         if(verboseLevel > 0) std::cerr << std::endl;
+      }
+      if(!optPassNames.empty()) {
+         if(verboseLevel > 0)
+            std::cerr << "Enabled optimization passes (in order):";
+         for(auto const& pass : optPassNames)
+            if(verboseLevel > 0) std::cerr << " " << pass;
+         if(verboseLevel > 0) std::cerr << std::endl;
+      }
+   }
+
    // Build the front end pipeline now that we have the files
    {
       using utils::Pass;
@@ -214,8 +248,10 @@ int main(int argc, char** argv) {
       }
    }
 
-   // Enable the appropriate front-end pass to run
-   FEPM.PO().EnablePass("dfa");
+   // Enable the default front-end pass to run
+   if(fePasses.empty()) {
+      FEPM.PO().EnablePass("dfa");
+   }
 
    // Run the front end passes
    if(!FEPM.Run()) {
@@ -240,6 +276,8 @@ int main(int argc, char** argv) {
    tir::Context CGContext{Alloc};
    tir::CompilationUnit CU{CGContext};
    {
+      if(verboseLevel > 0)
+         std::cerr << "*** Running code generation... ***" << std::endl;
       auto& NR = FEPM.FindPass<joos1::NameResolverPass>();
       codegen::CodeGenerator CG{CGContext, CU, NR.Resolver()};
       auto& pass = FEPM.FindPass<joos1::LinkerPass>();
@@ -248,12 +286,18 @@ int main(int argc, char** argv) {
       } catch(utils::AssertError& a) {
          std::cerr << a.what() << std::endl;
       }
+      if(verboseLevel > 0)
+         std::cerr << "*** Done code generation, ready for optimizations now! ***"
+                   << std::endl;
    }
 
    // Run the backend pipeline now and add the IR context pass
    NewIRContextPass(OptPM, CU);
-   OptPM.PO().EnablePass("cleanup-term");
-   OptPM.Run();
+   for(auto const& name : optPassNames) {
+      OptPM.PO().EnablePass(name);
+      OptPM.Run();
+      OptPM.Reset();
+   }
 
    // Dump the generated code to the output file
    std::ofstream out{optOutputFile};

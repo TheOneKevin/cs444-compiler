@@ -49,15 +49,22 @@ public:
 
    /// @brief Enables or disables a pass given the pass name
    void EnablePass(std::string_view name, bool enabled = true) {
-      if(auto it = pass_enabled_.find(std::string{name});
-         it != pass_enabled_.end()) {
+      if(auto it = pass_descs_.find(std::string{name});
+         it != pass_descs_.end()) {
          it->second.enabled = enabled;
+      } else {
+         assert(false && "Pass not found");
       }
    }
 
    /// @brief Iterate through the pass names
    utils::Generator<std::pair<std::string_view, std::string_view>> PassNames() {
-      for(auto& [name, desc] : pass_enabled_) co_yield {name, desc.desc};
+      for(auto& [name, desc] : pass_descs_) co_yield {name, desc.desc};
+   }
+
+   /// @brief Get the description of a pass
+   bool HasPass(std::string_view name) {
+      return pass_descs_.find(std::string{name}) != pass_descs_.end();
    }
 
 private:
@@ -94,7 +101,7 @@ private:
       bool enabled;
       std::string desc;
    };
-   std::unordered_map<std::string, PassDesc> pass_enabled_;
+   std::unordered_map<std::string, PassDesc> pass_descs_;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -206,6 +213,9 @@ public:
    /// @brief Runs all the passes in the pass manager
    /// @return True if all passes ran successfully
    bool Run();
+
+   /// @brief Resets the pass manager and frees all resources
+   void Reset();
 
    /// @return The last pass that was run by the pass manager
    Pass const* LastRun() const { return lastRun_; }
