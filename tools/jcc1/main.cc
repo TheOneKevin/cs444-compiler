@@ -76,7 +76,8 @@ int main(int argc, char** argv) {
    FEPM.PreserveAnalysis<joos1::AstContextPass>();
    FEPM.PreserveAnalysis<joos1::NameResolverPass>();
    // Build the optimization pipeline
-   NewCleanupTerminatorsPass(OptPM);
+   NewSimplifyCFG(OptPM);
+   NewGlobalDCE(OptPM);
 
    {
       std::ostringstream ss;

@@ -6,7 +6,7 @@
 #include <ostream>
 #include <ranges>
 #include <string_view>
-#include <vector>
+#include <unordered_set>
 
 #include "tir/Context.h"
 
@@ -28,7 +28,8 @@ public:
    tir::Context& ctx() { return ctx_; }
    auto users() { return std::views::all(users_); }
    Type* type() const { return type_; }
-   void addUser(User* user) { users_.push_back(user); }
+   void addUser(User* user) { users_.insert(user); }
+   void removeUser(User* user) { users_.erase(user); }
    std::string_view name() const { return name_.value(); }
    auto nameOpt() const { return name_.value(); }
    void setName(std::string_view name) {
@@ -47,7 +48,7 @@ public:
 private:
    tir::Context& ctx_;
    tir::Type* const type_;
-   std::pmr::vector<User*> users_;
+   std::pmr::unordered_set<User*> users_;
    std::optional<std::pmr::string> name_;
    unsigned valueID_;
 };
@@ -70,9 +71,23 @@ protected:
       children_.push_back(operand);
       operand->addUser(this);
    }
+   void replaceChild(unsigned idx, Value* operand) {
+      assert(idx < numChildren() && "Index out of bounds");
+      children_[idx]->removeUser(this);
+      children_[idx] = operand;
+      operand->addUser(this);
+   }
+   void destroy() {
+      assert(!destroyed_);
+      for(auto child : children_) {
+         child->removeUser(this);
+      }
+   }
+   bool isDestroyed() const { return destroyed_; }
 
 private:
    std::pmr::vector<Value*> children_;
+   bool destroyed_ = false;
 };
 
 std::ostream& operator<<(std::ostream& os, const Value& val);

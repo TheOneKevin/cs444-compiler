@@ -77,7 +77,13 @@ std::ostream& BasicBlock::print(std::ostream& os) const {
 }
 
 void BasicBlock::erase(Instruction* instr) {
+   assert(instr->parent_ == this && "Instruction does not belong to this BB");
    instr->eraseFromParent();
+}
+
+void BasicBlock::eraseFromParent() {
+   if(parent_ == nullptr) return;
+   parent_->removeBlock(this);
 }
 
 } // namespace tir

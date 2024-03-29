@@ -1,5 +1,6 @@
 #include "tir/Instructions.h"
 
+#include "tir/BasicBlock.h"
 #include "tir/Constant.h"
 #include "tir/TIR.h"
 
@@ -34,6 +35,11 @@ std::ostream& BranchInst::print(std::ostream& os) const {
    printNameOrConst(os, getChild(1)) << ", ";
    printNameOrConst(os, getChild(2));
    return os;
+}
+
+BasicBlock* BranchInst::getSuccessor(unsigned idx) const {
+   assert(idx < 2 && "BranchInst::getSuccessor index out of bounds");
+   return cast<BasicBlock>(getChild(idx + 1));
 }
 
 /* ===--------------------------------------------------------------------=== */

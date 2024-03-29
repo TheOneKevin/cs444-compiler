@@ -91,6 +91,7 @@ public:
    virtual bool isTerminator() const { return false; }
    // Inserts this before the given instruction, setting the parent of this
    void insertBefore(Instruction* inst) {
+      assert(!isDestroyed() && "Instruction is already destroyed");
       prev_ = inst->prev_;
       next_ = inst;
       if(prev_) {
@@ -105,6 +106,7 @@ public:
    }
    // Inserts this after the given instruction, setting the parent of this
    void insertAfter(Instruction* inst) {
+      assert(!isDestroyed() && "Instruction is already destroyed");
       next_ = inst->next_;
       prev_ = inst;
       if(next_) {
@@ -140,7 +142,8 @@ public:
     * will unlink this instruction from the list, re-linking the previous and
     * next instructions.
     */
-   void eraseFromParent() const {
+   void eraseFromParent(bool keep = false) {
+      assert(!isDestroyed() && "Instruction is already destroyed");
       if(prev_) {
          prev_->next_ = next_;
       }
@@ -155,7 +158,12 @@ public:
             parent_->last_ = prev_;
          }
       }
+      // Destroy all references to the parent BB
+      next_ = prev_ = nullptr;
+      if(!keep && isTerminator()) destroy();
    }
+   // Sets the parent BB of this instruction
+   void setParent(BasicBlock* parent) { parent_ = parent; }
 
    // Private data members /////////////////////////////////////////////////////
 private:
@@ -188,7 +196,12 @@ public:
 
 public:
    bool isTerminator() const override { return true; }
+   BasicBlock* getSuccessor(unsigned idx) const;
    std::ostream& print(std::ostream& os) const override;
+   void replaceSuccessor(unsigned idx, BasicBlock* newBB) {
+      assert(idx < 2 && "Index out of bounds");
+      replaceChild(idx+1, newBB);
+   }
 };
 
 /**

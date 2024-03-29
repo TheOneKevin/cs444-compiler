@@ -15,5 +15,9 @@ DECLARE_PASS(NameResolverPass);
 DECLARE_PASS(PrintASTPass);
 DECLARE_PASS(ExprResolverPass);
 DECLARE_PASS(DFAPass);
-DECLARE_PASS(CleanupTerminatorsPass);
+
+// Optimization passes
+
+DECLARE_PASS(SimplifyCFG);
+DECLARE_PASS(GlobalDCE);
 utils::Pass& NewIRContextPass(utils::PassManager&, tir::CompilationUnit&);

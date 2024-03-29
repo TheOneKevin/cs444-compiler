@@ -122,6 +122,8 @@ public:
    auto* terminator() const { return last_; }
    // Erase an instruction from the basic block
    void erase(Instruction* instr);
+   // Erases this basic block from the parent function
+   void eraseFromParent();
 
 private:
    Instruction* first_;

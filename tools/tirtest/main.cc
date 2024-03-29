@@ -46,7 +46,7 @@ int main() {
       auto val = builder.createLoadInstr(Type::getInt32Ty(ctx), ptr);
       // %add = add i32 %val, 1
       auto add = builder.createBinaryInstr(
-            BinOp::ADD, val, ConstantInt::Create(ctx, Type::getInt32Ty(ctx), 1));
+            BinOp::Add, val, ConstantInt::Create(ctx, Type::getInt32Ty(ctx), 1));
       // ret %add
       builder.createReturnInstr(add);
    }

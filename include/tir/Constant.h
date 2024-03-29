@@ -1,5 +1,6 @@
 #pragma once
 
+#include <forward_list>
 #include <string_view>
 
 #include "tir/Instructions.h"
@@ -170,11 +171,13 @@ public:
    }
    bool hasBody() const { return !body_.empty(); }
    /// @brief Gets the entry BB of the function or nullptr if it doesn't exist.
-   BasicBlock* getEntryBlock() const {
-      if(body_.empty()) return nullptr;
-      return body_.front();
-   }
+   BasicBlock* getEntryBlock() const { return entryBB_; }
    auto body() const { return std::views::all(body_); }
+   void removeBlock(BasicBlock* block) {
+      assert(block->parent() == this && "Block does not belong to this function");
+      assert(block != entryBB_ && "Cannot remove the entry block");
+      body_.remove(block);
+   }
 
    /**
     * @brief Create an alloca instruction for the given type. This will be
@@ -195,10 +198,14 @@ public:
    void setNoReturn(bool value) { noReturn_ = value; }
 
 private:
-   void addBlock(BasicBlock* block) { body_.push_back(block); }
+   void addBlock(BasicBlock* block) {
+      if(!entryBB_) entryBB_ = block;
+      body_.push_front(block);
+   }
 
 private:
-   std::pmr::vector<BasicBlock*> body_;
+   std::pmr::forward_list<BasicBlock*> body_;
+   BasicBlock* entryBB_ = nullptr;
    tir::CompilationUnit* parent_;
    bool noReturn_ = false;
 };
