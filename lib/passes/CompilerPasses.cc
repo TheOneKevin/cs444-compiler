@@ -119,8 +119,10 @@ static inline void mark_node(parsetree::Node* node) {
 }
 
 AstBuilderPass::AstBuilderPass(PassManager& PM, Joos1WParserPass& dep) noexcept
-      : Pass(PM), dep{dep} {
-   optCheckName = PM.PO().GetExistingOption("--check-file-name");
+      : Pass(PM), dep{dep} {}
+
+void AstBuilderPass::Init() {
+   optCheckName = PM().PO().GetExistingOption("--enable-filename-check");
 }
 
 void AstBuilderPass::Run() {
@@ -134,18 +136,21 @@ void AstBuilderPass::Run() {
    try {
       cu_ = visitor.visitCompilationUnit(PT);
    } catch(const parsetree::ParseTreeException& e) {
+      PM().Diag().ReportError(SourceRange{}) << "ParseTreeException occured";
       std::cerr << "ParseTreeException: " << e.what() << " in file ";
       SourceManager::print(std::cerr, dep.File());
       std::cerr << std::endl;
       std::cerr << "Parse tree trace:" << std::endl;
       trace_node(e.get_where(), std::cerr);
+      return;
    }
    if(cu_ == nullptr && !PM().Diag().hasErrors()) {
       PM().Diag().ReportError(PT->location()) << "failed to build AST";
+      return;
    }
    // Check if the file name matches the class name
    bool shouldCheck = optCheckName && optCheckName->as<bool>();
-   auto fileName = SourceManager::getFileName(dep.File());
+   std::pmr::string fileName{SourceManager::getFileName(dep.File()), alloc};
    if(!fileName.empty() && shouldCheck) {
       auto cuBody = cu_->bodyAsDecl();
       // Grab the file without the path and the extension
@@ -291,14 +296,16 @@ NameResolverPass::~NameResolverPass() {
 
 class PrintASTPass final : public Pass {
 public:
-   PrintASTPass(PassManager& PM) noexcept : Pass(PM) {
-      optDot = PM.PO().GetExistingOption("--print-dot");
-      optOutput = PM.PO().GetExistingOption("--print-output");
-      optSplit = PM.PO().GetExistingOption("--print-split");
-      optIgnoreStd = PM.PO().GetExistingOption("--print-ignore-std");
-   }
+   PrintASTPass(PassManager& PM) noexcept : Pass(PM) {}
    string_view Name() const override { return "print-ast"; }
    string_view Desc() const override { return "Print AST"; }
+
+   void Init() override {
+      optDot = PM().PO().GetExistingOption("--print-dot");
+      optOutput = PM().PO().GetExistingOption("--print-output");
+      optSplit = PM().PO().GetExistingOption("--print-split");
+      optIgnoreStd = PM().PO().GetExistingOption("--print-ignore-std");
+   }
 
    void Run() override {
       // 1a. Grab the AST node

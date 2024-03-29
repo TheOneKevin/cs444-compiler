@@ -38,26 +38,12 @@ public:
       return app_.get_option_no_throw(test_name);
    }
 
-   CLI::Option* AddOption(std::string name, std::string desc) {
-      if(auto opt = FindOption(name)) return opt;
-      return app_.add_option(name, CLI::callback_t(), desc);
-   }
-
-   CLI::Option* AddFlag(std::string name, std::string desc) {
-      if(auto opt = FindOption(name)) return opt;
-      return app_.add_flag(
-            name, [](int64_t) {}, desc);
-   }
-
    CLI::Option* GetExistingOption(std::string name) {
       auto opt = FindOption(name);
       if(opt == nullptr)
          throw utils::FatalError("pass requested nonexistent option: " + name);
       return opt;
    }
-
-   /// @brief Adds all the pass options to the command line
-   void AddAllOptions(std::string);
 
    /// @return True if the pass is disabled
    bool IsPassDisabled(Pass* p);
@@ -68,6 +54,11 @@ public:
          it != pass_enabled_.end()) {
          it->second.enabled = enabled;
       }
+   }
+
+   /// @brief Iterate through the pass names
+   utils::Generator<std::pair<std::string_view, std::string_view>> PassNames() {
+      for(auto& [name, desc] : pass_enabled_) co_yield {name, desc.desc};
    }
 
 private:
@@ -91,9 +82,6 @@ private:
    /// @param p The pass to set
    /// @param enabled If true, the pass is enabled
    void setPassEnabled(Pass* p, bool enabled);
-
-   /// @brief Called by PM to parse the command line options
-   void parseOptions();
 
 private:
    friend class Pass;
@@ -219,7 +207,7 @@ public:
    /// @brief Runs all the passes in the pass manager
    /// @return True if all passes ran successfully
    bool Run();
-   
+
    /// @return The last pass that was run by the pass manager
    Pass const* LastRun() const { return lastRun_; }
 
@@ -258,7 +246,7 @@ public:
 
    /// @brief Gets the pass options
    PassOptions& PO() { return options_; }
-   
+
    /// @brief Outside method to get a pass by type
    template <typename T>
       requires PassType<T>
@@ -280,9 +268,9 @@ public:
    }
 
    /// @brief Declare an analysis to be preserved forever
-   template<typename T>
+   template <typename T>
       requires PassType<T>
-   T& PreserveAnalysis() {
+   void PreserveAnalysis() {
       auto& pass = FindPass<T>();
       pass.Preserve();
    }

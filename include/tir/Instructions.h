@@ -104,6 +104,27 @@ public:
    auto iter() { return BasicBlock::iterator{this, this->parent_, false, false}; }
    // Gets the binary operator of this instruction
    auto binop() const { return binop_; }
+   /**
+    * @brief Removes this instruction from its parent BB if it exists. Also
+    * will unlink this instruction from the list, re-linking the previous and
+    * next instructions.
+    */
+   void eraseFromParent() const {
+      if(prev_) {
+         prev_->next_ = next_;
+      }
+      if(next_) {
+         next_->prev_ = prev_;
+      }
+      if(parent_) {
+         if(parent_->first_ == this) {
+            parent_->first_ = next_;
+         }
+         if(parent_->last_ == this) {
+            parent_->last_ = prev_;
+         }
+      }
+   }
 
    // Private data members /////////////////////////////////////////////////////
 private:

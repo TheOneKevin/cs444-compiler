@@ -139,7 +139,11 @@ public:
    DFAPass(PassManager& PM) noexcept : Pass(PM) {}
    string_view Name() const override { return "dfa"; }
    string_view Desc() const override { return "Dataflow Analysis"; }
+   void Init() override {
+      optEnable = PM().PO().GetExistingOption("--enable-dfa-check")->count();
+   }
    void Run() override {
+      if(!optEnable) return;
       auto LU = GetPass<LinkerPass>().LinkingUnit();
       auto& Sema = GetPass<AstContextPass>().Sema();
       ConstantTypeResolver CTR{NewHeap()};
@@ -160,6 +164,7 @@ private:
       ComputeDependency(GetPass<LinkerPass>());
       ComputeDependency(GetPass<ExprResolverPass>());
    }
+   bool optEnable;
 };
 
 /* ===--------------------------------------------------------------------=== */

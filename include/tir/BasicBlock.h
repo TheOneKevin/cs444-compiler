@@ -9,21 +9,20 @@ class Function;
 
 class BasicBlock final : public Value {
    friend class Instruction;
+
 private:
    // Private implementation of the iterator
    struct iterator_pimpl {
       // True if this iterator is after the last instruction in the list
-      bool isEnd;
+      bool afterEnd;
       // True if this iterator is before the first instruction in the list
-      bool isBegin;
+      bool beforeBegin;
       // The current instruction, this is never nullptr unless list is empty
       Instruction* inst;
       void next();
       void prev();
       bool equal(const iterator_pimpl& other) const {
-         // if(isEnd)
-         //    return other.isEnd;
-         return isEnd == other.isEnd && isBegin == other.isBegin &&
+         return afterEnd == other.afterEnd && beforeBegin == other.beforeBegin &&
                 inst == other.inst;
       }
    };
@@ -34,15 +33,19 @@ private:
    private:
       friend class Instruction;
       friend class BasicBlock;
-      iterator_impl(Instruction* inst, T bb, bool isEnd, bool isBegin)
-            : pimpl_{isEnd, isBegin, inst}, bb_{bb} {}
+      iterator_impl(Instruction* inst, T bb, bool afterEnd, bool beforeBegin)
+            : pimpl_{afterEnd, beforeBegin, inst}, bb_{bb} {}
 
    public:
       iterator_impl() : pimpl_{true, false, nullptr} {}
-
-   public:
-      Instruction* operator*() const { return pimpl_.inst; }
-      Instruction* operator->() const { return pimpl_.inst; }
+      Instruction* operator*() const {
+         assert(!pimpl_.beforeBegin && !pimpl_.afterEnd);
+         return pimpl_.inst;
+      }
+      Instruction* operator->() const {
+         assert(!pimpl_.beforeBegin && !pimpl_.afterEnd);
+         return pimpl_.inst;
+      }
       iterator_impl& operator++() {
          pimpl_.next();
          return *this;
@@ -58,8 +61,10 @@ private:
          return !(*this == other);
       }
       T getBB() const { return bb_; }
-      bool isBeforeFirst() const { return pimpl_.isBegin; }
-      bool isAfterLast() const { return pimpl_.isEnd; }
+      // Does this iterator point before the first instruction?
+      bool isBeforeFirst() const { return pimpl_.beforeBegin; }
+      // Does this iterator point past the end of the list?
+      bool isAfterLast() const { return pimpl_.afterEnd; }
 
    private:
       // Private implementation of the iterator
@@ -97,9 +102,9 @@ public:
    }
    // Gets the parent function of this basic block
    auto* parent() const { return parent_; }
-   // Gets the begin iterator for the instructions in this basic block
+   // Gets an iterator to the first instruction of the block (if not empty)
    auto begin() { return iterator{first_, this, first_ == nullptr, false}; }
-   // Gets the end iterator for the instructions in this basic block
+   // Gets an iterator to AFTER the last instruction of the block
    auto end() { return iterator{last_, this, true, false}; }
    // Const iterator
    auto begin() const {
@@ -115,6 +120,8 @@ public:
    std::ostream& print(std::ostream& os) const override;
    // Get the terminator instruction of this basic block
    auto* terminator() const { return last_; }
+   // Erase an instruction from the basic block
+   void erase(Instruction* instr);
 
 private:
    Instruction* first_;

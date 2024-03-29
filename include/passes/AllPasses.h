@@ -2,6 +2,7 @@
 
 #include <diagnostics/SourceManager.h>
 #include <utils/PassManager.h>
+#include "tir/Constant.h"
 
 utils::Pass& NewJoos1WParserPass(utils::PassManager& PM, SourceFile file,
                                  utils::Pass* depends);
@@ -14,3 +15,5 @@ DECLARE_PASS(NameResolverPass);
 DECLARE_PASS(PrintASTPass);
 DECLARE_PASS(ExprResolverPass);
 DECLARE_PASS(DFAPass);
+DECLARE_PASS(CleanupTerminatorsPass);
+utils::Pass& NewIRContextPass(utils::PassManager&, tir::CompilationUnit&);

@@ -16,22 +16,34 @@ BasicBlock::BasicBlock(Context& ctx, Function* parent)
 }
 
 void BasicBlock::iterator_pimpl::next() {
-   isBegin = false;
+   // 1. The next instruction after beforeBegin is instr itself
+   if(beforeBegin) {
+      beforeBegin = false;
+      return;
+   }
+   // 2. Fetch the next instruction
    auto* next = inst->next();
+   // 3. If it does not exist, we've entered afterEnd
    if(next) {
       inst = next;
    } else {
-      isEnd = true;
+      afterEnd = true;
    }
 }
 
 void BasicBlock::iterator_pimpl::prev() {
-   isEnd = false;
+   // 1. The previous instruction before afterEnd is instr itself
+   if(afterEnd) {
+      afterEnd = false;
+      return;
+   }
+   // 2. Fetch the previous instruction
    auto* prev = inst->prev();
+   // 3. If it does not exist, we've entered beforeBegin
    if(prev) {
       inst = prev;
    } else {
-      isBegin = true;
+      beforeBegin = true;
    }
 }
 
@@ -62,6 +74,10 @@ std::ostream& BasicBlock::print(std::ostream& os) const {
       inst->print(os);
    }
    return os;
+}
+
+void BasicBlock::erase(Instruction* instr) {
+   instr->eraseFromParent();
 }
 
 } // namespace tir

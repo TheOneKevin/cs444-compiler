@@ -100,7 +100,7 @@ def get_argparse(desc: str, single_test: bool, fn_more_args: callable = lambda x
     args = parser.parse_args()
     # If custom args is not set, set it to [-c]
     if not args.args:
-        args.args = ["-c"]
+        args.args = ["-c", "--enable-filename-check"]
     # Change the assignment number to an integer
     args.assignment = int(args.assignment[1:])
     return args

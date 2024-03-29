@@ -1,8 +1,6 @@
 #include <third-party/CLI11.h>
-#include <utils/PassManager.h>
-
-#include <sstream>
 #include <utils/Error.h>
+#include <utils/PassManager.h>
 
 namespace utils {
 
@@ -18,36 +16,6 @@ bool PassOptions::IsPassDisabled(Pass* p) {
 
 void PassOptions::setPassEnabled(Pass* p, bool enabled) {
    pass_enabled_[std::string{p->Name()}].enabled = enabled;
-}
-
-void PassOptions::parseOptions() {
-   // Iterate over the string, split by commas
-   std::string_view str = passes_;
-   while(!str.empty()) {
-      auto pos = str.find(',');
-      std::string_view pass = str.substr(0, pos);
-      if(auto it = pass_enabled_.find(std::string{pass});
-         it != pass_enabled_.end()) {
-         it->second.enabled = true;
-      }
-      if(pos == std::string_view::npos) break;
-      str.remove_prefix(pos + 1);
-   }
-}
-
-void PassOptions::AddAllOptions(std::string option_string) {
-   std::ostringstream oss;
-   oss << "A comma separated list of passes to run. The list of passes is: \n";
-   // Find the longest name
-   size_t max_len = 0;
-   for(auto& [key, _] : pass_enabled_) max_len = std::max(max_len, key.size());
-   // Now add the list of passes
-   for(auto& [key, val] : pass_enabled_) {
-      oss << "  " << key;
-      for(size_t i = 0; i < max_len - key.size(); i++) oss << " ";
-      oss << " : " << val.desc << "\n";
-   }
-   app_.add_option(option_string, passes_, oss.str());
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -93,9 +61,7 @@ void Pass::RegisterCLI() {
          PassOptions::PassDesc{false, std::string{Desc()}};
 }
 
-Pass& Pass::GetPass(std::string_view name) {
-   return PM().getPass(name);
-}
+Pass& Pass::GetPass(std::string_view name) { return PM().getPass(name); }
 
 /* ===--------------------------------------------------------------------=== */
 // PassManager
@@ -143,7 +109,6 @@ void PassManager::freeHeap(Heap& h) {
 bool PassManager::Run() {
    std::vector<Pass*> S;
    std::vector<Pass*> L;
-   PO().parseOptions();
    // 1a Propagate the enabled state
    for(auto& pass : passes_) {
       pass->state = Pass::PropagateEnabled;
@@ -203,10 +168,10 @@ bool PassManager::Run() {
       if(Diag().hasErrors()) {
          pass->state = Pass::Invalid;
          return false;
-      } else if (Diag().hasWarnings()) {
+      } else if(Diag().hasWarnings()) {
          pass->state = Pass::Invalid;
          return false;
-      } 
+      }
       // If the pass is running, we can free the heaps by calling
       // computeDependencies again
       pass->state = Pass::Cleanup;

@@ -2,10 +2,10 @@
 
 #include <string_view>
 
+#include "semantic/HierarchyChecker.h"
+#include "semantic/NameResolver.h"
 #include "semantic/Semantic.h"
 #include "utils/PassManager.h"
-#include "semantic/NameResolver.h"
-#include "semantic/HierarchyChecker.h"
 
 namespace joos1 {
 
@@ -61,6 +61,7 @@ class AstBuilderPass final : public Pass {
 public:
    AstBuilderPass(PassManager& PM, Joos1WParserPass& dep) noexcept;
    string_view Desc() const override { return "ParseTree -> AST Building"; }
+   void Init() override;
    void Run() override;
    ast::CompilationUnit* CompilationUnit() { return cu_; }
 
