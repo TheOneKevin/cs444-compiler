@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
    // clang-format on
 
    // Build FE (front-end) pass pipeline that requires command line options
+   // Be sure to preserve any analysis results for code generation
    {
       NewAstContextPass(FEPM);
       NewLinkerPass(FEPM);
@@ -69,14 +70,16 @@ int main(int argc, char** argv) {
       NewHierarchyCheckerPass(FEPM);
       NewExprResolverPass(FEPM);
       NewDFAPass(FEPM);
-      FEPM.PO().AddAllOptions();
+      FEPM.PO().AddAllOptions("-p,--passes");
+      FEPM.PreserveAnalysis<joos1::AstContextPass>();
+      FEPM.PreserveAnalysis<joos1::NameResolverPass>();
    }
 
    // Parse the command line options
    CLI11_PARSE(app, argc, argv);
 
    // Disable heap reuse if requested
-   if(optHeapReuse) FEPM.setHeapReuse(false);
+   if(optHeapReuse) FEPM.SetHeapReuse(false);
 
    // Validate the command line options
    {

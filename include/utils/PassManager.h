@@ -57,7 +57,7 @@ public:
    }
 
    /// @brief Adds all the pass options to the command line
-   void AddAllOptions();
+   void AddAllOptions(std::string);
 
    /// @return True if the pass is disabled
    bool IsPassDisabled(Pass* p);
@@ -132,6 +132,10 @@ public:
    virtual std::string_view Name() const { return ""; }
    /// @brief Function to override to get the description of the pass
    virtual std::string_view Desc() const = 0;
+   /// @brief Preserve the analysis results of this pass
+   void Preserve() { preserve = true; }
+   /// @brief Should this pass be preserved?
+   bool ShouldPreserve() const { return preserve; }
 
 protected:
    /// @brief Gets the pass manager that owns the pass
@@ -188,6 +192,7 @@ private:
       Invalid
    };
    State state = State::Uninitialized;
+   bool preserve = false;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -214,25 +219,25 @@ public:
    /// @brief Runs all the passes in the pass manager
    /// @return True if all passes ran successfully
    bool Run();
+   
    /// @return The last pass that was run by the pass manager
    Pass const* LastRun() const { return lastRun_; }
-   void setHeapReuse(bool reuse) { reuseHeaps_ = reuse; }
 
-private:
+   /// @brief Sets whether the pass manager should reuse heaps
+   void SetHeapReuse(bool reuse) { reuseHeaps_ = reuse; }
+
    // Deleted copy and move constructor and assignment operator
    PassManager(PassManager const&) = delete;
    PassManager(PassManager&&) = delete;
    PassManager& operator=(PassManager const&) = delete;
    PassManager& operator=(PassManager&&) = delete;
 
-public:
    ~PassManager() {
       // Clean up passes, and then heaps
       passes_.clear();
       heaps_.clear();
    }
 
-public:
    /// @brief Adds a pass to the pass manager
    /// @tparam T The type of the passr
    /// @param ...args The remaining arguments to pass to the pass constructor.
@@ -247,8 +252,10 @@ public:
       if(!result.Name().empty()) result.RegisterCLI();
       return result;
    }
+
    /// @brief Gets a reference to the diagnostic engine
    diagnostics::DiagnosticEngine& Diag() { return diag_; }
+
    /// @brief Gets the pass options
    PassOptions& PO() { return options_; }
    
@@ -270,6 +277,14 @@ public:
                                  std::string(typeid(T).name()));
       }
       return *result;
+   }
+
+   /// @brief Declare an analysis to be preserved forever
+   template<typename T>
+      requires PassType<T>
+   T& PreserveAnalysis() {
+      auto& pass = FindPass<T>();
+      pass.Preserve();
    }
 
 private:

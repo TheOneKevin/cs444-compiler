@@ -35,7 +35,7 @@ void PassOptions::parseOptions() {
    }
 }
 
-void PassOptions::AddAllOptions() {
+void PassOptions::AddAllOptions(std::string option_string) {
    std::ostringstream oss;
    oss << "A comma separated list of passes to run. The list of passes is: \n";
    // Find the longest name
@@ -47,7 +47,7 @@ void PassOptions::AddAllOptions() {
       for(size_t i = 0; i < max_len - key.size(); i++) oss << " ";
       oss << " : " << val.desc << "\n";
    }
-   app_.add_option("-p,--passes", passes_, oss.str());
+   app_.add_option(option_string, passes_, oss.str());
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -110,7 +110,7 @@ CustomBufferResource* PassManager::newHeap(Pass& pass) {
    for(auto& heap : heaps_) {
       if(heap.owner != nullptr) continue;
       // We found a free heap, so we can use it
-      heap.refCount = 1;
+      heap.refCount = pass.ShouldPreserve() ? 2 : 1;
       heap.owner = &pass;
       return heap.heap.get();
    }

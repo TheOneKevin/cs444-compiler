@@ -16,6 +16,10 @@ using std::string_view;
 using utils::Pass;
 using utils::PassManager;
 
+/* ===--------------------------------------------------------------------=== */
+// ExprResolverPass
+/* ===--------------------------------------------------------------------=== */
+
 class ExprResolverPass final : public Pass {
    struct Data {
       ExprResolver& ER;
@@ -126,6 +130,10 @@ private:
    }
 };
 
+/* ===--------------------------------------------------------------------=== */
+// DFAPass
+/* ===--------------------------------------------------------------------=== */
+
 class DFAPass final : public Pass {
 public:
    DFAPass(PassManager& PM) noexcept : Pass(PM) {}
@@ -153,6 +161,10 @@ private:
       ComputeDependency(GetPass<ExprResolverPass>());
    }
 };
+
+/* ===--------------------------------------------------------------------=== */
+// Register all the passes here
+/* ===--------------------------------------------------------------------=== */
 
 REGISTER_PASS(ExprResolverPass);
 REGISTER_PASS(DFAPass);
