@@ -27,11 +27,13 @@ void CG::emitForStmt(ast::ForStmt const* stmt) {
    } else {
       builder.createBranchInstr(body); // no condition, always branches to body
    }
+   cond->setName("for.cond");
    builder.setInsertPoint(body->begin());
    emitStmt(stmt->body());
    if(stmt->update()) {
       emitStmt(stmt->update());
    }
+   body->setName("for.body");
    builder.createBranchInstr(cond);
    builder.setInsertPoint(afterFor->begin());
 }
@@ -80,6 +82,7 @@ void CG::emitIfStmt(ast::IfStmt const* stmt) {
    builder.setInsertPoint(thenBB->begin());
    emitStmt(stmt->thenStmt());
    builder.createBranchInstr(afterIf);
+   thenBB->setName("if.then");
 
    // build the else block
    builder.setInsertPoint(elseBB->begin());
@@ -87,6 +90,7 @@ void CG::emitIfStmt(ast::IfStmt const* stmt) {
       emitStmt(stmt->elseStmt());
    }
    builder.createBranchInstr(afterIf);
+   elseBB->setName("if.else");
 
    // set the insert point to the afterIf block
    builder.setInsertPoint(afterIf->begin());
@@ -102,11 +106,13 @@ void CG::emitWhileStmt(ast::WhileStmt const* stmt) {
    builder.setInsertPoint(cond->begin());
    auto* condVal = emitExpr(stmt->condition());
    builder.createBranchInstr(condVal, body, afterWhile);
+   cond->setName("while.cond");
 
    // build the body block
    builder.setInsertPoint(body->begin());
    emitStmt(stmt->body());
    builder.createBranchInstr(cond);
+   body->setName("while.body");
 
    // set the insert point to the afterWhile block
    builder.setInsertPoint(afterWhile->begin());
