@@ -4,6 +4,7 @@
 
 #include "tir/BasicBlock.h"
 #include "tir/Type.h"
+#include "utils/DotPrinter.h"
 
 namespace tir {
 
@@ -42,7 +43,8 @@ std::ostream& Function::print(std::ostream& os) const {
    os << "function ";
    if(isExternalLinkage()) os << "external ";
    if(isNoReturn()) os << "noreturn ";
-   os << *getReturnType() << " " << "@" << name() << "(";
+   os << *getReturnType() << " "
+      << "@" << name() << "(";
    bool isFirst = true;
    for(auto* arg : args()) {
       if(!isFirst) os << ", ";
@@ -58,6 +60,30 @@ std::ostream& Function::print(std::ostream& os) const {
       os << "}\n";
    }
    return os;
+}
+
+void Function::printDot(std::ostream& os) const {
+   utils::DotPrinter dp{os, "5"};
+   dp.startGraph();
+   std::unordered_map<BasicBlock*, int> bbMap;
+   std::vector<BasicBlock*> terms;
+   for(auto bb : body()) {
+      int id = bb->printDotNode(dp);
+      bbMap[bb] = id;
+   }
+   for(auto bb : body()) {
+      terms.clear();
+      for(auto succ : bb->successors()) terms.push_back(succ);
+      if(terms.size() == 2) {
+         dp.printConnection(bbMap[bb], ":T", bbMap[terms[0]]);
+         dp.printConnection(bbMap[bb], ":F", bbMap[terms[1]]);
+      } else {
+         for (auto term : terms) {
+            dp.printConnection(bbMap[bb], bbMap[term]);
+         }
+      }
+   }
+   dp.endGraph();
 }
 
 } // namespace tir

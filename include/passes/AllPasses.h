@@ -18,6 +18,9 @@ DECLARE_PASS(DFAPass);
 
 // Optimization passes
 
+utils::Pass& NewIRContextPass(utils::PassManager&, tir::CompilationUnit&);
+
 DECLARE_PASS(SimplifyCFG);
 DECLARE_PASS(GlobalDCE);
-utils::Pass& NewIRContextPass(utils::PassManager&, tir::CompilationUnit&);
+DECLARE_PASS(MemToReg);
+DECLARE_PASS(PrintCFG);

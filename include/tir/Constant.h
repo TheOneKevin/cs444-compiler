@@ -205,6 +205,7 @@ public:
       if(!external_) return !entryBB_;
       return true;
    }
+   void printDot(std::ostream& os) const;
 
 private:
    void addBlock(BasicBlock* block) {

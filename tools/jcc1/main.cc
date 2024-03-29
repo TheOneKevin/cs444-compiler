@@ -78,7 +78,9 @@ int main(int argc, char** argv) {
    // Build the optimization pipeline
    NewSimplifyCFG(OptPM);
    NewGlobalDCE(OptPM);
-
+   NewMemToReg(OptPM);
+   NewPrintCFG(OptPM);
+   // Add the pipeline option and print the pass names
    {
       std::ostringstream ss;
       ss << "The pipeline string to run. Below is a list of the passes.\n";

@@ -14,7 +14,9 @@ class DotPrinter {
 
    struct Sanitize {
       string_view str;
-      Sanitize(string_view str) : str(str) {}
+      bool left_align;
+      Sanitize(string_view str, bool left_align = false)
+            : str(str), left_align(left_align) {}
    };
 
    friend ostream& operator<<(ostream& os, Sanitize s);
@@ -28,10 +30,11 @@ public:
          : os(os), min_height_{min_height}, min_width_{min_height} {}
 
    /// @brief Prints a table row with a single column
-   void printTableSingleRow(string_view cell_text, string_list cell_attrs = {}) {
+   void printTableSingleRow(string_view cell_text, string_list cell_attrs = {},
+                            bool left_align = false) {
       print_html_start("tr");
       print_html_start("td", {"colspan", "3", "height", min_height_}, cell_attrs);
-      os << Sanitize{cell_text};
+      os << Sanitize{cell_text, left_align};
       print_html_end("td");
       print_html_end("tr");
    }

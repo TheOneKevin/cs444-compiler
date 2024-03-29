@@ -1,6 +1,8 @@
 #pragma once
 
 #include "tir/Value.h"
+#include "utils/DotPrinter.h"
+#include "utils/Generator.h"
 
 namespace tir {
 
@@ -124,6 +126,10 @@ public:
    void erase(Instruction* instr);
    // Erases this basic block from the parent function
    void eraseFromParent();
+   // Prints the DOT representation of this basic block
+   int printDotNode(utils::DotPrinter&) const;
+   // Grab the sucessor basic blocks of this basic block
+   utils::Generator<BasicBlock*> successors() const;
 
 private:
    Instruction* first_;

@@ -18,7 +18,11 @@ std::ostream& operator<<(std::ostream& os, DotPrinter::Sanitize s) {
             os << "&apos;";
             break;
          case '\n':
-            os << "<br/>";
+            if(s.left_align) {
+               os << "<br align=\"left\"/>";
+            } else {
+               os << "<br/>";
+            }
             break;
          case '&':
             os << "&amp;";
