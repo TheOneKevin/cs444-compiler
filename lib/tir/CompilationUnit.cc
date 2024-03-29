@@ -12,13 +12,15 @@ CompilationUnit::CompilationUnit(Context& ctx) : ctx_{ctx}, globals_{ctx.alloc()
    {
       auto fnty = FunctionType::get(
             ctx, Type::getPointerTy(ctx), {Type::getInt32Ty(ctx)});
-      CreateFunction(fnty, "__malloc");
+      auto fn = CreateFunction(fnty, "__malloc");
+      fn->setExternalLinkage();
    }
    // Declare the "void __exception()" function
    {
       auto fnty = FunctionType::get(ctx, Type::getVoidTy(ctx), {});
       auto fn = CreateFunction(fnty, "__exception");
-      fn->setNoReturn(true);
+      fn->setNoReturn();
+      fn->setExternalLinkage();
    }
 }
 

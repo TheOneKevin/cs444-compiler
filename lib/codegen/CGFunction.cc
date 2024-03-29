@@ -39,10 +39,15 @@ void CodeGenerator::emitFunctionDecl(ast::MethodDecl const* decl) {
       std::ostringstream ss;
       ss << "NATIVE" << decl->getCanonicalName();
       func = cu.CreateFunction(funcTy, ss.str());
+      func->setExternalLinkage();
    } else {
       Mangler m{nr};
       m.MangleFunctionName(decl);
       func = cu.CreateFunction(funcTy, m.getMangledName());
+      // FIXME(kevin): Better way to grab main function?
+      if(decl->name() == "main") {
+         func->setExternalLinkage();
+      }
    }
    gvMap[decl] = func;
    assert(func && "Function already exists");

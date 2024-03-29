@@ -99,6 +99,9 @@ public:
 class GlobalObject : public Constant {
 protected:
    GlobalObject(Context& ctx, Type* type) : Constant{ctx, type} {}
+
+public:
+   virtual bool isExternalLinkage() const = 0;
 };
 
 /**
@@ -112,6 +115,7 @@ private:
 
 public:
    std::ostream& print(std::ostream& os) const override;
+   bool isExternalLinkage() const override { return false; }
 };
 
 /**
@@ -195,7 +199,12 @@ public:
    }
 
    auto isNoReturn() const { return noReturn_; }
-   void setNoReturn(bool value) { noReturn_ = value; }
+   void setNoReturn() { noReturn_ = true; }
+   void setExternalLinkage() { external_ = true; }
+   bool isExternalLinkage() const override {
+      if(!external_) return !entryBB_;
+      return true;
+   }
 
 private:
    void addBlock(BasicBlock* block) {
@@ -208,6 +217,7 @@ private:
    BasicBlock* entryBB_ = nullptr;
    tir::CompilationUnit* parent_;
    bool noReturn_ = false;
+   bool external_ = false;
 };
 
 } // namespace tir

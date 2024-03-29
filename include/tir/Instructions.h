@@ -160,7 +160,7 @@ public:
       }
       // Destroy all references to the parent BB
       next_ = prev_ = nullptr;
-      if(!keep && isTerminator()) destroy();
+      if(!keep) destroy();
    }
    // Sets the parent BB of this instruction
    void setParent(BasicBlock* parent) { parent_ = parent; }

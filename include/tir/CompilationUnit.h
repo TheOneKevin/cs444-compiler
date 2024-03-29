@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string_view>
 #include <unordered_map>
 
 #include "tir/Constant.h"
@@ -33,14 +34,15 @@ public:
 
    /**
     * @brief Create a new global variable with the given type and name.
-    * 
-    * @param type 
-    * @param name 
-    * @return GlobalVariable* 
+    *
+    * @param type
+    * @param name
+    * @return GlobalVariable*
     */
    GlobalVariable* CreateGlobalVariable(Type* type, const std::string_view name) {
       if(findGlobalVariable(std::string{name})) return nullptr;
-      auto* buf = ctx_.alloc().allocate_bytes(sizeof(GlobalVariable), alignof(GlobalVariable));
+      auto* buf = ctx_.alloc().allocate_bytes(sizeof(GlobalVariable),
+                                              alignof(GlobalVariable));
       auto* gv = new(buf) GlobalVariable{ctx_, type};
       globals_.emplace(name, gv);
       return gv;
@@ -88,6 +90,12 @@ public:
       for(auto& [name, go] : globals_) co_yield go;
    }
 
+   /// @brief Yields all global objects in the compilation unit
+   utils::Generator<std::pair<std::string_view, GlobalObject*>> global_objects_kv()
+         const {
+      for(auto& [name, go] : globals_) co_yield std::pair{name, go};
+   }
+
    /// @brief Get the context associated with this compilation unit
    auto& ctx() { return ctx_; }
 
@@ -98,13 +106,12 @@ public:
       }
    }
 
+   /// @brief Remove the global object with the given name
+   void removeGlobalObject(std::string const& name) { globals_.erase(name); }
+
 public:
-   Function* builtinMalloc() {
-      return findFunction("__malloc");
-   }
-   Function* builtinException() {
-      return findFunction("__exception");
-   }
+   Function* builtinMalloc() { return findFunction("__malloc"); }
+   Function* builtinException() { return findFunction("__exception"); }
 
 private:
    Context& ctx_;

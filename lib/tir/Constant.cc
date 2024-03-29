@@ -40,7 +40,7 @@ std::ostream& Argument::print(std::ostream& os) const {
 
 std::ostream& Function::print(std::ostream& os) const {
    os << "function ";
-   if(!hasBody()) os << "external ";
+   if(isExternalLinkage()) os << "external ";
    if(isNoReturn()) os << "noreturn ";
    os << *getReturnType() << " " << "@" << name() << "(";
    bool isFirst = true;
