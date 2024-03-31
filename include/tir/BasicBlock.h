@@ -130,6 +130,8 @@ public:
    int printDotNode(utils::DotPrinter&) const;
    // Grab the sucessor basic blocks of this basic block
    utils::Generator<BasicBlock*> successors() const;
+   // Grab the predecessor basic blocks of this basic block
+   utils::Generator<BasicBlock*> predecessors() const;
 
 private:
    Instruction* first_;

@@ -6,6 +6,7 @@
 #include "tir/Instructions.h"
 #include "tir/Type.h"
 #include "tir/Value.h"
+#include "utils/Generator.h"
 #include "utils/Utils.h"
 
 namespace tir {
@@ -176,6 +177,7 @@ public:
    bool hasBody() const { return !body_.empty(); }
    /// @brief Gets the entry BB of the function or nullptr if it doesn't exist.
    BasicBlock* getEntryBlock() const { return entryBB_; }
+   /// @brief Create a new basic block and add it to the function.
    auto body() const { return std::views::all(body_); }
    void removeBlock(BasicBlock* block) {
       assert(block->parent() == this && "Block does not belong to this function");
@@ -197,15 +199,31 @@ public:
       getEntryBlock()->insertBeforeBegin(inst);
       return inst;
    }
-
+   // Get the function attribute "noreturn"
    auto isNoReturn() const { return noReturn_; }
+   // Set the function attribute "noreturn"
    void setNoReturn() { noReturn_ = true; }
+   // Set the function attribute "external"
    void setExternalLinkage() { external_ = true; }
+   // Get the function attribute "external"
    bool isExternalLinkage() const override {
       if(!external_) return !entryBB_;
       return true;
    }
+   // Print the function in DOT format
    void printDot(std::ostream& os) const;
+   // Get the reverse post order of the basic blocks
+   utils::Generator<BasicBlock*> reversePostOrder() const;
+   // Iterates through the set of allocas
+   utils::Generator<AllocaInst*> allocas() const {
+      if(entryBB_) {
+         for(auto* inst : *entryBB_) {
+            if(auto* alloca = dyn_cast<AllocaInst>(inst)) {
+               co_yield alloca;
+            }
+         }
+      }
+   }
 
 private:
    void addBlock(BasicBlock* block) {

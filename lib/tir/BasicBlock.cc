@@ -114,4 +114,16 @@ utils::Generator<BasicBlock*> BasicBlock::successors() const {
    }
 }
 
+utils::Generator<BasicBlock*> BasicBlock::predecessors() const {
+   std::unordered_set<BasicBlock*> visited;
+   for(auto user : users()) {
+      if(auto term = dyn_cast<BranchInst>(user)) {
+         visited.insert(term->parent());
+      }
+   }
+   for(auto pred : visited) {
+      co_yield pred;
+   }
+}
+
 } // namespace tir

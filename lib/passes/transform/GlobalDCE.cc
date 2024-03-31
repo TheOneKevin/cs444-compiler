@@ -17,7 +17,7 @@ public:
       } while(changed);
    }
    string_view Name() const override { return "globaldce"; }
-   string_view Desc() const override { return "Global dead code elimination"; }
+   string_view Desc() const override { return "Global Dead Code Elimination"; }
 
 private:
    bool removeAllGlobals(tir::CompilationUnit& CU) {
@@ -25,12 +25,7 @@ private:
       for(auto p : CU.global_objects_kv()) {
          auto [name, go] = p;
          if(go->isExternalLinkage()) continue;
-         if(!go->users().empty()) {
-            for(auto user : go->users()) {
-               user->dump();
-            }
-            continue;
-         }
+         if(!go->users().empty()) continue;
          // Destroy the global object
          if(auto fn = dyn_cast<tir::Function>(go)) {
             for(auto bb : fn->body()) {

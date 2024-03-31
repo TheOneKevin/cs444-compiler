@@ -1,6 +1,7 @@
 #include "tir/Constant.h"
 
 #include <iostream>
+#include <queue>
 
 #include "tir/BasicBlock.h"
 #include "tir/Type.h"
@@ -78,12 +79,29 @@ void Function::printDot(std::ostream& os) const {
          dp.printConnection(bbMap[bb], ":T", bbMap[terms[0]]);
          dp.printConnection(bbMap[bb], ":F", bbMap[terms[1]]);
       } else {
-         for (auto term : terms) {
+         for(auto term : terms) {
             dp.printConnection(bbMap[bb], bbMap[term]);
          }
       }
    }
    dp.endGraph();
+}
+
+utils::Generator<BasicBlock*> Function::reversePostOrder() const {
+   std::unordered_set<BasicBlock*> visited;
+   std::queue<BasicBlock*> next;
+   assert(hasBody() && getEntryBlock() && "Function has no entry block");
+   next.push(getEntryBlock());
+   while(!next.empty()) {
+      auto* bb = next.front();
+      next.pop();
+      if(visited.count(bb)) continue;
+      visited.insert(bb);
+      co_yield bb;
+      for(auto succ : bb->successors()) {
+         next.push(succ);
+      }
+   }
 }
 
 } // namespace tir

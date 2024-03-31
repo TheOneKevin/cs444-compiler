@@ -8,8 +8,6 @@
 
 namespace tir {
 
-void Value::dump() const { print(std::cerr) << "\n"; }
-
 std::ostream& operator<<(std::ostream& os, const Value& value) {
    return value.print(os);
 }
