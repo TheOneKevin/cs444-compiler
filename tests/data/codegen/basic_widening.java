@@ -1,6 +1,6 @@
 public class Main {
     public Main() {}
-    public static int main() {
+    public static int main(String[] args) {
         short a = (short) -1;
         byte b = (byte) -1;
         short c = (short) 1;

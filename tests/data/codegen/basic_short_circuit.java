@@ -1,6 +1,6 @@
 public class Main {
     public Main() {}
-    public static int main() {
+    public static int main(String[] args) {
         boolean a = true;
         boolean b = false;
         boolean c = a && b;
