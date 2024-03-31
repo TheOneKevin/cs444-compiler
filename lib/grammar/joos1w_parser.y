@@ -404,8 +404,7 @@ CastExpression
             $$ = jl.make_node(@$, pty::CastExpression, jl.make_node(@2, pty::Type, $2), $4);
         } else if (isArrType) {
             $$ = jl.make_node(@$, pty::CastExpression, $2, $4);
-        }
-        else {
+        } else {
             jl.report_parser_error(@$, "Invalid expression for cast", {@1});
             $$ = jl.make_poison(@$);
         }
@@ -438,7 +437,16 @@ PrimaryNoNewArray
     ;
 
 FieldAccess
-    : Primary '.' IDENTIFIER                                                    { $$ = jl.make_node(@$, pty::FieldAccess, $1, $3); }
+    : Primary '.' IDENTIFIER {
+        bool isExpression = $1->get_node_type() == pty::Expression;
+        int numChildren = $1->num_children();
+        if(isExpression && numChildren == 1 && $1->child(0)->get_node_type() == pty::QualifiedIdentifier) {
+            jl.report_parser_error(@$, "Invalid expression for field access", {@1});
+            $$ = jl.make_poison(@$);
+        } else {
+            $$ = jl.make_node(@$, pty::FieldAccess, $1, $3); 
+        }
+    }
     ;
 
 ArrayAccess
@@ -449,6 +457,7 @@ ArrayAccess
 ArrayCastType
     : QualifiedIdentifier '[' ']'                                               { $$ = jl.make_node(@$, pty::ArrayType, $1); }
     ;
+
 MethodInvocation
     : QualifiedIdentifier '(' ArgumentListOpt ')'                               { $$ = jl.make_node(@$, pty::MethodInvocation, $1, $3); }
     | Primary '.' IDENTIFIER '(' ArgumentListOpt ')'                            { $$ = jl.make_node(@$, pty::MethodInvocation, $1, $3, $5); }
