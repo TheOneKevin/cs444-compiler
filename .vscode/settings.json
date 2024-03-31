@@ -19,6 +19,10 @@
     "editor.detectIndentation": false,
     "editor.indentSize": "tabSize"
   },
+  "[restructuredtext]": {
+    "editor.wordWrapColumn": 80,
+    "editor.wordWrap": "wordWrapColumn"
+  },
   "[cmake]": {
     "editor.tabSize": 8
   },
@@ -52,5 +56,6 @@
   "C_Cpp.debugShortcut": false,
   "gitlens.codeLens.enabled": false,
   "todo-tree.highlights.useColourScheme": false,
-  "todo-tree.regex.regexCaseSensitive": false
+  "todo-tree.regex.regexCaseSensitive": false,
+  "esbonio.sphinx.confDir": ""
 }

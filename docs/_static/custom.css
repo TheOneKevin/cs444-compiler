@@ -1,0 +1,28 @@
+.rst-content .line-block {
+  margin-bottom: 0px;
+}
+
+div.leftside {
+  width: 43%;
+  padding: 0px 3px 0px 0px;
+  float: left;
+}
+
+div.rightside {
+  margin-left: 45%;
+  /* float: right; */
+}
+
+#content ol p,
+#content ol>li,
+#content ul:not(.search) p,
+#content ul:not(.search)>li,
+#content ol ul:not(.search) {
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 1280px) {
+  .xl\:grid-cols-\[1fr_300px\] {
+    grid-template-columns: 1fr 200px
+  }
+}

@@ -1,12 +1,21 @@
-build*/
-joosc_build/
-tests/generated/
+# IDE and environment files exclude
 .joosc_build/
-docs/
+.venv/
 .cache/
-out.dot
 .trunk/
 .vscode/launch.json
 __pycache__/
+
+# Build files exclude
+build*/
+joosc_build/
+tests/generated/
 joosc
 !joosc/
+
+# Auto documentation exclude
+docs/api
+docs/_static/doxygen-html
+
+# Misc files exclude
+out.dot
