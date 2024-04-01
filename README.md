@@ -1,4 +1,7 @@
-# JOOS1W Compiler Framework
+<div align="center">
+<img src="docs/assets/logo.svg" width="100px">
+<h1>jCF - j/Compiler Framework</h1>
+</div>
 
 Compiler project for the University of Waterloo CS444/644 compiler construction course.
 The Joos1W language is based off the Java 1.3 language.

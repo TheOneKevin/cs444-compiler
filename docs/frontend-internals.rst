@@ -1,15 +1,10 @@
 .. |nbsp| unicode:: 0x2007 0x2007
-   :trim:
+  :trim:
 .. role:: dxc (emphasis)
-   :class: dxc
-.. role:: dxs (emphasis)
-   :class: dxs
+  :class: dxc
 
-jcc1 Frontend Internals
+Frontend Internals
 ================================================================================
-
-Driver Program
---------------------------------------------------------------------------------
 
 Parsing and Lexing
 --------------------------------------------------------------------------------
@@ -137,6 +132,7 @@ Finally, all of our AST nodes and data structures can be dumped to the console v
 We also provide a DOT graph printer for the AST For a simple Joos1W program that prints out "Hello, World!":
 
 .. code-block:: java
+  :caption: HelloWorld.java
 
     package com.example;
 
@@ -217,15 +213,17 @@ Example resolution
 Consider this example:
 
 .. code-block:: java
+  :caption: org/rpgpoet/Music.java
 
-    // File: org/rpgpoet/Music.java
     package org.rpgpoet;
     public class Music {
         public static String wizards;
         public Music() {}
     }
 
-    // File: bazola/Gabriel.java
+.. code-block:: java
+  :caption: bazola/Gabriel.java
+
     package bazola;
     public class Gabriel {
     	public static int n = org.rpgpoet.Music.wizards.length();
@@ -267,6 +265,6 @@ Now, all expression identifiers and types have been resolved. The :dxc:`semantic
 The final stage is to validate each statement is well formed. The :dxc:`semantic::AstChecker` will check this. For instance, the expression inside the condition of an ``if`` statement must be a boolean expression.
 
 Diagnostics and Error Reporting
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------------------------------------------------------
 
-
+🚧 WIP 🚧

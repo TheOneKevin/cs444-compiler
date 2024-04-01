@@ -26,3 +26,7 @@ div.rightside {
     grid-template-columns: 1fr 200px
   }
 }
+
+img.mr-2 {
+  width: 40px !important;
+}
