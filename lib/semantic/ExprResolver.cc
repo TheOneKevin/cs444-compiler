@@ -662,9 +662,13 @@ bool ER::isAccessible(ast::Modifiers mod, ast::DeclContext const* parent) const 
    if(mod.isPublic()) return true;
    // 6.6.2 Details on protected Access
    // If current is a child of parent, then it is accessible
+   auto* targetClass = cast<ast::ClassDecl>(parent);
    if(auto* curClass = dyn_cast<ast::ClassDecl>(cu_->bodyAsDecl())) {
-      auto* targetClass = cast<ast::ClassDecl>(parent);
-      if(HC->isSuperClass(targetClass, curClass) && mod.isProtected()) return true;
+      if(HC->isSuperClass(targetClass, curClass)) return true;
+   }
+   // If they are in the same package, access is also allowed
+   if(auto other_cu = dyn_cast<ast::CompilationUnit>(targetClass->parent())) {
+      if(cu_->getPackageName() == other_cu->getPackageName()) return true;
    }
    return false;
 }

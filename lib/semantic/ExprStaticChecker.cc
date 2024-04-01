@@ -160,7 +160,10 @@ void ESC::isAccessible(ETy lhs, ETy var) const {
    if(!lhsClass) return;
    if(auto method = dyn_cast<ast::MethodDecl>(var.decl)) {
       if(method->modifiers().isProtected()) {
-         if(!HC.isSuperClass(state.currentClass, lhsClass)) {
+         auto cur_cu = dyn_cast<ast::CompilationUnit>(state.currentClass->parent());
+         auto other_cu = dyn_cast<ast::CompilationUnit>(lhsClass->parent());
+         if(!HC.isSuperClass(state.currentClass, lhsClass)
+         && cur_cu->getPackageName() != other_cu->getPackageName()) {
             throw diag.ReportError(loc_)
                   << "cannot access protected method" << argLocation(0)
                   << "instance of " << lhsClass->name() << argLocation(1)
@@ -169,7 +172,10 @@ void ESC::isAccessible(ETy lhs, ETy var) const {
       }
    } else if(auto field = dyn_cast<ast::FieldDecl>(var.decl)) {
       if(field->modifiers().isProtected()) {
-         if(!HC.isSuperClass(state.currentClass, lhsClass)) {
+         auto cur_cu = dyn_cast<ast::CompilationUnit>(state.currentClass->parent());
+         auto other_cu = dyn_cast<ast::CompilationUnit>(lhsClass->parent());
+         if(!HC.isSuperClass(state.currentClass, lhsClass) 
+         && cur_cu->getPackageName() != other_cu->getPackageName()) {
             throw diag.ReportError(loc_)
                   << "cannot access protected field" << argLocation(0)
                   << "instance of " << lhsClass->name() << argLocation(1)
