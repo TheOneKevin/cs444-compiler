@@ -1,4 +1,5 @@
 #include <queue>
+#include <stack>
 #include <unordered_set>
 
 #include "../IRContextPass.h"
@@ -33,6 +34,8 @@ public:
       computePostorderIdx(func);
       computeDominators(func);
       computeFrontiers(func);
+      for(auto bb : func->body())
+         if(doms[bb] != bb) domt[doms[bb]].push_back(bb);
    }
 
    std::ostream& print(std::ostream& os) const {
@@ -69,11 +72,15 @@ public:
       return doms.contains(b) ? doms.at(b) : nullptr;
    }
 
+   // Get the children of the dominator tree
+   auto& getChildren(BasicBlock* b) { return domt[b]; }
+
 private:
    Function* func;
    std::unordered_map<BasicBlock*, BasicBlock*> doms;
    std::unordered_map<BasicBlock*, int> poidx;
    std::unordered_map<BasicBlock*, std::unordered_set<BasicBlock*>> frontiers;
+   std::unordered_map<BasicBlock*, std::vector<BasicBlock*>> domt;
 
    void computePostorderIdx(Function* func);
    void computeDominators(Function* func);
@@ -97,28 +104,42 @@ public:
          auto dbg = diag.ReportDebug();
          DT.print(dbg.get());
       }
-      // 2. Place PHI nodes for each alloca
+      // 2. Place PHI nodes for each alloca and record the uses
       for(auto alloca : func->allocas()) {
          if(canAllocaBeReplaced(alloca)) {
             placePHINodes(alloca);
+            for(auto* user : alloca->users()) {
+               if(auto* store = dyn_cast<StoreInst>(user)) {
+                  storesToRewrite.insert(store);
+               } else if(auto* load = dyn_cast<LoadInst>(user)) {
+                  loadsToRewrite.insert(load);
+               }
+            }
          }
       }
-
       // 3. Print out the alloca and phi nodes
       if(diag.Verbose()) {
          print(diag.ReportDebug().get());
+      }
+      // 4. Replace the uses of the alloca with the phi nodes
+      replaceUses(func->getEntryBlock());
+      // 5. Do DCE on the stores and loads
+      for(auto store : storesToRewrite) {
+         assert(store->uses().size() == 0);
+         store->eraseFromParent();
+      }
+      for(auto load : loadsToRewrite) {
+         assert(load->uses().size() == 0);
+         load->eraseFromParent();
       }
    }
 
    std::ostream& print(std::ostream& os) const {
       os << "*** PHI node insertion points ***\n";
-      for(auto [alloca, phis] : allocaPhiMap) {
-         os << "  Insert PHI for: ";
-         alloca->printName(os) << "\n";
-         for(auto bb : phis) {
-            os << "    at: ";
-            bb->printName(os) << "\n";
-         }
+      for(auto [phi, alloca] : phiAllocaMap) {
+         os << "  ";
+         phi->printName(os) << " -> ";
+         alloca->printName(os) << std::endl;
       }
       return os;
    }
@@ -126,13 +147,18 @@ public:
 private:
    Function* func;
    DominantorTree DT;
-   // Places to insert PHI for alloca
-   std::unordered_map<AllocaInst*, std::vector<BasicBlock*>> allocaPhiMap;
+   // Stores and loads to rewrite
+   std::unordered_set<Instruction*> storesToRewrite;
+   std::unordered_set<Instruction*> loadsToRewrite;
+   // Phi -> Alloca map
+   std::unordered_map<PhiNode*, AllocaInst*> phiAllocaMap;
+   // Variable stack
+   std::unordered_map<Value*, std::stack<Value*>> varStack;
 
 private:
    void placePHINodes(AllocaInst* alloca);
    bool canAllocaBeReplaced(AllocaInst* alloca);
-   void replaceUses(AllocaInst* alloca);
+   void replaceUses(BasicBlock* alloca);
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -229,7 +255,10 @@ void HoistAlloca::placePHINodes(AllocaInst* V) {
       W.pop();
       for(auto Y : DT.DF(X)) {
          if(DFPlus.contains(Y)) continue;
-         allocaPhiMap[V].push_back(Y);
+         auto phi = PhiNode::Create(V->ctx(), V->allocatedType(), {}, {});
+         phi->setName("phi");
+         Y->insertBeforeBegin(phi);
+         phiAllocaMap[phi] = V;
          DFPlus.insert(Y);
          if(!Work.contains(Y)) {
             Work.insert(Y);
@@ -240,8 +269,33 @@ void HoistAlloca::placePHINodes(AllocaInst* V) {
 }
 
 // Ref from paper, Figure 5. Construction of SSA form
-void HoistAlloca::replaceUses(AllocaInst* V) {
-   
+void HoistAlloca::replaceUses(BasicBlock* X) {
+   std::vector<Value*> pushed_vars;
+   for(auto phi : X->phis()) {
+      auto alloca = phiAllocaMap[phi];
+      pushed_vars.push_back(alloca);
+      varStack[alloca].push(phi);
+   }
+   for(auto inst : *X) {
+      if(storesToRewrite.contains(inst)) { // "LHS"
+         auto alloca = cast<AllocaInst>(inst->getChild(1));
+         pushed_vars.push_back(alloca);
+         varStack[alloca].push(inst->getChild(0));
+      } else if(loadsToRewrite.contains(inst)) { // "RHS"
+         auto alloca = cast<AllocaInst>(inst->getChild(0));
+         auto newVar = varStack[alloca].top();
+         inst->replaceAllUsesWith(newVar);
+      }
+   }
+   for(auto Y : X->successors()) {
+      for(auto phi : Y->phis()) {
+         phi->replaceOrAddOperand(X, varStack[phiAllocaMap[phi]].top());
+      }
+   }
+   for(auto Y : DT.getChildren(X)) {
+      replaceUses(Y);
+   }
+   for(auto V : pushed_vars) varStack[V].pop();
 }
 
 } // namespace

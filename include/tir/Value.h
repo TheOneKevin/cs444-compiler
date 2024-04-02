@@ -9,10 +9,35 @@
 #include <unordered_set>
 
 #include "tir/Context.h"
+#include "utils/Generator.h"
 
 namespace tir {
 
 class User;
+
+struct Use {
+   User* const user;
+   const unsigned idx;
+};
+
+namespace detail {
+struct UseEqual {
+   bool operator()(const Use& lhs, const Use& rhs) const {
+      return lhs.user == rhs.user && lhs.idx == rhs.idx;
+   }
+};
+} // namespace detail
+
+} // namespace tir
+
+template <>
+struct std::hash<tir::Use> {
+   std::size_t operator()(const tir::Use& use) const {
+      return std::hash<tir::User*>{}(use.user) ^ std::hash<unsigned>{}(use.idx);
+   }
+};
+
+namespace tir {
 
 /**
  * @brief
@@ -22,15 +47,20 @@ public:
    Value(Context& ctx, Type* type)
          : ctx_{ctx},
            type_{type},
-           users_{ctx.alloc()},
+           uses_{ctx.alloc()},
            name_{std::nullopt},
            valueID_{ctx.getNextValueID()} {}
    tir::Context& ctx() { return ctx_; }
-   auto users() { return std::views::all(users_); }
-   auto users() const { return std::views::all(users_); }
+   utils::Generator<User*> users() {
+      for(auto user : uses_) co_yield user.user;
+   }
+   utils::Generator<User const*> users() const {
+      for(auto use : uses_) co_yield use.user;
+   }
+   auto uses() const { return std::views::all(uses_); }
    Type* type() const { return type_; }
-   void addUser(User* user) { users_.insert(user); }
-   void removeUser(User* user) { users_.erase(user); }
+   void addUse(Use use) { uses_.insert(use); }
+   void removeUse(Use use) { uses_.erase(use); }
    std::string_view name() const { return name_.value(); }
    auto nameOpt() const { return name_.value(); }
    void replaceAllUsesWith(Value* newValue);
@@ -50,7 +80,7 @@ public:
 private:
    tir::Context& ctx_;
    tir::Type* const type_;
-   std::pmr::unordered_set<User*> users_;
+   std::pmr::unordered_set<Use, std::hash<Use>, detail::UseEqual> uses_;
    std::optional<std::pmr::string> name_;
    unsigned valueID_;
 };
@@ -60,6 +90,7 @@ private:
  */
 class User : public Value {
    friend class Value;
+
 public:
    User(Context& ctx, Type* type) : Value{ctx, type}, children_{ctx.alloc()} {}
    auto children() const { return std::views::all(children_); }
@@ -72,18 +103,23 @@ public:
 protected:
    void addChild(Value* operand) {
       children_.push_back(operand);
-      operand->addUser(this);
+      operand->addUse({this, (unsigned)numChildren() - 1});
+   }
+   void addChild(Value* operand, unsigned idx) {
+      children_.insert(children_.begin() + idx, operand);
+      operand->addUse({this, idx});
    }
    void replaceChild(unsigned idx, Value* operand) {
       assert(idx < numChildren() && "Index out of bounds");
-      children_[idx]->removeUser(this);
+      children_[idx]->removeUse({this, idx});
       children_[idx] = operand;
-      operand->addUser(this);
+      operand->addUse({this, idx});
    }
    void destroy() {
       assert(!destroyed_);
+      unsigned idx = 0;
       for(auto child : children_) {
-         child->removeUser(this);
+         child->removeUse({this, idx++});
       }
    }
    bool isDestroyed() const { return destroyed_; }

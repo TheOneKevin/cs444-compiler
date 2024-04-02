@@ -52,6 +52,7 @@ bool mergeSinglePredSingleSucc(tir::BasicBlock& bb) {
       instr = next;
    }
    // 4. Remove the successor from the parent function
+   succ->replaceAllUsesWith(&bb);
    succ->eraseFromParent();
    return true;
 }
@@ -71,6 +72,7 @@ bool mergeSinglePredSingleSucc(tir::BasicBlock& bb) {
  * +-------+   +----------+
  *
  */
+ // FIXME: This one's broken because of PHI nodes
 bool replaceSucessorInOneBranch(tir::BasicBlock& bb) {
    bool changed = false;
    auto term = dyn_cast<tir::BranchInst>(bb.terminator());
@@ -104,6 +106,11 @@ public:
       tir::CompilationUnit& CU = GetPass<IRContextPass>().CU();
       std::vector<tir::BasicBlock*> toRemove;
       for(auto func : CU.functions()) {
+         if(!func->hasBody()) continue;
+         if(PM().Diag().Verbose()) {
+            PM().Diag().ReportDebug() <<
+               "*** Running SimplifyCFG on function: " << func->name() << " ***";
+         }
          // 1. Iteratively simplify the CFG
          bool changed = false;
          do {
@@ -121,6 +128,11 @@ public:
          }
          // 3. Remove the basic blocks that are unreachable
          for(auto bb : toRemove) {
+            if(PM().Diag().Verbose()) {
+               auto dbg = PM().Diag().ReportDebug();
+               dbg << "Removing BB: ";
+               bb->printName(dbg.get());
+            }
             bb->eraseFromParent();
          }
       }
@@ -136,7 +148,7 @@ private:
       // 1. Run all the simplifications
       changed |= eliminateAfterFirstTerminator(bb);
       changed |= mergeSinglePredSingleSucc(bb);
-      changed |= replaceSucessorInOneBranch(bb);
+      // changed |= replaceSucessorInOneBranch(bb);
       // 2. Grab the next basic block
       auto term = dyn_cast<tir::BranchInst>(bb.terminator());
       if(term == nullptr) return false;

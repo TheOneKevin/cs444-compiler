@@ -200,7 +200,7 @@ public:
    std::ostream& print(std::ostream& os) const override;
    void replaceSuccessor(unsigned idx, BasicBlock* newBB) {
       assert(idx < 2 && "Index out of bounds");
-      replaceChild(idx+1, newBB);
+      replaceChild(idx + 1, newBB);
    }
 };
 
@@ -374,6 +374,7 @@ public:
 
 public:
    std::ostream& print(std::ostream& os) const override;
+   Type* allocatedType() const { return get<Type*>(); }
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -400,6 +401,28 @@ public:
       return structTy->getIndexedType(indices);
    }
    auto getStructType() const { return get<StructType*>(); }
+};
+
+/* ===--------------------------------------------------------------------=== */
+// PhiNode instruction
+/* ===--------------------------------------------------------------------=== */
+
+class PhiNode final : public Instruction {
+private:
+   PhiNode(Context& ctx, Type* type, utils::range_ref<Value*> values,
+           utils::range_ref<BasicBlock*> preds);
+
+public:
+   static PhiNode* Create(Context& ctx, Type* type,
+                          utils::range_ref<Value*> values,
+                          utils::range_ref<BasicBlock*> preds) {
+      auto buf = ctx.alloc().allocate_bytes(sizeof(PhiNode), alignof(PhiNode));
+      return new(buf) PhiNode{ctx, type, values, preds};
+   }
+
+public:
+   std::ostream& print(std::ostream& os) const override;
+   void replaceOrAddOperand(BasicBlock* pred, Value* val);
 };
 
 } // namespace tir

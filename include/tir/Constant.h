@@ -179,11 +179,7 @@ public:
    BasicBlock* getEntryBlock() const { return entryBB_; }
    /// @brief Create a new basic block and add it to the function.
    auto body() const { return std::views::all(body_); }
-   void removeBlock(BasicBlock* block) {
-      assert(block->parent() == this && "Block does not belong to this function");
-      assert(block != entryBB_ && "Cannot remove the entry block");
-      body_.remove(block);
-   }
+   void removeBlock(BasicBlock* block);
 
    /**
     * @brief Create an alloca instruction for the given type. This will be

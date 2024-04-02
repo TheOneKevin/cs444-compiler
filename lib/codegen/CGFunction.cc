@@ -1,6 +1,7 @@
 #include <sstream>
 #include <string_view>
 
+#include "ast/Decl.h"
 #include "codegen/CodeGen.h"
 #include "codegen/Mangling.h"
 #include "tir/IRBuilder.h"
@@ -67,12 +68,21 @@ void CodeGenerator::emitFunction(ast::MethodDecl const* decl) {
    // 2. Emit the function body and add the allocas for the locals
    auto entry = builder.createBasicBlock(func);
    builder.setInsertPoint(entry->begin());
+   std::vector<tir::Value*> paramAllocas;
    for(auto* local : decl->decls()) {
       auto* typedLocal = cast<ast::TypedDecl>(local);
       auto* localTy = emitType(typedLocal->type());
       auto* val = func->createAlloca(localTy);
       val->setName(typedLocal->name());
       valueMap[local] = cast<tir::AllocaInst>(val);
+      if(cast<ast::VarDecl>(local)->isArg()) {
+         paramAllocas.push_back(val);
+      }
+   }
+   unsigned paramNum = 0;
+   for(auto* arg : func->args()) {
+      func->getEntryBlock()->appendAfterEnd(
+            tir::StoreInst::Create(ctx, arg, paramAllocas[paramNum++]));
    }
    emitStmt(decl->body());
    // 3. If the BB we're in does not end in a terminator, add a return

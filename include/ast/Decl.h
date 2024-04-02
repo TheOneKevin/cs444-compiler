@@ -43,12 +43,18 @@ private:
 class VarDecl : public TypedDecl {
 public:
    VarDecl(BumpAllocator& alloc, SourceRange location, Type* type,
-           string_view name, Expr* init, ScopeID const* scope) noexcept
-         : TypedDecl{alloc, location, type, name, init, scope} {}
+           string_view name, Expr* init, ScopeID const* scope,
+           bool isArg = false) noexcept
+         : TypedDecl{alloc, location, type, name, init, scope},
+           isArg_{isArg} {}
 
    std::ostream& print(std::ostream& os, int indentation = 0) const override;
    int printDotNode(DotPrinter& dp) const override;
    virtual bool hasCanonicalName() const override { return false; }
+   bool isArg() const { return isArg_; }
+
+private:
+   bool isArg_;
 };
 
 /**

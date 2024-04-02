@@ -104,4 +104,11 @@ utils::Generator<BasicBlock*> Function::reversePostOrder() const {
    }
 }
 
+void Function::removeBlock(BasicBlock* block) {
+   assert(block->parent() == this && "Block does not belong to this function");
+   assert(block != entryBB_ && "Cannot remove the entry block");
+   block->releaseAllReferences();
+   body_.remove(block);
+}
+
 } // namespace tir

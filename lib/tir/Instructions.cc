@@ -232,4 +232,48 @@ std::ostream& GetElementPtrInst::print(std::ostream& os) const {
    return os;
 }
 
+/* ===--------------------------------------------------------------------=== */
+// PhiNode implementation
+/* ===--------------------------------------------------------------------=== */
+
+PhiNode::PhiNode(Context& ctx, Type* type, utils::range_ref<Value*> values,
+                 utils::range_ref<BasicBlock*> preds)
+      : Instruction{ctx, type} {
+   assert(values.size() == preds.size() && "PhiNode values and preds mismatch");
+   unsigned i = 0;
+   values.for_each([this, &i](Value* val) {
+      addChild(val, i);
+      i += 2;
+   });
+   i = 1;
+   preds.for_each([this, &i](BasicBlock* bb) {
+      addChild(bb, i);
+      i += 2;
+   });
+}
+
+std::ostream& PhiNode::print(std::ostream& os) const {
+   printName(os) << " = ";
+   os << "phi " << *type() << ", ";
+   for(unsigned i = 0; i < numChildren(); i += 2) {
+      printNameOrConst(os, getChild(i)) << " [";
+      printNameOrConst(os, getChild(i + 1)) << "]";
+      if(i != numChildren() - 2) os << ", ";
+   }
+   return os;
+}
+
+void PhiNode::replaceOrAddOperand(BasicBlock* pred, Value* val) {
+   // Try to find the predecessor and replace the value
+   for(unsigned i = 1; i < numChildren(); i += 2) {
+      if(getChild(i) == pred) {
+         replaceChild(i - 1, val);
+         return;
+      }
+   }
+   // Otherwise, add the new value and predecessor
+   addChild(val);
+   addChild(pred);
+}
+
 } // namespace tir

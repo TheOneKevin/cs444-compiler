@@ -36,7 +36,7 @@ public:
    /* ===-----------------------------------------------------------------=== */
 
    VarDecl* BuildVarDecl(Type* type, SourceRange location, string_view name,
-                         ScopeID const* scope, Expr* init = nullptr);
+                         ScopeID const* scope, Expr* init = nullptr, bool isArg = false);
    FieldDecl* BuildFieldDecl(Modifiers modifiers, SourceRange location, Type* type,
                              string_view name, Expr* init = nullptr,
                              bool allowFinal = false);

@@ -8,6 +8,7 @@ namespace tir {
 
 class Instruction;
 class Function;
+class PhiNode;
 
 class BasicBlock final : public Value {
    friend class Instruction;
@@ -132,6 +133,10 @@ public:
    utils::Generator<BasicBlock*> successors() const;
    // Grab the predecessor basic blocks of this basic block
    utils::Generator<BasicBlock*> predecessors() const;
+   // Iterate through the PHI nodes
+   utils::Generator<PhiNode*> phis() const;
+   // Destroy all instructions from this basic block
+   void releaseAllReferences();
 
 private:
    Instruction* first_;

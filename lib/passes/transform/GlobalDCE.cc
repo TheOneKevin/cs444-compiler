@@ -25,7 +25,7 @@ private:
       for(auto p : CU.global_objects_kv()) {
          auto [name, go] = p;
          if(go->isExternalLinkage()) continue;
-         if(!go->users().empty()) continue;
+         if(!go->uses().empty()) continue;
          // Destroy the global object
          if(auto fn = dyn_cast<tir::Function>(go)) {
             for(auto bb : fn->body()) {

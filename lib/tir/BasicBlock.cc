@@ -85,6 +85,7 @@ void BasicBlock::erase(Instruction* instr) {
 }
 
 void BasicBlock::eraseFromParent() {
+   assert(uses().size() == 0 && "Basic block still in use");
    if(parent_ == nullptr) return;
    parent_->removeBlock(this);
 }
@@ -123,6 +124,23 @@ utils::Generator<BasicBlock*> BasicBlock::predecessors() const {
    }
    for(auto pred : visited) {
       co_yield pred;
+   }
+}
+
+utils::Generator<PhiNode*> BasicBlock::phis() const {
+   // Just iterate the top of the block
+   for(auto inst : *this) {
+      if(auto phi = dyn_cast<PhiNode>(inst)) {
+         co_yield phi;
+      } else {
+         break;
+      }
+   }
+}
+
+void BasicBlock::releaseAllReferences() {
+   for(auto* inst : *this) {
+      inst->destroy();
    }
 }
 
