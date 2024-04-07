@@ -11,23 +11,39 @@ using utils::PassManager;
 
 namespace {
 
-// Remove all instructions after the first terminator in a basic block
-bool eliminateAfterFirstTerminator(tir::BasicBlock& bb) {
+// Remove all dead instructions
+bool deleteDeadInstructions(tir::BasicBlock& bb) {
+   bool changed = false;
    auto firstTerminator = bb.begin();
-   for(auto it = bb.begin(); it != bb.end(); ++it) {
-      if(it->isTerminator()) {
-         firstTerminator = it;
+   for(auto it = bb.begin(); it != bb.end();) {
+      // Save the next instruction as we might delete the current one
+      auto instr = it;
+      ++it;
+      // All instructions after the first terminator is considered dead
+      if(instr->isTerminator()) {
+         firstTerminator = instr;
          break;
       }
+      // Stores are never dead
+      if(dyn_cast<tir::StoreInst>(*instr)) {
+         continue;
+      }
+      // Otherwise, dead iff no users
+      if(instr->users().begin() == instr->users().end()) {
+         instr->eraseFromParent();
+         changed = true;
+      }
    }
-   if(firstTerminator == --bb.end()) return false;
+   // Delete all instructions after the first terminator
+   if(firstTerminator == --bb.end()) return changed;
+   changed = true;
    auto instr = *(++firstTerminator);
    while(instr != nullptr) {
       auto next = instr->next();
       bb.erase(instr);
       instr = next;
    }
-   return true;
+   return changed;
 }
 
 // Merge two basic blocks if the second one has a single predecessor
@@ -72,7 +88,7 @@ bool mergeSinglePredSingleSucc(tir::BasicBlock& bb) {
  * +-------+   +----------+
  *
  */
- // FIXME: This one's broken because of PHI nodes
+// FIXME: This one's broken because of PHI nodes
 bool replaceSucessorInOneBranch(tir::BasicBlock& bb) {
    bool changed = false;
    auto term = dyn_cast<tir::BranchInst>(bb.terminator());
@@ -108,8 +124,9 @@ public:
       for(auto func : CU.functions()) {
          if(!func->hasBody()) continue;
          if(PM().Diag().Verbose()) {
-            PM().Diag().ReportDebug() <<
-               "*** Running SimplifyCFG on function: " << func->name() << " ***";
+            PM().Diag().ReportDebug()
+                  << "*** Running SimplifyCFG on function: " << func->name()
+                  << " ***";
          }
          // 1. Iteratively simplify the CFG
          bool changed = false;
@@ -146,7 +163,7 @@ private:
       if(visited.count(&bb)) return false;
       visited.insert(&bb);
       // 1. Run all the simplifications
-      changed |= eliminateAfterFirstTerminator(bb);
+      changed |= deleteDeadInstructions(bb);
       changed |= mergeSinglePredSingleSucc(bb);
       // changed |= replaceSucessorInOneBranch(bb);
       // 2. Grab the next basic block
