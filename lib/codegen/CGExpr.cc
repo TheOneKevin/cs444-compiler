@@ -425,9 +425,8 @@ T CGExprEvaluator::evalMemberAccess(ex::MemberAccess& op, T lhs, T field) const 
    }
    // Special case: array.length
    else if(decl == findArrayField(cg.nr)) {
-      auto arrTy = cast<StructType>(lhs.irType());
-      auto arrSzGep =
-            cg.builder.createGEPInstr(obj, arrTy, {Constant::CreateInt32(ctx, 0)});
+      auto arrSzGep = cg.builder.createGEPInstr(
+            obj, cg.arrayType(), {Constant::CreateInt32(ctx, 0)});
       auto arrSz = cg.builder.createLoadInstr(Type::getInt32Ty(ctx), arrSzGep);
       return T::R(aTy, arrSz);
    }
@@ -469,34 +468,39 @@ T CGExprEvaluator::evalNewObject(ex::ClassInstanceCreation& op, T object,
 
 T CGExprEvaluator::evalNewArray(ex::ArrayInstanceCreation& op, T type,
                                 T size) const {
+   // This is the AST type of the array elements
    auto aTy = op.resultType();
-   auto arrTy = cast<StructType>(cg.emitType(aTy));
-   auto elemTy = cg.emitType(type.astType());
-   auto arrLength = castIntegerType(nullptr, Type::getInt32Ty(ctx), size)
-                          .asRValue(cg.builder);
+   // This is the type of the array elements
+   auto T = cg.emitType(cast<ast::ArrayType>(type.astType())->getElementType());
+   // Get the number of elements in the array
+   auto N = castIntegerType(nullptr, Type::getInt32Ty(ctx), size)
+                  .asRValue(cg.builder);
+   // Size in bytes = N * sizeof(T)
    auto totalSz = cg.builder.createBinaryInstr(
          Instruction::BinOp::Mul,
-         arrLength,
-         Constant::CreateInt32(ctx, elemTy->getSizeInBits() / 8));
+         N,
+         Constant::CreateInt32(ctx, (T->getSizeInBits() + 1) / 8));
+   // T[] arr = new T[N * sizeof(T)];
    auto arrPtr = cg.builder.createCallInstr(cu.builtinMalloc(), {totalSz});
-   auto alloca = curFn.createAlloca(cg.emitType(op.resultType()));
-   cg.emitSetArrayPtr(alloca, arrPtr);
-   cg.emitSetArraySz(alloca, arrLength);
-   auto loadArr = cg.builder.createLoadInstr(arrTy, arrPtr);
-   cg.builder.createStoreInstr(loadArr, alloca);
-   totalSz->setName("arr.sz");
-   arrPtr->setName("arr.ptr");
-   alloca->setName("arr.alloca");
-   return T::L(aTy, arrTy, alloca);
+   // Array* arrStructPtr = (Array*) malloc(sizeof(Array))
+   auto arrStructPtr = cg.builder.createCallInstr(
+         cu.builtinMalloc(),
+         {Constant::CreateInt32(ctx, (cg.arrayType_->getSizeInBits() + 1) / 8)});
+   // arrStructPtr->ptr = arrPtr
+   cg.emitSetArrayPtr(arrStructPtr, arrPtr);
+   // arrStructPtr->sz = N
+   cg.emitSetArraySz(arrStructPtr, N);
+   // NOTE: We can just return an R-value without an alloca (LV) because we
+   // don't support ternary expressions, so no PHI nodes are needed either.
+   return T::R(aTy, arrStructPtr);
 }
 
 T CGExprEvaluator::evalArrayAccess(ex::ArrayAccess& op, T array, T index) const {
-   auto arrAlloca = array.asLValue();
-   auto elemAstTy = op.resultType();
-   auto arrTy = cast<StructType>(array.irType());
-   auto arrPtr = cg.emitGetArrayPtr(arrAlloca);
-   auto arrSz = cg.emitGetArraySz(arrAlloca);
+   auto arrStructPtr = array.asRValue(cg.builder);
+   auto arrPtr = cg.emitGetArrayPtr(arrStructPtr);
+   auto arrSz = cg.emitGetArraySz(arrStructPtr);
    auto idxVal = index.asRValue(cg.builder);
+   // Check for out-of-bounds access
    auto lengthValid =
          cg.builder.createCmpInstr(CmpInst::Predicate::LT, idxVal, arrSz);
    auto bb1 = cg.builder.createBasicBlock(&curFn);
@@ -507,7 +511,9 @@ T CGExprEvaluator::evalArrayAccess(ex::ArrayAccess& op, T array, T index) const 
    cg.builder.setInsertPoint(bb1);
    cg.builder.createCallInstr(cu.builtinException(), {});
    cg.builder.setInsertPoint(bb2);
-   auto elemPtr = cg.builder.createGEPInstr(arrPtr, arrTy, {idxVal});
+   // Build the array access itself
+   auto elemAstTy = op.resultType();
+   auto elemPtr = cg.builder.createGEPInstr(arrPtr, cg.arrayType(), {idxVal});
    return T::L(elemAstTy, cg.emitType(elemAstTy), elemPtr);
 }
 

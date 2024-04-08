@@ -13,7 +13,7 @@ using CG = CodeGenerator;
 CG::CodeGenerator(tir::Context& ctx, tir::CompilationUnit& cu,
                   semantic::NameResolver& nr)
       : ctx{ctx}, cu{cu}, nr{nr} {
-   arrayType = tir::StructType::get(ctx,
+   arrayType_ = tir::StructType::get(ctx,
                                     {// Length
                                      tir::Type::getInt32Ty(ctx),
                                      // Pointer
@@ -40,8 +40,6 @@ tir::Type* CG::emitType(ast::Type const* type) {
          default:
             std::unreachable();
       }
-   } else if(type->isArray()) {
-      return arrayType;
    }
    std::unreachable();
 }
@@ -66,7 +64,7 @@ void CG::run(ast::LinkingUnit const* lu) {
 tir::Value* CG::emitGetArraySz(tir::Value* ptr) {
    using namespace tir;
    auto zero = Constant::CreateInt32(ctx, 0);
-   auto gepSz = builder.createGEPInstr(ptr, arrayType, {zero});
+   auto gepSz = builder.createGEPInstr(ptr, arrayType_, {zero});
    gepSz->setName("arr.gep.sz");
    auto sz = builder.createLoadInstr(Type::getInt32Ty(ctx), gepSz);
    sz->setName("arr.sz");
@@ -76,7 +74,7 @@ tir::Value* CG::emitGetArraySz(tir::Value* ptr) {
 tir::Value* CG::emitGetArrayPtr(tir::Value* ptr) {
    using namespace tir;
    auto one = Constant::CreateInt32(ctx, 1);
-   auto gepPtr = builder.createGEPInstr(ptr, arrayType, {one});
+   auto gepPtr = builder.createGEPInstr(ptr, arrayType_, {one});
    gepPtr->setName("arr.gep.ptr");
    auto arrPtr = builder.createLoadInstr(Type::getPointerTy(ctx), gepPtr);
    arrPtr->setName("arr.ptr");
@@ -86,7 +84,7 @@ tir::Value* CG::emitGetArrayPtr(tir::Value* ptr) {
 void CG::emitSetArraySz(tir::Value* ptr, tir::Value* sz) {
    using namespace tir;
    auto zero = Constant::CreateInt32(ctx, 0);
-   auto gepSz = builder.createGEPInstr(ptr, arrayType, {zero});
+   auto gepSz = builder.createGEPInstr(ptr, arrayType_, {zero});
    gepSz->setName("arr.gep.sz");
    builder.createStoreInstr(sz, gepSz);
 }
@@ -94,7 +92,7 @@ void CG::emitSetArraySz(tir::Value* ptr, tir::Value* sz) {
 void CG::emitSetArrayPtr(tir::Value* ptr, tir::Value* arr) {
    using namespace tir;
    auto one = Constant::CreateInt32(ctx, 1);
-   auto gepPtr = builder.createGEPInstr(ptr, arrayType, {one});
+   auto gepPtr = builder.createGEPInstr(ptr, arrayType_, {one});
    gepPtr->setName("arr.gep.ptr");
    builder.createStoreInstr(arr, gepPtr);
 }

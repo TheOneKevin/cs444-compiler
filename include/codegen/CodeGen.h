@@ -8,6 +8,7 @@
 #include "tir/IRBuilder.h"
 #include "tir/Instructions.h"
 #include "tir/TIR.h"
+#include "tir/Type.h"
 
 namespace codegen {
 
@@ -17,11 +18,11 @@ class CGExprEvaluator;
  * @brief Returns if the AST type will be mapped to a pointer in IR or not.
  *
  * @param ty The AST type
- * @return true True for strings, null and references.
- * @return false False for arrays and primitive types.
+ * @return true True for strings, null, arrays and references.
+ * @return false False for primitive types.
  */
 static bool isAstTypeReference(ast::Type const* ty) {
-   return ty->isString() || ty->isNull() || ty->isReference();
+   return ty->isString() || ty->isNull() || ty->isReference() || ty->isArray();
 }
 
 class CodeGenerator {
@@ -34,8 +35,13 @@ public:
    CodeGenerator(CodeGenerator&&) = delete;
    CodeGenerator& operator=(CodeGenerator const&) = delete;
    CodeGenerator& operator=(CodeGenerator&&) = delete;
+   
+   // Emit the AST linking unit
    void run(ast::LinkingUnit const* lu);
+   // Emit the type corresponding to the AST type
    tir::Type* emitType(ast::Type const* type);
+   // Gets the array struct type used
+   tir::StructType* arrayType() const { return arrayType_; }
 
 private:
    void emitStmt(ast::Stmt const* stmt);
@@ -79,7 +85,7 @@ private:
    // Global AST Class -> IR Type
    std::unordered_map<ast::Decl const*, tir::Type*> typeMap{};
    // Array type (cache)
-   tir::StructType* arrayType{nullptr};
+   tir::StructType* arrayType_{nullptr};
    tir::IRBuilder builder{ctx};
    semantic::NameResolver& nr;
 };

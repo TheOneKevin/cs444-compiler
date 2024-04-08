@@ -1,6 +1,7 @@
 #include <sstream>
 #include <string_view>
 
+#include "ast/AstNode.h"
 #include "ast/Decl.h"
 #include "codegen/CodeGen.h"
 #include "codegen/Mangling.h"
@@ -70,12 +71,12 @@ void CodeGenerator::emitFunction(ast::MethodDecl const* decl) {
    builder.setInsertPoint(entry->begin());
    std::vector<tir::Value*> paramAllocas;
    for(auto* local : decl->decls()) {
-      auto* typedLocal = cast<ast::TypedDecl>(local);
-      auto* localTy = emitType(typedLocal->type());
-      auto* val = func->createAlloca(localTy);
+      auto* const typedLocal = cast<ast::VarDecl>(local);
+      auto* const localTy = emitType(typedLocal->type());
+      auto* const val = func->createAlloca(localTy);
       val->setName(typedLocal->name());
       valueMap[local] = cast<tir::AllocaInst>(val);
-      if(cast<ast::VarDecl>(local)->isArg()) {
+      if(typedLocal->isArg()) {
          paramAllocas.push_back(val);
       }
    }

@@ -55,7 +55,7 @@ std::ostream& Function::print(std::ostream& os) const {
    os << ")";
    if(hasBody()) {
       os << " {\n";
-      for(auto* bb : body()) {
+      for(auto* bb : reversePostOrder()) {
          bb->print(os) << "\n";
       }
       os << "}\n";

@@ -165,7 +165,7 @@ public:
    auto* parent() const { return parent_; }
    auto args() const {
       return std::views::transform(
-            children(), [](Value* val) { return static_cast<Argument*>(val); });
+            children(), [](auto* val) { return static_cast<Argument*>(val); });
    }
    auto numParams() const { return cast<FunctionType>(type())->numParams(); }
    auto getParamType(int index) const {

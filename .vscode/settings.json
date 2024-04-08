@@ -57,5 +57,6 @@
   "gitlens.codeLens.enabled": false,
   "todo-tree.highlights.useColourScheme": false,
   "todo-tree.regex.regexCaseSensitive": false,
-  "esbonio.sphinx.confDir": ""
+  "esbonio.sphinx.confDir": "",
+  "python.terminal.activateEnvironment": false
 }
