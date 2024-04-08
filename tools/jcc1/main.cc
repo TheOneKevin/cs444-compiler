@@ -80,6 +80,7 @@ int main(int argc, char** argv) {
    NewGlobalDCE(OptPM);
    NewMemToReg(OptPM);
    NewPrintCFG(OptPM);
+   NewAsmWriter(OptPM);
    // Add the pipeline option and print the pass names
    {
       std::ostringstream ss;
