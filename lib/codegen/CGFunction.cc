@@ -49,6 +49,8 @@ void CodeGenerator::emitFunctionDecl(ast::MethodDecl const* decl) {
       // FIXME(kevin): Better way to grab main function?
       if(decl->name() == "main") {
          func->setExternalLinkage();
+      } else if(decl->name() == "test") {
+         func->setExternalLinkage();
       }
    }
    gvMap[decl] = func;
