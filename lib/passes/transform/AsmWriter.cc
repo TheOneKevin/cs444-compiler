@@ -103,10 +103,31 @@ void AsmWriter::emitInstruction(tir::Instruction* instr) {
       }
    } else if(auto* ret = dyn_cast<tir::ReturnInst*>(instr)) {
       // 2. Emit the return instruction
+      auto ret = instr->getChild(0);
+
+      if (auto* retConstant = dyn_cast<tir::ConstantInt*>(ret)) {
+         outfile << "mov eax, " << retConstant->sextValue() << "\n";
+      } else {
+         outfile << "mov eax, [rsp - " << valueStackMap[ret] << "]\n";
+      }
    } else if(auto* store = dyn_cast<tir::StoreInst*>(instr)) {
       // 3. Emit the store instruction
+      auto ret = instr->getChild(0);
+
+      if (auto* retConstant = dyn_cast<tir::ConstantInt*>(ret)) {
+         outfile << "mov eax, " << retConstant->sextValue() << "\n";
+      } else {
+         outfile << "mov eax, [rsp - " << valueStackMap[ret] << "]\n";
+      }
    } else if(auto* load = dyn_cast<tir::LoadInst*>(instr)) {
       // 4. Emit the load instruction
+      auto ret = instr->getChild(0);
+
+      if (auto* retConstant = dyn_cast<tir::ConstantInt*>(ret)) {
+         outfile << "mov " << retConstant->sextValue() << ", eax\n";
+      } else {
+         outfile << "mov [rsp - " << valueStackMap[ret] << "], eax\n";
+      }
    } else if(auto* call = dyn_cast<tir::CallInst*>(instr)) {
       // 5. Emit the store instruction
    } else if(auto* binary = dyn_cast<tir::BinaryInst*>(instr)) {

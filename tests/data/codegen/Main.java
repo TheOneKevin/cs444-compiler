@@ -1,11 +1,10 @@
 public class Main {
     public Main() {}
     public static int main(String[] args) {
-        if (1 + 1 == 2) {
-
-        } else {
-
+        boolean a = 1 < 3;
+        if (a) {
+            return 1;
         }
-        return 1 + 2;
+        return 0;
     }
 }
