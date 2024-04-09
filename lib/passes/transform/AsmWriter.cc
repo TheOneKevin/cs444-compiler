@@ -43,10 +43,13 @@ private:
 REGISTER_PASS(AsmWriter);
 
 void AsmWriter::emitFunction(tir::Function* F) {
-   outfile << F->name() << ":\n";
-   // 1. Map all values to a stack slot
+   // 1. Emit label for the function
+   F->printName(outfile);
+   outfile << ":\n";
 
-   // 2. Emit the function prologue
+   // 2. Map all values to a stack slot
+
+   // 3. Emit the function prologue
    outfile << "push rbp\n";     //  Save the old base pointer
    outfile << "mov rbp, rsp\n"; // Set the new base pointer
    int stackOffset = 0;
@@ -57,12 +60,12 @@ void AsmWriter::emitFunction(tir::Function* F) {
    }
    outfile << "sub " << stackOffset * 8 << ", rsp\n";
 
-   // 3. Emit the instructions in each basic block
+   // 4. Emit the instructions in each basic block
    for(auto block : F->body()) {
       emitBasicBlock(block);
    }
 
-   // 4. Emit the function epilogue
+   // 5. Emit the function epilogue
    outfile << "leave"; // This resets the stack pointer to the base pointer, and
                        // pops the base pointer
    outfile << "ret";   // Return to the caller
@@ -70,7 +73,8 @@ void AsmWriter::emitFunction(tir::Function* F) {
 
 void AsmWriter::emitBasicBlock(tir::BasicBlock* BB) {
    // 1. Emit the label for the basic block
-   outfile << BB->name() << ":\n";
+   BB->printName(outfile);
+   outfile << ":\n";
 
    // 2. Emit the instructions in the basic block
    for(auto instr = BB->begin(); instr != BB->end(); ++instr) {
@@ -104,12 +108,26 @@ void AsmWriter::emitInstruction(tir::Instruction* instr) {
       // 10. Emit the element pointer instruction
    } else if(auto* phi = dyn_cast<tir::PhiNode*>(instr)) {
       // 11. Emit the phi instruction
+   } else {
+      assert(false && "Unknown instruction");
    }
 }
 
 void AsmWriter::emitBinaryInstruction(tir::BinaryInst* instr) {
    switch (instr->binop()) {
       case tir::BinaryInst::BinOp::Add: {
+         auto lhsValue = instr->getChild(0);
+         auto rhsValue = instr->getChild(1);
+
+         if (lhsValue->type()->isPointerType() && rhsValue->type()->isPointerType()) {
+         } else if (lhsValue->type()->isPointerType()) {
+         } else if (rhsValue->type()->isPointerType()) {
+         } else {
+            outfile << "mov " << lhsValue << ", eax\n";
+            outfile << "add " << rhsValue << ", eax\n";
+            outfile << "mov eax, [rsp - " << valueStackMap[instr] << "]\n";
+         }
+
          break;
       }
       case tir::BinaryInst::BinOp::Sub: {

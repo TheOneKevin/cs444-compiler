@@ -30,6 +30,13 @@ public:
    tir::Context& ctx() { return ctx_; }
    Type* type() const { return type_; }
    std::string_view name() const { return name_.value(); }
+   std::string_view unique_name() const {
+      std::string ret = "%";
+      if(name_) ret += name_.value() + ".";
+      ret += valueID_;
+      std::string_view stringViewRet = ret;
+      return stringViewRet;
+   }
    auto nameOpt() const { return name_.value(); }
    void setName(std::string_view name) {
       name_ = std::pmr::string{name, ctx_.alloc()};
