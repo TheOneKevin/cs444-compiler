@@ -85,6 +85,22 @@ void AsmWriter::emitBasicBlock(tir::BasicBlock* BB) {
 void AsmWriter::emitInstruction(tir::Instruction* instr) {
    if(auto* branch = dyn_cast<tir::BranchInst*>(instr)) {
       // 1. Emit the branch instruction
+      auto cond = instr->getChild(0);
+      auto dest1 = instr->getChild(1);
+      auto dest2 = instr->getChild(2);
+
+      if (auto* condConstant = dyn_cast<tir::ConstantInt*>(cond)) {
+         if (condConstant->sextValue() == 1) {
+            outfile << "jmp " << dest1->getName() << "\n";
+         } else {
+            outfile << "jmp " << dest2->getName() << "\n";
+         }
+      } else {
+         outfile << "mov eax, [rsp - " << valueStackMap[cond] << "]\n";
+         outfile << "cmp eax, 1\n";
+         outfile << "je " << dest1->getName() << "\n";
+         outfile << "jmp " << dest2->getName() << "\n";
+      }
    } else if(auto* ret = dyn_cast<tir::ReturnInst*>(instr)) {
       // 2. Emit the return instruction
    } else if(auto* store = dyn_cast<tir::StoreInst*>(instr)) {
@@ -119,13 +135,25 @@ void AsmWriter::emitBinaryInstruction(tir::BinaryInst* instr) {
          auto lhsValue = instr->getChild(0);
          auto rhsValue = instr->getChild(1);
 
-         if (lhsValue->type()->isPointerType() && rhsValue->type()->isPointerType()) {
-         } else if (lhsValue->type()->isPointerType()) {
-         } else if (rhsValue->type()->isPointerType()) {
+         auto lhsConstant = dyn_cast<tir::ConstantInt*>(lhsValue);
+         auto rhsConstant = dyn_cast<tir::ConstantInt*>(rhsValue);
+
+         if (!lhsConstant && !rhsConstant) {
+            outfile << "mov eax, [rsp - " << valueStackMap[lhsValue] << "]\n";
+            outfile << "add eax, [rsp - " << valueStackMap[rhsValue] << "]\n";
+            outfile << "mov [rsp - " << valueStackMap[instr] << "], eax\n";
+         } else if (!lhsConstant && rhsConstant) {
+            outfile << "mov eax, [rsp - " << valueStackMap[lhsValue] << "]\n";
+            outfile << "add eax, " << rhsConstant->sextValue() << "\n";
+            outfile << "mov [rsp - " << valueStackMap[instr] << "], eax\n";
+         } else if (lhsConstant && !rhsConstant) {
+            outfile << "mov eax, " << lhsConstant->sextValue() << "\n";
+            outfile << "add eax, [rsp - " << valueStackMap[rhsValue] << "]\n";
+            outfile << "mov [rsp - " << valueStackMap[instr] << "], eax\n";
          } else {
-            outfile << "mov " << lhsValue << ", eax\n";
-            outfile << "add " << rhsValue << ", eax\n";
-            outfile << "mov eax, [rsp - " << valueStackMap[instr] << "]\n";
+            outfile << "mov eax, " << lhsConstant->sextValue() << "\n";
+            outfile << "add eax, " << rhsConstant->sextValue() << "\n";
+            outfile << "mov [rsp - " << valueStackMap[instr] << "], eax\n";
          }
 
          break;
