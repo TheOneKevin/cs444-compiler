@@ -1,3 +1,4 @@
+#include <string_view>
 #include <unordered_map>
 
 #include "../IRContextPass.h"
@@ -30,6 +31,7 @@ private:
    void emitBinaryInstruction(tir::BinaryInst* instr);
    void emitPredicateInstruction(tir::CmpInst* instr);
    void emitICastInstruction(tir::ICastInst* instr);
+   void emitCallInstruction(tir::CallInst* instr);
 
    void computeDependencies() override {
       ComputeDependency(GetPass<IRContextPass>());
@@ -47,18 +49,36 @@ void AsmWriter::emitFunction(tir::Function* F) {
    F->printName(outfile);
    outfile << ":\n";
 
+   if(F->name() == "_JF4Main4testEiii") {
+      outfile << "global _start" << std::endl;
+      outfile << "_start:" << std::endl;
+   }
    // 2. Map all values to a stack slot
-
+   valueStackMap.clear();
+   int offset = 0;
+   for(auto block : F->body()) {
+      for(auto instr : *block) {
+         if(dynamic_cast<tir::StoreInst*>(instr)) {
+            continue;
+         }
+         if(valueStackMap.find(instr) == valueStackMap.end()) {
+            offset += 8;
+            valueStackMap[instr] = offset;
+         }
+      }
+   }
    // 3. Emit the function prologue
-   outfile << "push rbp\n";     //  Save the old base pointer
-   outfile << "mov rbp, rsp\n"; // Set the new base pointer
+   outfile << "push rbp" << std::endl;     //  Save the old base pointer
+   outfile << "mov rbp, rsp" << std::endl; // Set the new base pointer
    int stackOffset = 0;
    for(auto instr : *F->getEntryBlock()) {
       if(auto* alloca = dynamic_cast<tir::AllocaInst*>(instr)) {
+         assert(alloca->allocatedType()->getSizeInBits() <= 64);
          stackOffset++;
       }
    }
-   outfile << "sub " << stackOffset * 8 << ", rsp\n";
+   if(stackOffset > 0)
+      outfile << "sub rsp, " << stackOffset * 8 << std::endl; // Allocate space for local variables
 
    // 4. Emit the instructions in each basic block
    for(auto block : F->body()) {
@@ -66,12 +86,13 @@ void AsmWriter::emitFunction(tir::Function* F) {
    }
 
    // 5. Emit the function epilogue
-   outfile << "leave"; // This resets the stack pointer to the base pointer, and
-                       // pops the base pointer
-   outfile << "ret";   // Return to the caller
+   outfile << "add rsp " << stackOffset * 8 << std::endl; // Deallocate space for local variables
+   outfile << "pop rbp" << std::endl;                      // Restore the old base pointer
+   outfile << "ret" << std::endl << std::endl; // Return to the caller
 }
 
 void AsmWriter::emitBasicBlock(tir::BasicBlock* BB) {
+   outfile << std::endl;
    // 1. Emit the label for the basic block
    BB->printName(outfile);
    outfile << ":\n";
@@ -92,7 +113,7 @@ void AsmWriter::emitInstruction(tir::Instruction* instr) {
    } else if(auto* load = dyn_cast<tir::LoadInst*>(instr)) {
       // 4. Emit the load instruction
    } else if(auto* call = dyn_cast<tir::CallInst*>(instr)) {
-      // 5. Emit the store instruction
+      emitCallInstruction(call);
    } else if(auto* binary = dyn_cast<tir::BinaryInst*>(instr)) {
       // 6. Emit the binary instruction
       emitBinaryInstruction(binary);
@@ -114,14 +135,15 @@ void AsmWriter::emitInstruction(tir::Instruction* instr) {
 }
 
 void AsmWriter::emitBinaryInstruction(tir::BinaryInst* instr) {
-   switch (instr->binop()) {
+   switch(instr->binop()) {
       case tir::BinaryInst::BinOp::Add: {
          auto lhsValue = instr->getChild(0);
          auto rhsValue = instr->getChild(1);
 
-         if (lhsValue->type()->isPointerType() && rhsValue->type()->isPointerType()) {
-         } else if (lhsValue->type()->isPointerType()) {
-         } else if (rhsValue->type()->isPointerType()) {
+         if(lhsValue->type()->isPointerType() &&
+            rhsValue->type()->isPointerType()) {
+         } else if(lhsValue->type()->isPointerType()) {
+         } else if(rhsValue->type()->isPointerType()) {
          } else {
             outfile << "mov " << lhsValue << ", eax\n";
             outfile << "add " << rhsValue << ", eax\n";
@@ -161,7 +183,7 @@ void AsmWriter::emitBinaryInstruction(tir::BinaryInst* instr) {
 }
 
 void AsmWriter::emitPredicateInstruction(tir::CmpInst* instr) {
-   switch (instr->predicate()) {
+   switch(instr->predicate()) {
       case tir::CmpInst::Predicate::EQ: {
          break;
       }
@@ -187,7 +209,7 @@ void AsmWriter::emitPredicateInstruction(tir::CmpInst* instr) {
 }
 
 void AsmWriter::emitICastInstruction(tir::ICastInst* instr) {
-   switch (instr->castop()) {
+   switch(instr->castop()) {
       case tir::ICastInst::CastOp::Trunc: {
          break;
       }
@@ -201,4 +223,21 @@ void AsmWriter::emitICastInstruction(tir::ICastInst* instr) {
          assert(false && "Unknown cast instruction");
       }
    }
+}
+
+void AsmWriter::emitCallInstruction(tir::CallInst* instr) {
+   string_view argRegs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+   // move the arguments into the correct registers
+   for(size_t i = 1; i < instr->children().size(); i++) {
+      outfile << "mov qword ptr [rbp - " 
+              << valueStackMap[instr->getChild(i)] << "], " << argRegs[i]
+              << std::endl;
+   }
+
+   // call the function
+   outfile << "call " << instr->getChild(0)->name() << std::endl;
+
+   // move the return value into the correct register
+   outfile << "mov qword ptr [rbp - " << valueStackMap[instr] << "]"
+           << ", rax" << std::endl;
 }
