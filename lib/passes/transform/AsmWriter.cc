@@ -49,7 +49,7 @@ void AsmWriter::emitFunction(tir::Function* F) {
    F->printName(outfile);
    outfile << ":\n";
 
-   if(F->name() == "_JF4Main4testEiii") {
+   if(F->name() == "_JF4Main4testEi") {
       outfile << "global _start" << std::endl;
       outfile << "_start:" << std::endl;
    }
@@ -61,6 +61,12 @@ void AsmWriter::emitFunction(tir::Function* F) {
          if(dynamic_cast<tir::StoreInst*>(instr)) {
             continue;
          }
+         if(dynamic_cast<tir::ReturnInst*>(instr)) {
+            continue;
+         }
+         if(dynamic_cast<tir::BranchInst*>(instr)) {
+            continue;
+         }
          if(valueStackMap.find(instr) == valueStackMap.end()) {
             offset += 8;
             valueStackMap[instr] = offset;
@@ -70,15 +76,8 @@ void AsmWriter::emitFunction(tir::Function* F) {
    // 3. Emit the function prologue
    outfile << "push rbp" << std::endl;     //  Save the old base pointer
    outfile << "mov rbp, rsp" << std::endl; // Set the new base pointer
-   int stackOffset = 0;
-   for(auto instr : *F->getEntryBlock()) {
-      if(auto* alloca = dynamic_cast<tir::AllocaInst*>(instr)) {
-         assert(alloca->allocatedType()->getSizeInBits() <= 64);
-         stackOffset++;
-      }
-   }
-   if(stackOffset > 0)
-      outfile << "sub rsp, " << stackOffset * 8 << std::endl; // Allocate space for local variables
+   if(offset > 0)
+      outfile << "sub rsp, " << offset << std::endl; // Allocate space for local variables
 
    // 4. Emit the instructions in each basic block
    for(auto block : F->body()) {
@@ -86,7 +85,7 @@ void AsmWriter::emitFunction(tir::Function* F) {
    }
 
    // 5. Emit the function epilogue
-   outfile << "add rsp " << stackOffset * 8 << std::endl; // Deallocate space for local variables
+   outfile << "add rsp " << offset << std::endl; // Deallocate space for local variables
    outfile << "pop rbp" << std::endl;                      // Restore the old base pointer
    outfile << "ret" << std::endl << std::endl; // Return to the caller
 }
@@ -105,25 +104,31 @@ void AsmWriter::emitBasicBlock(tir::BasicBlock* BB) {
 
 void AsmWriter::emitInstruction(tir::Instruction* instr) {
    if(auto* branch = dyn_cast<tir::BranchInst*>(instr)) {
-      // 1. Emit the branch instruction
-      auto cond = instr->getChild(0);
-      auto dest1 = instr->getChild(1);
-      auto dest2 = instr->getChild(2);
+      // // 1. Emit the branch instruction
+      // auto cond = instr->getChild(0);
+      // auto dest1 = instr->getChild(1);
+      // auto dest2 = instr->getChild(2);
 
-      if (auto* condConstant = dyn_cast<tir::ConstantInt*>(cond)) {
-         if (condConstant->sextValue() == 1) {
-            outfile << "jmp " << dest1->getName() << "\n";
-         } else {
-            outfile << "jmp " << dest2->getName() << "\n";
-         }
-      } else {
-         outfile << "mov eax, [rsp - " << valueStackMap[cond] << "]\n";
-         outfile << "cmp eax, 1\n";
-         outfile << "je " << dest1->getName() << "\n";
-         outfile << "jmp " << dest2->getName() << "\n";
-      }
+      // if (auto* condConstant = dyn_cast<tir::ConstantInt*>(cond)) {
+      //    if (condConstant->sextValue() == 1) {
+      //       outfile << "jmp " << dest1->getName() << "\n";
+      //    } else {
+      //       outfile << "jmp " << dest2->getName() << "\n";
+      //    }
+      // } else {
+      //    outfile << "mov eax, [rsp - " << valueStackMap[cond] << "]\n";
+      //    outfile << "cmp eax, 1\n";
+      //    outfile << "je " << dest1->getName() << "\n";
+      //    outfile << "jmp " << dest2->getName() << "\n";
+      // }
    } else if(auto* ret = dyn_cast<tir::ReturnInst*>(instr)) {
-      // 2. Emit the return instruction
+      if (ret->isReturnVoid()) return;
+      auto retValue = instr->getChild(0);
+      if (auto* retConstant = dyn_cast<tir::ConstantInt*>(retValue)) {
+         outfile << "mov rax, " << retConstant->sextValue() << std::endl;
+      } else {
+         outfile << "mov rax, [rbp - " << valueStackMap[retValue] << "]" << std::endl;
+      }
    } else if(auto* store = dyn_cast<tir::StoreInst*>(instr)) {
       // 3. Emit the store instruction
    } else if(auto* load = dyn_cast<tir::LoadInst*>(instr)) {
@@ -256,9 +261,15 @@ void AsmWriter::emitCallInstruction(tir::CallInst* instr) {
    string_view argRegs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
    // move the arguments into the correct registers
    for(size_t i = 1; i < instr->children().size(); i++) {
-      outfile << "mov qword ptr [rbp - " 
+      if (auto constant = dyn_cast<tir::ConstantInt*>(instr->getChild(i))) {
+         outfile << "mov " << argRegs[i] << ", " 
+              << constant->sextValue() << std::endl;
+      } else {
+         outfile << "mov qword ptr [rbp - " 
               << valueStackMap[instr->getChild(i)] << "], " << argRegs[i]
               << std::endl;
+      }
+      
    }
 
    // call the function
