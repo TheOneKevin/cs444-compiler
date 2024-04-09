@@ -17,6 +17,7 @@ public:
    AsmWriter(PassManager& PM) noexcept : Pass(PM), outfile("output/output.s") {}
    void Run() override {
       tir::CompilationUnit& CU = GetPass<IRContextPass>().CU();
+      outfile << "section .text" << std::endl << std::endl ;
       for(auto* F : CU.functions()) {
          if(F->hasBody()) emitFunction(F);
       }
@@ -116,8 +117,8 @@ void AsmWriter::emitInstruction(tir::Instruction* instr) {
       //       outfile << "jmp " << dest2->getName() << "\n";
       //    }
       // } else {
-      //    outfile << "mov eax, [rsp - " << valueStackMap[cond] << "]\n";
-      //    outfile << "cmp eax, 1\n";
+      //    outfile << "mov rax, [rsp - " << valueStackMap[cond] << "]\n";
+      //    outfile << "cmp rax, 1\n";
       //    outfile << "je " << dest1->getName() << "\n";
       //    outfile << "jmp " << dest2->getName() << "\n";
       // }
@@ -129,33 +130,28 @@ void AsmWriter::emitInstruction(tir::Instruction* instr) {
       } else {
          outfile << "mov rax, [rbp - " << valueStackMap[retValue] << "]" << std::endl;
       }
-   } else if(auto* ret = dyn_cast<tir::ReturnInst*>(instr)) {
-      // 2. Emit the return instruction
-      auto ret = instr->getChild(0);
-
-      if (auto* retConstant = dyn_cast<tir::ConstantInt*>(ret)) {
-         outfile << "mov eax, " << retConstant->sextValue() << "\n";
-      } else {
-         outfile << "mov eax, [rsp - " << valueStackMap[ret] << "]\n";
-      }
    } else if(auto* store = dyn_cast<tir::StoreInst*>(instr)) {
       // 3. Emit the store instruction
-      auto ret = instr->getChild(0);
+      auto val = instr->getChild(0);
+      auto ptr = instr->getChild(1);
 
-      if (auto* retConstant = dyn_cast<tir::ConstantInt*>(ret)) {
-         outfile << "mov eax, " << retConstant->sextValue() << "\n";
+      if (auto* valConstant = dyn_cast<tir::ConstantInt*>(val)) {
+         outfile << "mov rax, " << valConstant->sextValue() << "\n";
       } else {
-         outfile << "mov eax, [rsp - " << valueStackMap[ret] << "]\n";
+         outfile << "mov rax, [rbp - " << valueStackMap[val] << "]\n";
       }
+
+      outfile << "mov [rbp - " << valueStackMap[ptr] << "], rax\n";
    } else if(auto* load = dyn_cast<tir::LoadInst*>(instr)) {
       // 4. Emit the load instruction
-      auto ret = instr->getChild(0);
+      auto val = instr->getChild(0);
 
-      if (auto* retConstant = dyn_cast<tir::ConstantInt*>(ret)) {
-         outfile << "mov " << retConstant->sextValue() << ", eax\n";
+      if (auto* valConstant = dyn_cast<tir::ConstantInt*>(val)) {
+         outfile << "mov rax, " << valConstant->sextValue() << "\n";
       } else {
-         outfile << "mov [rsp - " << valueStackMap[ret] << "], eax\n";
+         outfile << "mov rax, [rbp - " << valueStackMap[val] << "]\n";
       }
+      outfile << "mov [rbp - " << valueStackMap[instr] << "], rax\n";
    } else if(auto* call = dyn_cast<tir::CallInst*>(instr)) {
       emitCallInstruction(call);
    } else if(auto* binary = dyn_cast<tir::BinaryInst*>(instr)) {
@@ -188,21 +184,21 @@ void AsmWriter::emitBinaryInstruction(tir::BinaryInst* instr) {
          auto rhsConstant = dyn_cast<tir::ConstantInt*>(rhsValue);
 
          if (!lhsConstant && !rhsConstant) {
-            outfile << "mov eax, [rsp - " << valueStackMap[lhsValue] << "]\n";
-            outfile << "add eax, [rsp - " << valueStackMap[rhsValue] << "]\n";
-            outfile << "mov [rsp - " << valueStackMap[instr] << "], eax\n";
+            outfile << "mov rax, [rbp - " << valueStackMap[lhsValue] << "]\n";
+            outfile << "add rax, [rbp - " << valueStackMap[rhsValue] << "]\n";
+            outfile << "mov [rbp - " << valueStackMap[instr] << "], rax\n";
          } else if (!lhsConstant && rhsConstant) {
-            outfile << "mov eax, [rsp - " << valueStackMap[lhsValue] << "]\n";
-            outfile << "add eax, " << rhsConstant->sextValue() << "\n";
-            outfile << "mov [rsp - " << valueStackMap[instr] << "], eax\n";
+            outfile << "mov rax, [rbp - " << valueStackMap[lhsValue] << "]\n";
+            outfile << "add rax, " << rhsConstant->sextValue() << "\n";
+            outfile << "mov [rbp - " << valueStackMap[instr] << "], rax\n";
          } else if (lhsConstant && !rhsConstant) {
-            outfile << "mov eax, " << lhsConstant->sextValue() << "\n";
-            outfile << "add eax, [rsp - " << valueStackMap[rhsValue] << "]\n";
-            outfile << "mov [rsp - " << valueStackMap[instr] << "], eax\n";
+            outfile << "mov rax, " << lhsConstant->sextValue() << "\n";
+            outfile << "add rax, [rbp - " << valueStackMap[rhsValue] << "]\n";
+            outfile << "mov [rbp - " << valueStackMap[instr] << "], rax\n";
          } else {
-            outfile << "mov eax, " << lhsConstant->sextValue() << "\n";
-            outfile << "add eax, " << rhsConstant->sextValue() << "\n";
-            outfile << "mov [rsp - " << valueStackMap[instr] << "], eax\n";
+            outfile << "mov rax, " << lhsConstant->sextValue() << "\n";
+            outfile << "add rax, " << rhsConstant->sextValue() << "\n";
+            outfile << "mov [rbp - " << valueStackMap[instr] << "], rax\n";
          }
 
          break;
