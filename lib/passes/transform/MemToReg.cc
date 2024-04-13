@@ -2,7 +2,7 @@
 #include <stack>
 #include <unordered_set>
 
-#include "../IRContextPass.h"
+#include "passes/IRContextPass.h"
 #include "diagnostics/Diagnostics.h"
 #include "tir/BasicBlock.h"
 #include "tir/Constant.h"

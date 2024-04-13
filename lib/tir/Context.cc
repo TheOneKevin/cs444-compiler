@@ -12,7 +12,8 @@ std::ostream& operator<<(std::ostream& os, const Value& value) {
    return value.print(os);
 }
 
-Context::Context(BumpAllocator& alloc) : alloc_{alloc}, pimpl_{nullptr} {
+Context::Context(BumpAllocator& alloc, TargetInfo& TI)
+      : alloc_{alloc}, TI_{TI}, pimpl_{nullptr} {
    void* buf1 = alloc.allocate_bytes(sizeof(OpaquePointerType),
                                      alignof(OpaquePointerType));
    auto* pointerType = new(buf1) OpaquePointerType{this};

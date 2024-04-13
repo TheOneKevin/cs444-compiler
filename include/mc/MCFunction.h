@@ -1,20 +1,51 @@
 #pragma once
 
+#include "mc/InstSelectNode.h"
+#include "tir/Context.h"
 #include "utils/BumpAllocator.h"
-#include "mc/InstSelectDAG.h"
-#include <vector>
+#include "utils/DotPrinter.h"
 
 namespace mc {
 
-class MCFunction {
+class ISelDAGBuilder;
+
+class MCFunction final {
+   friend class ISelDAGBuilder;
+
 public:
-   MCFunction(BumpAllocator& alloc) : alloc_{alloc} {}
-   BumpAllocator& alloc() { return alloc_; }
-   int allocVirtReg() { return highestVregIdx_++; }
+   std::ostream& printDot(std::ostream& os) const {
+      utils::DotPrinter dp{os};
+      std::unordered_set<InstSelectNode const*> visited;
+      dp.startGraph();
+      dp.print("compound=true;");
+      // First, print all the nodes and connections
+      for(auto* graph : graphs_) dp.id(graph);
+      for(auto* graph : graphs_) {
+         dp.startSubgraph(dp.getId(graph));
+         graph->printDotNode(dp, visited);
+         dp.endSubgraph();
+      }
+      // Next. print the edges that cross the subgraphs
+      for(auto* graph : graphs_) {
+         for(auto* pred : graph->users()) {
+            // FIXME(kevin): This seems like a bad bug, why does this occur?
+            if(dp.getId(pred) == -1) continue;
+            auto from = dp.getId(pred);
+            auto to = dp.getId(graph);
+            dp.printConnection(from, to, {"color", "blue", "style", "dashed"});
+         }
+      }
+      dp.endGraph();
+      return os;
+   }
 
 private:
-   BumpAllocator& alloc_;
-   int highestVregIdx_ = 0;
+   MCFunction(BumpAllocator& alloc, tir::TargetInfo const& TI)
+         : TI_{TI}, graphs_{alloc} {}
+
+private:
+   tir::TargetInfo const& TI_;
+   std::pmr::vector<InstSelectNode*> graphs_;
 };
 
 } // namespace mc

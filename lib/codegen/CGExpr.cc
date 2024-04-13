@@ -513,8 +513,10 @@ T CGExprEvaluator::evalArrayAccess(ex::ArrayAccess& op, T array, T index) const 
    cg.builder.setInsertPoint(bb2);
    // Build the array access itself
    auto elemAstTy = op.resultType();
-   auto elemPtr = cg.builder.createGEPInstr(arrPtr, cg.arrayType(), {idxVal});
-   return T::L(elemAstTy, cg.emitType(elemAstTy), elemPtr);
+   auto elemTy = cg.emitType(elemAstTy);
+   auto elemPtr = cg.builder.createGEPInstr(
+         arrPtr, ArrayType::get(ctx, elemTy, 0), {idxVal});
+   return T::L(elemAstTy, elemTy, elemPtr);
 }
 
 T CGExprEvaluator::evalCast(ex::Cast& op, T type, T value) const {

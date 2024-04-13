@@ -1,4 +1,4 @@
-#include "../IRContextPass.h"
+#include "passes/IRContextPass.h"
 #include "tir/Constant.h"
 #include "utils/PassManager.h"
 
@@ -20,7 +20,7 @@ public:
       number++;
    }
    string_view Name() const override { return "printcfg"; }
-   string_view Desc() const override { return "Dump CFG DOT per Function"; }
+   string_view Desc() const override { return "Dump CFG DOT (per function)"; }
 
 private:
    void computeDependencies() override {

@@ -29,18 +29,6 @@ protected:
                              const T index) const = 0;
    virtual T evalCast(exprnode::Cast& op, const T type, const T value) const = 0;
 
-   /**
-    * @brief Gets the location of the argument at the given index.
-    *
-    * @param arg_index The index of the argument.
-    * @return SourceLocation
-    */
-   SourceRange argLocation(int arg_index) {
-      // FIXME(kevin): Implement this
-      (void)arg_index;
-      return SourceRange{};
-   }
-
 public:
    /**
     * @brief Evaluates the given expression.

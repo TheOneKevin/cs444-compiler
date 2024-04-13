@@ -171,7 +171,7 @@ public:
       return insert(ICastInst::Create(ctx_, op, val, destTy));
    }
 
-   Instruction* createGEPInstr(Value* ptr, StructType* t, utils::range_ref<Value*> indices) {
+   Instruction* createGEPInstr(Value* ptr, Type* t, utils::range_ref<Value*> indices) {
       return insert(GetElementPtrInst::Create(ctx_, ptr, t, indices));
    }
 

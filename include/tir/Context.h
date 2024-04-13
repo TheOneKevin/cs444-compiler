@@ -11,6 +11,14 @@ class ArrayType;
 class IntegerType;
 class StructType;
 
+class TargetInfo {
+public:
+   /// @brief Returns the size of the stack alignment in bytes
+   virtual int getStackAlignment() const = 0;
+   /// @brief Returns the size of the pointer in bits
+   virtual int getPointerSizeInBits() const = 0;
+};
+
 struct ContextPImpl {
 public:
    ContextPImpl(BumpAllocator& alloc, Type* const pointerType,
@@ -38,7 +46,7 @@ public:
 
 class Context {
 public:
-   Context(BumpAllocator& alloc);
+   Context(BumpAllocator& alloc, TargetInfo& TI);
    Context(const Context&) = delete;
    Context(Context&&) = delete;
    Context& operator=(const Context&) = delete;
@@ -48,9 +56,11 @@ public:
    ContextPImpl& pimpl() { return *pimpl_; }
    ContextPImpl const& pimpl() const { return *pimpl_; }
    unsigned getNextValueID() { return value_counter++; }
+   auto const& TI() const { return TI_; }
 
 private:
    BumpAllocator& alloc_;
+   TargetInfo& TI_;
    ContextPImpl* pimpl_;
    unsigned value_counter = 0;
 };

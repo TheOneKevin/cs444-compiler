@@ -120,6 +120,12 @@ std::ostream& CallInst::print(std::ostream& os) const {
 
 Function* CallInst::getCallee() const { return cast<Function>(getChild(0)); }
 
+utils::Generator<Value*> CallInst::args() const {
+   for(unsigned i = 1; i < numChildren(); ++i) {
+      co_yield getChild(i);
+   }
+}
+
 bool CallInst::isTerminator() const { return getCallee()->isNoReturn(); }
 
 /* ===--------------------------------------------------------------------=== */
@@ -212,10 +218,9 @@ std::ostream& ICastInst::print(std::ostream& os) const {
 // GetElementPtrInst implementation
 /* ===--------------------------------------------------------------------=== */
 
-GetElementPtrInst::GetElementPtrInst(Context& ctx, Value* ptr,
-                                     StructType* structTy,
+GetElementPtrInst::GetElementPtrInst(Context& ctx, Value* ptr, Type* ty,
                                      utils::range_ref<Value*> indices)
-      : Instruction{ctx, Type::getPointerTy(ctx), structTy} {
+      : Instruction{ctx, Type::getPointerTy(ctx), ty} {
    addChild(ptr);
    indices.for_each([this](auto* idx) { addChild(idx); });
    static_assert(sizeof(GetElementPtrInst) == sizeof(Instruction));
@@ -223,7 +228,7 @@ GetElementPtrInst::GetElementPtrInst(Context& ctx, Value* ptr,
 
 std::ostream& GetElementPtrInst::print(std::ostream& os) const {
    printName(os) << " = ";
-   os << "getelementptr " << *getStructType() << ", ";
+   os << "getelementptr " << *getContainedType() << ", ";
    printNameOrConst(os, getChild(0));
    for(unsigned i = 1; i < numChildren(); ++i) {
       os << ", ";
@@ -274,6 +279,12 @@ void PhiNode::replaceOrAddOperand(BasicBlock* pred, Value* val) {
    // Otherwise, add the new value and predecessor
    addChild(val);
    addChild(pred);
+}
+
+utils::Generator<PhiNode::IncomingValue> PhiNode::incomingValues() const {
+   for(unsigned i = 0; i < numChildren(); i += 2) {
+      co_yield {getChild(i), cast<BasicBlock>(getChild(i + 1))};
+   }
 }
 
 } // namespace tir

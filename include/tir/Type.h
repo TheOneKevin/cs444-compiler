@@ -65,6 +65,10 @@ protected:
     * @brief Gets the array of child types associated with this type.
     */
    ChildTypeArray getChildTypes() const { return subtypes_; }
+   /**
+    * @brief Gets the context in which this type is uniqued.
+    */
+   Context const& ctx() const { return *ctx_; }
 
 private:
    Context const* ctx_ = nullptr;
@@ -83,8 +87,9 @@ private:
    OpaquePointerType(Context* ctx) : Type{ctx} {}
 
 public:
-   // FIXME(kevin): Pointer size should depend on architecture...
-   uint32_t getSizeInBits() const override { return 64; }
+   uint32_t getSizeInBits() const override {
+      return ctx().TI().getPointerSizeInBits();
+   }
 };
 
 /**
@@ -139,8 +144,7 @@ public:
    static FunctionType* get(Context& ctx, Type* returnTy,
                             utils::range_ref<Type*> types) {
       // Grab the array size
-      uint32_t size = 1;
-      types.for_each([&](Type*) { size++; });
+      uint32_t size = 1 + types.size();
       // First, search ctx for existing FunctionType with types.
       for(auto* type : ctx.pimpl().functionTypes) {
          auto data = type->getChildTypes();
@@ -160,7 +164,7 @@ public:
       // Types are stored after the FunctionType object in memory.
       void* buf2 =
             ctx.alloc().allocate_bytes(size * sizeof(Type*), alignof(Type*));
-      auto* typesBuf = reinterpret_cast<Type**>(buf2);
+      auto* typesBuf = static_cast<Type**>(buf2);
       // Copy the types into the buffer.
       {
          uint32_t i = 1;
@@ -209,7 +213,7 @@ public:
       void* buf =
             ctx.alloc().allocate_bytes(sizeof(ArrayType), alignof(ArrayType));
       void* buf2 = ctx.alloc().allocate_bytes(sizeof(Type*), alignof(Type*));
-      auto* typeBuf = reinterpret_cast<Type**>(buf2);
+      auto* typeBuf = static_cast<Type**>(buf2);
       typeBuf[0] = elementType;
       auto* type = new(buf) ArrayType{ctx, typeBuf, numElements};
       ctx.pimpl().arrayTypes.push_back(type);
@@ -221,8 +225,10 @@ public:
    Type* getElementType() const { return getChildTypes().array[0]; }
    uint32_t getLength() const { return getData(); }
    uint32_t getSizeInBits() const override {
+      assert(isSizeBounded() && "Array type must have a size");
       return getLength() * getElementType()->getSizeInBits();
    }
+   bool isSizeBounded() const { return getLength() != 0; }
 };
 
 /**
@@ -237,8 +243,13 @@ private:
 
 public:
    static StructType* get(Context& ctx, utils::range_ref<Type*> elementTypes) {
-      uint32_t size = 0;
-      elementTypes.for_each([&](Type*) { size++; });
+      uint32_t size = elementTypes.size();
+      // Make sure elementTypes are valid
+      elementTypes.for_each([](Type* ty) {
+         assert(ty && "StructType cannot have null element type");
+         assert((!ty->isArrayType() || cast<ArrayType>(ty)->isSizeBounded()) &&
+                "StructType element must be a bounded array type");
+      });
       // First, search ctx for existing StructType with elementTypes.
       for(auto* type : ctx.pimpl().structTypes) {
          auto data = type->getChildTypes();
@@ -256,7 +267,7 @@ public:
             ctx.alloc().allocate_bytes(sizeof(StructType), alignof(StructType));
       void* buf2 =
             ctx.alloc().allocate_bytes(size * sizeof(Type*), alignof(Type*));
-      auto* typeBuf = reinterpret_cast<Type**>(buf2);
+      auto* typeBuf = static_cast<Type**>(buf2);
       {
          uint32_t i = 0;
          elementTypes.for_each([&](Type* ty) { typeBuf[i++] = ty; });
@@ -282,8 +293,13 @@ public:
       return size;
    }
    Type* getIndexedType(utils::range_ref<Value*> indices);
-   Type* getTypeAtIndex(uint32_t index) {
-      return getChildTypes().array[index];
+   Type* getTypeAtIndex(uint32_t index) { return getChildTypes().array[index]; }
+   uint32_t getTypeOffsetAtIndex(uint32_t index) {
+      uint32_t offset = 0;
+      for(uint32_t i = 0; i < index; ++i) {
+         offset += getTypeAtIndex(i)->getSizeInBits();
+      }
+      return offset;
    }
 };
 

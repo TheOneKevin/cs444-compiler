@@ -1,9 +1,13 @@
 #include <ast/AST.h>
+#include <codegen/CodeGen.h>
+#include <diagnostics/Diagnostics.h>
 #include <grammar/Joos1WGrammar.h>
+#include <mc/ISelDAGBuilder.h>
 #include <parsetree/ParseTreeVisitor.h>
 #include <passes/AllPasses.h>
 #include <semantic/HierarchyChecker.h>
 #include <semantic/NameResolver.h>
+#include <target/x86/x86TargetInfo.h>
 #include <third-party/CLI11.h>
 #include <tir/TIR.h>
 #include <utils/BumpAllocator.h>
@@ -15,9 +19,8 @@
 #include <sstream>
 #include <string>
 
-#include "codegen/CodeGen.h"
-#include "diagnostics/Diagnostics.h"
 #include "passes/CompilerPasses.h"
+#include "passes/IRContextPass.h"
 
 enum class InputMode { File, Stdin };
 void pretty_print_errors(SourceManager& SM, diagnostics::DiagnosticEngine& diag);
@@ -66,21 +69,11 @@ int main(int argc, char** argv) {
    // clang-format on
 
    // Build the front-end pipeline
-   NewAstContextPass(FEPM);
-   NewLinkerPass(FEPM);
-   NewPrintASTPass(FEPM);
-   NewNameResolverPass(FEPM);
-   NewHierarchyCheckerPass(FEPM);
-   NewExprResolverPass(FEPM);
-   NewDFAPass(FEPM);
+   BuildFrontEndPasses(FEPM);
    FEPM.PreserveAnalysis<joos1::AstContextPass>();
    FEPM.PreserveAnalysis<joos1::NameResolverPass>();
    // Build the optimization pipeline
-   NewSimplifyCFG(OptPM);
-   NewGlobalDCE(OptPM);
-   NewMemToReg(OptPM);
-   NewPrintCFG(OptPM);
-   NewAsmWriter(OptPM);
+   BuildOptPasses(OptPM);
    // Add the pipeline option and print the pass names
    {
       std::ostringstream ss;
@@ -128,16 +121,14 @@ int main(int argc, char** argv) {
          std::cerr << "Error: --print-split requires --print-dot" << std::endl;
          return 1;
       }
-      // If -s is set, -c must be set
-      if(optCodeGen) {
-         optCompile = true;
-      }
-      // If -s is set, -o must be set too
-      if(optCodeGen && optOutputFile.empty()) {
-         std::cerr << "Error: -s requires -o to be set." << std::endl;
+      // If -c is not set, -o must be set too
+      if(!optCompile && optOutputFile.empty()) {
+         std::cerr << "Error: missing option -o." << std::endl;
          return 1;
-      } else if(!optCodeGen && !optOutputFile.empty()) {
-         std::cerr << "Warning: -o is set but -s is not set. Ignoring -o."
+      }
+      // If -c is set and -o is set, print a warning
+      if(optCompile && !optOutputFile.empty()) {
+         std::cerr << "Warning: -c is set, but -o is also set. Ignoring -o."
                    << std::endl;
       }
    }
@@ -269,15 +260,16 @@ int main(int argc, char** argv) {
       }
    }
 
-   // If we only want to compile, we are done
-   if(!optCodeGen) {
+   // If we only "-c" is set and "-s" is not
+   if(!optCodeGen && optCompile) {
       return 0;
    }
 
    // Run the code generation now
    utils::CustomBufferResource Heap{};
    BumpAllocator Alloc{&Heap};
-   tir::Context CGContext{Alloc};
+   target::x86::X86TargetInfo TI{};
+   tir::Context CGContext{Alloc, TI};
    tir::CompilationUnit CU{CGContext};
    {
       if(verboseLevel > 0)
@@ -295,18 +287,37 @@ int main(int argc, char** argv) {
                    << std::endl;
    }
 
-   // Run the backend pipeline now and add the IR context pass
+   // Run the middle-end pipeline now and add the IR context pass
    NewIRContextPass(OptPM, CU);
+   OptPM.PreserveAnalysis<IRContextPass>();
    for(auto const& name : optPassNames) {
       OptPM.PO().EnablePass(name);
       OptPM.Run();
       OptPM.Reset();
    }
 
-   // Dump the generated code to the output file
-   std::ofstream out{optOutputFile};
-   CU.print(out);
-   out.close();
+   // Dump the generated code to the output file and exit when "-s" is set
+   if(optCodeGen) {
+      std::ofstream out{optOutputFile};
+      CU.print(out);
+      out.close();
+      return 0;
+   }
 
+   if(verboseLevel > 0) {
+      std::cerr << "*** Running backend machine-code pipeline... ***" << std::endl;
+   }
+
+   // Run the backend pipeline now (it's not based off the pass pipeline)
+   {
+      auto const& Pass = OptPM.FindPass<IRContextPass>();
+      for(auto const* F : Pass.CU().functions()) {
+         if(!F->hasBody()) continue;
+         auto* MCF = mc::ISelDAGBuilder::Build(Alloc, F);
+         std::ofstream out{std::string{F->name()} + ".dag.dot"};
+         MCF->printDot(out);
+         out.close();
+      }
+   }
    return 0;
 }

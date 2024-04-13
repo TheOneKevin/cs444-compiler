@@ -1,4 +1,4 @@
-#include "CompilerPasses.h"
+#include "passes/CompilerPasses.h"
 #include "ast/AstNode.h"
 #include "ast/Decl.h"
 #include "semantic/AstValidator.h"

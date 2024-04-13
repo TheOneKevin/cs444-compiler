@@ -148,8 +148,10 @@ public:
    }
 
    /// @brief Prints a DOT connection between 2 nodes
-   void printConnection(int from, int to) {
-      indent() << "node" << from << " -> node" << to << ";\n";
+   void printConnection(int from, int to, string_list attrs = {}) {
+      indent() << "node" << from << " -> node" << to << "[";
+      print_attr_list(attrs, false);
+      os << "];\n";
    }
 
    /// @brief Prints a DOT connection between 2 nodes but it goes against the

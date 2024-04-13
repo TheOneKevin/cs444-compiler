@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ranges>
 #include <variant>
 
 #include "tir/BasicBlock.h"
@@ -7,6 +8,7 @@
 #include "tir/Type.h"
 #include "tir/Value.h"
 #include "utils/EnumMacros.h"
+#include "utils/Generator.h"
 #include "utils/Utils.h"
 
 namespace tir {
@@ -67,7 +69,7 @@ protected:
 
    // Protected data type and getter ///////////////////////////////////////////
 protected:
-   using DataType = std::variant<BinOp, Predicate, CastOp, Type*, StructType*>;
+   using DataType = std::variant<BinOp, Predicate, CastOp, Type*>;
    template <typename T>
    constexpr T const& get() const {
       return std::get<T>(data_);
@@ -164,6 +166,7 @@ public:
    }
    // Sets the parent BB of this instruction
    void setParent(BasicBlock* parent) { parent_ = parent; }
+   bool isInstruction() const override { return true; }
 
    // Private data members /////////////////////////////////////////////////////
 private:
@@ -202,6 +205,7 @@ public:
       assert(idx < 2 && "Index out of bounds");
       replaceChild(idx + 1, newBB);
    }
+   Value* getCondition() const { return getChild(0); }
 };
 
 /**
@@ -288,6 +292,8 @@ public:
    std::ostream& print(std::ostream& os) const override;
    bool isTerminator() const override;
    Function* getCallee() const;
+   utils::Generator<Value*> args() const;
+   auto nargs() const { return numChildren() - 1; }
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -383,24 +389,28 @@ public:
 
 class GetElementPtrInst final : public Instruction {
 private:
-   GetElementPtrInst(Context& ctx, Value* ptr, StructType* structTy,
+   GetElementPtrInst(Context& ctx, Value* ptr, Type* structTy,
                      utils::range_ref<Value*> indices);
 
 public:
-   static GetElementPtrInst* Create(Context& ctx, Value* ptr, StructType* structTy,
+   static GetElementPtrInst* Create(Context& ctx, Value* ptr, Type* ty,
                                     utils::range_ref<Value*> indices) {
+      assert((dyn_cast<StructType>(ty) || dyn_cast<ArrayType>(ty)) &&
+             "Type must be a struct or array type");
       auto buf = ctx.alloc().allocate_bytes(sizeof(GetElementPtrInst),
                                             alignof(GetElementPtrInst));
-      return new(buf) GetElementPtrInst{ctx, ptr, structTy, indices};
+      return new(buf) GetElementPtrInst{ctx, ptr, ty, indices};
    }
 
 public:
    std::ostream& print(std::ostream& os) const override;
-   Type* getIndexedType(utils::range_ref<Value*> indices) const {
-      auto structTy = get<StructType*>();
-      return structTy->getIndexedType(indices);
+   auto getContainedType() const { return get<Type*>(); }
+   auto indices() const {
+      return children() |
+             std::views::transform([](auto* v) { return cast<Value>(v); }) |
+             std::views::drop(1);
    }
-   auto getStructType() const { return get<StructType*>(); }
+   Value* getPointerOperand() const { return getChild(0); }
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -420,9 +430,15 @@ public:
       return new(buf) PhiNode{ctx, type, values, preds};
    }
 
+   struct IncomingValue {
+      Value* value;
+      BasicBlock* pred;
+   };
+
 public:
    std::ostream& print(std::ostream& os) const override;
    void replaceOrAddOperand(BasicBlock* pred, Value* val);
+   utils::Generator<IncomingValue> incomingValues() const;
 };
 
 } // namespace tir

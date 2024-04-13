@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "target/x86/x86TargetInfo.h"
 #include "tir/BasicBlock.h"
 #include "tir/Constant.h"
 #include "tir/IRBuilder.h"
@@ -13,7 +14,8 @@ int main() {
 
    utils::CustomBufferResource resource{};
    BumpAllocator allocator{&resource};
-   Context ctx{allocator};
+   target::x86::X86TargetInfo TI{};
+   Context ctx{allocator, TI};
    CompilationUnit cu{ctx};
 
    // Declare the "ptr* __malloc(i32)" function
@@ -30,6 +32,7 @@ int main() {
       auto fnty = FunctionType::get(ctx, Type::getVoidTy(ctx), {});
       fn_exception = cu.CreateFunction(fnty, "__exception");
    }
+   (void) fn_exception;
 
    // Build the "int main()" function
    Function* fn_main;

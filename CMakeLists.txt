@@ -124,7 +124,7 @@ macro(add_tool TARGET_NAME)
     target_link_libraries(${TARGET_NAME} OLKCompilerLib)
     target_include_directories(${TARGET_NAME} PRIVATE
         "${PARSER_DIR}"
-        lib
+        "include"
         "."
     )
 endmacro()

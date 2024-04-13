@@ -9,6 +9,7 @@ public:
    void Init() override {}
    void Run() override {}
    tir::CompilationUnit& CU() { return cu; }
+   tir::CompilationUnit const& CU() const { return cu; }
    ~IRContextPass() override {}
 
 private:

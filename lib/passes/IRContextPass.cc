@@ -1,6 +1,6 @@
 #include "tir/CompilationUnit.h"
 #include "utils/PassManager.h"
-#include "IRContextPass.h"
+#include "passes/IRContextPass.h"
 
 using namespace utils;
 

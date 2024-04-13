@@ -1,4 +1,4 @@
-#include "../IRContextPass.h"
+#include "passes/IRContextPass.h"
 #include "tir/Constant.h"
 #include "utils/PassManager.h"
 

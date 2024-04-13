@@ -154,7 +154,7 @@ static void unescapeString(std::string_view in, std::pmr::string& out) {
 
 LiteralNode::LiteralNode(BumpAllocator& alloc, parsetree::Literal const* node,
                          ast::BuiltInType* type, SourceRange loc)
-      : ExprValue{loc, reinterpret_cast<ast::Type*>(type)} {
+      : ExprValue{loc, static_cast<ast::Type*>(type)} {
    auto str = node->get_value();
 
    // 1. Check if the type is numeric

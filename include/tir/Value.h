@@ -28,6 +28,7 @@ public:
            name_{std::nullopt},
            valueID_{ctx.getNextValueID()} {}
    tir::Context& ctx() { return ctx_; }
+   tir::Context const& ctx() const { return ctx_; }
    Type* type() const { return type_; }
    std::string_view name() const { return name_.value(); }
    std::string_view unique_name() const {
@@ -50,6 +51,12 @@ public:
    virtual std::ostream& print(std::ostream&) const = 0;
    void dump() const;
    virtual ~Value() = default;
+   virtual bool isFunction() const { return false; }
+   virtual bool isFunctionArg() const { return false; }
+   virtual bool isBasicBlock() const { return false; }
+   virtual bool isInstruction() const { return false; }
+   virtual bool isConstant() const { return false; }
+   virtual bool isUser() const { return false; }
 
 private:
    tir::Context& ctx_;
@@ -70,6 +77,7 @@ public:
    Value* getChild(unsigned idx) const {
       return static_cast<Value*>(getRawChild(idx));
    }
+   bool isUser() const override { return true; }
 };
 
 std::ostream& operator<<(std::ostream& os, const Value& val);

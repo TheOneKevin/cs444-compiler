@@ -1,7 +1,7 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "../IRContextPass.h"
+#include "passes/IRContextPass.h"
 #include "tir/BasicBlock.h"
 #include "tir/Constant.h"
 #include "tir/Instructions.h"

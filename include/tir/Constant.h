@@ -22,9 +22,6 @@ class ConstantInt;
 class Constant : public User {
 protected:
    Constant(Context& ctx, Type* type) : User{ctx, type} {}
-   virtual bool isNullPointer() const { return false; }
-   virtual bool isNumeric() const { return false; }
-   virtual bool isBoolean() const { return false; }
 
 public:
    static ConstantInt* CreateInt(Context& ctx, uint8_t bits, uint32_t value);
@@ -35,6 +32,11 @@ public:
       return CreateInt(ctx, 32, value);
    }
    static ConstantNullPointer* CreateNullPointer(Context& ctx);
+   bool isConstant() const override { return true; }
+   virtual bool isNumeric() const { return false; }
+   virtual bool isGlobalVariable() const { return false; }
+   virtual bool isNullPointer() const { return false; }
+   virtual bool isBoolean() const { return false; }
 };
 
 /**
@@ -117,6 +119,7 @@ private:
 public:
    std::ostream& print(std::ostream& os) const override;
    bool isExternalLinkage() const override { return false; }
+   bool isGlobalVariable() const override { return true; }
 };
 
 /**
@@ -132,6 +135,7 @@ public:
    std::ostream& print(std::ostream& os) const override;
    auto* parent() const { return parent_; }
    auto index() const { return index_; }
+   bool isFunctionArg() const override { return true; }
 
 private:
    Function* parent_;
@@ -180,6 +184,7 @@ public:
    /// @brief Create a new basic block and add it to the function.
    auto body() const { return std::views::all(body_); }
    void removeBlock(BasicBlock* block);
+   bool isFunction() const override { return true; }
 
    /**
     * @brief Create an alloca instruction for the given type. This will be

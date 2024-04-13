@@ -137,6 +137,7 @@ public:
    utils::Generator<PhiNode*> phis() const;
    // Destroy all instructions from this basic block
    void releaseAllReferences();
+   bool isBasicBlock() const override { return true; }
 
 private:
    Instruction* first_;
