@@ -148,7 +148,7 @@ target_link_libraries(OLKCompilerLib PUBLIC Backward::Interface)
 ################################################################################
 
 execute_process(
-    COMMAND python3 "scripts/generate_gtest.py"
+    COMMAND python3 "tests/generate_gtest.py"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
