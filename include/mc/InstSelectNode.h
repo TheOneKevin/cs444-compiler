@@ -10,6 +10,7 @@
 #include "utils/BumpAllocator.h"
 #include "utils/DotPrinter.h"
 #include "utils/EnumMacros.h"
+#include "utils/Generator.h"
 #include "utils/User.h"
 #include "utils/Utils.h"
 
@@ -57,7 +58,8 @@ class ISelDAGBuilder;
    F(BR_CC)             \
    F(BR)                \
    F(PHI)               \
-   F(RETURN)
+   F(RETURN)            \
+   F(UNREACHABLE)
 
 DECLARE_ENUM(NodeType, NodeTypeList)
 
@@ -138,6 +140,8 @@ public:
    NodeType type() const { return type_; }
    int printDotNode(utils::DotPrinter& dp,
                     std::unordered_set<InstSelectNode const*>& visited) const;
+   utils::Generator<InstSelectNode*> childNodes() const;
+   void clearChains() { children_.resize(arity); }
 
 private:
    const NodeType type_;

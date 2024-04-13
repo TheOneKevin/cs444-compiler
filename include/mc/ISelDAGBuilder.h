@@ -38,12 +38,14 @@ private:
    // Allocate (if not exist) or get (if exist) a stack slot index chunk
    // corresponding to the given alloca instruction
    InstSelectNode::StackSlot findOrAllocStackSlot(tir::AllocaInst* alloca);
+   // Create a chain edge given the instruction and its node
+   void createChain(tir::Instruction*, InstSelectNode*);
 
 private:
    BumpAllocator& alloc;
    MCFunction* MCF;
    tir::BasicBlock* curbb;
-   // Maps TIR instruction -> node, this is cleared per BB
+   // Maps TIR instruction -> node, this is not cleared per BB
    std::unordered_map<tir::Value*, InstSelectNode*> instMap;
    std::unordered_map<tir::Value*, int> vregMap;
    std::unordered_map<tir::AllocaInst*, InstSelectNode::StackSlot> allocaMap;

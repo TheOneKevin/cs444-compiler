@@ -14,7 +14,7 @@ class MCFunction final {
 
 public:
    std::ostream& printDot(std::ostream& os) const {
-      utils::DotPrinter dp{os};
+      utils::DotPrinter dp{os, "20"};
       std::unordered_set<InstSelectNode const*> visited;
       dp.startGraph();
       dp.print("compound=true;");
@@ -28,6 +28,7 @@ public:
       // Next. print the edges that cross the subgraphs
       for(auto* graph : graphs_) {
          for(auto* pred : graph->users()) {
+            if(pred->type() != NodeType::BasicBlock) continue;
             // FIXME(kevin): This seems like a bad bug, why does this occur?
             if(dp.getId(pred) == -1) continue;
             auto from = dp.getId(pred);

@@ -104,8 +104,8 @@ public:
    }
 
    /// @brief Starts a DOT label
-   void startLabel(int id, string_list attrs = {}) {
-      indent() << "node" << id << " [shape=rect";
+   void startLabel(int id, string_list attrs = {}, string_view shape = "rect") {
+      indent() << "node" << id << " [shape=" << shape;
       print_attr_list(attrs, false);
       os << " label=<";
    }
@@ -114,8 +114,9 @@ public:
    void endLabel() { os << ">];\n"; }
 
    /// @brief Prints a DOT label
-   void printLabel(int id, string_view label, string_list attrs = {}) {
-      startLabel(id, attrs);
+   void printLabel(int id, string_view label, string_list attrs = {},
+                   string_view shape = "rect") {
+      startLabel(id, attrs, shape);
       sanitize(label);
       endLabel();
    }

@@ -38,13 +38,43 @@ MCFunction* DAG::Build(BumpAllocator& alloc, tir::Function const* F) {
    // Build the DAG for each basic block
    for(auto* bb : F->body()) {
       builder.curbb = bb;
-      builder.instMap.clear();
       ISN* entry = nullptr;
       for(auto* inst : *bb) {
          entry = builder.buildInst(inst);
       }
       assert(entry && "Basic block has no terminator");
       builder.bbMap[bb]->addChild(entry);
+   }
+   // For each of the vregs, add a LoadToReg node
+   for(auto [v, idx] : builder.vregMap) {
+      auto instnode = builder.instMap[v];
+      auto vreg = ISN::CreateLeaf(alloc, NodeType::Register, ISN::VReg{idx});
+      auto node = ISN::Create(alloc, NodeType::LoadToReg, {vreg, instnode});
+      // Find the graph corresponding to instnode
+      auto parbb = cast<Instruction>(v)->parent();
+      cast<ISN>(builder.bbMap[parbb])->addChild(node);
+   }
+   // Now we rearrange the children of entry so they are children of the
+   // first branch instruction instead
+   for(auto* bb : MCF->graphs_) {
+      // First, find the branch of the BB
+      InstSelectNode* branch = nullptr;
+      for(auto* child : bb->childNodes()) {
+         if(child->type() == NodeType::BR || child->type() == NodeType::BR_CC ||
+            child->type() == NodeType::RETURN ||
+            child->type() == NodeType::UNREACHABLE) {
+            branch = child;
+            break;
+         }
+      }
+      assert(branch);
+      // Next, move all the children of the entry node to the branch node
+      for(auto* child : bb->childNodes())
+         if(child != branch) branch->addChild(child);
+      // Nuke all chains from bb
+      bb->clearChains();
+      // Re-add the branch node to the bb
+      bb->addChild(branch);
    }
    return builder.MCF;
 }
@@ -75,10 +105,8 @@ ISN::StackSlot DAG::findOrAllocStackSlot(tir::AllocaInst* alloca) {
 }
 
 InstSelectNode* DAG::buildVReg(tir::Instruction* v) {
-   if(instMap.contains(v)) return instMap[v];
    int vreg = findOrAllocVirtReg(v);
    auto* const node = ISN::CreateLeaf(alloc, NodeType::Register, ISN::VReg{vreg});
-   instMap[v] = node;
    return node;
 }
 
@@ -88,11 +116,9 @@ InstSelectNode* DAG::buildCC(tir::Instruction::Predicate pred) {
 
 InstSelectNode* DAG::findValue(tir::Value* v) {
    if(v->isBasicBlock()) {
-      if(instMap.contains(v)) return instMap[v];
       auto& subgraph = bbMap[cast<BasicBlock>(v)];
       auto node = ISN::CreateLeaf(alloc, NodeType::BasicBlock);
       node->addChild(subgraph);
-      instMap[v] = node;
       return node;
    } else if(v->isInstruction()) {
       auto* instr = cast<Instruction>(v);
@@ -130,6 +156,17 @@ InstSelectNode* DAG::findValue(tir::Value* v) {
    }
    assert(false && "Unknown value type");
    std::unreachable();
+}
+
+void DAG::createChain(tir::Instruction* inst, InstSelectNode* node) {
+   auto dep = inst->prev();
+   if(!dep) return;
+   // If dep is a user of inst, then don't chain
+   for(auto* user : dep->users())
+      if(user == inst) return;
+   // Otherwise, add a chain edge to both the dep and from the entry node
+   node->addChild(findValue(dep));
+   bbMap[curbb]->addChild(node);
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -178,19 +215,11 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
       auto src = inst->getChild(0);
       auto dst = inst->getChild(1);
       node = ISN::Create(alloc, NodeType::STORE, {findValue(src), findValue(dst)});
-      // Chain to the previous instruction
-      auto dep = inst->prev();
-      if(!(dep == src || dep == dst) && dep) {
-         node->addChild(findValue(dep));
-      }
+      createChain(inst, node);
    } else if(dyn_cast<LoadInst>(inst)) {
       auto src = inst->getChild(0);
       node = ISN::Create(alloc, NodeType::LOAD, {findValue(src)});
-      // Chain to the previous instruction
-      auto dep = inst->prev();
-      if(dep != src && dep) {
-         node->addChild(findValue(dep));
-      }
+      createChain(inst, node);
    } else if(auto bin = dyn_cast<BinaryInst>(inst)) {
       auto op = bin->binop();
       auto lhs = findValue(bin->getChild(0));
@@ -235,6 +264,15 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
          for(auto* arg : ci->args()) args.push_back(findValue(arg));
       }
       node = ISN::Create(alloc, NodeType::CALL, args);
+      // If the call is a terminator, add an UNREACHABLE to the end of it
+      if(ci->isTerminator()) {
+         auto unreachable = ISN::CreateLeaf(alloc, NodeType::UNREACHABLE);
+         bbMap[curbb]->addChild(unreachable);
+         unreachable->addChild(node);
+         node = unreachable;
+      } else {
+         createChain(inst, node);
+      }
    } else if(auto ici = dyn_cast<ICastInst>(inst)) {
       auto src = findValue(ici->getChild(0));
       auto nodeType = NodeType::None;
