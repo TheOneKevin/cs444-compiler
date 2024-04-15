@@ -1,5 +1,6 @@
 #include "mc/InstSelectNode.h"
 
+#include "tir/Constant.h"
 #include "utils/DotPrinter.h"
 
 namespace mc {
@@ -81,6 +82,14 @@ int ISN::printDotNode(utils::DotPrinter& dp,
                        "Entry",
                        {"style", "filled", "fillcolor", "lightgreen"},
                        "Mdiamond");
+         break;
+      }
+      case NodeType::GlobalAddress: {
+         auto GO = std::get<tir::GlobalObject*>(data_.value());
+         dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
+         dp.printTableSingleRow("GlobalAddress");
+         dp.printTableDoubleRow("Id", GO->name());
+         dp.endTLabel();
          break;
       }
       default: {

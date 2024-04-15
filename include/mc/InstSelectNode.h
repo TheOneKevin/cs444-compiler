@@ -114,8 +114,8 @@ private:
                                  utils::range_ref<InstSelectNode*> args) {
       auto* buf =
             alloc.allocate_bytes(sizeof(InstSelectNode), alignof(InstSelectNode));
-      auto* node =
-            new(buf) InstSelectNode{alloc, type, static_cast<unsigned>(args.size())};
+      auto* node = new(buf)
+            InstSelectNode{alloc, type, static_cast<unsigned>(args.size())};
       args.for_each([&node](auto* arg) { node->addChild(arg); });
       return node;
    }
@@ -143,6 +143,9 @@ public:
    void printNodeTable(utils::DotPrinter& dp) const;
    utils::Generator<InstSelectNode*> childNodes() const;
    void clearChains() { children_.resize(arity); }
+   InstSelectNode* getChild(unsigned idx) const {
+      return static_cast<InstSelectNode*>(getRawChild(idx));
+   }
 
 private:
    const NodeType type_;

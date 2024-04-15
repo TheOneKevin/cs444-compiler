@@ -38,8 +38,13 @@ private:
    // Allocate (if not exist) or get (if exist) a stack slot index chunk
    // corresponding to the given alloca instruction
    InstSelectNode::StackSlot findOrAllocStackSlot(tir::AllocaInst* alloca);
-   // Create a chain edge given the instruction and its node
-   void createChain(tir::Instruction*, InstSelectNode*);
+   // Create a chain edge from this instruction to the previous instruction
+   // if possible (returns false when impossible)
+   bool tryChainToPrev(tir::Instruction*, InstSelectNode*);
+   // Create a chain to previous, and if not, then to the entry
+   void chainToPrevOrEntry(tir::Instruction*, InstSelectNode*);
+   // Creates a chain if the instruction requires it (i.e., dependencies)
+   void createChainIfNeeded(tir::Instruction*, InstSelectNode*);
 
 private:
    BumpAllocator& alloc;

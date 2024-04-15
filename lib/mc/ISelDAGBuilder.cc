@@ -11,6 +11,7 @@
 #include "tir/TIR.h"
 #include "tir/Type.h"
 #include "tir/Value.h"
+#include "utils/Utils.h"
 
 namespace mc {
 
@@ -75,6 +76,15 @@ MCFunction* DAG::Build(BumpAllocator& alloc, tir::Function const* F) {
       bb->clearChains();
       // Re-add the branch node to the bb
       bb->addChild(branch);
+      // This step is purely cosmetic:
+      //   Let's clean up the chains of BR by removing the chained nodes that
+      //   already have users (and so don't need to be chained to BR).
+      for(unsigned i = branch->numChildren()-1; i > branch->arity; i--) {
+         auto* child = branch->getChild(i-1);
+         if(child->numUsers() > 1) {
+            branch->removeChild(i-1);
+         }
+      }
    }
    return builder.MCF;
 }
@@ -152,22 +162,45 @@ InstSelectNode* DAG::findValue(tir::Value* v) {
                alloc, NodeType::GlobalAddress, cast<GlobalObject>(c));
       } else if(c->isNullPointer()) {
          return ISN::CreateImm(alloc, MCF->TI_.getPointerSizeInBits(), 0);
+      } else if(c->isUndef()) {
+         return ISN::CreateImm(alloc, c->type()->getSizeInBits(), 0);
       }
    }
    assert(false && "Unknown value type");
    std::unreachable();
 }
 
-void DAG::createChain(tir::Instruction* inst, InstSelectNode* node) {
-   // Always chain the node to the bb entry node
-   bbMap[curbb]->addChild(node);
+bool DAG::tryChainToPrev(tir::Instruction* inst, InstSelectNode* node) {
+   // Check if the dependency to the previou node even exists
    auto dep = inst->prev();
-   if(!dep) return;
+   if(!dep) return false;
    // If dep is a user of inst, then don't chain
    for(auto* user : dep->users())
-      if(user == inst) return;
+      if(user == inst) return false;
    // Otherwise, add a chain edge to the dep
    node->addChild(findValue(dep));
+   return true;
+}
+
+void DAG::chainToPrevOrEntry(tir::Instruction* inst, InstSelectNode* node) {
+   // Can a chain be created?
+   if(tryChainToPrev(inst, node)) return;
+   // If no chain, then chain the node to the bb entry node
+   bbMap[curbb]->addChild(node);
+}
+
+void DAG::createChainIfNeeded(tir::Instruction* inst, InstSelectNode* node) {
+   /**
+    * Instructions with side effects must execute in-order
+    * 1. Loads must wait for the previous instruction to finish
+    * 2. Stores, calls and any side-effect instructions must be executed before
+    *    the next instruction starts.
+    */
+   if(dyn_cast<LoadInst>(inst)) {
+      chainToPrevOrEntry(inst, node);
+   } else if(inst->prev() && inst->prev()->hasSideEffects()) {
+      chainToPrevOrEntry(inst, node);
+   }
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -216,11 +249,9 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
       auto src = inst->getChild(0);
       auto dst = inst->getChild(1);
       node = ISN::Create(alloc, NodeType::STORE, {findValue(src), findValue(dst)});
-      createChain(inst, node);
    } else if(dyn_cast<LoadInst>(inst)) {
       auto src = inst->getChild(0);
       node = ISN::Create(alloc, NodeType::LOAD, {findValue(src)});
-      createChain(inst, node);
    } else if(auto bin = dyn_cast<BinaryInst>(inst)) {
       auto op = bin->binop();
       auto lhs = findValue(bin->getChild(0));
@@ -272,8 +303,6 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
          bbMap[curbb]->addChild(unreachable);
          unreachable->addChild(node);
          node = unreachable;
-      } else {
-         createChain(inst, node);
       }
    } else if(auto ici = dyn_cast<ICastInst>(inst)) {
       auto src = findValue(ici->getChild(0));
@@ -339,6 +368,8 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
              "Instruction selection DAG does not support this instruction");
       std::unreachable();
    }
+   // Create chain if needed
+   createChainIfNeeded(inst, node);
    // Store the instruction
    instMap[inst] = node;
    return node;

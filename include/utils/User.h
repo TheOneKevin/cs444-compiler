@@ -74,6 +74,7 @@ public:
    utils::Generator<T const*> users() const {
       for(auto use : uses_) co_yield static_cast<T*>(use.user);
    }
+   auto numUsers() const { return uses_.size(); }
 
 protected:
    std::pmr::unordered_set<Use<T>, std::hash<Use<T>>, detail::UseEqual<T>> uses_;
@@ -101,6 +102,11 @@ public:
    Node* getRawChild(unsigned idx) const {
       assert(idx < numChildren() && "Index out of bounds");
       return children_[idx];
+   }
+   void removeChild(unsigned idx) {
+      auto child = getRawChild(idx);
+      child->removeUse({static_cast<T*>(this), idx});
+      children_.erase(children_.begin() + idx);
    }
 
 protected:
