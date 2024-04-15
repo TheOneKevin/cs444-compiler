@@ -73,4 +73,20 @@ void Mangler::MangleFunctionName(ast::MethodDecl const* decl) {
    }
 }
 
+void Mangler::MangleGlobalName(ast::FieldDecl const* decl) {
+   ss << "_JG";
+   MangleType(decl->type());
+   MangleCanonicalName(decl->getCanonicalName());
+}
+
+void Mangler::MangleDecl(ast::Decl const* decl) {
+   if(auto* fd = dyn_cast<ast::FieldDecl>(decl)) {
+      MangleGlobalName(fd);
+   } else if(auto* md = dyn_cast<ast::MethodDecl>(decl)) {
+      MangleFunctionName(md);
+   } else {
+      assert(false && "Unknown decl type");
+   }
+}
+
 } // namespace codegen

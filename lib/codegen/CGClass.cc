@@ -2,6 +2,7 @@
 
 #include "ast/AstNode.h"
 #include "ast/Type.h"
+#include "codegen/Mangling.h"
 #include "tir/Type.h"
 
 namespace codegen {
@@ -16,7 +17,9 @@ void CodeGenerator::emitClassDecl(ast::ClassDecl const* decl) {
    for(auto* field : decl->fields()) {
       auto ty = emitType(field->type());
       if(field->modifiers().isStatic()) {
-         gvMap[field] = cu.CreateGlobalVariable(ty, field->getCanonicalName());
+         Mangler m{nr};
+         m.MangleDecl(field);
+         gvMap[field] = cu.CreateGlobalVariable(ty, m.getMangledName());
       } else {
          fieldTypes.push_back(ty);
       }

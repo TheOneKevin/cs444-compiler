@@ -70,11 +70,11 @@ protected:
 #undef CAST_KINDS
 
 public:
-#define INTRINSIC_KINDS(F)                        \
-   F(malloc, @jcf.malloc)                         \
-   F(exception, @jcf.exception)                   \
-   F(check_array_bounds, @jcf.check.array_bounds) \
-   F(check_null, @jcf.check.null)
+#define INTRINSIC_KINDS(F)                       \
+   F(malloc, jcf.malloc)                         \
+   F(exception, jcf.exception)                   \
+   F(check_array_bounds, jcf.check.array_bounds) \
+   F(check_null, jcf.check.null)
 
    DECLARE_ENUM_2(IntrinsicKind, INTRINSIC_KINDS)
 protected:

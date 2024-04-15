@@ -45,7 +45,7 @@ void CodeGenerator::emitFunctionDecl(ast::MethodDecl const* decl) {
       func->setAttrs(tir::Function::Attrs{.external = true});
    } else {
       Mangler m{nr};
-      m.MangleFunctionName(decl);
+      m.MangleDecl(decl);
       func = cu.CreateFunction(funcTy, m.getMangledName());
       // FIXME(kevin): Better way to grab main function?
       if(decl->name() == "main" || decl->name() == "test") {

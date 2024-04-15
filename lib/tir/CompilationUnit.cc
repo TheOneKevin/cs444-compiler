@@ -17,7 +17,10 @@ std::ostream& CompilationUnit::print(std::ostream& os) const {
    for(auto const* structTy : ctx_.pimpl().structTypes) {
       structTy->printDetail(os) << "\n";
    }
-
+   // Print all globals
+   for(auto const* global : global_variables()) {
+      global->print(os) << "\n";
+   }
    // Print all the functions
    for(auto* func : functions()) {
       func->print(os) << "\n";

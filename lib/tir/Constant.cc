@@ -32,7 +32,10 @@ std::ostream& ConstantInt::print(std::ostream& os) const {
    return os;
 }
 
-std::ostream& GlobalVariable::print(std::ostream& os) const { return os; }
+std::ostream& GlobalVariable::print(std::ostream& os) const {
+   os << "global " << *type() << " @" << name();
+   return os;
+}
 
 Argument::Argument(Function* parent, Type* type, unsigned index)
       : Value{parent->ctx(), type}, parent_{parent}, index_{index} {

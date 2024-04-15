@@ -132,7 +132,7 @@ CallInst::CallInst(Context& ctx, Value* callee, utils::range_ref<Value*> args)
 
 std::ostream& CallInst::print(std::ostream& os) const {
    if(!type()->isVoidType()) printName(os) << " = ";
-   os << "call " << getChild(0)->name() << "(";
+   os << "call @" << getChild(0)->name() << "(";
    for(unsigned i = 1; i < numChildren(); ++i) {
       printNameOrConst(os, getChild(i));
       if(i != numChildren() - 1) os << ", ";
