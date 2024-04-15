@@ -42,7 +42,13 @@ def grab_all_java(dir):
 def get_directories(anum: int):
     assignment = f"a{anum}"
     test_dir = f"/u/cs444/pub/assignment_testcases/{assignment}"
-    stdlib_dir = f"/u/cs444/pub/stdlib/{str(max(2, anum))}.0"
+    stdlib_dir_version = 0
+    stdlib_dir = f"/u/cs444/pub/stdlib/{str(max(2, anum))}.{stdlib_dir_version}"
+    # Get the latest version of the stdlib directory
+    while os.path.exists(stdlib_dir) and os.path.isdir(stdlib_dir):
+        stdlib_dir_version += 1
+        stdlib_dir = f"/u/cs444/pub/stdlib/{str(max(2, anum))}.{stdlib_dir_version}"
+    stdlib_dir = f"/u/cs444/pub/stdlib/{str(max(2, anum))}.{stdlib_dir_version-1}"
     # Check that both the stdlib directory exist and is a directory
     if not os.path.exists(stdlib_dir) or not os.path.isdir(stdlib_dir):
         print(f"Error: stdlib directory {stdlib_dir} does not exist")
@@ -52,7 +58,6 @@ def get_directories(anum: int):
         print(f"Error: test directory {test_dir} does not exist")
         sys.exit(1)
     return test_dir, stdlib_dir
-
 
 # Gets the test case from the test directory
 def get_testcase(test_dir: str, test: str):

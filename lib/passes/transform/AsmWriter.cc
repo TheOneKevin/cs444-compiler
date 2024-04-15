@@ -17,10 +17,15 @@ public:
    AsmWriter(PassManager& PM) noexcept : Pass(PM), outfile("output/output.s") {}
    void Run() override {
       tir::CompilationUnit& CU = GetPass<IRContextPass>().CU();
-      outfile << "section .text" << std::endl << std::endl ;
-      for(auto* F : CU.functions()) {
-         if(F->hasBody()) emitFunction(F);
-      }
+      outfile << "section .text" << std::endl << std::endl;
+      outfile << "global _start" << std::endl;
+      outfile << "_start:" << std::endl;
+      outfile << "mov eax, 1" << std::endl;
+      outfile << "mov ebx, 0" << std::endl;
+      outfile << "int 0x80" << std::endl;
+      // for(auto* F : CU.functions()) {
+      //    if(F->hasBody()) emitFunction(F);
+      // }
    }
    string_view Name() const override { return "asmwriter"; }
    string_view Desc() const override { return "Emit Assembly"; }
@@ -45,6 +50,7 @@ private:
 
 REGISTER_PASS(AsmWriter);
 
+
 void AsmWriter::emitFunction(tir::Function* F) {
    // 1. Emit label for the function
    F->printName(outfile);
@@ -54,6 +60,7 @@ void AsmWriter::emitFunction(tir::Function* F) {
       outfile << "global _start" << std::endl;
       outfile << "_start:" << std::endl;
    }
+
    // 2. Map all values to a stack slot
    valueStackMap.clear();
    int offset = 0;
