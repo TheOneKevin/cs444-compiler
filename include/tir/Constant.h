@@ -6,6 +6,7 @@
 #include "tir/Instructions.h"
 #include "tir/Type.h"
 #include "tir/Value.h"
+#include "utils/BitField.h"
 #include "utils/Generator.h"
 #include "utils/Utils.h"
 
@@ -37,6 +38,7 @@ public:
    virtual bool isGlobalVariable() const { return false; }
    virtual bool isNullPointer() const { return false; }
    virtual bool isBoolean() const { return false; }
+   virtual bool isUndef() const { return false; }
 };
 
 /**
@@ -94,6 +96,24 @@ public:
 public:
    std::ostream& print(std::ostream& os) const override;
    bool isNullPointer() const override { return true; }
+};
+
+/**
+ * @brief
+ */
+class Undef final : public Constant {
+private:
+   Undef(Context& ctx, Type* ty) : Constant{ctx, ty} {}
+
+public:
+   static Undef* Create(Context& ctx, Type* ty) {
+      auto* buf = ctx.alloc().allocate_bytes(sizeof(Undef), alignof(Undef));
+      return new(buf) Undef{ctx, ty};
+   }
+
+public:
+   std::ostream& print(std::ostream& os) const override;
+   bool isUndef() const override { return true; }
 };
 
 /**
@@ -165,6 +185,15 @@ private:
    }
 
 public:
+   union Attrs {
+      using T = uint8_t;
+      utils::BitField<T, 0, 8 * sizeof(T)> all{0};
+      utils::BitField<T, 0, 1> noreturn;
+      utils::BitField<T, 1, 1> external;
+      utils::BitField<T, 2, 1> intrinsic;
+   };
+
+public:
    std::ostream& print(std::ostream& os) const override;
    auto* parent() const { return parent_; }
    auto args() const {
@@ -200,17 +229,20 @@ public:
       getEntryBlock()->insertBeforeBegin(inst);
       return inst;
    }
-   // Get the function attribute "noreturn"
-   auto isNoReturn() const { return noReturn_; }
-   // Set the function attribute "noreturn"
-   void setNoReturn() { noReturn_ = true; }
-   // Set the function attribute "external"
-   void setExternalLinkage() { external_ = true; }
-   // Get the function attribute "external"
-   bool isExternalLinkage() const override {
-      if(!external_) return !entryBB_;
-      return true;
+   // Set all function attributes that is true
+   void setAttrs(Attrs attrs) {
+      attrs_.all =
+            static_cast<Attrs::T>(attrs_.all) | static_cast<Attrs::T>(attrs.all);
    }
+   // Clear all function attributes that is true
+   void clearAttrs(Attrs attrs) {
+      attrs_.all =
+            static_cast<Attrs::T>(attrs_.all) & ~static_cast<Attrs::T>(attrs.all);
+   }
+   // Get all function attributes
+   inline Attrs attrs() const { return attrs_; }
+   // Override the external linkage for global objects
+   bool isExternalLinkage() const override { return attrs_.external; }
    // Print the function in DOT format
    void printDot(std::ostream& os) const;
    // Get the reverse post order of the basic blocks
@@ -225,6 +257,10 @@ public:
          }
       }
    }
+   // Gets the n-th argument of the function
+   Argument* arg(unsigned index) const {
+      return static_cast<Argument*>(getChild(index));
+   }
 
 private:
    void addBlock(BasicBlock* block) {
@@ -236,8 +272,7 @@ private:
    std::pmr::forward_list<BasicBlock*> body_;
    BasicBlock* entryBB_ = nullptr;
    tir::CompilationUnit* parent_;
-   bool noReturn_ = false;
-   bool external_ = false;
+   Attrs attrs_{.all{0}};
 };
 
 } // namespace tir

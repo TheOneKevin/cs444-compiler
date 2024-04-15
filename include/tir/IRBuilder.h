@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tir/BasicBlock.h"
+#include "tir/CompilationUnit.h"
 #include "tir/Constant.h"
 #include "tir/Context.h"
 #include "tir/Instructions.h"
@@ -32,13 +33,9 @@ public:
     *
     * @param bb The basic block to set the insertion point to
     */
-   void setInsertPoint(BasicBlock* bb) {
-      insertPoint_ = bb->begin();
-   }
+   void setInsertPoint(BasicBlock* bb) { insertPoint_ = bb->begin(); }
 
-   BasicBlock* currentBlock() {
-      return insertPoint_.getBB();
-   }
+   BasicBlock* currentBlock() { return insertPoint_.getBB(); }
 
 public:
    /**
@@ -74,6 +71,19 @@ public:
     */
    Instruction* createCallInstr(Value* callee, utils::range_ref<Value*> args) {
       return insert(CallInst::Create(ctx_, callee, args));
+   }
+
+   /**
+    * @brief Create a call to an intrinsic function.
+    * 
+    * @param kind The intrinsic kind
+    * @param args The arguments to pass to the intrinsic
+    * @return Instruction* A pointer to the instruction
+    */
+   Instruction* createIntrinsicCallInstr(Instruction::IntrinsicKind kind,
+                                         utils::range_ref<Value*> args) {
+      auto* cu = currentBlock()->parent()->parent();
+      return createCallInstr(cu->getIntrinsic(kind), args);
    }
 
    /**
@@ -161,7 +171,7 @@ public:
    /**
     * @brief Create the generic trunc/zext/sext instruction with the given
     * operation, value, and destination type.
-    * 
+    *
     * @param op The cast operation to perform
     * @param val The value to cast
     * @param destTy The destination type
@@ -171,7 +181,8 @@ public:
       return insert(ICastInst::Create(ctx_, op, val, destTy));
    }
 
-   Instruction* createGEPInstr(Value* ptr, Type* t, utils::range_ref<Value*> indices) {
+   Instruction* createGEPInstr(Value* ptr, Type* t,
+                               utils::range_ref<Value*> indices) {
       return insert(GetElementPtrInst::Create(ctx_, ptr, t, indices));
    }
 

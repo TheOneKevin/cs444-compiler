@@ -24,8 +24,8 @@ bool deleteDeadInstructions(tir::BasicBlock& bb) {
          firstTerminator = instr;
          break;
       }
-      // Stores are never dead
-      if(dyn_cast<tir::StoreInst>(*instr)) {
+      // i.e., stores and calls are never dead
+      if(instr->hasSideEffects()) {
          continue;
       }
       // Otherwise, dead iff no users

@@ -16,7 +16,7 @@ void CodeGenerator::emitClassDecl(ast::ClassDecl const* decl) {
    for(auto* field : decl->fields()) {
       auto ty = emitType(field->type());
       if(field->modifiers().isStatic()) {
-         gvMap[field] = cu.CreateGlobalVariable(ty, field->name());
+         gvMap[field] = cu.CreateGlobalVariable(ty, field->getCanonicalName());
       } else {
          fieldTypes.push_back(ty);
       }

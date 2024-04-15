@@ -15,6 +15,7 @@
 using namespace tir;
 namespace ex = ast::exprnode;
 using T = codegen::CGExprEvaluator::T;
+using II = Instruction::IntrinsicKind;
 
 /* ===--------------------------------------------------------------------=== */
 // Conversion functions in T::
@@ -481,10 +482,10 @@ T CGExprEvaluator::evalNewArray(ex::ArrayInstanceCreation& op, T type,
          N,
          Constant::CreateInt32(ctx, (T->getSizeInBits() + 1) / 8));
    // T[] arr = new T[N * sizeof(T)];
-   auto arrPtr = cg.builder.createCallInstr(cu.builtinMalloc(), {totalSz});
+   auto arrPtr = cg.builder.createIntrinsicCallInstr(II::malloc, {totalSz});
    // Array* arrStructPtr = (Array*) malloc(sizeof(Array))
-   auto arrStructPtr = cg.builder.createCallInstr(
-         cu.builtinMalloc(),
+   auto arrStructPtr = cg.builder.createIntrinsicCallInstr(
+         II::malloc,
          {Constant::CreateInt32(ctx, (cg.arrayType_->getSizeInBits() + 1) / 8)});
    // arrStructPtr->ptr = arrPtr
    cg.emitSetArrayPtr(arrStructPtr, arrPtr);
@@ -496,24 +497,24 @@ T CGExprEvaluator::evalNewArray(ex::ArrayInstanceCreation& op, T type,
 }
 
 T CGExprEvaluator::evalArrayAccess(ex::ArrayAccess& op, T array, T index) const {
+   // Build and check null pointer access
    auto arrStructPtr = array.asRValue(cg.builder);
-   auto arrPtr = cg.emitGetArrayPtr(arrStructPtr);
-   auto arrSz = cg.emitGetArraySz(arrStructPtr);
+   cg.builder.createIntrinsicCallInstr(II::check_null, {arrStructPtr});
+   // Build and assert idxVal is i32 or less and promote if necessary
    auto idxVal = index.asRValue(cg.builder);
+   assert(idxVal->type()->isIntegerType());
+   assert(idxVal->type()->getSizeInBits() <= 32);
+   if(idxVal->type()->getSizeInBits() < 32) {
+      idxVal = cg.builder.createICastInstr(
+            ICastInst::CastOp::ZExt, idxVal, Type::getInt32Ty(ctx));
+   }
    // Check for out-of-bounds access
-   auto lengthValid =
-         cg.builder.createCmpInstr(CmpInst::Predicate::LT, idxVal, arrSz);
-   auto bb1 = cg.builder.createBasicBlock(&curFn);
-   bb1->setName("array.oob");
-   auto bb2 = cg.builder.createBasicBlock(&curFn);
-   bb2->setName("array.inbounds");
-   cg.builder.createBranchInstr(lengthValid, bb2, bb1);
-   cg.builder.setInsertPoint(bb1);
-   cg.builder.createCallInstr(cu.builtinException(), {});
-   cg.builder.setInsertPoint(bb2);
+   cg.builder.createIntrinsicCallInstr(II::check_array_bounds,
+                                       {arrStructPtr, idxVal});
    // Build the array access itself
    auto elemAstTy = op.resultType();
    auto elemTy = cg.emitType(elemAstTy);
+   auto arrPtr = cg.emitGetArrayPtr(arrStructPtr);
    auto elemPtr = cg.builder.createGEPInstr(
          arrPtr, ArrayType::get(ctx, elemTy, 0), {idxVal});
    return T::L(elemAstTy, elemTy, elemPtr);

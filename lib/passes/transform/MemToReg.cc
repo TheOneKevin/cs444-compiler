@@ -2,8 +2,8 @@
 #include <stack>
 #include <unordered_set>
 
-#include "passes/IRContextPass.h"
 #include "diagnostics/Diagnostics.h"
+#include "passes/IRContextPass.h"
 #include "tir/BasicBlock.h"
 #include "tir/Constant.h"
 #include "tir/Instructions.h"
@@ -277,6 +277,13 @@ void HoistAlloca::replaceUses(BasicBlock* X) {
       varStack[alloca].push(phi);
    }
    for(auto inst : *X) {
+      // If inst is an alloca, push it onto the stack and mark it as undef
+      // and DO NOT add it to varStack[] (i.e., do not pop)
+      if(auto alloca = dyn_cast<AllocaInst>(inst)) {
+         varStack[alloca].push(
+               Undef::Create(alloca->ctx(), alloca->allocatedType()));
+         continue;
+      }
       if(storesToRewrite.contains(inst)) { // "LHS"
          auto alloca = cast<AllocaInst>(inst->getChild(1));
          pushed_vars.push_back(alloca);

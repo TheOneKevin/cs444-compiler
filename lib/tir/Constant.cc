@@ -22,6 +22,11 @@ std::ostream& ConstantNullPointer::print(std::ostream& os) const {
    return os;
 }
 
+std::ostream& Undef::print(std::ostream& os) const {
+   os << *type() << " undef";
+   return os;
+}
+
 std::ostream& ConstantInt::print(std::ostream& os) const {
    os << *type() << " " << zextValue();
    return os;
@@ -43,7 +48,7 @@ std::ostream& Argument::print(std::ostream& os) const {
 std::ostream& Function::print(std::ostream& os) const {
    os << "function ";
    if(isExternalLinkage()) os << "external ";
-   if(isNoReturn()) os << "noreturn ";
+   if(attrs().noreturn) os << "noreturn ";
    os << *getReturnType() << " "
       << "@" << name() << "(";
    bool isFirst = true;

@@ -7,13 +7,37 @@
 namespace tir {
 
 static std::ostream& printNameOrConst(std::ostream& os, Value* val) {
-   if(auto* ci = dyn_cast<ConstantInt>(val)) {
-      os << *ci;
+   if(val->isConstant()) {
+      os << *val;
    } else {
       if(!val->type()->isLabelType()) os << *val->type() << " ";
       val->printName(os);
    }
    return os;
+}
+
+/* ===--------------------------------------------------------------------=== */
+// Register all intrinsic instructions
+/* ===--------------------------------------------------------------------=== */
+
+void RegisterAllIntrinsics(CompilationUnit& CU) {
+   using I = Instruction::IntrinsicKind;
+   using FTy = FunctionType;
+   using T = Type;
+   auto& ctx = CU.ctx();
+   auto PtrTy = T::getPointerTy(ctx);
+   auto VoidTy = T::getVoidTy(ctx);
+   auto i32Ty = T::getInt32Ty(ctx);
+
+   // @jcf.malloc(i32) -> ptr*
+   CU.CreateIntrinsic(I::malloc, FTy::get(ctx, PtrTy, {i32Ty}));
+   // @jcf.exception() -> void
+   CU.CreateIntrinsic(I::exception, FTy::get(ctx, VoidTy, {}));
+   // @jcf.check.array_bounds(ptr*, i32) -> void
+   CU.CreateIntrinsic(I::check_array_bounds,
+                      FTy::get(ctx, VoidTy, {PtrTy, i32Ty}));
+   // @jcf.check.null(ptr*) -> void
+   CU.CreateIntrinsic(I::check_null, FTy::get(ctx, VoidTy, {PtrTy}));
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -126,7 +150,7 @@ utils::Generator<Value*> CallInst::args() const {
    }
 }
 
-bool CallInst::isTerminator() const { return getCallee()->isNoReturn(); }
+bool CallInst::isTerminator() const { return getCallee()->attrs().noreturn; }
 
 /* ===--------------------------------------------------------------------=== */
 // BinaryInst implementation

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ranges>
+#include <string_view>
 #include <variant>
 
 #include "tir/BasicBlock.h"
@@ -14,6 +15,7 @@
 namespace tir {
 
 class Function;
+class CompilationUnit;
 
 /* ===--------------------------------------------------------------------=== */
 // Instruction base class
@@ -66,6 +68,18 @@ public:
 protected:
    DECLARE_STRING_TABLE(CastOp, castop_strtab_, CAST_KINDS)
 #undef CAST_KINDS
+
+public:
+#define INTRINSIC_KINDS(F)                        \
+   F(malloc, @jcf.malloc)                         \
+   F(exception, @jcf.exception)                   \
+   F(check_array_bounds, @jcf.check.array_bounds) \
+   F(check_null, @jcf.check.null)
+
+   DECLARE_ENUM_2(IntrinsicKind, INTRINSIC_KINDS)
+protected:
+   DECLARE_STRING_TABLE_2(IntrinsicKind, intrinsic_strtab_, INTRINSIC_KINDS)
+#undef INTRINSIC_KINDS
 
    // Protected data type and getter ///////////////////////////////////////////
 protected:
@@ -166,7 +180,14 @@ public:
    }
    // Sets the parent BB of this instruction
    void setParent(BasicBlock* parent) { parent_ = parent; }
+   // Is this Value an Instruction?
    bool isInstruction() const override { return true; }
+   // Gets the name of the intrinsic kind
+   static inline std::string_view getIntrinsicName(IntrinsicKind kind) {
+      return IntrinsicKind_to_string(kind, "??");
+   }
+   // Does this instruction have side effects (other than users and control flow)?
+   virtual bool hasSideEffects() const { return false; }
 
    // Private data members /////////////////////////////////////////////////////
 private:
@@ -175,6 +196,8 @@ private:
    const DataType data_;
    BasicBlock* parent_;
 };
+
+void RegisterAllIntrinsics(CompilationUnit& cu);
 
 /* ===--------------------------------------------------------------------=== */
 // Terminal instructions
@@ -248,6 +271,7 @@ public:
 
 public:
    std::ostream& print(std::ostream& os) const override;
+   bool hasSideEffects() const override { return true; }
 };
 
 /**
@@ -294,6 +318,7 @@ public:
    Function* getCallee() const;
    utils::Generator<Value*> args() const;
    auto nargs() const { return numChildren() - 1; }
+   bool hasSideEffects() const override { return true; }
 };
 
 /* ===--------------------------------------------------------------------=== */

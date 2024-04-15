@@ -5,11 +5,14 @@
 
 #include "tir/Constant.h"
 #include "tir/Context.h"
+#include "tir/Instructions.h"
 #include "utils/Generator.h"
 
 namespace tir {
 
 class CompilationUnit {
+   friend void RegisterAllIntrinsics(CompilationUnit& cu);
+
 public:
    CompilationUnit(Context& ctx);
    CompilationUnit(const CompilationUnit&) = delete;
@@ -45,6 +48,7 @@ public:
                                               alignof(GlobalVariable));
       auto* gv = new(buf) GlobalVariable{ctx_, type};
       globals_.emplace(name, gv);
+      gv->setName(name);
       return gv;
    }
 
@@ -110,12 +114,25 @@ public:
    void removeGlobalObject(std::string const& name) { globals_.erase(name); }
 
 public:
-   Function* builtinMalloc() { return findFunction("__malloc"); }
-   Function* builtinException() { return findFunction("__exception"); }
+   Function* getIntrinsic(Instruction::IntrinsicKind kind) {
+      auto it = intrinsics_.find(kind);
+      assert(it != intrinsics_.end());
+      return it->second;
+   }
+
+private:
+   void CreateIntrinsic(Instruction::IntrinsicKind kind, FunctionType* type) {
+      auto* buf = ctx_.alloc().allocate_bytes(sizeof(Function), alignof(Function));
+      auto name = Instruction::getIntrinsicName(kind);
+      auto* func = new(buf) Function{ctx_, this, type, name};
+      func->setAttrs(Function::Attrs{.intrinsic = true});
+      intrinsics_.emplace(kind, func);
+   }
 
 private:
    Context& ctx_;
    std::pmr::unordered_map<std::string, GlobalObject*> globals_;
+   std::pmr::unordered_map<Instruction::IntrinsicKind, Function*> intrinsics_;
 };
 
 } // namespace tir

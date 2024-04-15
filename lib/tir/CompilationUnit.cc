@@ -7,21 +7,9 @@
 
 namespace tir {
 
-CompilationUnit::CompilationUnit(Context& ctx) : ctx_{ctx}, globals_{ctx.alloc()} {
-   // Declare the "ptr* __malloc(i32)" function
-   {
-      auto fnty = FunctionType::get(
-            ctx, Type::getPointerTy(ctx), {Type::getInt32Ty(ctx)});
-      auto fn = CreateFunction(fnty, "__malloc");
-      fn->setExternalLinkage();
-   }
-   // Declare the "void __exception()" function
-   {
-      auto fnty = FunctionType::get(ctx, Type::getVoidTy(ctx), {});
-      auto fn = CreateFunction(fnty, "__exception");
-      fn->setNoReturn();
-      fn->setExternalLinkage();
-   }
+CompilationUnit::CompilationUnit(Context& ctx)
+      : ctx_{ctx}, globals_{ctx.alloc()}, intrinsics_{ctx.alloc()} {
+   RegisterAllIntrinsics(*this);
 }
 
 std::ostream& CompilationUnit::print(std::ostream& os) const {

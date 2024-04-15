@@ -70,6 +70,16 @@ void BasicBlock::insertBeforeBegin(Instruction* instr) {
    instr->parent_ = this;
 }
 
+Instruction* BasicBlock::getFirstInsertionPoint() const {
+   // Skip over the allocas and PHIs
+   for(auto inst : *this) {
+      if(!dyn_cast<AllocaInst>(inst) && !dyn_cast<PhiNode>(inst)) {
+         return inst;
+      }
+   }
+   return nullptr;
+}
+
 std::ostream& BasicBlock::print(std::ostream& os) const {
    printName(os) << ":";
    for(auto inst : *this) {

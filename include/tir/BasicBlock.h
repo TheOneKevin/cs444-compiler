@@ -119,6 +119,8 @@ public:
    void appendAfterEnd(Instruction* instr);
    // Insert an instruction before the first instruction in the basic block
    void insertBeforeBegin(Instruction* instr);
+   // Get the instruction before the first insertion point of the basic block
+   Instruction* getFirstInsertionPoint() const;
    // Print the basic block to the given output stream
    std::ostream& print(std::ostream& os) const override;
    // Get the terminator instruction of this basic block

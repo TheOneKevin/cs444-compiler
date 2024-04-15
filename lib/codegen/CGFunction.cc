@@ -5,6 +5,7 @@
 #include "ast/Decl.h"
 #include "codegen/CodeGen.h"
 #include "codegen/Mangling.h"
+#include "tir/Constant.h"
 #include "tir/IRBuilder.h"
 #include "tir/Instructions.h"
 #include "tir/Type.h"
@@ -41,16 +42,14 @@ void CodeGenerator::emitFunctionDecl(ast::MethodDecl const* decl) {
       std::ostringstream ss;
       ss << "NATIVE" << decl->getCanonicalName();
       func = cu.CreateFunction(funcTy, ss.str());
-      func->setExternalLinkage();
+      func->setAttrs(tir::Function::Attrs{.external = true});
    } else {
       Mangler m{nr};
       m.MangleFunctionName(decl);
       func = cu.CreateFunction(funcTy, m.getMangledName());
       // FIXME(kevin): Better way to grab main function?
-      if(decl->name() == "main") {
-         func->setExternalLinkage();
-      } else if(decl->name() == "test") {
-         func->setExternalLinkage();
+      if(decl->name() == "main" || decl->name() == "test") {
+         func->setAttrs(tir::Function::Attrs{.external = true});
       }
    }
    gvMap[decl] = func;
@@ -71,7 +70,7 @@ void CodeGenerator::emitFunction(ast::MethodDecl const* decl) {
    // 2. Emit the function body and add the allocas for the locals
    auto entry = builder.createBasicBlock(func);
    builder.setInsertPoint(entry->begin());
-   std::vector<tir::Value*> paramAllocas;
+   unsigned paramNum = 0;
    for(auto* local : decl->decls()) {
       auto* const typedLocal = cast<ast::VarDecl>(local);
       auto* const localTy = emitType(typedLocal->type());
@@ -79,13 +78,9 @@ void CodeGenerator::emitFunction(ast::MethodDecl const* decl) {
       val->setName(typedLocal->name());
       valueMap[local] = cast<tir::AllocaInst>(val);
       if(typedLocal->isArg()) {
-         paramAllocas.push_back(val);
+         func->getEntryBlock()->appendAfterEnd(
+               tir::StoreInst::Create(ctx, func->arg(paramNum++), val));
       }
-   }
-   unsigned paramNum = 0;
-   for(auto* arg : func->args()) {
-      func->getEntryBlock()->appendAfterEnd(
-            tir::StoreInst::Create(ctx, arg, paramAllocas[paramNum++]));
    }
    emitStmt(decl->body());
    // 3. If the BB we're in does not end in a terminator, add a return
