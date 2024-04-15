@@ -159,14 +159,15 @@ InstSelectNode* DAG::findValue(tir::Value* v) {
 }
 
 void DAG::createChain(tir::Instruction* inst, InstSelectNode* node) {
+   // Always chain the node to the bb entry node
+   bbMap[curbb]->addChild(node);
    auto dep = inst->prev();
    if(!dep) return;
    // If dep is a user of inst, then don't chain
    for(auto* user : dep->users())
       if(user == inst) return;
-   // Otherwise, add a chain edge to both the dep and from the entry node
+   // Otherwise, add a chain edge to the dep
    node->addChild(findValue(dep));
-   bbMap[curbb]->addChild(node);
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -260,6 +261,7 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
       // FIXME(kevin): Calls should have a call begin + call end
       findValue(ci->getCallee());
       std::vector<InstSelectNode*> args;
+      args.push_back(findValue(ci->getCallee()));
       if(ci->nargs() > 0) {
          for(auto* arg : ci->args()) args.push_back(findValue(arg));
       }

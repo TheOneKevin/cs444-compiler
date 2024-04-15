@@ -104,7 +104,7 @@ public:
 private:
    friend class ISelDAGBuilder;
    // Internal constructor for N-ary nodes
-   InstSelectNode(BumpAllocator& alloc, NodeType type, int arity)
+   InstSelectNode(BumpAllocator& alloc, NodeType type, unsigned arity)
          : utils::GraphNodeUser<InstSelectNode>{alloc},
            utils::GraphNode<InstSelectNode>{alloc},
            type_{type},
@@ -115,7 +115,7 @@ private:
       auto* buf =
             alloc.allocate_bytes(sizeof(InstSelectNode), alignof(InstSelectNode));
       auto* node =
-            new(buf) InstSelectNode{alloc, type, static_cast<int>(args.size())};
+            new(buf) InstSelectNode{alloc, type, static_cast<unsigned>(args.size())};
       args.for_each([&node](auto* arg) { node->addChild(arg); });
       return node;
    }
@@ -140,13 +140,14 @@ public:
    NodeType type() const { return type_; }
    int printDotNode(utils::DotPrinter& dp,
                     std::unordered_set<InstSelectNode const*>& visited) const;
+   void printNodeTable(utils::DotPrinter& dp) const;
    utils::Generator<InstSelectNode*> childNodes() const;
    void clearChains() { children_.resize(arity); }
 
 private:
    const NodeType type_;
    DataOpt data_;
-   const int arity;
+   const unsigned arity;
 };
 
 } // namespace mc

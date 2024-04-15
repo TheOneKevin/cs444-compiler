@@ -198,12 +198,13 @@ public:
    /// @brief Print a single line of indented text
    void print(string_view str) { indent() << str << "\n"; }
 
-private:
+   /// @brief Print a series of spaces to indent this line
    ostream& indent() {
       for(int i = 0; i < indent_; i++) os << "  ";
       return os;
    }
 
+   /// @brief Print a series of space separated attr=value pairs
    void print_attr_list(string_list attrs, bool quote) {
       bool isKey = true;
       for(auto attr : attrs) {
@@ -218,6 +219,7 @@ private:
       }
    }
 
+   /// @brief Print the start of an HTML tag
    void print_html_start(string_view tag, string_list attrs = {},
                          string_list attrs2 = {}) {
       bool newline = true;
@@ -232,6 +234,7 @@ private:
       }
    }
 
+   /// @brief Print the end of an HTML tag
    void print_html_end(string_view tag) {
       bool newline = true;
       if(tag == "td") newline = false;

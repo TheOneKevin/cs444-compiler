@@ -1,8 +1,32 @@
 #include "mc/InstSelectNode.h"
 
+#include "utils/DotPrinter.h"
+
 namespace mc {
 
 using ISN = InstSelectNode;
+
+void ISN::printNodeTable(utils::DotPrinter& dp) const {
+   auto colspan = arity + (arity < numChildren() ? 1 : 0);
+   dp.print_html_start("tr");
+   dp.print_html_start("td", {"colspan", std::to_string(colspan)});
+   dp.sanitize(NodeType_to_string(type_, "??"));
+   dp.print_html_end("td");
+   dp.print_html_end("tr");
+   dp.print_html_start("tr");
+   for(unsigned i = 0; i < arity; i++) {
+      auto str = std::to_string(i);
+      dp.print_html_start("td", {"port", str});
+      dp.sanitize(str);
+      dp.print_html_end("td");
+   }
+   if(arity < numChildren()) {
+      dp.print_html_start("td", {"port", "ch"});
+      dp.sanitize("ch");
+      dp.print_html_end("td");
+   }
+   dp.print_html_end("tr");
+}
 
 int ISN::printDotNode(utils::DotPrinter& dp,
                       std::unordered_set<ISN const*>& visited) const {
@@ -59,28 +83,31 @@ int ISN::printDotNode(utils::DotPrinter& dp,
                        "Mdiamond");
          break;
       }
-      default:
+      default: {
          if(arity == 0) {
             dp.printLabel(id,
                           NodeType_to_string(type_, "??"),
                           {"style", "filled", "fillcolor", "lightblue"});
          } else {
-            dp.printLabel(id, NodeType_to_string(type_, "??"));
+            dp.startTLabel(id, {}, "3");
+            printNodeTable(dp);
+            dp.endTLabel();
          }
          break;
+      }
    }
    // Now go to the children
    unsigned i;
    for(i = 0; i < (unsigned)arity; i++) {
       auto child = cast<ISN>(getRawChild(i));
       int childId = child->printDotNode(dp, visited);
-      dp.printConnection(id, childId);
+      dp.indent() << "node" << id << ":" << i << ":s -> node" << childId << "[weight=100];\n";
    }
    // For the rest, print it as red
    for(; i < numChildren(); i++) {
       auto child = cast<ISN>(getRawChild(i));
       int childId = child->printDotNode(dp, visited);
-      dp.printConnection(id, childId, {"color", "red"});
+      dp.indent() << "node" << id << ":ch:s -> node" << childId << " [color=red weight=0];\n";
    }
    return id;
 }
