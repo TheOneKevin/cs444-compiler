@@ -94,14 +94,14 @@ if (args.assignment == 5 or args.assignment == 6):
         if (test_ret != 0):
             valid_failures += 1
         else:
-            valid_failures += run_codegen(test, 0)
+            valid_failures += run_codegen(test, 123)
     invalid_failures = 0
     for test in invalid_files:
         test_ret = run_test(test, 0)
         if (test_ret != 0):
             invalid_failures += 1
         else:
-            invalid_failures += run_codegen(test, 13)
+            invalid_failures += run_codegen(test, 1)
     failures = valid_failures + invalid_failures
     print(
         f"Total failures: {failures}/{len(test_names)}"
