@@ -12,16 +12,16 @@ class InstSelectNode;
 class MCFunction;
 
 /* ===--------------------------------------------------------------------=== */
-// ISelDAGBuilder
+// DAGBuilder
 /* ===--------------------------------------------------------------------=== */
 
-class ISelDAGBuilder final {
+class DAGBuilder final {
 private:
-   ISelDAGBuilder(BumpAllocator& alloc, MCFunction* MCF)
-         : alloc{alloc}, MCF{MCF} {}
+   DAGBuilder(BumpAllocator& alloc, MCFunction* MCF) : alloc{alloc}, MCF{MCF} {}
 
 public:
-   static MCFunction* Build(BumpAllocator&, tir::Function const* F);
+   static MCFunction* Build(BumpAllocator&, tir::Function const* F,
+                            MCTargetDesc const& TD);
 
 private:
    // Main DAG building instruction to translate TIR -> instruction node

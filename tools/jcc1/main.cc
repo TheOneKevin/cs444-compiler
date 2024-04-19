@@ -2,7 +2,7 @@
 #include <codegen/CodeGen.h>
 #include <diagnostics/Diagnostics.h>
 #include <grammar/Joos1WGrammar.h>
-#include <mc/ISelDAGBuilder.h>
+#include <mc/DAGBuilder.h>
 #include <parsetree/ParseTreeVisitor.h>
 #include <passes/AllPasses.h>
 #include <semantic/HierarchyChecker.h>
@@ -269,6 +269,7 @@ int main(int argc, char** argv) {
    utils::CustomBufferResource Heap{};
    BumpAllocator Alloc{&Heap};
    target::x86::X86TargetInfo TI{};
+   target::x86::x86MCTargetDesc TD{};
    tir::Context CGContext{Alloc, TI};
    tir::CompilationUnit CU{CGContext};
    {
@@ -313,7 +314,7 @@ int main(int argc, char** argv) {
       auto const& Pass = OptPM.FindPass<IRContextPass>();
       for(auto const* F : Pass.CU().functions()) {
          if(!F->hasBody()) continue;
-         auto* MCF = mc::ISelDAGBuilder::Build(Alloc, F);
+         auto* MCF = mc::DAGBuilder::Build(Alloc, F, TD);
          std::ofstream out{std::string{F->name()} + ".dag.dot"};
          MCF->printDot(out);
          out.close();

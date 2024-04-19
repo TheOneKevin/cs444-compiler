@@ -17,7 +17,7 @@
 namespace mc {
 
 class InstSelectNode;
-class ISelDAGBuilder;
+class DAGBuilder;
 
 /* ===--------------------------------------------------------------------=== */
 // NodeType enum
@@ -106,15 +106,17 @@ public:
    DECLARE_STRING_TABLE(NodeKind, NodeTypeStrings, NodeTypeList)
 
    /* ===-----------------------------------------------------------------=== */
-   // Private constructors, used by the ISelDAGBuilder
+   // Private constructors, used by the DAGBuilder
    /* ===-----------------------------------------------------------------=== */
 private:
-   friend class ISelDAGBuilder;
+   friend class DAGBuilder;
    // Internal constructor for N-ary nodes
-   InstSelectNode(BumpAllocator& alloc, NodeKind type, unsigned arity)
+   InstSelectNode(BumpAllocator& alloc, NodeKind type, unsigned arity,
+                  DataOpt data)
          : utils::GraphNodeUser<InstSelectNode>{alloc},
            utils::GraphNode<InstSelectNode>{alloc},
            kind_{type},
+           data_{data},
            arity_{arity} {}
    // Build any non-leaf node of some type, with N arguments
    static InstSelectNode* Create(BumpAllocator& alloc, Type ty, NodeKind kind,
@@ -122,9 +124,8 @@ private:
       auto* buf =
             alloc.allocate_bytes(sizeof(InstSelectNode), alignof(InstSelectNode));
       auto* node = new(buf)
-            InstSelectNode{alloc, kind, static_cast<unsigned>(args.size())};
+            InstSelectNode{alloc, kind, static_cast<unsigned>(args.size()), ty};
       args.for_each([&node](auto* arg) { node->addChild(arg); });
-      node->data_ = ty;
       return node;
    }
    // Build a leaf node (zero arity) with type and leaf data. Note that leaf
@@ -133,8 +134,7 @@ private:
                                      DataOpt data = std::nullopt) {
       auto* buf =
             alloc.allocate_bytes(sizeof(InstSelectNode), alignof(InstSelectNode));
-      auto* node = new(buf) InstSelectNode{alloc, kind, 0};
-      node->data_ = data;
+      auto* node = new(buf) InstSelectNode{alloc, kind, 0, data};
       return node;
    }
    // Build a constant immediate leaf node
@@ -145,20 +145,59 @@ private:
    }
 
 public:
+   /// @brief Gets the kind/operation of the node
    NodeKind kind() const { return kind_; }
+   /// @brief Prints the node in the DOT format
    int printDotNode(utils::DotPrinter& dp,
                     std::unordered_set<InstSelectNode const*>& visited) const;
+   /// @brief Prints the node table in the DOT format
    void printNodeTable(utils::DotPrinter& dp) const;
+   /// @brief Iterates over the children of the node (including chains)
    utils::Generator<InstSelectNode*> childNodes() const;
+   /// @brief Remove all the chains from the node
    void clearChains() { children_.resize(arity_); }
+   /// @brief Gets the ith child of the node
    InstSelectNode* getChild(unsigned idx) const {
       return static_cast<InstSelectNode*>(getRawChild(idx));
+   }
+   /// @brief Gets the live range of this node as a tuple of (from, to)
+   /// where, noting the topoIdx decreases from-top-to-bottom of the basic
+   /// block, we must have from >= to.
+   auto liveRange() const { return std::make_tuple(topoIdx_, liveRangeTo_); }
+   /// @brief Gets the topological index of this node
+   auto topoIdx() const { return topoIdx_; }
+   /// @brief Sets the topological index of this node and updates live range.
+   void setTopoIdx(int idx) {
+      topoIdx_ = idx;
+      liveRangeTo_ = idx;
+   }
+   /// @brief Updates the live-range-to of this node, takes the minimum of the
+   /// current range and the given one (to maximum live range).
+   void updateLiveRange(int to) {
+      liveRangeTo_ = liveRangeTo_ == -1 ? to : std::min(liveRangeTo_, to);
+   }
+   /**
+    * @brief Insert this node before the given node in the list
+    *
+    * @param node The node to insert before
+    */
+   void insertBefore(InstSelectNode* node) {
+      assert(prev_ == nullptr && next_ == nullptr);
+      prev_ = node->prev_;
+      next_ = node;
+      if(prev_) prev_->next_ = this;
+      node->prev_ = this;
    }
 
 private:
    const NodeKind kind_;
-   DataOpt data_;
+   const DataOpt data_;
    const unsigned arity_;
+   int topoIdx_ = -1;
+   int liveRangeTo_ = -1;
+   InstSelectNode* prev_ = nullptr;
+   InstSelectNode* next_ = nullptr;
+   int mcRegIndex_ = -1;
 };
 
 } // namespace mc

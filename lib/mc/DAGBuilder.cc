@@ -1,10 +1,11 @@
-#include "mc/ISelDAGBuilder.h"
+#include "mc/DAGBuilder.h"
 
 #include <unordered_map>
 #include <utility>
 
 #include "mc/InstSelectNode.h"
 #include "mc/MCFunction.h"
+#include "mc/MCTargetDesc.h"
 #include "tir/BasicBlock.h"
 #include "tir/Constant.h"
 #include "tir/Instructions.h"
@@ -16,7 +17,7 @@
 namespace mc {
 
 using namespace tir;
-using DAG = ISelDAGBuilder;
+using DAG = DAGBuilder;
 using ISN = InstSelectNode;
 using T = ISN::Type;
 
@@ -24,13 +25,14 @@ using T = ISN::Type;
 // Function to actually build the DAG for a given TIR function
 /* ===--------------------------------------------------------------------=== */
 
-MCFunction* DAG::Build(BumpAllocator& alloc, tir::Function const* F) {
+MCFunction* DAG::Build(BumpAllocator& alloc, tir::Function const* F,
+                       MCTargetDesc const& TD) {
    assert(F->hasBody());
    // Allocate the MCFunction to store the DAGs
    void* buf = alloc.allocate_bytes(sizeof(MCFunction), alignof(MCFunction));
-   auto MCF = new(buf) MCFunction{alloc, F->ctx().TI()};
+   auto MCF = new(buf) MCFunction{alloc, F->ctx().TI(), TD};
    // Create the builder now
-   ISelDAGBuilder builder{alloc, MCF};
+   DAGBuilder builder{alloc, MCF};
    // Build dummy DAG nodes for each basic block
    for(auto* bb : F->reversePostOrder()) {
       auto* const node = ISN::CreateLeaf(alloc, NodeKind::Entry);
@@ -107,7 +109,7 @@ ISN::StackSlot DAG::findOrAllocStackSlot(tir::AllocaInst* alloca) {
    if(it != allocaMap.end()) {
       return it->second;
    }
-   auto& TI = MCF->TI_;
+   auto& TI = MCF->TI;
    int idx = ++highestStackSlotIdx;
    int bytes = (alloca->allocatedType()->getSizeInBits() + 1) / 8;
    int slots = (bytes + TI.getStackAlignment() - 1) / TI.getStackAlignment();
@@ -162,7 +164,7 @@ InstSelectNode* DAG::findValue(tir::Value* v) {
          return ISN::CreateLeaf(
                alloc, NodeKind::GlobalAddress, cast<GlobalObject>(c));
       } else if(c->isNullPointer()) {
-         return ISN::CreateImm(alloc, MCF->TI_.getPointerSizeInBits(), 0);
+         return ISN::CreateImm(alloc, MCF->TI.getPointerSizeInBits(), 0);
       } else if(c->isUndef()) {
          return ISN::CreateImm(alloc, c->type()->getSizeInBits(), 0);
       }

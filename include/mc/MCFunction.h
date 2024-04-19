@@ -1,52 +1,36 @@
 #pragma once
 
 #include "mc/InstSelectNode.h"
+#include "mc/MCTargetDesc.h"
 #include "tir/Context.h"
 #include "utils/BumpAllocator.h"
-#include "utils/DotPrinter.h"
 
 namespace mc {
 
-class ISelDAGBuilder;
+class DAGBuilder;
 
 class MCFunction final {
-   friend class ISelDAGBuilder;
+   friend class DAGBuilder;
 
 public:
-   std::ostream& printDot(std::ostream& os) const {
-      utils::DotPrinter dp{os, "20"};
-      std::unordered_set<InstSelectNode const*> visited;
-      dp.startGraph();
-      dp.print("compound=true;");
-      // First, print all the nodes and connections
-      for(auto* graph : graphs_) dp.id(graph);
-      for(auto* graph : graphs_) {
-         dp.startSubgraph(dp.getId(graph));
-         graph->printDotNode(dp, visited);
-         dp.endSubgraph();
-      }
-      // Next. print the edges that cross the subgraphs
-      for(auto* graph : graphs_) {
-         for(auto* pred : graph->users()) {
-            if(pred->kind() != NodeKind::BasicBlock) continue;
-            // FIXME(kevin): This seems like a bad bug, why does this occur?
-            if(dp.getId(pred) == -1) continue;
-            auto from = dp.getId(pred);
-            auto to = dp.getId(graph);
-            dp.printConnection(from, to, {"color", "blue", "style", "dashed"});
-         }
-      }
-      dp.endGraph();
-      return os;
-   }
+   /// @brief Prints the DAG as a collection of subgraphs in DOT format
+   std::ostream& printDot(std::ostream& os) const;
+   /**
+    * @brief Runs a reversed topological sort on the basic block DAG
+    * subgraphs and emits a single DAG node as the machine IR root.
+    */
+   void scheduleMIR();
 
 private:
-   MCFunction(BumpAllocator& alloc, tir::TargetInfo const& TI)
-         : TI_{TI}, graphs_{alloc} {}
+   MCFunction(BumpAllocator& alloc, tir::TargetInfo const& TI,
+              mc::MCTargetDesc const& TD)
+         : TI{TI}, TD{TD}, graphs_{alloc} {}
 
 private:
-   tir::TargetInfo const& TI_;
+   tir::TargetInfo const& TI;
+   mc::MCTargetDesc const& TD;
    std::pmr::vector<InstSelectNode*> graphs_;
+   InstSelectNode* mirRoot_;
 };
 
 } // namespace mc
