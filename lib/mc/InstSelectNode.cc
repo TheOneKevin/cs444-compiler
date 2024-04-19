@@ -8,23 +8,39 @@ namespace mc {
 using ISN = InstSelectNode;
 
 void ISN::printNodeTable(utils::DotPrinter& dp) const {
-   auto colspan = arity + (arity < numChildren() ? 1 : 0);
+   auto colspan = arity_ + (arity_ < numChildren() ? 1 : 0);
+   auto type = std::get<Type>(data_.value());
    dp.print_html_start("tr");
-   dp.print_html_start("td", {"colspan", std::to_string(colspan)});
-   dp.sanitize(NodeType_to_string(type_, "??"));
-   dp.print_html_end("td");
-   dp.print_html_end("tr");
-   dp.print_html_start("tr");
-   for(unsigned i = 0; i < arity; i++) {
-      auto str = std::to_string(i);
-      dp.print_html_start("td", {"port", str});
-      dp.sanitize(str);
+   {
+      dp.print_html_start("td", {"colspan", std::to_string(colspan)});
+      dp.sanitize(NodeKind_to_string(kind_, "??"));
       dp.print_html_end("td");
    }
-   if(arity < numChildren()) {
-      dp.print_html_start("td", {"port", "ch"});
-      dp.sanitize("ch");
+   dp.print_html_end("tr");
+   dp.print_html_start("tr");
+   {
+      dp.print_html_start("td", {"colspan", std::to_string(colspan)});
+      if(type.bits == 0) {
+         dp.sanitize("Type: void");
+      } else {
+         dp.sanitize("Type: i" + std::to_string(type.bits));
+      }
       dp.print_html_end("td");
+   }
+   dp.print_html_end("tr");
+   dp.print_html_start("tr");
+   {
+      for(unsigned i = 0; i < arity_; i++) {
+         auto str = std::to_string(i);
+         dp.print_html_start("td", {"port", str});
+         dp.sanitize(str);
+         dp.print_html_end("td");
+      }
+      if(arity_ < numChildren()) {
+         dp.print_html_start("td", {"port", "ch"});
+         dp.sanitize("ch");
+         dp.print_html_end("td");
+      }
    }
    dp.print_html_end("tr");
 }
@@ -35,10 +51,10 @@ int ISN::printDotNode(utils::DotPrinter& dp,
    if(visited.count(this)) return dp.getId(this);
    visited.insert(this);
    // Create a new the id for this node
-   int id = (type() == NodeType::Entry) ? dp.getId(this) : dp.id(this);
+   int id = (kind() == NodeKind::Entry) ? dp.getId(this) : dp.id(this);
    // If it's a leaf node, print the data. Otherwise, just print the operation
-   switch(type()) {
-      case NodeType::Constant: {
+   switch(kind()) {
+      case NodeKind::Constant: {
          auto imm = std::get<ImmValue>(data_.value());
          dp.startTLabel(id, {"style", "filled", "bgcolor", "gainboro"});
          dp.printTableSingleRow("Constant");
@@ -47,7 +63,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          dp.endTLabel();
          break;
       }
-      case NodeType::Register: {
+      case NodeKind::Register: {
          auto reg = std::get<VReg>(data_.value()).idx;
          dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
          dp.printTableSingleRow("Register");
@@ -55,7 +71,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          dp.endTLabel();
          break;
       }
-      case NodeType::FrameIndex: {
+      case NodeKind::FrameIndex: {
          auto idx = std::get<StackSlot>(data_.value()).idx;
          dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
          dp.printTableSingleRow("FrameIndex");
@@ -63,7 +79,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          dp.endTLabel();
          break;
       }
-      case NodeType::Argument: {
+      case NodeKind::Argument: {
          auto idx = std::get<VReg>(data_.value()).idx;
          dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
          dp.printTableSingleRow("Argument");
@@ -71,20 +87,20 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          dp.endTLabel();
          break;
       }
-      case NodeType::BasicBlock: {
+      case NodeKind::BasicBlock: {
          // Defer the printing of connections to MCFunction
          dp.printLabel(
                id, "BasicBlock", {"style", "filled", "fillcolor", "lightblue"});
          return id;
       }
-      case NodeType::Entry: {
+      case NodeKind::Entry: {
          dp.printLabel(id,
                        "Entry",
                        {"style", "filled", "fillcolor", "lightgreen"},
                        "Mdiamond");
          break;
       }
-      case NodeType::GlobalAddress: {
+      case NodeKind::GlobalAddress: {
          auto GO = std::get<tir::GlobalObject*>(data_.value());
          dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
          dp.printTableSingleRow("GlobalAddress");
@@ -93,9 +109,9 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          break;
       }
       default: {
-         if(arity == 0) {
+         if(arity_ == 0) {
             dp.printLabel(id,
-                          NodeType_to_string(type_, "??"),
+                          NodeKind_to_string(kind_, "??"),
                           {"style", "filled", "fillcolor", "lightblue"});
          } else {
             dp.startTLabel(id, {}, "3");
@@ -107,16 +123,18 @@ int ISN::printDotNode(utils::DotPrinter& dp,
    }
    // Now go to the children
    unsigned i;
-   for(i = 0; i < (unsigned)arity; i++) {
+   for(i = 0; i < (unsigned)arity_; i++) {
       auto child = cast<ISN>(getRawChild(i));
       int childId = child->printDotNode(dp, visited);
-      dp.indent() << "node" << id << ":" << i << ":s -> node" << childId << "[weight=100];\n";
+      dp.indent() << "node" << id << ":" << i << ":s -> node" << childId
+                  << "[weight=100];\n";
    }
    // For the rest, print it as red
    for(; i < numChildren(); i++) {
       auto child = cast<ISN>(getRawChild(i));
       int childId = child->printDotNode(dp, visited);
-      dp.indent() << "node" << id << ":ch:s -> node" << childId << " [color=red weight=0];\n";
+      dp.indent() << "node" << id << ":ch:s -> node" << childId
+                  << " [color=red weight=0];\n";
    }
    return id;
 }

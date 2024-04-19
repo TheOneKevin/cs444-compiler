@@ -28,7 +28,7 @@ public:
       // Next. print the edges that cross the subgraphs
       for(auto* graph : graphs_) {
          for(auto* pred : graph->users()) {
-            if(pred->type() != NodeType::BasicBlock) continue;
+            if(pred->kind() != NodeKind::BasicBlock) continue;
             // FIXME(kevin): This seems like a bad bug, why does this occur?
             if(dp.getId(pred) == -1) continue;
             auto from = dp.getId(pred);

@@ -44,6 +44,8 @@ public:
    virtual uint32_t getSizeInBits() const {
       assert(false && "Type does not have a size");
    }
+   // Does this type even have a size?
+   virtual bool isSizeBounded() const { return false; }
    void dump() const;
 
 protected:
@@ -90,6 +92,7 @@ public:
    uint32_t getSizeInBits() const override {
       return ctx().TI().getPointerSizeInBits();
    }
+   bool isSizeBounded() const override { return true; }
 };
 
 /**
@@ -129,6 +132,7 @@ public:
    bool isBooleanType() const override { return getData() == 1; }
    uint32_t getBitWidth() const { return getData(); }
    uint32_t getSizeInBits() const override { return getBitWidth(); }
+   bool isSizeBounded() const override { return true; }
    uint64_t getMask() const { return (1ULL << getBitWidth()) - 1; }
 };
 
@@ -228,7 +232,7 @@ public:
       assert(isSizeBounded() && "Array type must have a size");
       return getLength() * getElementType()->getSizeInBits();
    }
-   bool isSizeBounded() const { return getLength() != 0; }
+   bool isSizeBounded() const override { return getLength() != 0; }
 };
 
 /**
@@ -292,6 +296,7 @@ public:
       }
       return size;
    }
+   bool isSizeBounded() const override { return true; }
    Type* getIndexedType(utils::range_ref<Value*> indices);
    Type* getTypeAtIndex(uint32_t index) { return getChildTypes().array[index]; }
    uint32_t getTypeOffsetAtIndex(uint32_t index) {

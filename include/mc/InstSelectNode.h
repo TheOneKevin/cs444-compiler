@@ -61,7 +61,7 @@ class ISelDAGBuilder;
    F(RETURN)            \
    F(UNREACHABLE)
 
-DECLARE_ENUM(NodeType, NodeTypeList)
+DECLARE_ENUM(NodeKind, NodeTypeList)
 
 /* ===--------------------------------------------------------------------=== */
 // InstSelectNode class
@@ -88,15 +88,22 @@ public:
       explicit VReg(int idx) : idx{idx} {}
    };
 
+   struct Type {
+      uint32_t bits;
+      Type() : bits{0 /* Meaning there's no type */} {}
+      explicit Type(uint32_t bits) : bits{bits} {}
+   };
+
    using DataUnion =
          std::variant</* Stack slot index for allocas */ StackSlot,
                       /* Virtual register index */ VReg,
                       /* Constant immediate value */ ImmValue,
                       /* Predicate value */ tir::Instruction::Predicate,
-                      /* Global object pointer */ tir::GlobalObject*>;
+                      /* Global object pointer */ tir::GlobalObject*,
+                      /* Integer type of node */ Type>;
    using DataOpt = std::optional<DataUnion>;
 
-   DECLARE_STRING_TABLE(NodeType, NodeTypeStrings, NodeTypeList)
+   DECLARE_STRING_TABLE(NodeKind, NodeTypeStrings, NodeTypeList)
 
    /* ===-----------------------------------------------------------------=== */
    // Private constructors, used by the ISelDAGBuilder
@@ -104,28 +111,29 @@ public:
 private:
    friend class ISelDAGBuilder;
    // Internal constructor for N-ary nodes
-   InstSelectNode(BumpAllocator& alloc, NodeType type, unsigned arity)
+   InstSelectNode(BumpAllocator& alloc, NodeKind type, unsigned arity)
          : utils::GraphNodeUser<InstSelectNode>{alloc},
            utils::GraphNode<InstSelectNode>{alloc},
-           type_{type},
-           arity{arity} {}
+           kind_{type},
+           arity_{arity} {}
    // Build any non-leaf node of some type, with N arguments
-   static InstSelectNode* Create(BumpAllocator& alloc, NodeType type,
+   static InstSelectNode* Create(BumpAllocator& alloc, Type ty, NodeKind kind,
                                  utils::range_ref<InstSelectNode*> args) {
       auto* buf =
             alloc.allocate_bytes(sizeof(InstSelectNode), alignof(InstSelectNode));
       auto* node = new(buf)
-            InstSelectNode{alloc, type, static_cast<unsigned>(args.size())};
+            InstSelectNode{alloc, kind, static_cast<unsigned>(args.size())};
       args.for_each([&node](auto* arg) { node->addChild(arg); });
+      node->data_ = ty;
       return node;
    }
    // Build a leaf node (zero arity) with type and leaf data. Note that leaf
    // nodes can have children through chaining.
-   static InstSelectNode* CreateLeaf(BumpAllocator& alloc, NodeType type,
+   static InstSelectNode* CreateLeaf(BumpAllocator& alloc, NodeKind kind,
                                      DataOpt data = std::nullopt) {
       auto* buf =
             alloc.allocate_bytes(sizeof(InstSelectNode), alignof(InstSelectNode));
-      auto* node = new(buf) InstSelectNode{alloc, type, 0};
+      auto* node = new(buf) InstSelectNode{alloc, kind, 0};
       node->data_ = data;
       return node;
    }
@@ -133,24 +141,24 @@ private:
    static InstSelectNode* CreateImm(BumpAllocator& alloc, int bits,
                                     uint64_t value) {
       return CreateLeaf(
-            alloc, NodeType::Constant, InstSelectNode::ImmValue{bits, value});
+            alloc, NodeKind::Constant, InstSelectNode::ImmValue{bits, value});
    }
 
 public:
-   NodeType type() const { return type_; }
+   NodeKind kind() const { return kind_; }
    int printDotNode(utils::DotPrinter& dp,
                     std::unordered_set<InstSelectNode const*>& visited) const;
    void printNodeTable(utils::DotPrinter& dp) const;
    utils::Generator<InstSelectNode*> childNodes() const;
-   void clearChains() { children_.resize(arity); }
+   void clearChains() { children_.resize(arity_); }
    InstSelectNode* getChild(unsigned idx) const {
       return static_cast<InstSelectNode*>(getRawChild(idx));
    }
 
 private:
-   const NodeType type_;
+   const NodeKind kind_;
    DataOpt data_;
-   const unsigned arity;
+   const unsigned arity_;
 };
 
 } // namespace mc
