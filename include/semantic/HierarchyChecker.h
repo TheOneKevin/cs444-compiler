@@ -1,12 +1,14 @@
 #pragma once
 
-#include <map>
-#include <set>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "ast/AST.h"
 #include "ast/AstNode.h"
+#include "ast/Decl.h"
 #include "diagnostics/Diagnostics.h"
+#include "utils/Generator.h"
 
 namespace semantic {
 
@@ -19,7 +21,12 @@ public:
       checkInheritance();
    }
 
-   bool isSubtype(ast::Type const* sub, ast::Type const* super);
+   /// @brief Iterate through the inherited members in-order from the
+   /// base class to the derived class.
+   utils::Generator<ast::FieldDecl*> getInheritedMembersInOrder(ast::Decl const* decl);
+
+   // returns if sub is a type of super
+   bool isSubType(ast::Decl const* sub, ast::Decl const* super);
 
    // @brief Check if a class is a subclass of another class
    bool isSuperClass(ast::ClassDecl const* super, ast::ClassDecl const* sub);
@@ -52,11 +59,11 @@ public:
 private:
    diagnostics::DiagnosticEngine& diag;
    ast::LinkingUnit const* lu_;
-   std::pmr::map<ast::Decl const*, std::pmr::set<ast::Decl const*>>
+   std::pmr::unordered_map<ast::Decl const*, std::pmr::unordered_set<ast::Decl const*>>
          inheritanceMap_;
-   std::pmr::map<ast::Decl const*, std::pmr::vector<ast::MethodDecl const*>>
+   std::pmr::unordered_map<ast::Decl const*, std::pmr::vector<ast::MethodDecl const*>>
          methodInheritanceMap_;
-   std::pmr::map<ast::Decl const*, std::pmr::set<ast::TypedDecl const*>>
+   std::pmr::unordered_map<ast::Decl const*, std::pmr::unordered_set<ast::TypedDecl const*>>
          memberInheritancesMap_;
    void checkInheritance();
 
@@ -72,7 +79,7 @@ private:
    // Check method inheritance
    void checkMethodInheritance();
    void checkMethodInheritanceHelper(ast::Decl const* node,
-                                     std::pmr::set<ast::Decl const*>& visited);
+                                     std::pmr::unordered_set<ast::Decl const*>& visited);
 
    void setInheritedMembersHelper(ast::Decl const* node, ast::Decl const* parent);
 };

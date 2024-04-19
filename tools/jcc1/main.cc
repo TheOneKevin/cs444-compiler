@@ -276,7 +276,8 @@ int main(int argc, char** argv) {
       if(verboseLevel > 0)
          std::cerr << "*** Running code generation... ***" << std::endl;
       auto& NR = FEPM.FindPass<joos1::NameResolverPass>();
-      codegen::CodeGenerator CG{CGContext, CU, NR.Resolver()};
+      auto& HC = FEPM.FindPass<joos1::HierarchyCheckerPass>();
+      codegen::CodeGenerator CG{CGContext, CU, NR.Resolver(), HC.Checker()};
       auto& pass = FEPM.FindPass<joos1::LinkerPass>();
       try {
          CG.run(pass.LinkingUnit());

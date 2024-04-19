@@ -14,6 +14,7 @@ class Mangler {
 public:
    Mangler(semantic::NameResolver const& nr) : NR{nr} {}
    void MangleDecl(ast::Decl const* decl);
+   void MangleVTable(ast::Decl const* decl);
    std::string getMangledName() { return ss.str(); }
 
 private:

@@ -76,7 +76,7 @@ void CodeGenerator::emitFunction(ast::MethodDecl const* decl) {
       auto* const localTy = emitType(typedLocal->type());
       auto* const val = func->createAlloca(localTy);
       val->setName(typedLocal->name());
-      valueMap[local] = cast<tir::AllocaInst>(val);
+      valueMap[typedLocal] = cast<tir::AllocaInst>(val);
       if(typedLocal->isArg()) {
          func->getEntryBlock()->appendAfterEnd(
                tir::StoreInst::Create(ctx, func->arg(paramNum++), val));

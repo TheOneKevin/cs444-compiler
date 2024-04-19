@@ -1,7 +1,7 @@
 #include "semantic/HierarchyChecker.h"
 
-#include <set>
 #include <utility>
+
 #include "ast/AstNode.h"
 #include "ast/DeclContext.h"
 #include "utils/Utils.h"
@@ -20,6 +20,26 @@ static bool isSameMethodSignature(ast::MethodDecl const* method1,
    }
 
    return true;
+}
+
+bool HierarchyChecker::isSubType(ast::Decl const* sub, ast::Decl const* super) {
+   if(auto subClass = dyn_cast<ast::ClassDecl>(sub)) {
+      if(auto superClass = dyn_cast<ast::ClassDecl>(super)) {
+         return isSuperClass(superClass, subClass);
+      }
+      if(auto superInterface = dyn_cast<ast::InterfaceDecl>(super)) {
+         return isSuperInterface(superInterface, subClass);
+      }
+   }
+   if(auto subInterface = dyn_cast<ast::InterfaceDecl>(sub)) {
+      if(auto superClass = dyn_cast<ast::ClassDecl>(super)) {
+         return false;
+      }
+      if(auto superInterface = dyn_cast<ast::InterfaceDecl>(super)) {
+         return isSuperInterface(superInterface, subInterface);
+      }
+   }
+   return false;
 }
 
 bool HierarchyChecker::isSuperClass(ast::ClassDecl const* super,
@@ -56,11 +76,11 @@ void HierarchyChecker::setInheritedMembersHelper(ast::Decl const* node,
 }
 
 void HierarchyChecker::checkMethodInheritanceHelper(
-      ast::Decl const* node, std::pmr::set<ast::Decl const*>& visited) {
+      ast::Decl const* node, std::pmr::unordered_set<ast::Decl const*>& visited) {
    // Mark the node as visited
    visited.insert(node);
    std::pmr::vector<ast::MethodDecl const*> inheritedMethods;
-   memberInheritancesMap_[node] = std::pmr::set<ast::TypedDecl const*>{};
+   memberInheritancesMap_[node] = std::pmr::unordered_set<ast::TypedDecl const*>{};
    auto nodeAsClass = dyn_cast<ast::ClassDecl>(node);
    if(nodeAsClass) {
       for(auto member : nodeAsClass->fields()) {
@@ -114,7 +134,7 @@ void HierarchyChecker::checkMethodInheritanceHelper(
 }
 
 void HierarchyChecker::checkMethodInheritance() {
-   std::pmr::set<ast::Decl const*> visited;
+   std::pmr::unordered_set<ast::Decl const*> visited;
    for(auto cu : lu_->compliationUnits()) {
       auto body = cu->body();
       // if the body is null, continue to the next iteration
@@ -308,12 +328,9 @@ void HierarchyChecker::checkClassMethod(
          diag.ReportError(classDecl->location())
                << "an abstract method must be implemented in a "
                   "non-abstract class "
-               << method->name()
-               << classDecl->location()
-               << "does not implement " << method->name()
-               << cast<ast::Decl>(method->parent())->location()
-               << "method is inherited from here"
-               << method->location()
+               << method->name() << classDecl->location() << "does not implement "
+               << method->name() << cast<ast::Decl>(method->parent())->location()
+               << "method is inherited from here" << method->location()
                << "abstract method is declared here";
       } else if(isImplemented == !method->modifiers().isAbstract()) {
          allMethods.emplace_back(method);
@@ -327,10 +344,12 @@ void HierarchyChecker::checkClassMethod(
       diag.ReportDebug(2) << "Class: " << classDecl->name();
       diag.ReportDebug(2) << "Inherited methods: ";
       for(auto method : allMethods) {
-         if (auto parent = dyn_cast<ast::ClassDecl>(method->parent())) {
-            diag.ReportDebug(2) << "\t" << method->name() << " -> " << parent->name();
-         } else if (auto parent = dyn_cast<ast::InterfaceDecl>(method->parent())) {
-            diag.ReportDebug(2) << "\t" << method->name() << " -> " << parent->name();
+         if(auto parent = dyn_cast<ast::ClassDecl>(method->parent())) {
+            diag.ReportDebug(2)
+                  << "\t" << method->name() << " -> " << parent->name();
+         } else if(auto parent = dyn_cast<ast::InterfaceDecl>(method->parent())) {
+            diag.ReportDebug(2)
+                  << "\t" << method->name() << " -> " << parent->name();
          }
       }
    }
@@ -432,6 +451,11 @@ void HierarchyChecker::checkInterfaceMethod(
       diag.ReportDebug(2) << "Inherited methods:";
       for(auto method : allMethods) diag.ReportDebug(2) << "\t" << method->name();
    }
+}
+
+utils::Generator<ast::FieldDecl*> HierarchyChecker::getInheritedMembersInOrder(
+      ast::Decl const* decl) {
+   // TODO(larry): Implement this!
 }
 
 } // namespace semantic
