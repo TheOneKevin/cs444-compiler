@@ -1,6 +1,7 @@
 #pragma once
 #include "ast/DeclContext.h"
 #include "semantic/CFGBuilder.h"
+#include <set>
 namespace semantic {
 
 class DataflowAnalysis {

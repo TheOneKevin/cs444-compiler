@@ -4,6 +4,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <variant>
+#include <set>
 
 #include "ast/Decl.h"
 #include "diagnostics/Location.h"

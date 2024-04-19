@@ -1,4 +1,5 @@
 #include "codegen/Mangling.h"
+
 #include <string_view>
 
 #include "ast/AST.h"
@@ -87,6 +88,11 @@ void Mangler::MangleDecl(ast::Decl const* decl) {
    } else {
       assert(false && "Unknown decl type");
    }
+}
+
+void Mangler::MangleVTable(ast::Decl const* decl) {
+   ss << "_JV";
+   MangleCanonicalName(decl->getCanonicalName());
 }
 
 } // namespace codegen

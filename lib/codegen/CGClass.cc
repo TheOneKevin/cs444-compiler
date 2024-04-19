@@ -41,11 +41,11 @@ void CodeGenerator::emitVTable(ast::ClassDecl const* decl) {
    tir::IRBuilder builder{ctx};
    auto bb = builder.createBasicBlock(F);
    builder.setInsertPoint(bb->begin());
-   gep = ...;
+   // gep = ...;
    // vtable_global_value[1] = func is basically:
    //    %gep = getelementpointer %vtable_global_value, i64 1
    //    store %func, %gep
-   builder.createStoreInstr(/* Value you're storing */ func, /* Where are you storing it? */ gep);
+   // builder.createStoreInstr(/* Value you're storing */ func, /* Where are you storing it? */ gep);
 }
 
 void CodeGenerator::emitClassDecl(ast::ClassDecl const* decl) {
