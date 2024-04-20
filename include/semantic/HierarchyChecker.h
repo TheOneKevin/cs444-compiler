@@ -23,7 +23,7 @@ public:
 
    /// @brief Iterate through the inherited members in-order from the
    /// base class to the derived class.
-   utils::Generator<ast::FieldDecl*> getInheritedMembersInOrder(ast::Decl const* decl);
+   utils::Generator<ast::FieldDecl const*> getInheritedMembersInOrder(ast::Decl const* decl);
 
    // returns if sub is a type of super
    bool isSubType(ast::Decl const* sub, ast::Decl const* super);
@@ -63,7 +63,7 @@ private:
          inheritanceMap_;
    std::pmr::unordered_map<ast::Decl const*, std::pmr::vector<ast::MethodDecl const*>>
          methodInheritanceMap_;
-   std::pmr::unordered_map<ast::Decl const*, std::pmr::unordered_set<ast::TypedDecl const*>>
+   std::pmr::unordered_map<ast::Decl const*, std::pmr::vector<ast::FieldDecl const*>>
          memberInheritancesMap_;
    void checkInheritance();
 
@@ -81,7 +81,7 @@ private:
    void checkMethodInheritanceHelper(ast::Decl const* node,
                                      std::pmr::unordered_set<ast::Decl const*>& visited);
 
-   void setInheritedMembersHelper(ast::Decl const* node, ast::Decl const* parent);
+   void setInheritedMembersHelper(ast::ClassDecl const* node, ast::Decl const* parent);
 };
 
 } // namespace semantic

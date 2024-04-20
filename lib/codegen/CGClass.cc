@@ -13,7 +13,7 @@ void CodeGenerator::emitVTable(ast::ClassDecl const* decl) {
    }
    std::vector<tir::Type*> fieldTypes{(unsigned)numEntries + 1};
    // 1. TypeID
-   fieldTypes.push_back(tir::Type::getInt32Ty(ctx));
+   fieldTypes[0] = (tir::Type::getInt32Ty(ctx));
    // 2. Fill the rest with function pointers
    for(int i = 1; i < numEntries + 1; i++) {
       fieldTypes[i] = tir::Type::getPointerTy(ctx);

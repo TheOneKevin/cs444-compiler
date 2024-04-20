@@ -85,6 +85,9 @@ void Mangler::MangleDecl(ast::Decl const* decl) {
       MangleGlobalName(fd);
    } else if(auto* md = dyn_cast<ast::MethodDecl>(decl)) {
       MangleFunctionName(md);
+   } else if (auto *cd = dyn_cast<ast::ClassDecl>(decl)) {
+      ss << "_JC";
+      MangleCanonicalName(cd->getCanonicalName());
    } else {
       assert(false && "Unknown decl type");
    }

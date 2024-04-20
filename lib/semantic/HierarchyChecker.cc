@@ -62,16 +62,16 @@ bool HierarchyChecker::isSuperInterface(ast::InterfaceDecl const* super,
    return false;
 }
 
-void HierarchyChecker::setInheritedMembersHelper(ast::Decl const* node,
+void HierarchyChecker::setInheritedMembersHelper(ast::ClassDecl const* node,
                                                  ast::Decl const* parent) {
    for(auto member : getInheritedMembers(parent)) {
       bool isHidden = false;
-      for(auto memberInherited : memberInheritancesMap_[node]) {
+      for(auto memberInherited : node->fields()) {
          if(memberInherited->name() == member->name()) {
             isHidden = true;
          }
       }
-      if(!isHidden) memberInheritancesMap_[node].insert(member);
+      if(!isHidden) memberInheritancesMap_[node].push_back(member);
    }
 }
 
@@ -80,13 +80,8 @@ void HierarchyChecker::checkMethodInheritanceHelper(
    // Mark the node as visited
    visited.insert(node);
    std::pmr::vector<ast::MethodDecl const*> inheritedMethods;
-   memberInheritancesMap_[node] = std::pmr::unordered_set<ast::TypedDecl const*>{};
+   memberInheritancesMap_[node] = std::pmr::vector<ast::FieldDecl const*>{};
    auto nodeAsClass = dyn_cast<ast::ClassDecl>(node);
-   if(nodeAsClass) {
-      for(auto member : nodeAsClass->fields()) {
-         memberInheritancesMap_[node].insert(member);
-      }
-   }
 
    for(auto super : inheritanceMap_[node]) {
       if(auto superClass = dyn_cast<ast::ClassDecl>(super)) {
@@ -101,7 +96,7 @@ void HierarchyChecker::checkMethodInheritanceHelper(
          for(auto method : getInheritedMethods(superClass)) {
             inheritedMethods.emplace_back(method);
          }
-         setInheritedMembersHelper(node, superClass);
+         setInheritedMembersHelper(nodeAsClass, superClass);
       } else if(auto superInterface = dyn_cast<ast::InterfaceDecl>(super)) {
          if(!visited.count(superInterface)) {
             checkMethodInheritanceHelper(superInterface, visited);
@@ -130,6 +125,11 @@ void HierarchyChecker::checkMethodInheritanceHelper(
       }
    } else if(auto interfaceDecl = dyn_cast<ast::InterfaceDecl>(node)) {
       checkInterfaceMethod(interfaceDecl, inheritedMethods);
+   }
+   if(nodeAsClass) {
+      for(auto member : nodeAsClass->fields()) {
+         memberInheritancesMap_[node].push_back(member);
+      }
    }
 }
 
@@ -453,9 +453,11 @@ void HierarchyChecker::checkInterfaceMethod(
    }
 }
 
-utils::Generator<ast::FieldDecl*> HierarchyChecker::getInheritedMembersInOrder(
+utils::Generator<ast::FieldDecl const*> HierarchyChecker::getInheritedMembersInOrder(
       ast::Decl const* decl) {
-   // TODO(larry): Implement this!
+   for (auto member : getInheritedMembers(decl)) {
+      co_yield member;
+   }
 }
 
 } // namespace semantic
