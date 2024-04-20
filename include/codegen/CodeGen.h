@@ -58,6 +58,11 @@ private:
    void emitClass(ast::ClassDecl const* decl);
    // Populate the RTTI mappings
    void populateRtti(ast::LinkingUnit const* lu);
+   // Populate the method index table
+   void populateMethodIndexTable(ast::LinkingUnit const* lu);
+   void colorInterferenceGraph(
+         std::unordered_map<const ast::MethodDecl*,
+                            std::unordered_set<const ast::MethodDecl*>>& graph);
    // Emit the vtable in the IR for the class
    void emitVTable(ast::ClassDecl const* decl);
 

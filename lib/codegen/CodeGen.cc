@@ -1,5 +1,6 @@
 #include "codegen/CodeGen.h"
 
+#include <unordered_map>
 #include <utility>
 
 #include "ast/AstNode.h"
@@ -47,6 +48,8 @@ tir::Type* CG::emitType(ast::Type const* type) {
 void CG::run(ast::LinkingUnit const* lu) {
    // 1. Populate the RTTI mappings
    populateRtti(lu);
+   // 2. Populate method index table
+   populateMethodIndexTable(lu);
    // 2. Generate the class structs
    for(auto* cu : lu->compliationUnits()) {
       for(auto* decl : cu->decls()) {
@@ -116,11 +119,66 @@ void CG::populateRtti(ast::LinkingUnit const* lu) {
    // Create the RTTI table
    rttiTable.resize(highestRtti, std::vector<bool>(highestRtti, false));
    // Now populate the RTTI table (Ti, Tj)
-   for (auto& [key, val] : rttiMap) {
-      for (auto& [key2, val2] : rttiMap) {
+   for(auto& [key, val] : rttiMap) {
+      for(auto& [key2, val2] : rttiMap) {
          rttiTable[val][val2] = hc.isSubType(key, key2);
       }
    }
 }
+
+void CG::populateMethodIndexTable(ast::LinkingUnit const* lu) {
+   auto inferenceGraph =
+         std::unordered_map<const ast::MethodDecl*,
+                            std::unordered_set<const ast::MethodDecl*>>{};
+   // 1. Build the interface method graph
+   for(auto* cu : lu->compliationUnits()) {
+      for(auto* decl : cu->decls()) {
+         if(auto* id = dyn_cast<ast::InterfaceDecl>(decl)) {
+            for(auto* method : hc.getInheritedMethods(id)) {
+               for(auto* method2 : hc.getInheritedMethods(id)) {
+                  if(method == method2) continue;
+                  inferenceGraph[method].insert(method2);
+               }
+            }
+         } else if(auto* cd = dyn_cast<ast::ClassDecl>(decl)) {
+            for(auto* method : hc.getInheritedMethods(cd)) {
+               for(auto* method2 : hc.getInheritedMethods(cd)) {
+                  if(method == method2) continue;
+                  inferenceGraph[method].insert(method2);
+               }
+            }
+         }
+      }
+   }
+   // 2. Colour the graph and assign indices
+   vtableIndexMap.clear();
+   colorInterferenceGraph(inferenceGraph);
+}
+
+void CG::colorInterferenceGraph(
+      std::unordered_map<const ast::MethodDecl*,
+                         std::unordered_set<const ast::MethodDecl*>>& graph) {
+         for (auto& [key, val] : graph) {
+            if (vtableIndexMap.count(key)) continue; // Already coloured
+            if (val.empty()) {
+               vtableIndexMap[key] = 0;
+               std::cout << key->name() << " -> 0\n";
+               continue;
+            } // No neighbours, color it 0
+            std::unordered_set<int> usedColors;
+            for(auto* neighbour : val) {
+               if(vtableIndexMap.count(neighbour)) {
+                  usedColors.insert(vtableIndexMap[neighbour]);
+               }
+            }
+            for(int i = 0; ; ++i) {
+               if(usedColors.count(i) == 0) {
+                  vtableIndexMap[key] = i;
+                  std::cout << key->name() << " -> " << i << "\n";
+                  break;
+               }
+            }
+         }
+      }
 
 } // namespace codegen

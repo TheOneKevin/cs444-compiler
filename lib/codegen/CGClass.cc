@@ -8,7 +8,7 @@ namespace codegen {
 
 void CodeGenerator::emitVTable(ast::ClassDecl const* decl) {
    int numEntries = 0;
-   for(auto* method : decl->methods()) {
+   for(auto* method : hc.getInheritedMethods(decl)) {
       numEntries = std::max(numEntries, vtableIndexMap[method]);
    }
    std::vector<tir::Type*> fieldTypes{(unsigned)numEntries + 1};
@@ -38,9 +38,9 @@ void CodeGenerator::emitVTable(ast::ClassDecl const* decl) {
    }
 
    // TODO(larry): Emit ctor into F
-   tir::IRBuilder builder{ctx};
-   auto bb = builder.createBasicBlock(F);
-   builder.setInsertPoint(bb->begin());
+   // tir::IRBuilder builder{ctx};
+   // auto bb = builder.createBasicBlock(F);
+   // builder.setInsertPoint(bb->begin());
    // gep = ...;
    // vtable_global_value[1] = func is basically:
    //    %gep = getelementpointer %vtable_global_value, i64 1
