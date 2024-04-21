@@ -54,6 +54,7 @@ void CG::run(ast::LinkingUnit const* lu) {
    for(auto* cu : lu->compliationUnits()) {
       for(auto* decl : cu->decls()) {
          if(auto* classDecl = dyn_cast<ast::ClassDecl>(decl)) {
+            // We should still emit abstract class static fields
             emitClassDecl(classDecl);
          }
       }

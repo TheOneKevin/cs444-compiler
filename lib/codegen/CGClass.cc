@@ -56,7 +56,6 @@ void CodeGenerator::emitVTable(ast::ClassDecl const* decl) {
       builder.createStoreInstr(gvMap[method], gep);
    }
    builder.createReturnInstr();
-   F->dump();
 }
 
 void CodeGenerator::emitClassDecl(ast::ClassDecl const* decl) {
@@ -65,9 +64,8 @@ void CodeGenerator::emitClassDecl(ast::ClassDecl const* decl) {
    // 2. Emit any static fields as globals
    // 3. Construct the class struct type as well
    std::vector<tir::Type*> fieldTypes{};
-   // 3a) VTable pointer
+   // 3a) Add the VTable pointer field
    fieldTypes.push_back(tir::Type::getPointerTy(ctx));
-   emitVTable(decl);
    // 3b) Inherited members first
    for(auto* field : hc.getInheritedMembersInOrder(decl)) {
       fieldTypes.push_back(emitType(field->type()));
@@ -99,6 +97,12 @@ void CodeGenerator::emitClassDecl(ast::ClassDecl const* decl) {
 }
 
 void CodeGenerator::emitClass(ast::ClassDecl const* decl) {
+   // 1. Emit vtable and its ctor function
+   //    But we shouldn't emit abstract class members and vtables
+   if(!decl->modifiers().isAbstract()) {
+      emitVTable(decl);
+   }
+   // 2. Emit the class methods
    for(auto* method : decl->methods()) {
       if(method->modifiers().isStatic()) {
          emitFunction(method);
