@@ -2,6 +2,8 @@
 
 #include "mc/MCTargetDesc.h"
 #include "tir/Context.h"
+#include "utils/EnumMacros.h"
+
 namespace target::x86 {
 
 // General target information for code generation
@@ -14,7 +16,9 @@ public:
 };
 
 // MC patterns
-enum class x86MCInst { ADD, SUB, LAST_MEMBER };
+#define x86MCInstList(F) F(ADD) F(SUB) F(AND) F(XOR) F(OR)
+DECLARE_ENUM(x86MCInst, x86MCInstList)
+
 enum class x86MCFrag { M32Frag, M64Frag, LAST_MEMBER };
 enum class x86RegClass { GPR32, GPR64 };
 
@@ -26,6 +30,12 @@ public:
    using RegClass = x86RegClass;
    static constexpr int MaxStates = 100;
    static constexpr int MaxOperands = 3;
+   static constexpr int MaxPatternsPerDef = 2;
+
+   /// @brief Gets the name of the pattern
+   static constexpr std::string_view GetPatternName(InstType ty) {
+      return x86MCInst_to_string(ty, "??");
+   }
 
    /// @brief Gets the number of MC register classes
    int numMCRegClasses() const override { return 0; }
@@ -34,6 +44,13 @@ public:
    /// @brief Gets the MC register description for the i-th MC register
    /// where i is in the range [0, numMCRegisters())
    mc::MCRegDesc getMCRegDesc(int i) const override { return mc::MCRegDesc{i, 0}; }
+   /// @brief Returns the MCPattern class for DAG pattern matching
+   const mc::MCPatterns& getMCPatterns() const override;
+
+private:
+   DECLARE_STRING_TABLE(x86MCInst, x86MCInstStringTable, x86MCInstList)
 };
+
+void Initializex86Patterns();
 
 } // namespace target::x86

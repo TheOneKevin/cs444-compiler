@@ -20,6 +20,11 @@ public:
     * subgraphs and emits a single DAG node as the machine IR root.
     */
    void scheduleMIR();
+   /**
+    * @brief Performs instruction selection on the machine IR root node
+    * for each basic block DAG subgraph.
+    */
+   void selectInstructions();
 
 private:
    MCFunction(BumpAllocator& alloc, tir::TargetInfo const& TI,

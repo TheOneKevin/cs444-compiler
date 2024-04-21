@@ -310,12 +310,18 @@ int main(int argc, char** argv) {
       std::cerr << "*** Running backend machine-code pipeline... ***" << std::endl;
    }
 
+   target::x86::Initializex86Patterns();
+   for(auto def : TD.getMCPatterns().patterns()) {
+      def->dump();
+   }
+
    // Run the backend pipeline now (it's not based off the pass pipeline)
    {
       auto const& Pass = OptPM.FindPass<IRContextPass>();
       for(auto const* F : Pass.CU().functions()) {
          if(!F->hasBody()) continue;
          auto* MCF = mc::DAGBuilder::Build(Alloc, F, TD);
+         MCF->selectInstructions();
          std::ofstream out{std::string{F->name()} + ".dag.dot"};
          MCF->printDot(out);
          out.close();

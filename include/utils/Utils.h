@@ -5,6 +5,17 @@
 #include <type_traits>
 #include <vector>
 
+// FIXME(kevin): This exists solely because ASAN does not do well with coroutines
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define DISABLE_ASAN __attribute__((no_sanitize("address")))
+#else
+#define DISABLE_ASAN
+#endif
+#else
+#define DISABLE_ASAN
+#endif
+
 namespace utils {
 
 template <typename T>

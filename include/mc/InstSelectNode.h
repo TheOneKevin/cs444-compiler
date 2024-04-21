@@ -35,8 +35,9 @@ class DAGBuilder;
    F(BasicBlock)        \
    F(Predicate)         \
    /* Special ops*/     \
-   F(LoadFromReg)       \
    F(LoadToReg)         \
+   F(PHI)               \
+   F(UNREACHABLE)       \
    /* Operations */     \
    F(LOAD)              \
    F(STORE)             \
@@ -52,14 +53,11 @@ class DAGBuilder;
    F(ZERO_EXTEND)       \
    F(TRUNCATE)          \
    F(SET_CC)            \
-   F(SELECT_CC)         \
    /* Control flow */   \
    F(CALL)              \
    F(BR_CC)             \
    F(BR)                \
-   F(PHI)               \
-   F(RETURN)            \
-   F(UNREACHABLE)
+   F(RETURN)
 
 DECLARE_ENUM(NodeKind, NodeTypeList)
 

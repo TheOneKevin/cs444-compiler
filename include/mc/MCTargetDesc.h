@@ -1,6 +1,9 @@
 #pragma once
 
 #include <cstdint>
+
+#include "mc/MCPatterns.h"
+
 namespace mc {
 
 /// @brief Describes a target register
@@ -19,6 +22,8 @@ public:
    /// @brief Gets the MC register description for the i-th MC register
    /// where i is in the range [0, numMCRegisters())
    virtual MCRegDesc getMCRegDesc(int i) const = 0;
+   /// @brief Returns the MCPattern class for DAG pattern matching
+   virtual const MCPatterns& getMCPatterns() const = 0;
 };
 
 } // namespace mc

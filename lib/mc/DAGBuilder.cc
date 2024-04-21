@@ -82,7 +82,7 @@ MCFunction* DAG::Build(BumpAllocator& alloc, tir::Function const* F,
       // This step is purely cosmetic:
       //   Let's clean up the chains of BR by removing the chained nodes that
       //   already have users (and so don't need to be chained to BR).
-      for(unsigned i = branch->numChildren() - 1; i > branch->arity_; i--) {
+      for(unsigned i = branch->numChildren(); i > branch->arity_; i--) {
          auto* child = branch->getChild(i - 1);
          if(child->numUsers() > 1) {
             branch->removeChild(i - 1);

@@ -60,4 +60,10 @@ void MCFunction::scheduleMIR() {
    mirRoot_ = nullptr;
 }
 
+void MCFunction::selectInstructions() {
+   for(auto* root : graphs_) {
+      TD.getMCPatterns().matchAndReplace(root);
+   }
+}
+
 } // namespace mc
