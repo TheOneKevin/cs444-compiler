@@ -3,6 +3,7 @@
 #include "codegen/CodeGen.h"
 #include "codegen/Mangling.h"
 #include "tir/Type.h"
+#include "tir/Value.h"
 
 namespace codegen {
 
@@ -19,12 +20,13 @@ void CodeGenerator::emitVTable(ast::ClassDecl const* decl) {
       fieldTypes[i] = tir::Type::getPointerTy(ctx);
    }
    tir::StructType* vtableType = tir::StructType::get(ctx, fieldTypes);
-
+   tir::Value* vtableGlobal;
    // Create a vtable global variable for the class (mangled)
    {
       Mangler m{nr};
       m.MangleVTable(decl);
-      vtableMap[decl] = cu.CreateGlobalVariable(vtableType, m.getMangledName());
+      vtableGlobal = cu.CreateGlobalVariable(vtableType, m.getMangledName());
+      vtableMap[decl] = vtableGlobal;
    }
 
    // Create a function called "void @jcf.vtable.ctor.<class-name>()"
@@ -38,14 +40,23 @@ void CodeGenerator::emitVTable(ast::ClassDecl const* decl) {
    }
 
    // TODO(larry): Emit ctor into F
-   // tir::IRBuilder builder{ctx};
-   // auto bb = builder.createBasicBlock(F);
-   // builder.setInsertPoint(bb->begin());
-   // gep = ...;
+   tir::IRBuilder builder{ctx};
+   auto bb = builder.createBasicBlock(F);
+   builder.setInsertPoint(bb->begin());
    // vtable_global_value[1] = func is basically:
    //    %gep = getelementpointer %vtable_global_value, i64 1
    //    store %func, %gep
-   // builder.createStoreInstr(/* Value you're storing */ func, /* Where are you storing it? */ gep);
+   // builder.createStoreInstr(/* Value you're storing */ func, /* Where are you
+   // storing it? */ gep);
+   for(auto* method : hc.getInheritedMethods(decl)) {
+      auto gep = builder.createGEPInstr(
+            vtableGlobal,
+            vtableType,
+            {tir::Constant::CreateInt32(ctx, vtableIndexMap[method])});
+      builder.createStoreInstr(gvMap[method], gep);
+   }
+   builder.createReturnInstr();
+   F->dump();
 }
 
 void CodeGenerator::emitClassDecl(ast::ClassDecl const* decl) {
