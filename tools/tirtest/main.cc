@@ -1,8 +1,7 @@
-#include <iostream>
-
-#include "target/x86/x86TargetInfo.h"
+#include "target/Target.h"
 #include "tir/BasicBlock.h"
 #include "tir/Constant.h"
+#include "tir/Context.h"
 #include "tir/IRBuilder.h"
 #include "tir/TIR.h"
 #include "utils/BumpAllocator.h"
@@ -14,7 +13,7 @@ int main() {
 
    utils::CustomBufferResource resource{};
    BumpAllocator allocator{&resource};
-   target::x86::X86TargetInfo TI{};
+   auto& TI = target::TargetInfo::Get<target::ArchType::X86>();
    Context ctx{allocator, TI};
    CompilationUnit cu{ctx};
 

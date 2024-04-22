@@ -4,7 +4,7 @@
 #include <utility>
 
 #include "mc/InstSelectNode.h"
-#include "mc/MCTargetDesc.h"
+#include "target/Target.h"
 
 namespace mc {
 

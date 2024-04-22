@@ -4,8 +4,8 @@
 
 #include "mc/InstSelectNode.h"
 #include "mc/MCPatterns.h"
-#include "target/x86/x86TargetInfo.h"
 #include "utils/Utils.h"
+#include "Target.h"
 
 namespace target::x86 {
 
@@ -16,15 +16,12 @@ using F = x86MCFrag;
 using N = mc::NodeKind;
 using PatternGenerator = utils::Generator<mc::MCPatternDef const*>;
 
-// Map of mc::NodeKind -> list of mc::MCPatternDef
-static std::unordered_map<int, std::vector<mc::MCPatternDef const*>> PatternMap_;
-
 /* ===--------------------------------------------------------------------=== */
 // x86 patterns definition
 /* ===--------------------------------------------------------------------=== */
 
 // MC target instruction patterns
-class x86Patterns final : public mc::MCPatternsImpl<x86MCTargetDesc> {
+class x86Patterns final : public mc::MCPatternsImpl<x86TargetDesc> {
 private:
    // Adds the x86 RM encoding for an inst -> node pair
    static consteval auto AddRMEncoding(I inst, N node, bool commutes) {
@@ -166,25 +163,28 @@ public:
 // Class member functions
 /* ===--------------------------------------------------------------------=== */
 
-PatternGenerator x86Patterns::getPatternFor(mc::NodeKind kind) const {
-   for(const auto* def : PatternMap_[(int)kind]) {
-      co_yield def;
-   }
-}
-
-PatternGenerator x86Patterns::patterns() const {
-   for(const auto& [_, list] : PatternMap_) {
-      for(const auto* def : list) {
-         co_yield def;
-      }
-   }
-}
+// Map of mc::NodeKind -> list of mc::MCPatternDef
+static std::unordered_map<int, std::vector<mc::MCPatternDef const*>> PatternMap_;
 
 // Private std::array of patterns (must be global for ASAN to be happy)
 static constexpr auto PatternsArray_ =
       utils::array_from_tuple(x86Patterns::GetPatterns());
 
-void x86MCTargetDesc::initialize() {
+// Initialize the private global patterns class
+static constexpr x86Patterns Patterns_{};
+
+// Get all the patterns for a given node kind
+PatternGenerator x86Patterns::getPatternFor(mc::NodeKind kind) const {
+   for(const auto* def : PatternMap_[(int)kind]) co_yield def;
+}
+
+// Get all the patterns
+PatternGenerator x86Patterns::patterns() const {
+   for(const auto& [_, list] : PatternMap_)
+      for(const auto* def : list) co_yield def;
+}
+
+void x86TargetDesc::initialize() {
    // Add the patterns to the map
    for(auto& Def : PatternsArray_) {
       PatternMap_[(int)Def.getDAGKind()].push_back(&Def);
@@ -197,21 +197,7 @@ void x86MCTargetDesc::initialize() {
    }
 }
 
-// Initialize the private global patterns class
-static constexpr x86Patterns Patterns_{};
-
 // Get the patterns for the x86 target description
-const mc::MCPatterns& x86MCTargetDesc::getMCPatterns() const { return Patterns_; }
-
-// Checks if the given class can take an MIR type
-bool x86MCTargetDesc::isRegisterClass(unsigned classIdx,
-                                      mc::InstSelectNode::Type type) const {
-   if(classIdx == (unsigned)x86RegClass::GPR32) {
-      return type.bits == 32;
-   } else if(classIdx == (unsigned)x86RegClass::GPR64) {
-      return type.bits == 64;
-   }
-   return false;
-}
+const mc::MCPatterns& x86TargetDesc::getMCPatterns() const { return Patterns_; }
 
 } // namespace target::x86

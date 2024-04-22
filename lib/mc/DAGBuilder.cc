@@ -5,7 +5,7 @@
 
 #include "mc/InstSelectNode.h"
 #include "mc/MCFunction.h"
-#include "mc/MCTargetDesc.h"
+#include "target/Target.h"
 #include "tir/BasicBlock.h"
 #include "tir/Constant.h"
 #include "tir/Instructions.h"
@@ -26,7 +26,7 @@ using T = ISN::Type;
 /* ===--------------------------------------------------------------------=== */
 
 MCFunction* DAG::Build(BumpAllocator& alloc, tir::Function const* F,
-                       MCTargetDesc const& TD) {
+                       target::TargetDesc const& TD) {
    assert(F->hasBody());
    // Allocate the MCFunction to store the DAGs
    void* buf = alloc.allocate_bytes(sizeof(MCFunction), alignof(MCFunction));

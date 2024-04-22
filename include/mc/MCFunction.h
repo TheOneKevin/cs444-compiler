@@ -1,8 +1,7 @@
 #pragma once
 
 #include "mc/InstSelectNode.h"
-#include "mc/MCTargetDesc.h"
-#include "tir/Context.h"
+#include "target/Target.h"
 #include "utils/BumpAllocator.h"
 
 namespace mc {
@@ -27,8 +26,8 @@ public:
    void selectInstructions();
 
 private:
-   MCFunction(BumpAllocator& alloc, tir::TargetInfo const& TI,
-              mc::MCTargetDesc const& TD)
+   MCFunction(BumpAllocator& alloc, target::TargetInfo const& TI,
+              target::TargetDesc const& TD)
          : alloc_{alloc}, TI{TI}, TD{TD}, graphs_{alloc} {}
 
    /**
@@ -43,8 +42,8 @@ private:
 
 private:
    BumpAllocator& alloc_;
-   tir::TargetInfo const& TI;
-   mc::MCTargetDesc const& TD;
+   target::TargetInfo const& TI;
+   target::TargetDesc const& TD;
    std::pmr::vector<InstSelectNode*> graphs_;
    InstSelectNode* mirRoot_;
 };

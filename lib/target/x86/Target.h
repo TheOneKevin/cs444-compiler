@@ -1,13 +1,13 @@
 #pragma once
 
-#include "mc/MCTargetDesc.h"
-#include "tir/Context.h"
+#include <string_view>
+#include "target/Target.h"
 #include "utils/EnumMacros.h"
 
 namespace target::x86 {
 
 // x86 IR target info
-class X86TargetInfo final : public tir::TargetInfo {
+class x86TargetInfo final : public target::TargetInfo {
 public:
    /// @brief Returns the size of the stack alignment in bytes
    int getStackAlignment() const override { return 8; }
@@ -48,7 +48,7 @@ DECLARE_ENUM(x86RegClass, x86RegClassList)
 DECLARE_ENUM(x86Reg, x86RegList)
 
 // MC target description
-class x86MCTargetDesc final : public mc::MCTargetDesc {
+class x86TargetDesc final : public target::TargetDesc {
 public:
    using InstType = x86MCInst;
    using FragType = x86MCFrag;

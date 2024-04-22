@@ -7,7 +7,7 @@
 #include <ast/AstNode.h>
 #include <ast/DeclContext.h>
 #include <grammar/Joos1WGrammar.h>
-#include <parsetree/ParseTreeVisitor.h>
+#include <ParseTreeVisitor.h>
 #include <passes/AllPasses.h>
 #include <semantic/HierarchyChecker.h>
 #include <semantic/NameResolver.h>

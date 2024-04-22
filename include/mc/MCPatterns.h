@@ -6,10 +6,12 @@
 #include "mc/InstSelectNode.h"
 #include "utils/Generator.h"
 
-namespace mc {
-class MCTargetDesc;
-struct MatchOptions;
+namespace target {
+class TargetDesc;
+}
 
+namespace mc {
+struct MatchOptions;
 } // namespace mc
 
 /* ===--------------------------------------------------------------------=== */
@@ -227,7 +229,7 @@ public:
  * @brief Struct of options passed to match a pattern
  */
 struct mc::MatchOptions {
-   mc::MCTargetDesc const& TD;
+   target::TargetDesc const& TD;
    mc::details::MCPatternDefBase const* def;
    std::vector<InstSelectNode*>& operands;
    std::vector<InstSelectNode*>& nodesToDelete;
