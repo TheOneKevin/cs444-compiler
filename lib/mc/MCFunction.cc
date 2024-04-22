@@ -1,8 +1,10 @@
 #include "mc/MCFunction.h"
 
+#include <queue>
 #include <unordered_set>
 
 #include "mc/InstSelectNode.h"
+#include "mc/MCPatterns.h"
 #include "utils/DotPrinter.h"
 
 struct Edge {
@@ -61,9 +63,44 @@ void MCFunction::scheduleMIR() {
 }
 
 void MCFunction::selectInstructions() {
-   for(auto* root : graphs_) {
-      TD.getMCPatterns().matchAndReplace(root);
+   std::queue<InstSelectNode*> worklist;
+   std::unordered_set<InstSelectNode*> visited;
+   for(auto* root : graphs_) worklist.emplace(root);
+   int ctr = 0;
+   while(!worklist.empty()) {
+      auto* root = worklist.front();
+      worklist.pop();
+      if(visited.count(root)) continue;
+      visited.emplace(root);
+      if(root->arity() > 0 && root->kind() != NodeKind::MachineInstr) {
+         auto tmp = matchAndReplace(root);
+         if((tmp != root) && (++ctr >= 13)) {
+            //return;
+         }
+         root = tmp;
+      }
+      for(auto* child : root->childNodes()) {
+         worklist.emplace(child);
+      }
    }
+}
+
+InstSelectNode* MCFunction::matchAndReplace(InstSelectNode* root) const {
+   std::vector<InstSelectNode*> operands;
+   std::vector<InstSelectNode*> nodesToDelete;
+   for(auto* def : TD.getMCPatterns().getPatternFor(root->kind())) {
+      operands.resize(def->numInputs());
+      for(auto* pat : def->patterns()) {
+         std::fill(operands.begin(), operands.end(), nullptr);
+         nodesToDelete.clear();
+         if(pat->matches(
+                  mc::MatchOptions{TD, def, operands, nodesToDelete, root})) {
+            // Now we build the new node
+            return root->selectPattern(alloc_, def, operands, nodesToDelete);
+         }
+      }
+   }
+   return root;
 }
 
 } // namespace mc

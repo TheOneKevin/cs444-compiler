@@ -310,10 +310,7 @@ int main(int argc, char** argv) {
       std::cerr << "*** Running backend machine-code pipeline... ***" << std::endl;
    }
 
-   target::x86::Initializex86Patterns();
-   for(auto def : TD.getMCPatterns().patterns()) {
-      def->dump();
-   }
+   TD.initialize();
 
    // Run the backend pipeline now (it's not based off the pass pipeline)
    {

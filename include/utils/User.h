@@ -140,7 +140,8 @@ protected:
 
 template <typename T>
 void utils::GraphNode<T>::replaceAllUsesWith(GraphNode<T>* newValue) {
-   for(auto use : uses_) {
+   std::vector<Use<T>> uses_copy{uses_.begin(), uses_.end()};
+   for(auto use : uses_copy) {
       use.user->replaceChild(use.fromIndex, newValue);
    }
 }

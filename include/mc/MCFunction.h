@@ -29,9 +29,20 @@ public:
 private:
    MCFunction(BumpAllocator& alloc, tir::TargetInfo const& TI,
               mc::MCTargetDesc const& TD)
-         : TI{TI}, TD{TD}, graphs_{alloc} {}
+         : alloc_{alloc}, TI{TI}, TD{TD}, graphs_{alloc} {}
+
+   /**
+    * @brief Uses maximal munch to match the pattern starting from the root
+    * node. Returns constructed new node with the matched pattern and linked
+    * parameters. Will destroy the matched node.
+    *
+    * @param root The node to begin matching at
+    * @return mc::InstSelectNode* The new node with the matched pattern
+    */
+   InstSelectNode* matchAndReplace(InstSelectNode* root) const;
 
 private:
+   BumpAllocator& alloc_;
    tir::TargetInfo const& TI;
    mc::MCTargetDesc const& TD;
    std::pmr::vector<InstSelectNode*> graphs_;
