@@ -426,8 +426,7 @@ T CGExprEvaluator::evalMemberAccess(ex::MemberAccess& op, T lhs, T field) const 
    }
    // Special case: array.length
    else if(decl == findArrayField(cg.nr)) {
-      auto arrSzGep = cg.builder.createGEPInstr(
-            obj, cg.arrayType(), {Constant::CreateInt32(ctx, 0)});
+      auto arrSzGep = cg.builder.createGEPInstr(obj, cg.arrayType(), {0});
       auto arrSz = cg.builder.createLoadInstr(Type::getInt32Ty(ctx), arrSzGep);
       return T::R(aTy, arrSz);
    }
@@ -503,10 +502,11 @@ T CGExprEvaluator::evalArrayAccess(ex::ArrayAccess& op, T array, T index) const 
    // Build and assert idxVal is i32 or less and promote if necessary
    auto idxVal = index.asRValue(cg.builder);
    assert(idxVal->type()->isIntegerType());
-   assert(idxVal->type()->getSizeInBits() <= 32);
-   if(idxVal->type()->getSizeInBits() < 32) {
+   const auto ptrWidth = static_cast<uint32_t>(ctx.TI().getPointerSizeInBits());
+   assert(idxVal->type()->getSizeInBits() <= ptrWidth);
+   if(idxVal->type()->getSizeInBits() < ptrWidth) {
       idxVal = cg.builder.createICastInstr(
-            ICastInst::CastOp::ZExt, idxVal, Type::getInt32Ty(ctx));
+            ICastInst::CastOp::ZExt, idxVal, IntegerType::get(ctx, ptrWidth));
    }
    // Check for out-of-bounds access
    cg.builder.createIntrinsicCallInstr(II::check_array_bounds,

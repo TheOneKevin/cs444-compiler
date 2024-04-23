@@ -20,7 +20,7 @@ public:
 DECLARE_ENUM(x86MCInst, x86MCInstList)
 
 // x86 MC pattern fragments
-#define x86MCFragList(F) F(M32Frag) F(M64Frag)
+#define x86MCFragList(F) F(MemFrag)
 DECLARE_ENUM(x86MCFrag, x86MCFragList)
 
 // x86 Register Classes
@@ -53,13 +53,18 @@ public:
    using InstType = x86MCInst;
    using FragType = x86MCFrag;
    using RegClass = x86RegClass;
-   static constexpr int MaxStates = 100;
-   static constexpr int MaxOperands = 3;
+   static constexpr int MaxStates = 40;
+   static constexpr int MaxOperands = 5;
    static constexpr int MaxPatternsPerDef = 2;
 
    /// @brief Gets the name of the pattern
    static constexpr std::string_view GetPatternName(InstType ty) {
       return x86MCInst_to_string(ty, "??");
+   }
+
+   /// @brief Gets the name of the fragment
+   static constexpr std::string_view GetFragmentName(FragType ty) {
+      return x86MCFrag_to_string(ty, "??");
    }
 
    /// @brief Initializes the target description
@@ -75,7 +80,10 @@ public:
 
 private:
    DECLARE_STRING_TABLE(x86MCInst, x86MCInstStringTable, x86MCInstList)
+   DECLARE_STRING_TABLE(x86MCFrag, x86MCFragStringTable, x86MCFragList)
 };
+
+bool MatchMemoryPatternFragment(mc::MatchOptions&, mc::InstSelectNode*&);
 
 } // namespace target::x86
 

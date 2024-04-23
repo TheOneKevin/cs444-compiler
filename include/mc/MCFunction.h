@@ -24,6 +24,7 @@ public:
     * for each basic block DAG subgraph.
     */
    void selectInstructions();
+   BumpAllocator& alloc() const { return alloc_; }
    
    void topoSort(std::unordered_map<InstSelectNode*, std::vector<InstSelectNode*>> adj);
 

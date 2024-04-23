@@ -420,8 +420,6 @@ private:
 public:
    static GetElementPtrInst* Create(Context& ctx, Value* ptr, Type* ty,
                                     utils::range_ref<Value*> indices) {
-      assert((dyn_cast<StructType>(ty) || dyn_cast<ArrayType>(ty)) &&
-             "Type must be a struct or array type");
       auto buf = ctx.alloc().allocate_bytes(sizeof(GetElementPtrInst),
                                             alignof(GetElementPtrInst));
       return new(buf) GetElementPtrInst{ctx, ptr, ty, indices};

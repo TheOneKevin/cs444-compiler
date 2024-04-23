@@ -71,8 +71,7 @@ void CG::run(ast::LinkingUnit const* lu) {
 
 tir::Value* CG::emitGetArraySz(tir::Value* ptr) {
    using namespace tir;
-   auto zero = Constant::CreateInt32(ctx, 0);
-   auto gepSz = builder.createGEPInstr(ptr, arrayType_, {zero});
+   auto gepSz = builder.createGEPInstr(ptr, arrayType_, {0});
    gepSz->setName("arr.gep.sz");
    auto sz = builder.createLoadInstr(Type::getInt32Ty(ctx), gepSz);
    sz->setName("arr.sz");
@@ -81,8 +80,7 @@ tir::Value* CG::emitGetArraySz(tir::Value* ptr) {
 
 tir::Value* CG::emitGetArrayPtr(tir::Value* ptr) {
    using namespace tir;
-   auto one = Constant::CreateInt32(ctx, 1);
-   auto gepPtr = builder.createGEPInstr(ptr, arrayType_, {one});
+   auto gepPtr = builder.createGEPInstr(ptr, arrayType_, {1});
    gepPtr->setName("arr.gep.ptr");
    auto arrPtr = builder.createLoadInstr(Type::getPointerTy(ctx), gepPtr);
    arrPtr->setName("arr.ptr");
@@ -90,17 +88,13 @@ tir::Value* CG::emitGetArrayPtr(tir::Value* ptr) {
 }
 
 void CG::emitSetArraySz(tir::Value* ptr, tir::Value* sz) {
-   using namespace tir;
-   auto zero = Constant::CreateInt32(ctx, 0);
-   auto gepSz = builder.createGEPInstr(ptr, arrayType_, {zero});
+   auto gepSz = builder.createGEPInstr(ptr, arrayType_, {0});
    gepSz->setName("arr.gep.sz");
    builder.createStoreInstr(sz, gepSz);
 }
 
 void CG::emitSetArrayPtr(tir::Value* ptr, tir::Value* arr) {
-   using namespace tir;
-   auto one = Constant::CreateInt32(ctx, 1);
-   auto gepPtr = builder.createGEPInstr(ptr, arrayType_, {one});
+   auto gepPtr = builder.createGEPInstr(ptr, arrayType_, {1});
    gepPtr->setName("arr.gep.ptr");
    builder.createStoreInstr(arr, gepPtr);
 }

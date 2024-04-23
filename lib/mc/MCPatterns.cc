@@ -5,13 +5,12 @@
 
 #include "mc/InstSelectNode.h"
 #include "target/Target.h"
+#include "target/TargetDesc.h"
 
 namespace mc {
 
-using mc::details::MCPatternBase;
-
 std::ostream& MCPatternDef::print(std::ostream& os, int indent) const {
-   os << std::string(indent * 4, ' ') << getPatternName() << "\n";
+   os << std::string(indent * 4, ' ') << name() << "\n";
    indent++;
    unsigned i = 0;
    for(auto* pat : patterns()) {
@@ -25,7 +24,7 @@ std::ostream& MCPatternDef::print(std::ostream& os, int indent) const {
 void MCPatternDef::dump() const { print(std::cerr); }
 
 // Print the pattern
-std::ostream& MCPatternBase::print(std::ostream& os, int indent) const {
+std::ostream& MCPattern::print(std::ostream& os, int indent) const {
    for(auto& bc : bytecode()) {
       os << std::string(indent * 4, ' ');
       switch(bc->type) {
@@ -58,9 +57,28 @@ std::ostream& MCPatternBase::print(std::ostream& os, int indent) const {
    return os;
 }
 
-void MCPatternBase::dump() const { print(std::cerr); }
+void MCPattern::dump() const { print(std::cerr); }
 
-bool MCPatternBase::matches(MatchOptions opt) const {
+// Adjusts the index to account for fragments
+static unsigned adjustOperandIndex(unsigned index, target::TargetDesc const& TD,
+                                   MCPatternDef const* def) {
+   using mc::details::MCOperand;
+   unsigned counter = 0;
+   assert(index < def->numInputs() && "Index out of bounds");
+   for(unsigned i = 0; i < index; i++) {
+      auto curop = def->getInput(i);
+      if(curop.type == MCOperand::Type::Fragment) {
+         // FIXME(kevin): Assumes fragments do not contain fragments
+         auto& Frag = TD.getMCPatterns().getFragment(curop.data);
+         counter += std::max<unsigned>(1, Frag.numInputs());
+      } else {
+         counter++;
+      }
+   }
+   return counter;
+}
+
+bool MCPattern::matches(MatchOptions opt) const {
    auto [TD, def, ops, nodesToDelete, node] = opt;
    using N = mc::NodeKind;
    using I = mc::InstSelectNode;
@@ -90,15 +108,10 @@ bool MCPatternBase::matches(MatchOptions opt) const {
             break;
          }
          case MCOperand::Type::CheckOperandType: {
-            auto index = bc->data;
-            auto operand = def->getInput(index);
-            auto child = node->getChild(childIdx++);
-            // Check if the operand matches what we've seen before
-            if(!ops[index]) {
-               ops[index] = child;
-            } else if(*ops[index] != *child) {
-               return false;
-            }
+            const auto index = bc->data;
+            const auto operand = def->getInput(index);
+            const auto child = node->getChild(childIdx++);
+            const auto adjustedIndex = adjustOperandIndex(index, TD, def);
             // Check if the operand matches the expected type
             switch(operand.type) {
                case MCOperand::Type::Immediate: {
@@ -112,10 +125,25 @@ bool MCPatternBase::matches(MatchOptions opt) const {
                      return false;
                   break;
                }
+               case MCOperand::Type::Fragment: {
+                  InstSelectNode* newChild = nullptr;
+                  auto optCopy = opt;
+                  optCopy.node = child;
+                  auto& P = TD.getMCPatterns();
+                  auto& Frag = P.getFragment(operand.data);
+                  if(!P.matchFragment(Frag, optCopy, newChild)) return false;
+                  if(newChild) ops[adjustedIndex] = newChild;
+                  break;
+               }
                default:
-                  return false;
                   assert(false);
                   std::unreachable();
+            }
+            // Check if the operand matches what we've seen before
+            if(!ops[adjustedIndex]) {
+               ops[adjustedIndex] = child;
+            } else if(*ops[adjustedIndex] != *child) {
+               return false;
             }
             break;
          }

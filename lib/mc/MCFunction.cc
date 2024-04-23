@@ -130,32 +130,45 @@ void MCFunction::selectInstructions() {
    std::queue<InstSelectNode*> worklist;
    std::unordered_set<InstSelectNode*> visited;
    for(auto* root : graphs_) worklist.emplace(root);
-   int ctr = 0;
    while(!worklist.empty()) {
       auto* root = worklist.front();
       worklist.pop();
       if(visited.count(root)) continue;
       visited.emplace(root);
       if(root->arity() > 0 && root->kind() != NodeKind::MachineInstr) {
-         auto tmp = matchAndReplace(root);
-         if((tmp != root) && (++ctr >= 13)) {
-            //return;
-         }
-         root = tmp;
+         root = matchAndReplace(root);
       }
       for(auto* child : root->childNodes()) {
-         worklist.emplace(child);
+         if(child) {
+            worklist.emplace(child);
+         }
       }
    }
+}
+
+// FIXME(kevin): Merge with function in MCPattern.cc
+static unsigned getTotalSize(target::TargetDesc const& TD,
+                             MCPatternDef const* def) {
+   using mc::details::MCOperand;
+   unsigned size = 0;
+   for(unsigned i = 0; i < def->numInputs(); i++) {
+      auto op = def->getInput(i);
+      if(op.type == MCOperand::Type::Fragment) {
+         auto& frag = TD.getMCPatterns().getFragment(op.data);
+         size += std::max<unsigned>(1, frag.numInputs());
+      } else {
+         size++;
+      }
+   }
+   return size;
 }
 
 InstSelectNode* MCFunction::matchAndReplace(InstSelectNode* root) const {
    std::vector<InstSelectNode*> operands;
    std::vector<InstSelectNode*> nodesToDelete;
    for(auto* def : TD.getMCPatterns().getPatternFor(root->kind())) {
-      operands.resize(def->numInputs());
       for(auto* pat : def->patterns()) {
-         std::fill(operands.begin(), operands.end(), nullptr);
+         operands.resize(getTotalSize(TD, def), nullptr);
          nodesToDelete.clear();
          if(pat->matches(
                   mc::MatchOptions{TD, def, operands, nodesToDelete, root})) {

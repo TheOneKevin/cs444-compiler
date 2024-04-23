@@ -18,9 +18,10 @@ namespace mc {
 
 class InstSelectNode;
 class DAGBuilder;
+class MCFunction;
 
 namespace details {
-class MCPatternDefBase;
+class MCPatDefBase;
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -103,7 +104,7 @@ public:
                       /* Constant immediate value */ ImmValue,
                       /* Predicate value */ tir::Instruction::Predicate,
                       /* Global object pointer */ tir::GlobalObject*,
-                      /* For inst select */ details::MCPatternDefBase const*>;
+                      /* For inst select */ details::MCPatDefBase const*>;
    using DataOpt = std::optional<DataUnion>;
 
    DECLARE_STRING_TABLE(NodeKind, NodeTypeStrings, NodeTypeList)
@@ -115,40 +116,53 @@ private:
    friend class DAGBuilder;
    // Internal constructor for N-ary nodes
    InstSelectNode(BumpAllocator& alloc, NodeKind kind, unsigned arity,
-                  DataOpt data, Type type)
+                  DataOpt data, Type type, MCFunction* parent)
          : utils::GraphNodeUser<InstSelectNode>{alloc},
            utils::GraphNode<InstSelectNode>{alloc},
            kind_{kind},
            data_{data},
            arity_{arity},
-           type_{type} {}
+           type_{type},
+           parent_{parent} {}
    // Build any non-leaf node of some type, with N arguments
-   static InstSelectNode* Create(BumpAllocator& alloc, Type ty, NodeKind kind,
+   static InstSelectNode* Create(BumpAllocator& alloc, MCFunction* parent, Type ty,
+                                 NodeKind kind,
                                  utils::range_ref<InstSelectNode*> args) {
       auto* buf =
             alloc.allocate_bytes(sizeof(InstSelectNode), alignof(InstSelectNode));
-      auto* node = new(buf) InstSelectNode{
-            alloc, kind, static_cast<unsigned>(args.size()), std::nullopt, ty};
+      auto* node = new(buf) InstSelectNode{alloc,
+                                           kind,
+                                           static_cast<unsigned>(args.size()),
+                                           std::nullopt,
+                                           ty,
+                                           parent};
       args.for_each([&node](auto* arg) { node->addChild(arg); });
       return node;
    }
    // Build a leaf node (zero arity) with type and leaf data. Note that leaf
    // nodes can have children through chaining.
-   static InstSelectNode* CreateLeaf(BumpAllocator& alloc, NodeKind kind,
-                                     Type type = Type{0},
+   static InstSelectNode* CreateLeaf(BumpAllocator& alloc, MCFunction* parent,
+                                     NodeKind kind, Type type = Type{0},
                                      DataOpt data = std::nullopt) {
       auto* buf =
             alloc.allocate_bytes(sizeof(InstSelectNode), alignof(InstSelectNode));
-      auto* node = new(buf) InstSelectNode{alloc, kind, 0, data, type};
+      auto* node = new(buf) InstSelectNode{alloc, kind, 0, data, type, parent};
       return node;
    }
    // Build a constant immediate leaf node
-   static InstSelectNode* CreateImm(BumpAllocator& alloc, int bits,
-                                    uint64_t value) {
+   static InstSelectNode* CreateImm(BumpAllocator& alloc, MCFunction* parent,
+                                    int bits, uint64_t value) {
       return CreateLeaf(alloc,
+                        parent,
                         NodeKind::Constant,
                         Type{static_cast<uint32_t>(bits)},
                         InstSelectNode::ImmValue{bits, value});
+   }
+
+public:
+   static InstSelectNode* CreateCustom(BumpAllocator& alloc, MCFunction* parent) {
+      return CreateLeaf(
+            alloc, parent, NodeKind::MachineInstr, Type{0}, std::nullopt);
    }
 
 public:
@@ -220,7 +234,7 @@ public:
     * @brief Replace this node with the selected pattern
     */
    InstSelectNode* selectPattern(BumpAllocator& alloc,
-                                 details::MCPatternDefBase const* pattern,
+                                 details::MCPatDefBase const* pattern,
                                  std::vector<InstSelectNode*>& operands,
                                  std::vector<InstSelectNode*>& nodesToDelete);
    // Gets the arity of this node
@@ -231,6 +245,8 @@ public:
    }
    // Get the type of this node
    auto type() const { return type_; }
+   // Get the parent
+   auto* parent() { return parent_; }
 
    // @brief Link the current node with the next node
    void link(InstSelectNode* node) {
@@ -247,6 +263,7 @@ private:
    const DataOpt data_;
    const unsigned arity_;
    const Type type_;
+   MCFunction* const parent_;
    int topoIdx_ = -1;
    int liveRangeTo_ = -1;
    InstSelectNode* prev_ = nullptr;

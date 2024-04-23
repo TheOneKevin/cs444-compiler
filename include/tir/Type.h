@@ -133,6 +133,7 @@ public:
    uint32_t getBitWidth() const { return getData(); }
    uint32_t getSizeInBits() const override { return getBitWidth(); }
    bool isSizeBounded() const override { return true; }
+   [[clang::no_sanitize("shift-exponent")]]
    uint64_t getMask() const { return (1ULL << getBitWidth()) - 1; }
 };
 

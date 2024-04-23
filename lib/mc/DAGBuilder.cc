@@ -35,7 +35,7 @@ MCFunction* DAG::Build(BumpAllocator& alloc, tir::Function const* F,
    DAGBuilder builder{alloc, MCF};
    // Build dummy DAG nodes for each basic block
    for(auto* bb : F->reversePostOrder()) {
-      auto* const node = ISN::CreateLeaf(alloc, NodeKind::Entry);
+      auto* const node = ISN::CreateLeaf(alloc, MCF, NodeKind::Entry);
       builder.bbMap[bb] = node;
       MCF->graphs_.push_back(node);
    }
@@ -53,10 +53,12 @@ MCFunction* DAG::Build(BumpAllocator& alloc, tir::Function const* F,
    for(auto [v, idx] : builder.vregMap) {
       auto instnode = builder.instMap[v];
       auto vreg = ISN::CreateLeaf(alloc,
+                                  MCF,
                                   NodeKind::Register,
                                   ISN::Type{v->type()->getSizeInBits()},
                                   ISN::VReg{idx});
-      auto node = ISN::Create(alloc, T{}, NodeKind::LoadToReg, {vreg, instnode});
+      auto node =
+            ISN::Create(alloc, MCF, T{}, NodeKind::LoadToReg, {vreg, instnode});
       // Find the graph corresponding to instnode
       auto parbb = cast<Instruction>(v)->parent();
       cast<ISN>(builder.bbMap[parbb])->addChild(node);
@@ -123,6 +125,7 @@ ISN::StackSlot DAG::findOrAllocStackSlot(tir::AllocaInst* alloca) {
 InstSelectNode* DAG::buildVReg(tir::Instruction* v) {
    int vreg = findOrAllocVirtReg(v);
    auto* const node = ISN::CreateLeaf(alloc,
+                                      MCF,
                                       NodeKind::Register,
                                       ISN::Type{v->type()->getSizeInBits()},
                                       ISN::VReg{vreg});
@@ -130,13 +133,13 @@ InstSelectNode* DAG::buildVReg(tir::Instruction* v) {
 }
 
 InstSelectNode* DAG::buildCC(tir::Instruction::Predicate pred) {
-   return ISN::CreateLeaf(alloc, NodeKind::Predicate, ISN::Type{0}, pred);
+   return ISN::CreateLeaf(alloc, MCF, NodeKind::Predicate, ISN::Type{0}, pred);
 }
 
 InstSelectNode* DAG::findValue(tir::Value* v) {
    if(v->isBasicBlock()) {
       auto& subgraph = bbMap[cast<BasicBlock>(v)];
-      auto node = ISN::CreateLeaf(alloc, NodeKind::BasicBlock);
+      auto node = ISN::CreateLeaf(alloc, MCF, NodeKind::BasicBlock);
       node->addChild(subgraph);
       return node;
    } else if(v->isInstruction()) {
@@ -145,8 +148,9 @@ InstSelectNode* DAG::findValue(tir::Value* v) {
       if(auto* alloca = dyn_cast<AllocaInst>(v)) {
          return ISN::CreateLeaf(
                alloc,
+               MCF,
                NodeKind::FrameIndex,
-               ISN::Type{alloca->allocatedType()->getSizeInBits()},
+               ISN::Type{(uint32_t) MCF->TI.getPointerSizeInBits()},
                findOrAllocStackSlot(alloca));
       }
       // If the instruction is declared in another bb, use a vreg
@@ -159,6 +163,7 @@ InstSelectNode* DAG::findValue(tir::Value* v) {
    } else if(v->isFunction()) {
       return ISN::CreateLeaf(
             alloc,
+            MCF,
             NodeKind::GlobalAddress,
             ISN::Type{Type::getPointerTy(curbb->ctx())->getSizeInBits()},
             cast<GlobalObject>(v));
@@ -166,6 +171,7 @@ InstSelectNode* DAG::findValue(tir::Value* v) {
       auto arg = cast<Argument>(v);
       int idx = arg->index();
       return ISN::CreateLeaf(alloc,
+                             MCF,
                              NodeKind::Argument,
                              ISN::Type{arg->type()->getSizeInBits()},
                              ISN::VReg{idx});
@@ -174,17 +180,18 @@ InstSelectNode* DAG::findValue(tir::Value* v) {
       if(c->isNumeric()) {
          auto CI = cast<ConstantInt>(c);
          auto bits = CI->type()->getSizeInBits();
-         return ISN::CreateImm(alloc, bits, CI->zextValue());
+         return ISN::CreateImm(alloc, MCF, bits, CI->zextValue());
       } else if(c->isGlobalVariable()) {
          return ISN::CreateLeaf(
                alloc,
+               MCF,
                NodeKind::GlobalAddress,
                ISN::Type{Type::getPointerTy(curbb->ctx())->getSizeInBits()},
                cast<GlobalObject>(c));
       } else if(c->isNullPointer()) {
-         return ISN::CreateImm(alloc, MCF->TI.getPointerSizeInBits(), 0);
+         return ISN::CreateImm(alloc, MCF, MCF->TI.getPointerSizeInBits(), 0);
       } else if(c->isUndef()) {
-         return ISN::CreateImm(alloc, c->type()->getSizeInBits(), 0);
+         return ISN::CreateImm(alloc, MCF, c->type()->getSizeInBits(), 0);
       }
    }
    assert(false && "Unknown value type");
@@ -242,7 +249,7 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
       auto bb2 = br->getSuccessor(1);
       // If it's an unconditional branch, emit a br
       if(bb1 == bb2) {
-         node = ISN::Create(alloc, T{}, NodeKind::BR, {findValue(bb1)});
+         node = ISN::Create(alloc, MCF, T{}, NodeKind::BR, {findValue(bb1)});
       }
       // If the condition comes from a cmp, emit a br_cc
       else if(auto cmp = dyn_cast<CmpInst>(cond)) {
@@ -250,6 +257,7 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
          auto rhs = findValue(cmp->getChild(1));
          auto cc = buildCC(cmp->predicate());
          node = ISN::Create(alloc,
+                            MCF,
                             T{},
                             NodeKind::BR_CC,
                             {cc, lhs, rhs, findValue(bb1), findValue(bb2)});
@@ -257,9 +265,11 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
       // Else, emit a br_cc with a comparison against 0
       else {
          auto cc = buildCC(CmpInst::Predicate::NE);
-         const auto zero = ISN::CreateImm(alloc, cond->type()->getSizeInBits(), 0);
+         const auto zero =
+               ISN::CreateImm(alloc, MCF, cond->type()->getSizeInBits(), 0);
          auto lhs = findValue(cond);
          node = ISN::Create(alloc,
+                            MCF,
                             T{},
                             NodeKind::BR_CC,
                             {cc, lhs, zero, findValue(bb1), findValue(bb2)});
@@ -267,18 +277,18 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
    } else if(auto ri = dyn_cast<ReturnInst>(inst)) {
       if(!ri->isReturnVoid()) {
          node = ISN::Create(
-               alloc, T{}, NodeKind::RETURN, {findValue(ri->getChild(0))});
+               alloc, MCF, T{}, NodeKind::RETURN, {findValue(ri->getChild(0))});
       } else {
-         node = ISN::Create(alloc, Ty, NodeKind::RETURN, {});
+         node = ISN::Create(alloc, MCF, Ty, NodeKind::RETURN, {});
       }
    } else if(dyn_cast<StoreInst>(inst)) {
       auto src = inst->getChild(0);
       auto dst = inst->getChild(1);
       node = ISN::Create(
-            alloc, T{}, NodeKind::STORE, {findValue(src), findValue(dst)});
+            alloc, MCF, T{}, NodeKind::STORE, {findValue(src), findValue(dst)});
    } else if(dyn_cast<LoadInst>(inst)) {
       auto src = inst->getChild(0);
-      node = ISN::Create(alloc, Ty, NodeKind::LOAD, {findValue(src)});
+      node = ISN::Create(alloc, MCF, Ty, NodeKind::LOAD, {findValue(src)});
    } else if(auto bin = dyn_cast<BinaryInst>(inst)) {
       auto op = bin->binop();
       auto lhs = findValue(bin->getChild(0));
@@ -314,7 +324,7 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
             assert(false);
             std::unreachable();
       }
-      node = ISN::Create(alloc, Ty, nodeType, {lhs, rhs});
+      node = ISN::Create(alloc, MCF, Ty, nodeType, {lhs, rhs});
    } else if(auto ci = dyn_cast<CallInst>(inst)) {
       // FIXME(kevin): Calls should have a call begin + call end
       findValue(ci->getCallee());
@@ -323,10 +333,10 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
       if(ci->nargs() > 0) {
          for(auto* arg : ci->args()) args.push_back(findValue(arg));
       }
-      node = ISN::Create(alloc, Ty, NodeKind::CALL, args);
+      node = ISN::Create(alloc, MCF, Ty, NodeKind::CALL, args);
       // If the call is a terminator, add an UNREACHABLE to the end of it
       if(ci->isTerminator()) {
-         auto unreachable = ISN::CreateLeaf(alloc, NodeKind::UNREACHABLE);
+         auto unreachable = ISN::CreateLeaf(alloc, MCF, NodeKind::UNREACHABLE);
          bbMap[curbb]->addChild(unreachable);
          unreachable->addChild(node);
          node = unreachable;
@@ -348,7 +358,7 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
             assert(false);
             std::unreachable();
       }
-      node = ISN::Create(alloc, Ty, nodeType, {src});
+      node = ISN::Create(alloc, MCF, Ty, nodeType, {src});
    } else if(auto gep = dyn_cast<GetElementPtrInst>(inst)) {
       auto base = findValue(gep->getPointerOperand());
       auto type = gep->getContainedType();
@@ -362,17 +372,17 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
             auto nidx = cast<ConstantInt>(idx)->zextValue();
             auto STy = cast<StructType>(type);
             auto offs = STy->getTypeOffsetAtIndex(nidx);
-            auto offs_node = ISN::CreateImm(alloc, ptrbits, offs);
-            base = ISN::Create(alloc, PTy, NodeKind::ADD, {base, offs_node});
+            auto offs_node = ISN::CreateImm(alloc, MCF, ptrbits, offs);
+            base = ISN::Create(alloc, MCF, PTy, NodeKind::ADD, {base, offs_node});
             type = STy->getTypeAtIndex(nidx);
          } else if(type->isArrayType()) {
             auto ATy = cast<ArrayType>(type);
             auto idx_node = findValue(idx);
             auto elem_sz = ATy->getElementType()->getSizeInBits();
-            auto elem_sz_node = ISN::CreateImm(alloc, ptrbits, elem_sz);
-            auto offs_node =
-                  ISN::Create(alloc, PTy, NodeKind::MUL, {idx_node, elem_sz_node});
-            base = ISN::Create(alloc, PTy, NodeKind::ADD, {base, offs_node});
+            auto elem_sz_node = ISN::CreateImm(alloc, MCF, ptrbits, elem_sz);
+            auto offs_node = ISN::Create(
+                  alloc, MCF, PTy, NodeKind::MUL, {idx_node, elem_sz_node});
+            base = ISN::Create(alloc, MCF, PTy, NodeKind::ADD, {base, offs_node});
             type = ATy->getElementType();
          } else {
             assert(false && "Unsupported GEP type");
@@ -384,9 +394,9 @@ InstSelectNode* DAG::buildInst(tir::Instruction* inst) {
       auto lhs = findValue(cmp->getChild(0));
       auto rhs = findValue(cmp->getChild(1));
       auto cc = buildCC(cmp->predicate());
-      node = ISN::Create(alloc, Ty, NodeKind::SET_CC, {cc, lhs, rhs});
+      node = ISN::Create(alloc, MCF, Ty, NodeKind::SET_CC, {cc, lhs, rhs});
    } else if(dyn_cast<PhiNode>(inst)) {
-      node = ISN::Create(alloc, Ty, NodeKind::PHI, {});
+      node = ISN::Create(alloc, MCF, Ty, NodeKind::PHI, {});
       for(auto [bb, val] : cast<PhiNode>(inst)->incomingValues()) {
          node->addChild(findValue(val));
          node->addChild(findValue(bb));

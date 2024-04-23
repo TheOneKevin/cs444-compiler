@@ -50,9 +50,7 @@ void CodeGenerator::emitVTable(ast::ClassDecl const* decl) {
    // storing it? */ gep);
    for(auto* method : hc.getInheritedMethods(decl)) {
       auto gep = builder.createGEPInstr(
-            vtableGlobal,
-            vtableType,
-            {tir::Constant::CreateInt32(ctx, vtableIndexMap[method])});
+            vtableGlobal, vtableType, {vtableIndexMap[method]});
       builder.createStoreInstr(gvMap[method], gep);
    }
    builder.createReturnInstr();

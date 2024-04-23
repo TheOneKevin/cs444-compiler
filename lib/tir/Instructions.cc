@@ -245,8 +245,17 @@ std::ostream& ICastInst::print(std::ostream& os) const {
 GetElementPtrInst::GetElementPtrInst(Context& ctx, Value* ptr, Type* ty,
                                      utils::range_ref<Value*> indices)
       : Instruction{ctx, Type::getPointerTy(ctx), ty} {
+   assert((dyn_cast<StructType>(ty) || dyn_cast<ArrayType>(ty)) &&
+          "Type must be a struct or array type");
+   /*assert((ptr->type() == Type::getPointerTy(ctx)) &&
+          "Pointer passed to GEP must be a pointer");*/
    addChild(ptr);
-   indices.for_each([this](auto* idx) { addChild(idx); });
+   indices.for_each([this, &ctx](auto* idx) {
+      assert((idx->type()->getSizeInBits() ==
+              Type::getPointerTy(ctx)->getSizeInBits()) &&
+             "Index must be compatible with a pointer type");
+      addChild(idx);
+   });
    static_assert(sizeof(GetElementPtrInst) == sizeof(Instruction));
 }
 

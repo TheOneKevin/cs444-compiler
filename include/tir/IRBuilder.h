@@ -75,7 +75,7 @@ public:
 
    /**
     * @brief Create a call to an intrinsic function.
-    * 
+    *
     * @param kind The intrinsic kind
     * @param args The arguments to pass to the intrinsic
     * @return Instruction* A pointer to the instruction
@@ -184,6 +184,19 @@ public:
    Instruction* createGEPInstr(Value* ptr, Type* t,
                                utils::range_ref<Value*> indices) {
       return insert(GetElementPtrInst::Create(ctx_, ptr, t, indices));
+   }
+
+   Instruction* createGEPInstr(Value* ptr, Type* t,
+                               utils::range_ref<unsigned> indices) {
+      auto& ctx = ptr->ctx();
+      const auto ptrWidth = ctx.TI().getPointerSizeInBits();
+      // TODO(kevin): one day we can do indices.map<Value(>)
+      std::vector<Value*> values;
+      indices.for_each([&values, &ctx, &ptrWidth](auto idx) {
+         values.push_back(
+               ConstantInt::Create(ctx, IntegerType::get(ctx, ptrWidth), idx));
+      });
+      return insert(GetElementPtrInst::Create(ctx_, ptr, t, values));
    }
 
 private:

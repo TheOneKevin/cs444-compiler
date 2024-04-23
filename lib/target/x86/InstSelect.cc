@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 
 #include "Target.h"
 #include "mc/InstSelectNode.h"
@@ -35,7 +36,7 @@ private:
             << (commutes ? pattern{node, 1, 0} : pattern{}),
          // r32, m32
          define{inst}
-            << inputs{reg(R::GPR32), frag(F::M32Frag)}
+            << inputs{reg(R::GPR32), frag(F::MemFrag)}
             << outputs{reg(R::GPR32)}
             << pattern{node, 0, {N::LOAD, 1}}
             << (commutes ? pattern{node, {N::LOAD, 1}, 0} : pattern{}),
@@ -47,7 +48,7 @@ private:
             << (commutes ? pattern{node, 1, 0} : pattern{}),
          // r64, m64
          define{inst}
-            << inputs{reg(R::GPR64), frag(F::M64Frag)}
+            << inputs{reg(R::GPR64), frag(F::MemFrag)}
             << outputs{reg(R::GPR64)}
             << pattern{node, 0, {N::LOAD, 1}}
             << (commutes ? pattern{node, {N::LOAD, 1}, 0} : pattern{})
@@ -67,7 +68,7 @@ private:
             << (commutes ? pattern{node, 1, 0} : pattern{}),
          // m32, imm32
          define{inst}
-            << inputs{frag(F::M32Frag), imm(32)}
+            << inputs{frag(F::MemFrag), imm(32)}
             << outputs{/* Nothing, as it's a store */}
             << pattern{N::STORE, 0, {node, {N::LOAD, 0}, 1}}
             << (commutes ? pattern{N::STORE, 0, {node, 1, {N::LOAD, 0}}} : pattern{}),
@@ -79,7 +80,7 @@ private:
             << (commutes ? pattern{node, 1, 0} : pattern{}),
          // m64, imm32
          define{inst}
-            << inputs{frag(F::M64Frag), imm(64)}
+            << inputs{frag(F::MemFrag), imm(64)}
             << outputs{/* Nothing, as it's a store */}
             << pattern{N::STORE, 0, {node, {N::LOAD, 0}, 1}}
             << (commutes ? pattern{N::STORE, 0, {node, 1, {N::LOAD, 0}}} : pattern{})
@@ -93,13 +94,13 @@ private:
       return std::make_tuple(
          // m32, r32
          define{inst}
-            << inputs{frag(F::M32Frag), reg(R::GPR32)}
+            << inputs{frag(F::MemFrag), reg(R::GPR32)}
             << outputs{/* Nothing, as it's a store */}
             << pattern{N::STORE, 0, {node, {N::LOAD, 0}, 1}}
             << (commutes ? pattern{N::STORE, 0, {node, 1, {N::LOAD, 0}}} : pattern{}),
          // m64, r64
          define{inst}
-            << inputs{frag(F::M64Frag), reg(R::GPR64)}
+            << inputs{frag(F::MemFrag), reg(R::GPR64)}
             << outputs{/* Nothing, as it's a store */}
             << pattern{N::STORE, 0, {node, {N::LOAD, 0}, 1}}
             << (commutes ? pattern{N::STORE, 0, {node, 1, {N::LOAD, 0}}} : pattern{})
@@ -129,22 +130,22 @@ private:
       return std::make_tuple(
          // Load r32
          define{I::MOV}
-            << inputs{frag(F::M32Frag)}
+            << inputs{frag(F::MemFrag)}
             << outputs{reg(R::GPR32)}
             << pattern{N::LOAD, 0},
          // Load r64
          define{I::MOV}
-            << inputs{frag(F::M64Frag)}
+            << inputs{frag(F::MemFrag)}
             << outputs{reg(R::GPR64)}
             << pattern{N::LOAD, 0},
          // Store r32
          define{I::MOV}
-            << inputs{frag(F::M32Frag), reg(R::GPR32)}
+            << inputs{frag(F::MemFrag), reg(R::GPR32)}
             << outputs{}
             << pattern{N::STORE, 1, 0},
          // Store r64
          define{I::MOV}
-            << inputs{frag(F::M64Frag), reg(R::GPR64)}
+            << inputs{frag(F::MemFrag), reg(R::GPR64)}
             << outputs{}
             << pattern{N::STORE, 1, 0}
       );
@@ -152,11 +153,26 @@ private:
    }
 
 public:
-   PatternGenerator getPatternFor(mc::NodeKind kind) const override;
-   PatternGenerator patterns() const override;
    static consteval auto GetPatterns() {
       return std::tuple_cat(AddAllScalarInsts(), AddLoadStoreInsts());
+      // return AddLoadStoreInsts();
    }
+
+   static consteval auto GetFragments() {
+      return std::make_tuple(fragment{F::MemFrag} << inputs{
+                                   reg(R::GPR64) /* Base */,
+                                   reg(R::GPR64) /* Index */,
+                                   imm(8) /* Scale */,
+                                   imm(32) /* Disp */
+                             });
+   }
+
+public:
+   PatternGenerator getPatternFor(mc::NodeKind kind) const override;
+   PatternGenerator patterns() const override;
+   mc::MCPatternFragment const& getFragment(unsigned kind) const override;
+   bool matchFragment(mc::MCPatternFragment const& frag, mc::MatchOptions& mo,
+                      mc::InstSelectNode*& out) const override;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -166,9 +182,16 @@ public:
 // Map of mc::NodeKind -> list of mc::MCPatternDef
 static std::unordered_map<int, std::vector<mc::MCPatternDef const*>> PatternMap_;
 
+// Map of mc::MCPatternFragment kind -> mc::MCPatternFragment
+static std::unordered_map<int, mc::MCPatternFragment const*> FragmentMap_;
+
 // Private std::array of patterns (must be global for ASAN to be happy)
 static constexpr auto PatternsArray_ =
       utils::array_from_tuple(x86Patterns::GetPatterns());
+
+// Private std::array of fragments (must be global for ASAN to be happy)
+static constexpr auto FragmentsArray_ =
+      utils::array_from_tuple(x86Patterns::GetFragments());
 
 // Initialize the private global patterns class
 static constexpr x86Patterns Patterns_{};
@@ -184,15 +207,37 @@ PatternGenerator x86Patterns::patterns() const {
       for(const auto* def : list) co_yield def;
 }
 
+// Get the fragment for the given kind
+mc::MCPatternFragment const& x86Patterns::getFragment(unsigned kind) const {
+   return *FragmentMap_.at(kind);
+}
+
+// Match the fragment
+bool x86Patterns::matchFragment(mc::MCPatternFragment const& frag,
+                                mc::MatchOptions& mo,
+                                mc::InstSelectNode*& out) const {
+   switch(static_cast<x86MCFrag>(frag.kind())) {
+      case x86MCFrag::MemFrag:
+         return MatchMemoryPatternFragment(mo, out);
+      case x86MCFrag::LAST_MEMBER:
+         assert(false);
+         std::unreachable();
+   }
+}
+
 void x86TargetDesc::initialize() {
    // Add the patterns to the map
    for(auto& Def : PatternsArray_) {
       PatternMap_[(int)Def.getDAGKind()].push_back(&Def);
    }
-   // Sort the patterns by its length
+   // Add the fragments to the map
+   for(auto& Frag : FragmentsArray_) {
+      FragmentMap_[Frag.kind()] = &Frag;
+   }
+   // Sort the patterns by its length (decending order)
    for(auto& [_, list] : PatternMap_) {
       std::sort(list.begin(), list.end(), [](auto* a, auto* b) {
-         return a->maxTapeLength() < b->maxTapeLength();
+         return a->maxTapeLength() > b->maxTapeLength();
       });
    }
 }

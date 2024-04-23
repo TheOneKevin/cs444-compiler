@@ -112,22 +112,26 @@ public:
 protected:
    void addChild(Node* operand) {
       children_.push_back(operand);
+      if(!operand) return;
       operand->addUse({static_cast<T*>(this), (unsigned)numChildren() - 1});
    }
    void addChild(Node* operand, unsigned idx) {
       children_.insert(children_.begin() + idx, operand);
+      if(!operand) return;
       operand->addUse({static_cast<T*>(this), idx});
    }
    void replaceChild(unsigned idx, Node* operand) {
       assert(idx < numChildren() && "Index out of bounds");
       children_[idx]->removeUse({static_cast<T*>(this), idx});
       children_[idx] = operand;
+      if(!operand) return;
       operand->addUse({static_cast<T*>(this), idx});
    }
    void destroy() {
       assert(!destroyed_);
       unsigned idx = 0;
       for(auto child : children_) {
+         if(!child) continue;
          child->removeUse({static_cast<T*>(this), idx++});
       }
    }

@@ -312,11 +312,12 @@ int main(int argc, char** argv) {
       for(auto const* F : Pass.CU().functions()) {
          if(!F->hasBody()) continue;
          auto* MCF = mc::DAGBuilder::Build(Alloc, F, TD);
+         std::ofstream out1{std::string{F->name()} + ".dag.dot"};
+         MCF->printDot(out1);
          MCF->selectInstructions();
-         std::ofstream out{std::string{F->name()} + ".dag.dot"};
          MCF->scheduleMIR();
-         MCF->printDot(out);
-         out.close();
+         std::ofstream out2{std::string{F->name()} + ".dag.isel.dot"};
+         MCF->printDot(out2);
       }
    }
    return 0;

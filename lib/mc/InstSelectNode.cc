@@ -1,10 +1,19 @@
 #include "mc/InstSelectNode.h"
+#include "mc/MCPatterns.h"
 #include "tir/Constant.h"
 #include "utils/DotPrinter.h"
 
 namespace mc {
 
 using ISN = InstSelectNode;
+
+static std::string typeToString(ISN::Type type) {
+   if(type.bits == 0) {
+      return "void";
+   } else {
+      return "i" + std::to_string(type.bits);
+   }
+}
 
 bool ISN::operator==(InstSelectNode const& other) const {
    switch(kind_) {
@@ -18,8 +27,7 @@ bool ISN::operator==(InstSelectNode const& other) const {
    }
 }
 
-ISN* ISN::selectPattern(BumpAllocator& alloc,
-                        details::MCPatternDefBase const* pattern,
+ISN* ISN::selectPattern(BumpAllocator& alloc, details::MCPatDefBase const* pattern,
                         std::vector<InstSelectNode*>& operands,
                         std::vector<InstSelectNode*>& nodesToDelete) {
    // Create a new node
@@ -28,7 +36,8 @@ ISN* ISN::selectPattern(BumpAllocator& alloc,
                                 NodeKind::MachineInstr,
                                 static_cast<unsigned>(operands.size()),
                                 pattern,
-                                Type{0}};
+                                Type{0},
+                                parent_};
    // Copy the operands
    for(auto* op : operands) {
       newNode->addChild(op);
@@ -40,11 +49,11 @@ ISN* ISN::selectPattern(BumpAllocator& alloc,
       }
    }
    // RAUW the root node
-   nodesToDelete[0]->replaceAllUsesWith(newNode);
+   this->replaceAllUsesWith(newNode);
    // Delete each node in nodesToDelete
-   for(auto* node : nodesToDelete) {
+   /*for(auto* node : nodesToDelete) {
       node->destroy();
-   }
+   }*/
    // Return the new node
    return newNode;
 }
@@ -62,10 +71,11 @@ void ISN::printNodeTable(utils::DotPrinter& dp) const {
    dp.print_html_start("tr");
    {
       dp.print_html_start("td", {"colspan", std::to_string(colspan)});
-      if(type.bits == 0) {
-         dp.sanitize("Type: void");
+      if(kind_ == NodeKind::MachineInstr) {
+         auto* pat = get<details::MCPatDefBase const*>();
+         dp.sanitize(pat->name());
       } else {
-         dp.sanitize("Type: i" + std::to_string(type.bits));
+         dp.sanitize("Type: " + typeToString(type));
       }
       dp.print_html_end("td");
    }
@@ -121,6 +131,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          auto idx = get<StackSlot>().idx;
          dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
          dp.printTableSingleRow("FrameIndex");
+         dp.printTableSingleRow("Type: " + typeToString(type_));
          dp.printTableDoubleRow("Idx", std::to_string(idx));
          dp.endTLabel();
          break;
@@ -170,6 +181,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
    // Now go to the children
    unsigned i;
    for(i = 0; i < (unsigned)arity_; i++) {
+      if(!getRawChild(i)) continue;
       auto child = cast<ISN>(getRawChild(i));
       int childId = child->printDotNode(dp, visited);
       dp.indent() << "node" << id << ":" << i << ":s -> node" << childId
@@ -177,6 +189,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
    }
    // For the rest, print it as red
    for(; i < numChildren(); i++) {
+      if(!getRawChild(i)) continue;
       auto child = cast<ISN>(getRawChild(i));
       int childId = child->printDotNode(dp, visited);
       dp.indent() << "node" << id << ":ch:s -> node" << childId
@@ -213,7 +226,7 @@ void ISN::buildAdjacencyList(std::unordered_map<ISN*, std::vector<ISN*>> &adj) {
 
 utils::Generator<ISN*> ISN::childNodes() const {
    for(auto* child : children()) {
-      co_yield cast<ISN>(child);
+      co_yield child ? cast<ISN>(child) : nullptr;
    }
 }
 
