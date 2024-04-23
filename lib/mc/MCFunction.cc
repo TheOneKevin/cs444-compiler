@@ -2,7 +2,6 @@
 
 #include <queue>
 #include <unordered_set>
-#include <queue>
 
 #include "mc/InstSelectNode.h"
 #include "mc/MCPatterns.h"
@@ -60,69 +59,48 @@ void MCFunction::scheduleMIR() {
     * 2. The root is the last node
     * 3. Remove all the chains from each node
     */
-
-   for (auto* graph : graphs_) {
+   for(auto* graph : graphs_) {
       assert(graph->kind() == NodeKind::Entry && "Graph root is not Entry node");
-
       std::unordered_map<InstSelectNode*, std::vector<InstSelectNode*>> adj;
-
       // Build the adjacency list
       graph->buildAdjacencyList(adj);
-
       // Topological sort the graph
       topoSort(adj);
    }
-   
    // Set mirRoot_ to the start?
-
 }
 
-void MCFunction::topoSort(std::unordered_map<InstSelectNode*, std::vector<InstSelectNode*>> adj) {
+void MCFunction::topoSort(
+      std::unordered_map<InstSelectNode*, std::vector<InstSelectNode*>> adj) {
    std::unordered_map<InstSelectNode*, int> inDegree;
    std::queue<InstSelectNode*> queue;
    std::vector<InstSelectNode*> topologicalOrder;
-
    // Initialize inDegree for all nodes
-   for (auto& pair : adj) {
-      if (inDegree.find(pair.first) == inDegree.end()) {
-         inDegree[pair.first] = 0;  // Ensure all nodes are in inDegree map
-      }
-      for (InstSelectNode* node : pair.second) {
-         inDegree[node]++;
-      }
+   for(auto& [v, children] : adj) {
+      if(inDegree.find(v) == inDegree.end())
+         inDegree[v] = 0; // Ensure all nodes are in inDegree map
+      for(InstSelectNode* node : children) inDegree[node]++;
    }
-
    // Enqueue all nodes with in-degree of 0
-   for (auto& pair : inDegree) {
-      if (pair.second == 0) {
-         queue.push(pair.first);
-      }
-   }
-
+   for(auto& [v, deg] : inDegree)
+      if(deg == 0) queue.push(v);
    // Process the graph
-   while (!queue.empty()) {
+   while(!queue.empty()) {
       InstSelectNode* current = queue.front();
       queue.pop();
       current->setTopoIdx(curTopoIdx++);
       topologicalOrder.push_back(current);
-      
-      for (InstSelectNode* neighbor : adj[current]) {
+      for(auto* neighbor : adj[current]) {
          inDegree[neighbor]--;
-         if (inDegree[neighbor] == 0) {
-            queue.push(neighbor);
-         }
+         if(inDegree[neighbor] == 0) queue.push(neighbor);
       }
    }
-
-   if (topologicalOrder.empty()) return;
-   
+   if(topologicalOrder.empty()) return;
    InstSelectNode* current = topologicalOrder.front();
-
-   for (size_t i = 1; i < topologicalOrder.size(); ++i) {
+   for(size_t i = 1; i < topologicalOrder.size(); ++i) {
       current->link(topologicalOrder[i]);
       current = topologicalOrder[i];
    }
-
    return;
 }
 
@@ -146,29 +124,12 @@ void MCFunction::selectInstructions() {
    }
 }
 
-// FIXME(kevin): Merge with function in MCPattern.cc
-static unsigned getTotalSize(target::TargetDesc const& TD,
-                             MCPatternDef const* def) {
-   using mc::details::MCOperand;
-   unsigned size = 0;
-   for(unsigned i = 0; i < def->numInputs(); i++) {
-      auto op = def->getInput(i);
-      if(op.type == MCOperand::Type::Fragment) {
-         auto& frag = TD.getMCPatterns().getFragment(op.data);
-         size += std::max<unsigned>(1, frag.numInputs());
-      } else {
-         size++;
-      }
-   }
-   return size;
-}
-
 InstSelectNode* MCFunction::matchAndReplace(InstSelectNode* root) const {
    std::vector<InstSelectNode*> operands;
    std::vector<InstSelectNode*> nodesToDelete;
    for(auto* def : TD.getMCPatterns().getPatternFor(root->kind())) {
       for(auto* pat : def->patterns()) {
-         operands.resize(getTotalSize(TD, def), nullptr);
+         operands.resize(def->adjustOperandIndex(def->numInputs(), TD), nullptr);
          nodesToDelete.clear();
          if(pat->matches(
                   mc::MatchOptions{TD, def, operands, nodesToDelete, root})) {

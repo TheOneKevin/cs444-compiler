@@ -59,14 +59,13 @@ std::ostream& MCPattern::print(std::ostream& os, int indent) const {
 
 void MCPattern::dump() const { print(std::cerr); }
 
-// Adjusts the index to account for fragments
-static unsigned adjustOperandIndex(unsigned index, target::TargetDesc const& TD,
-                                   MCPatternDef const* def) {
+unsigned MCPatternDef::adjustOperandIndex(unsigned index,
+                                          target::TargetDesc const& TD) const {
    using mc::details::MCOperand;
    unsigned counter = 0;
-   assert(index < def->numInputs() && "Index out of bounds");
+   assert(index <= numInputs() && "Index out of bounds");
    for(unsigned i = 0; i < index; i++) {
-      auto curop = def->getInput(i);
+      auto curop = getInput(i);
       if(curop.type == MCOperand::Type::Fragment) {
          // FIXME(kevin): Assumes fragments do not contain fragments
          auto& Frag = TD.getMCPatterns().getFragment(curop.data);
@@ -111,7 +110,7 @@ bool MCPattern::matches(MatchOptions opt) const {
             const auto index = bc->data;
             const auto operand = def->getInput(index);
             const auto child = node->getChild(childIdx++);
-            const auto adjustedIndex = adjustOperandIndex(index, TD, def);
+            const auto adjustedIndex = def->adjustOperandIndex(index, TD);
             // Check if the operand matches the expected type
             switch(operand.type) {
                case MCOperand::Type::Immediate: {

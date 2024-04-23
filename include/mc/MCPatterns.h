@@ -82,6 +82,19 @@ public:
    void dump() const;
    // Print the pattern
    std::ostream& print(std::ostream&, int indent = 0) const;
+   /**
+    * @brief Adjust the index so that they are contiguous with the pattern
+    * fragments. For ex, if we have an input array [reg, frag, reg] where
+    * frag has 3 inputs itself, adjustOperandIndex(2) will return 4. Setting
+    * idx to the number of inputs will return the total number of operands.
+    *
+    * @param index The input index to adjust
+    * @param TD The target description
+    * @return unsigned The adjusted index
+    */
+   unsigned adjustOperandIndex(unsigned index, target::TargetDesc const& TD) const;
+
+public:
    virtual MCOperand getInput(unsigned idx) const = 0;
    virtual MCOperand getOutput(unsigned idx) const = 0;
    virtual unsigned numInputs() const = 0;

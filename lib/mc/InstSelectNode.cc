@@ -1,4 +1,5 @@
 #include "mc/InstSelectNode.h"
+
 #include "mc/MCPatterns.h"
 #include "tir/Constant.h"
 #include "utils/DotPrinter.h"
@@ -59,8 +60,9 @@ ISN* ISN::selectPattern(BumpAllocator& alloc, details::MCPatDefBase const* patte
 }
 
 void ISN::printNodeTable(utils::DotPrinter& dp) const {
-   auto colspan = arity_ + (arity_ < numChildren() ? 1 : 0) + 1;
+   auto colspan = arity_ + (arity_ < numChildren() ? 1 : 0);
    auto type = type_;
+   // Row: Node kind name
    dp.print_html_start("tr");
    {
       dp.print_html_start("td", {"colspan", std::to_string(colspan)});
@@ -68,6 +70,7 @@ void ISN::printNodeTable(utils::DotPrinter& dp) const {
       dp.print_html_end("td");
    }
    dp.print_html_end("tr");
+   // Row: Type or MCInstr name
    dp.print_html_start("tr");
    {
       dp.print_html_start("td", {"colspan", std::to_string(colspan)});
@@ -80,6 +83,15 @@ void ISN::printNodeTable(utils::DotPrinter& dp) const {
       dp.print_html_end("td");
    }
    dp.print_html_end("tr");
+   // Row: TopoIdx
+   if(topoIdx_ >= 0) {
+      dp.print_html_start("tr");
+      dp.print_html_start("td", {"colspan", std::to_string(colspan)});
+      dp.sanitize("TopoIdx: " + std::to_string(topoIdx()));
+      dp.print_html_end("td");
+      dp.print_html_end("tr");
+   }
+   // Row: Children ports
    dp.print_html_start("tr");
    {
       for(unsigned i = 0; i < arity_; i++) {
@@ -93,10 +105,6 @@ void ISN::printNodeTable(utils::DotPrinter& dp) const {
          dp.sanitize("ch");
          dp.print_html_end("td");
       }
-
-      dp.print_html_start("td", {"port", "topoIdx"});
-      dp.sanitize(std::to_string(topoIdx()));
-      dp.print_html_end("td");
    }
    dp.print_html_end("tr");
 }
@@ -198,28 +206,14 @@ int ISN::printDotNode(utils::DotPrinter& dp,
    return id;
 }
 
-void ISN::buildAdjacencyList(std::unordered_map<ISN*, std::vector<ISN*>> &adj) {
+void ISN::buildAdjacencyList(std::unordered_map<ISN*, std::vector<ISN*>>& adj) {
    for(auto* child : users()) {
-      if (child->kind() == NodeKind::Constant || child->kind() == NodeKind::Register 
-      || child->kind() == NodeKind::FrameIndex || child->kind() == NodeKind::Argument 
-      || child->kind() == NodeKind::BasicBlock || child->kind() == NodeKind::Entry 
-      || child->kind() == NodeKind::GlobalAddress || child->kind() == NodeKind::Predicate) {
-         continue;
-      }
-
+      if(!child || child->arity() == 0) continue;
       adj[this].push_back(cast<ISN>(child));
    }
-   
    for(unsigned i = numChildren(); i > 0; i--) {
-      auto child = cast<ISN>(getRawChild(i - 1));
-
-      if (child->kind() == NodeKind::Constant || child->kind() == NodeKind::Register 
-      || child->kind() == NodeKind::FrameIndex || child->kind() == NodeKind::Argument 
-      || child->kind() == NodeKind::BasicBlock || child->kind() == NodeKind::Entry 
-      || child->kind() == NodeKind::GlobalAddress || child->kind() == NodeKind::Predicate) {
-         continue;
-      }
-
+      auto child = getChild(i - 1);
+      if(!child || child->arity() == 0) continue;
       child->buildAdjacencyList(adj);
    }
 }
