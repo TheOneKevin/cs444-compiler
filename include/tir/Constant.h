@@ -140,6 +140,11 @@ public:
    std::ostream& print(std::ostream& os) const override;
    bool isExternalLinkage() const override { return false; }
    bool isGlobalVariable() const override { return true; }
+   void setInitializer(Function* init) { initializer_ = init; }
+   Function* initializer() const { return initializer_; }
+
+private:
+   Function* initializer_ = nullptr;
 };
 
 /**

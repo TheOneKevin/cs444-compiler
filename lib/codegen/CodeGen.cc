@@ -54,6 +54,7 @@ void CG::run(ast::LinkingUnit const* lu) {
    for(auto* cu : lu->compliationUnits()) {
       for(auto* decl : cu->decls()) {
          if(auto* classDecl = dyn_cast<ast::ClassDecl>(decl)) {
+            // We should still emit abstract class static fields
             emitClassDecl(classDecl);
          }
       }
@@ -161,20 +162,21 @@ void CG::colorInterferenceGraph(
          for (auto& [key, val] : graph) {
             if (vtableIndexMap.count(key)) continue; // Already coloured
             if (val.empty()) {
-               vtableIndexMap[key] = 0;
-               std::cout << key->name() << " -> 0\n";
+               vtableIndexMap[key] = 1;
+               // std::cout << key->name() << " -> 0\n";
                continue;
-            } // No neighbours, color it 0
+            } // No neighbours, color it 1
             std::unordered_set<int> usedColors;
             for(auto* neighbour : val) {
                if(vtableIndexMap.count(neighbour)) {
                   usedColors.insert(vtableIndexMap[neighbour]);
                }
             }
-            for(int i = 0; ; ++i) {
+            // colour it with the first available colour
+            for(int i = 1; ; ++i) {
                if(usedColors.count(i) == 0) {
                   vtableIndexMap[key] = i;
-                  std::cout << key->name() << " -> " << i << "\n";
+                  // std::cout << key->name() << " -> " << i << "\n";
                   break;
                }
             }

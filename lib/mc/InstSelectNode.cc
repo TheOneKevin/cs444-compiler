@@ -6,9 +6,52 @@ namespace mc {
 
 using ISN = InstSelectNode;
 
+bool ISN::operator==(InstSelectNode const& other) const {
+   switch(kind_) {
+      case mc::NodeKind::FrameIndex:
+         return get<StackSlot>().idx == other.get<StackSlot>().idx;
+      case mc::NodeKind::Register:
+      case mc::NodeKind::Argument:
+         return get<VReg>().idx == other.get<VReg>().idx;
+      default:
+         return this == &other;
+   }
+}
+
+ISN* ISN::selectPattern(BumpAllocator& alloc,
+                        details::MCPatternDefBase const* pattern,
+                        std::vector<InstSelectNode*>& operands,
+                        std::vector<InstSelectNode*>& nodesToDelete) {
+   // Create a new node
+   void* buf = alloc.allocate(sizeof(ISN));
+   auto* newNode = new(buf) ISN{alloc,
+                                NodeKind::MachineInstr,
+                                static_cast<unsigned>(operands.size()),
+                                pattern,
+                                Type{0}};
+   // Copy the operands
+   for(auto* op : operands) {
+      newNode->addChild(op);
+   }
+   // Copy the chains of each nodesToDelete
+   for(auto* node : nodesToDelete) {
+      for(auto* chain : node->chains()) {
+         newNode->addChild(chain);
+      }
+   }
+   // RAUW the root node
+   nodesToDelete[0]->replaceAllUsesWith(newNode);
+   // Delete each node in nodesToDelete
+   for(auto* node : nodesToDelete) {
+      node->destroy();
+   }
+   // Return the new node
+   return newNode;
+}
+
 void ISN::printNodeTable(utils::DotPrinter& dp) const {
    auto colspan = arity_ + (arity_ < numChildren() ? 1 : 0);
-   auto type = std::get<Type>(data_.value());
+   auto type = type_;
    dp.print_html_start("tr");
    {
       dp.print_html_start("td", {"colspan", std::to_string(colspan)});
@@ -58,7 +101,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
    // If it's a leaf node, print the data. Otherwise, just print the operation
    switch(kind()) {
       case NodeKind::Constant: {
-         auto imm = std::get<ImmValue>(data_.value());
+         auto imm = get<ImmValue>();
          dp.startTLabel(id, {"style", "filled", "bgcolor", "gainboro"});
          dp.printTableSingleRow("Constant");
          dp.printTableDoubleRow("Value", std::to_string(imm.value));
@@ -67,7 +110,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          break;
       }
       case NodeKind::Register: {
-         auto reg = std::get<VReg>(data_.value()).idx;
+         auto reg = get<VReg>().idx;
          dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
          dp.printTableSingleRow("Register");
          dp.printTableDoubleRow("VReg", std::to_string(reg));
@@ -75,7 +118,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          break;
       }
       case NodeKind::FrameIndex: {
-         auto idx = std::get<StackSlot>(data_.value()).idx;
+         auto idx = get<StackSlot>().idx;
          dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
          dp.printTableSingleRow("FrameIndex");
          dp.printTableDoubleRow("Idx", std::to_string(idx));
@@ -83,7 +126,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          break;
       }
       case NodeKind::Argument: {
-         auto idx = std::get<VReg>(data_.value()).idx;
+         auto idx = get<VReg>().idx;
          dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
          dp.printTableSingleRow("Argument");
          dp.printTableDoubleRow("Idx", std::to_string(idx));
@@ -104,7 +147,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          break;
       }
       case NodeKind::GlobalAddress: {
-         auto GO = std::get<tir::GlobalObject*>(data_.value());
+         auto GO = get<tir::GlobalObject*>();
          dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
          dp.printTableSingleRow("GlobalAddress");
          dp.printTableDoubleRow("Id", GO->name());

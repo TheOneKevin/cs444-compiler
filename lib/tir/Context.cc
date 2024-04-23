@@ -12,7 +12,7 @@ std::ostream& operator<<(std::ostream& os, const Value& value) {
    return value.print(os);
 }
 
-Context::Context(BumpAllocator& alloc, TargetInfo& TI)
+Context::Context(BumpAllocator& alloc, target::TargetInfo& TI)
       : alloc_{alloc}, TI_{TI}, pimpl_{nullptr} {
    void* buf1 = alloc.allocate_bytes(sizeof(OpaquePointerType),
                                      alignof(OpaquePointerType));

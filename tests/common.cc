@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "grammar/Joos1WGrammar.h"
-#include "parsetree/ParseTreeVisitor.h"
+#include "ParseTreeVisitor.h"
 
 bool testing::parse_grammar(const string& str) {
    Joos1WParser parser{str};

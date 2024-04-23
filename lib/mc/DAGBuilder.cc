@@ -5,7 +5,7 @@
 
 #include "mc/InstSelectNode.h"
 #include "mc/MCFunction.h"
-#include "mc/MCTargetDesc.h"
+#include "target/Target.h"
 #include "tir/BasicBlock.h"
 #include "tir/Constant.h"
 #include "tir/Instructions.h"
@@ -26,7 +26,7 @@ using T = ISN::Type;
 /* ===--------------------------------------------------------------------=== */
 
 MCFunction* DAG::Build(BumpAllocator& alloc, tir::Function const* F,
-                       MCTargetDesc const& TD) {
+                       target::TargetDesc const& TD) {
    assert(F->hasBody());
    // Allocate the MCFunction to store the DAGs
    void* buf = alloc.allocate_bytes(sizeof(MCFunction), alignof(MCFunction));
@@ -52,7 +52,10 @@ MCFunction* DAG::Build(BumpAllocator& alloc, tir::Function const* F,
    // For each of the vregs, add a LoadToReg node
    for(auto [v, idx] : builder.vregMap) {
       auto instnode = builder.instMap[v];
-      auto vreg = ISN::CreateLeaf(alloc, NodeKind::Register, ISN::VReg{idx});
+      auto vreg = ISN::CreateLeaf(alloc,
+                                  NodeKind::Register,
+                                  ISN::Type{v->type()->getSizeInBits()},
+                                  ISN::VReg{idx});
       auto node = ISN::Create(alloc, T{}, NodeKind::LoadToReg, {vreg, instnode});
       // Find the graph corresponding to instnode
       auto parbb = cast<Instruction>(v)->parent();
@@ -82,7 +85,7 @@ MCFunction* DAG::Build(BumpAllocator& alloc, tir::Function const* F,
       // This step is purely cosmetic:
       //   Let's clean up the chains of BR by removing the chained nodes that
       //   already have users (and so don't need to be chained to BR).
-      for(unsigned i = branch->numChildren() - 1; i > branch->arity_; i--) {
+      for(unsigned i = branch->numChildren(); i > branch->arity_; i--) {
          auto* child = branch->getChild(i - 1);
          if(child->numUsers() > 1) {
             branch->removeChild(i - 1);
@@ -119,12 +122,15 @@ ISN::StackSlot DAG::findOrAllocStackSlot(tir::AllocaInst* alloca) {
 
 InstSelectNode* DAG::buildVReg(tir::Instruction* v) {
    int vreg = findOrAllocVirtReg(v);
-   auto* const node = ISN::CreateLeaf(alloc, NodeKind::Register, ISN::VReg{vreg});
+   auto* const node = ISN::CreateLeaf(alloc,
+                                      NodeKind::Register,
+                                      ISN::Type{v->type()->getSizeInBits()},
+                                      ISN::VReg{vreg});
    return node;
 }
 
 InstSelectNode* DAG::buildCC(tir::Instruction::Predicate pred) {
-   return ISN::CreateLeaf(alloc, NodeKind::Predicate, pred);
+   return ISN::CreateLeaf(alloc, NodeKind::Predicate, ISN::Type{0}, pred);
 }
 
 InstSelectNode* DAG::findValue(tir::Value* v) {
@@ -138,7 +144,10 @@ InstSelectNode* DAG::findValue(tir::Value* v) {
       // If this is an alloca, use a stack slot
       if(auto* alloca = dyn_cast<AllocaInst>(v)) {
          return ISN::CreateLeaf(
-               alloc, NodeKind::FrameIndex, findOrAllocStackSlot(alloca));
+               alloc,
+               NodeKind::FrameIndex,
+               ISN::Type{alloca->allocatedType()->getSizeInBits()},
+               findOrAllocStackSlot(alloca));
       }
       // If the instruction is declared in another bb, use a vreg
       // Otherwise, grab the emitted instruction
@@ -149,11 +158,17 @@ InstSelectNode* DAG::findValue(tir::Value* v) {
                       instMap[instr]);
    } else if(v->isFunction()) {
       return ISN::CreateLeaf(
-            alloc, NodeKind::GlobalAddress, cast<GlobalObject>(v));
+            alloc,
+            NodeKind::GlobalAddress,
+            ISN::Type{Type::getPointerTy(curbb->ctx())->getSizeInBits()},
+            cast<GlobalObject>(v));
    } else if(v->isFunctionArg()) {
       auto arg = cast<Argument>(v);
       int idx = arg->index();
-      return ISN::CreateLeaf(alloc, NodeKind::Argument, ISN::VReg{idx});
+      return ISN::CreateLeaf(alloc,
+                             NodeKind::Argument,
+                             ISN::Type{arg->type()->getSizeInBits()},
+                             ISN::VReg{idx});
    } else if(v->isConstant()) {
       auto c = cast<Constant>(v);
       if(c->isNumeric()) {
@@ -162,7 +177,10 @@ InstSelectNode* DAG::findValue(tir::Value* v) {
          return ISN::CreateImm(alloc, bits, CI->zextValue());
       } else if(c->isGlobalVariable()) {
          return ISN::CreateLeaf(
-               alloc, NodeKind::GlobalAddress, cast<GlobalObject>(c));
+               alloc,
+               NodeKind::GlobalAddress,
+               ISN::Type{Type::getPointerTy(curbb->ctx())->getSizeInBits()},
+               cast<GlobalObject>(c));
       } else if(c->isNullPointer()) {
          return ISN::CreateImm(alloc, MCF->TI.getPointerSizeInBits(), 0);
       } else if(c->isUndef()) {

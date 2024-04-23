@@ -19,6 +19,10 @@ namespace mc {
 class InstSelectNode;
 class DAGBuilder;
 
+namespace details {
+class MCPatternDefBase;
+}
+
 /* ===--------------------------------------------------------------------=== */
 // NodeType enum
 /* ===--------------------------------------------------------------------=== */
@@ -35,8 +39,10 @@ class DAGBuilder;
    F(BasicBlock)        \
    F(Predicate)         \
    /* Special ops*/     \
-   F(LoadFromReg)       \
+   F(MachineInstr)      \
    F(LoadToReg)         \
+   F(PHI)               \
+   F(UNREACHABLE)       \
    /* Operations */     \
    F(LOAD)              \
    F(STORE)             \
@@ -52,14 +58,11 @@ class DAGBuilder;
    F(ZERO_EXTEND)       \
    F(TRUNCATE)          \
    F(SET_CC)            \
-   F(SELECT_CC)         \
    /* Control flow */   \
    F(CALL)              \
    F(BR_CC)             \
    F(BR)                \
-   F(PHI)               \
-   F(RETURN)            \
-   F(UNREACHABLE)
+   F(RETURN)
 
 DECLARE_ENUM(NodeKind, NodeTypeList)
 
@@ -100,7 +103,7 @@ public:
                       /* Constant immediate value */ ImmValue,
                       /* Predicate value */ tir::Instruction::Predicate,
                       /* Global object pointer */ tir::GlobalObject*,
-                      /* Integer type of node */ Type>;
+                      /* For inst select */ details::MCPatternDefBase const*>;
    using DataOpt = std::optional<DataUnion>;
 
    DECLARE_STRING_TABLE(NodeKind, NodeTypeStrings, NodeTypeList)
@@ -111,40 +114,51 @@ public:
 private:
    friend class DAGBuilder;
    // Internal constructor for N-ary nodes
-   InstSelectNode(BumpAllocator& alloc, NodeKind type, unsigned arity,
-                  DataOpt data)
+   InstSelectNode(BumpAllocator& alloc, NodeKind kind, unsigned arity,
+                  DataOpt data, Type type)
          : utils::GraphNodeUser<InstSelectNode>{alloc},
            utils::GraphNode<InstSelectNode>{alloc},
-           kind_{type},
+           kind_{kind},
            data_{data},
-           arity_{arity} {}
+           arity_{arity},
+           type_{type} {}
    // Build any non-leaf node of some type, with N arguments
    static InstSelectNode* Create(BumpAllocator& alloc, Type ty, NodeKind kind,
                                  utils::range_ref<InstSelectNode*> args) {
       auto* buf =
             alloc.allocate_bytes(sizeof(InstSelectNode), alignof(InstSelectNode));
-      auto* node = new(buf)
-            InstSelectNode{alloc, kind, static_cast<unsigned>(args.size()), ty};
+      auto* node = new(buf) InstSelectNode{
+            alloc, kind, static_cast<unsigned>(args.size()), std::nullopt, ty};
       args.for_each([&node](auto* arg) { node->addChild(arg); });
       return node;
    }
    // Build a leaf node (zero arity) with type and leaf data. Note that leaf
    // nodes can have children through chaining.
    static InstSelectNode* CreateLeaf(BumpAllocator& alloc, NodeKind kind,
+                                     Type type = Type{0},
                                      DataOpt data = std::nullopt) {
       auto* buf =
             alloc.allocate_bytes(sizeof(InstSelectNode), alignof(InstSelectNode));
-      auto* node = new(buf) InstSelectNode{alloc, kind, 0, data};
+      auto* node = new(buf) InstSelectNode{alloc, kind, 0, data, type};
       return node;
    }
    // Build a constant immediate leaf node
    static InstSelectNode* CreateImm(BumpAllocator& alloc, int bits,
                                     uint64_t value) {
-      return CreateLeaf(
-            alloc, NodeKind::Constant, InstSelectNode::ImmValue{bits, value});
+      return CreateLeaf(alloc,
+                        NodeKind::Constant,
+                        Type{static_cast<uint32_t>(bits)},
+                        InstSelectNode::ImmValue{bits, value});
    }
 
 public:
+   /// @brief Gets the data of the node as a specific type
+   template <typename T>
+   T get() const {
+      return std::get<T>(data_.value());
+   }
+   /// @brief Checks if this node has data associated with it
+   bool hasData() const { return data_.has_value(); }
    /// @brief Gets the kind/operation of the node
    NodeKind kind() const { return kind_; }
    /// @brief Prints the node in the DOT format
@@ -155,7 +169,11 @@ public:
    /// @brief Iterates over the children of the node (including chains)
    utils::Generator<InstSelectNode*> childNodes() const;
    /// @brief Remove all the chains from the node
-   void clearChains() { children_.resize(arity_); }
+   void clearChains() {
+      for(unsigned i = arity_; i < numChildren(); i++)
+         getRawChild(i)->removeUse({this, i});
+      children_.resize(arity_);
+   }
    /// @brief Gets the ith child of the node
    InstSelectNode* getChild(unsigned idx) const {
       return static_cast<InstSelectNode*>(getRawChild(idx));
@@ -190,6 +208,30 @@ public:
       if(prev_) prev_->next_ = this;
       node->prev_ = this;
    }
+   
+   /**
+    * @brief Compare if two nodes are referring to the same thing. This means
+    * pointer equality for non-leaf nodes.
+    *
+    * @param other The other node to compare with
+    */
+   bool operator==(InstSelectNode const& other) const;
+   /**
+    * @brief Replace this node with the selected pattern
+    */
+   InstSelectNode* selectPattern(BumpAllocator& alloc,
+                                 details::MCPatternDefBase const* pattern,
+                                 std::vector<InstSelectNode*>& operands,
+                                 std::vector<InstSelectNode*>& nodesToDelete);
+   // Gets the arity of this node
+   auto arity() const { return arity_; }
+   // Iterate through the chains of this node
+   utils::Generator<InstSelectNode*> chains() const {
+      for(size_t i = arity_; i < numChildren(); i++) co_yield getChild(i);
+   }
+   // Get the type of this node
+   auto type() const { return type_; }
+
    // @brief Link the current node with the next node
    void link(InstSelectNode* node) {
       assert(next_ == nullptr);
@@ -204,6 +246,7 @@ private:
    const NodeKind kind_;
    const DataOpt data_;
    const unsigned arity_;
+   const Type type_;
    int topoIdx_ = -1;
    int liveRangeTo_ = -1;
    InstSelectNode* prev_ = nullptr;

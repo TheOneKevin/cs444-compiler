@@ -1,26 +1,20 @@
-#include <ast/AST.h>
-#include <codegen/CodeGen.h>
-#include <diagnostics/Diagnostics.h>
-#include <grammar/Joos1WGrammar.h>
-#include <mc/DAGBuilder.h>
-#include <parsetree/ParseTreeVisitor.h>
-#include <passes/AllPasses.h>
-#include <semantic/HierarchyChecker.h>
-#include <semantic/NameResolver.h>
-#include <target/x86/x86TargetInfo.h>
-#include <third-party/CLI11.h>
-#include <tir/TIR.h>
-#include <utils/BumpAllocator.h>
-#include <utils/PassManager.h>
-
 #include <filesystem>
 #include <iostream>
 #include <iterator>
 #include <sstream>
 #include <string>
 
+#include "codegen/CodeGen.h"
+#include "diagnostics/Diagnostics.h"
+#include "mc/DAGBuilder.h"
+#include "passes/AllPasses.h"
 #include "passes/CompilerPasses.h"
 #include "passes/IRContextPass.h"
+#include "target/Target.h"
+#include "third-party/CLI11.h"
+#include "tir/TIR.h"
+#include "utils/BumpAllocator.h"
+#include "utils/PassManager.h"
 
 enum class InputMode { File, Stdin };
 void pretty_print_errors(SourceManager& SM, diagnostics::DiagnosticEngine& diag);
@@ -268,8 +262,8 @@ int main(int argc, char** argv) {
    // Run the code generation now
    utils::CustomBufferResource Heap{};
    BumpAllocator Alloc{&Heap};
-   target::x86::X86TargetInfo TI{};
-   target::x86::x86MCTargetDesc TD{};
+   auto& TI = target::TargetInfo::Get<target::ArchType::X86>();
+   auto& TD = target::TargetDesc::Get<target::ArchType::X86>();
    tir::Context CGContext{Alloc, TI};
    tir::CompilationUnit CU{CGContext};
    {
@@ -310,12 +304,15 @@ int main(int argc, char** argv) {
       std::cerr << "*** Running backend machine-code pipeline... ***" << std::endl;
    }
 
+   TD.initialize();
+
    // Run the backend pipeline now (it's not based off the pass pipeline)
    {
       auto const& Pass = OptPM.FindPass<IRContextPass>();
       for(auto const* F : Pass.CU().functions()) {
          if(!F->hasBody()) continue;
          auto* MCF = mc::DAGBuilder::Build(Alloc, F, TD);
+         MCF->selectInstructions();
          std::ofstream out{std::string{F->name()} + ".dag.dot"};
          MCF->scheduleMIR();
          MCF->printDot(out);

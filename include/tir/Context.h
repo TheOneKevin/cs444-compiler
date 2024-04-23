@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils/BumpAllocator.h"
+#include "target/TargetInfo.h"
 
 namespace tir {
 
@@ -10,14 +11,6 @@ class FunctionType;
 class ArrayType;
 class IntegerType;
 class StructType;
-
-class TargetInfo {
-public:
-   /// @brief Returns the size of the stack alignment in bytes
-   virtual int getStackAlignment() const = 0;
-   /// @brief Returns the size of the pointer in bits
-   virtual int getPointerSizeInBits() const = 0;
-};
 
 struct ContextPImpl {
 public:
@@ -46,7 +39,7 @@ public:
 
 class Context {
 public:
-   Context(BumpAllocator& alloc, TargetInfo& TI);
+   Context(BumpAllocator& alloc, target::TargetInfo& TI);
    Context(const Context&) = delete;
    Context(Context&&) = delete;
    Context& operator=(const Context&) = delete;
@@ -60,7 +53,7 @@ public:
 
 private:
    BumpAllocator& alloc_;
-   TargetInfo& TI_;
+   target::TargetInfo& TI_;
    ContextPImpl* pimpl_;
    unsigned value_counter = 0;
 };

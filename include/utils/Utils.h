@@ -238,8 +238,8 @@ public:
       sz_ = 0;
    }
 
-   template<typename U, class Tp>
-   requires std::convertible_to<U, T>
+   template <typename U, class Tp>
+      requires std::convertible_to<U, T>
    range_ref(std::vector<U, Tp>& vec) {
       range_ = const_cast<void*>(static_cast<void const*>(&vec));
       foreach_ = [](void* r, details::function_ref<void(T)> callback) {
@@ -248,8 +248,8 @@ public:
       sz_ = vec.size();
    }
 
-   template<std::ranges::view R>
-   requires std::convertible_to<std::ranges::range_value_t<R>, T>
+   template <std::ranges::view R>
+      requires std::convertible_to<std::ranges::range_value_t<R>, T>
    range_ref(R&& range) {
       range_ = const_cast<void*>(static_cast<void const*>(&range));
       foreach_ = [](void* r, details::function_ref<void(T)> callback) {
@@ -258,8 +258,8 @@ public:
       sz_ = std::ranges::size(range);
    }
 
-   template<typename U>
-   requires std::convertible_to<U, T>
+   template <typename U>
+      requires std::convertible_to<U, T>
    range_ref(std::initializer_list<U>&& list) {
       range_ = const_cast<void*>(static_cast<void const*>(&list));
       foreach_ = [](void* r, details::function_ref<void(T)> callback) {
@@ -272,9 +272,7 @@ public:
       if(foreach_) foreach_(range_, callback);
    }
 
-   inline std::size_t size() const {
-      return sz_;
-   }
+   inline std::size_t size() const { return sz_; }
 
 private:
    using range_fun_t = void (*)(void*, details::function_ref<void(T)>);
@@ -282,5 +280,20 @@ private:
    range_fun_t foreach_ = nullptr;
    std::size_t sz_ = 0;
 };
+
+/**
+ * @brief Converts a given std::tuple into an std::array
+ *
+ * @tparam T The type of the tuple
+ * @param tuple The tuple to convert
+ * @return constexpr auto The resulting std::array<...>
+ */
+template <typename T>
+constexpr auto array_from_tuple(T&& tuple) {
+   constexpr auto get_array = [](auto&&... x) {
+      return std::array{std::forward<decltype(x)>(x)...};
+   };
+   return std::apply(get_array, std::forward<T>(tuple));
+}
 
 } // namespace utils

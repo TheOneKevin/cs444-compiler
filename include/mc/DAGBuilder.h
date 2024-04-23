@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mc/MCFunction.h"
+#include "target/Target.h"
 #include "tir/BasicBlock.h"
 #include "tir/Constant.h"
 #include "tir/Instructions.h"
@@ -21,7 +22,7 @@ private:
 
 public:
    static MCFunction* Build(BumpAllocator&, tir::Function const* F,
-                            MCTargetDesc const& TD);
+                            target::TargetDesc const& TD);
 
 private:
    // Main DAG building instruction to translate TIR -> instruction node
