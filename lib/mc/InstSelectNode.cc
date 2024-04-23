@@ -1,5 +1,4 @@
 #include "mc/InstSelectNode.h"
-
 #include "tir/Constant.h"
 #include "utils/DotPrinter.h"
 
@@ -41,6 +40,10 @@ void ISN::printNodeTable(utils::DotPrinter& dp) const {
          dp.sanitize("ch");
          dp.print_html_end("td");
       }
+
+      dp.print_html_start("td", {"port", "topoIdx"});
+      dp.sanitize(std::to_string(topoIdx()));
+      dp.print_html_end("td");
    }
    dp.print_html_end("tr");
 }
@@ -137,6 +140,32 @@ int ISN::printDotNode(utils::DotPrinter& dp,
                   << " [color=red weight=0];\n";
    }
    return id;
+}
+
+void ISN::buildAdjacencyList(std::unordered_map<ISN*, std::vector<ISN*>> &adj) {
+   for(auto* child : users()) {
+      if (child->kind() == NodeKind::Constant || child->kind() == NodeKind::Register 
+      || child->kind() == NodeKind::FrameIndex || child->kind() == NodeKind::Argument 
+      || child->kind() == NodeKind::BasicBlock || child->kind() == NodeKind::Entry 
+      || child->kind() == NodeKind::GlobalAddress) {
+         continue;
+      }
+
+      adj[this].push_back(cast<ISN>(child));
+   }
+   
+   for(unsigned i = numChildren(); i > 0; i--) {
+      auto child = cast<ISN>(getRawChild(i - 1));
+
+      if (child->kind() == NodeKind::Constant || child->kind() == NodeKind::Register 
+      || child->kind() == NodeKind::FrameIndex || child->kind() == NodeKind::Argument 
+      || child->kind() == NodeKind::BasicBlock || child->kind() == NodeKind::Entry 
+      || child->kind() == NodeKind::GlobalAddress) {
+         continue;
+      }
+
+      child->buildAdjacencyList(adj);
+   }
 }
 
 utils::Generator<ISN*> ISN::childNodes() const {

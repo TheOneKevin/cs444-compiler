@@ -317,6 +317,7 @@ int main(int argc, char** argv) {
          if(!F->hasBody()) continue;
          auto* MCF = mc::DAGBuilder::Build(Alloc, F, TD);
          std::ofstream out{std::string{F->name()} + ".dag.dot"};
+         MCF->scheduleMIR();
          MCF->printDot(out);
          out.close();
       }

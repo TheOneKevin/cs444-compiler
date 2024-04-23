@@ -1,6 +1,7 @@
 #include "mc/MCFunction.h"
 
 #include <unordered_set>
+#include <queue>
 
 #include "mc/InstSelectNode.h"
 #include "utils/DotPrinter.h"
@@ -57,7 +58,70 @@ void MCFunction::scheduleMIR() {
     * 2. The root is the last node
     * 3. Remove all the chains from each node
     */
-   mirRoot_ = nullptr;
+
+   for (auto* graph : graphs_) {
+      assert(graph->kind() == NodeKind::Entry && "Graph root is not Entry node");
+
+      std::unordered_map<InstSelectNode*, std::vector<InstSelectNode*>> adj;
+
+      // Build the adjacency list
+      graph->buildAdjacencyList(adj);
+
+      // Topological sort the graph
+      topoSort(adj);
+   }
+   
+   // Set mirRoot_ to the start?
+
+}
+
+void MCFunction::topoSort(std::unordered_map<InstSelectNode*, std::vector<InstSelectNode*>> adj) {
+   std::unordered_map<InstSelectNode*, int> inDegree;
+   std::queue<InstSelectNode*> queue;
+   std::vector<InstSelectNode*> topologicalOrder;
+
+   // Initialize inDegree for all nodes
+   for (auto& pair : adj) {
+      if (inDegree.find(pair.first) == inDegree.end()) {
+         inDegree[pair.first] = 0;  // Ensure all nodes are in inDegree map
+      }
+      for (InstSelectNode* node : pair.second) {
+         inDegree[node]++;
+      }
+   }
+
+   // Enqueue all nodes with in-degree of 0
+   for (auto& pair : inDegree) {
+      if (pair.second == 0) {
+         queue.push(pair.first);
+      }
+   }
+
+   // Process the graph
+   while (!queue.empty()) {
+      InstSelectNode* current = queue.front();
+      queue.pop();
+      current->setTopoIdx(curTopoIdx++);
+      topologicalOrder.push_back(current);
+      
+      for (InstSelectNode* neighbor : adj[current]) {
+         inDegree[neighbor]--;
+         if (inDegree[neighbor] == 0) {
+            queue.push(neighbor);
+         }
+      }
+   }
+
+   if (topologicalOrder.empty()) return;
+   
+   InstSelectNode* current = topologicalOrder.front();
+
+   for (size_t i = 1; i < topologicalOrder.size(); ++i) {
+      current->link(topologicalOrder[i]);
+      current = topologicalOrder[i];
+   }
+
+   return;
 }
 
 } // namespace mc

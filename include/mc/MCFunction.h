@@ -20,6 +20,7 @@ public:
     * subgraphs and emits a single DAG node as the machine IR root.
     */
    void scheduleMIR();
+   void topoSort(std::unordered_map<InstSelectNode*, std::vector<InstSelectNode*>> adj);
 
 private:
    MCFunction(BumpAllocator& alloc, tir::TargetInfo const& TI,
@@ -31,6 +32,7 @@ private:
    mc::MCTargetDesc const& TD;
    std::pmr::vector<InstSelectNode*> graphs_;
    InstSelectNode* mirRoot_;
+   int curTopoIdx = 0;
 };
 
 } // namespace mc
