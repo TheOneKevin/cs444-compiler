@@ -24,32 +24,36 @@ using PatternGenerator = utils::Generator<mc::MCPatternDef const*>;
 // MC target instruction patterns
 class x86Patterns final : public mc::MCPatternsImpl<x86TargetDesc> {
 private:
+   // Get the register for the given register class
+   static consteval auto GetRegClass(int bits) {
+      switch(bits) {
+         case 8:
+            return R::GPR8;
+         case 16:
+            return R::GPR16;
+         case 32:
+            return R::GPR32;
+         case 64:
+            return R::GPR64;
+         default:
+            throw "Invalid register size";
+      }
+   }
    // Adds the x86 RM encoding for an inst -> node pair
-   static consteval auto AddRMEncoding(I inst, N node, bool commutes) {
+   static consteval auto AddRMEncoding(I inst, N node, int bits, bool commutes) {
+      R r = GetRegClass(bits);
       // clang-format off
       return std::make_tuple(
-         // r32, r32
+         // r8/16/32/64, r8/16/32/64
          define{inst}
-            << inputs{reg(R::GPR32), reg(R::GPR32)}
-            << outputs{reg(R::GPR32)}
+            << inputs{reg(r), reg(r)}
+            << outputs{reg(r)}
             << pattern{node, 0, 1}
             << (commutes ? pattern{node, 1, 0} : pattern{}),
-         // r32, m32
+         // r8/16/32/64, m*
          define{inst}
-            << inputs{reg(R::GPR32), frag(F::MemFrag)}
-            << outputs{reg(R::GPR32)}
-            << pattern{node, 0, {N::LOAD, 1}}
-            << (commutes ? pattern{node, {N::LOAD, 1}, 0} : pattern{}),
-         // r64, r64
-         define{inst}
-            << inputs{reg(R::GPR64), reg(R::GPR64)}
-            << outputs{reg(R::GPR64)}
-            << pattern{node, 0, 1}
-            << (commutes ? pattern{node, 1, 0} : pattern{}),
-         // r64, m64
-         define{inst}
-            << inputs{reg(R::GPR64), frag(F::MemFrag)}
-            << outputs{reg(R::GPR64)}
+            << inputs{reg(r), frag(F::MemFrag)}
+            << outputs{reg(r)}
             << pattern{node, 0, {N::LOAD, 1}}
             << (commutes ? pattern{node, {N::LOAD, 1}, 0} : pattern{})
       );
@@ -57,30 +61,19 @@ private:
    }
 
    // Adds the x86 MI encoding for an inst -> node pair
-   static consteval auto AddMIEncoding(I inst, N node, bool commutes) {
+   static consteval auto AddMIEncoding(I inst, N node, int bits, bool commutes) {
+      R r = GetRegClass(bits);
       // clang-format off
       return std::make_tuple(
-         // r32, imm32
+         // r8/16/32/64, imm8/16/32
          define{inst}
-            << inputs{reg(R::GPR32), imm(32)}
-            << outputs{reg(R::GPR32)}
+            << inputs{reg(r), imm(bits == 64 ? 32 : bits)}
+            << outputs{reg(r)}
             << pattern{node, 0, 1}
             << (commutes ? pattern{node, 1, 0} : pattern{}),
-         // m32, imm32
+         // m*, imm8/16/32
          define{inst}
-            << inputs{frag(F::MemFrag), imm(32)}
-            << outputs{/* Nothing, as it's a store */}
-            << pattern{N::STORE, 0, {node, {N::LOAD, 0}, 1}}
-            << (commutes ? pattern{N::STORE, 0, {node, 1, {N::LOAD, 0}}} : pattern{}),
-         // r64, imm32
-         define{inst}
-            << inputs{reg(R::GPR64), imm(64)}
-            << outputs{reg(R::GPR64)}
-            << pattern{node, 0, 1}
-            << (commutes ? pattern{node, 1, 0} : pattern{}),
-         // m64, imm32
-         define{inst}
-            << inputs{frag(F::MemFrag), imm(64)}
+            << inputs{frag(F::MemFrag), imm(bits)}
             << outputs{/* Nothing, as it's a store */}
             << pattern{N::STORE, 0, {node, {N::LOAD, 0}, 1}}
             << (commutes ? pattern{N::STORE, 0, {node, 1, {N::LOAD, 0}}} : pattern{})
@@ -89,18 +82,13 @@ private:
    }
 
    // Adds the x86 MR encoding for an inst -> node pair
-   static consteval auto AddMREncoding(I inst, N node, bool commutes) {
+   static consteval auto AddMREncoding(I inst, N node, int bits, bool commutes) {
+      R r = GetRegClass(bits);
       // clang-format off
       return std::make_tuple(
-         // m32, r32
+         // m*, r8/16/32/64
          define{inst}
-            << inputs{frag(F::MemFrag), reg(R::GPR32)}
-            << outputs{/* Nothing, as it's a store */}
-            << pattern{N::STORE, 0, {node, {N::LOAD, 0}, 1}}
-            << (commutes ? pattern{N::STORE, 0, {node, 1, {N::LOAD, 0}}} : pattern{}),
-         // m64, r64
-         define{inst}
-            << inputs{frag(F::MemFrag), reg(R::GPR64)}
+            << inputs{frag(F::MemFrag), reg(r)}
             << outputs{/* Nothing, as it's a store */}
             << pattern{N::STORE, 0, {node, {N::LOAD, 0}, 1}}
             << (commutes ? pattern{N::STORE, 0, {node, 1, {N::LOAD, 0}}} : pattern{})
@@ -109,19 +97,28 @@ private:
    }
 
    // Adds the RM, MI, MR encoding for a scalar instruction
-   static consteval auto AddScalarInst(I inst, N node) {
-      return std::tuple_cat(AddRMEncoding(inst, node, true),
-                            AddMIEncoding(inst, node, true),
-                            AddMREncoding(inst, node, true));
+   static consteval auto AddScalarInst(I rm, I mi, I mr, N node) {
+      return std::tuple_cat(AddRMEncoding(rm, node, 8, true),
+                            AddRMEncoding(rm, node, 16, true),
+                            AddRMEncoding(rm, node, 32, true),
+                            AddRMEncoding(rm, node, 64, true),
+                            AddMIEncoding(mi, node, 8, true),
+                            AddMIEncoding(mi, node, 16, true),
+                            AddMIEncoding(mi, node, 32, true),
+                            AddMIEncoding(mi, node, 64, true),
+                            AddMREncoding(mr, node, 8, true),
+                            AddMREncoding(mr, node, 16, true),
+                            AddMREncoding(mr, node, 32, true),
+                            AddMREncoding(mr, node, 64, true));
    }
 
    // Adds all basic scalar instructions
    static consteval auto AddAllScalarInsts() {
-      return std::tuple_cat(AddScalarInst(I::ADD, N::ADD),
-                            AddScalarInst(I::SUB, N::SUB),
-                            AddScalarInst(I::OR, N::OR),
-                            AddScalarInst(I::AND, N::AND),
-                            AddScalarInst(I::XOR, N::XOR));
+      return std::tuple_cat(AddScalarInst(I::ADD_RM, I::ADD_MR, I::ADD_MI, N::ADD),
+                            AddScalarInst(I::SUB_RM, I::SUB_MR, I::SUB_MI, N::SUB),
+                            AddScalarInst(I::AND_RM, I::AND_MR, I::AND_MI, N::AND),
+                            AddScalarInst(I::XOR_RM, I::XOR_MR, I::XOR_MI, N::XOR),
+                            AddScalarInst(I::OR_RM, I::OR_MR, I::OR_MI, N::OR));
    }
 
    // Adds the load/store instructions
@@ -129,22 +126,22 @@ private:
       // clang-format off
       return std::make_tuple(
          // Load r32
-         define{I::MOV}
+         define{I::MOV_MR}
             << inputs{frag(F::MemFrag)}
             << outputs{reg(R::GPR32)}
             << pattern{N::LOAD, 0},
          // Load r64
-         define{I::MOV}
+         define{I::MOV_MR}
             << inputs{frag(F::MemFrag)}
             << outputs{reg(R::GPR64)}
             << pattern{N::LOAD, 0},
          // Store r32
-         define{I::MOV}
+         define{I::MOV_RM}
             << inputs{frag(F::MemFrag), reg(R::GPR32)}
             << outputs{}
             << pattern{N::STORE, 1, 0},
          // Store r64
-         define{I::MOV}
+         define{I::MOV_RM}
             << inputs{frag(F::MemFrag), reg(R::GPR64)}
             << outputs{}
             << pattern{N::STORE, 1, 0}

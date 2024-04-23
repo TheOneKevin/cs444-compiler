@@ -19,6 +19,7 @@ namespace mc {
 class InstSelectNode;
 class DAGBuilder;
 class MCFunction;
+struct MatchOptions;
 
 namespace details {
 class MCPatDefBase;
@@ -233,10 +234,7 @@ public:
    /**
     * @brief Replace this node with the selected pattern
     */
-   InstSelectNode* selectPattern(BumpAllocator& alloc,
-                                 details::MCPatDefBase const* pattern,
-                                 std::vector<InstSelectNode*>& operands,
-                                 std::vector<InstSelectNode*>& nodesToDelete);
+   InstSelectNode* selectPattern(MatchOptions);
    // Gets the arity of this node
    auto arity() const { return arity_; }
    // Iterate through the chains of this node

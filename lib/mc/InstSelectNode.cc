@@ -1,5 +1,6 @@
 #include "mc/InstSelectNode.h"
 
+#include "mc/MCFunction.h"
 #include "mc/MCPatterns.h"
 #include "tir/Constant.h"
 #include "utils/DotPrinter.h"
@@ -17,6 +18,7 @@ static std::string typeToString(ISN::Type type) {
 }
 
 bool ISN::operator==(InstSelectNode const& other) const {
+   if(kind_ != other.kind_) return false;
    switch(kind_) {
       case mc::NodeKind::FrameIndex:
          return get<StackSlot>().idx == other.get<StackSlot>().idx;
@@ -28,9 +30,9 @@ bool ISN::operator==(InstSelectNode const& other) const {
    }
 }
 
-ISN* ISN::selectPattern(BumpAllocator& alloc, details::MCPatDefBase const* pattern,
-                        std::vector<InstSelectNode*>& operands,
-                        std::vector<InstSelectNode*>& nodesToDelete) {
+ISN* ISN::selectPattern(MatchOptions options) {
+   auto& alloc = parent_->alloc();
+   auto [TD, pattern, operands, nodesToDelete, node] = options;
    // Create a new node
    void* buf = alloc.allocate(sizeof(ISN));
    auto* newNode = new(buf) ISN{alloc,
@@ -52,6 +54,7 @@ ISN* ISN::selectPattern(BumpAllocator& alloc, details::MCPatDefBase const* patte
    // RAUW the root node
    this->replaceAllUsesWith(newNode);
    // Delete each node in nodesToDelete
+   // FIXME(kevin): We really don't need this part of it
    /*for(auto* node : nodesToDelete) {
       node->destroy();
    }*/

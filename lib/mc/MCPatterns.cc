@@ -85,6 +85,17 @@ bool MCPattern::matches(MatchOptions opt) const {
    stack.push({0, node});
    unsigned childIdx = 0;
    nodesToDelete.push_back(node);
+   // Check if the output types matches the pattern output
+   assert(def->numOutputs() <= 1 && "Multiple outputs not supported");
+   if(def->numOutputs() == 0) {
+      if(node->type().bits != 0) return false;
+   } else if(def->numOutputs() == 1) {
+      if(def->getOutput(0).type == MCOperand::Type::Register) {
+         if(!TD.isRegisterClass(def->getOutput(0).data, node->type()))
+            return false;
+      }
+   }
+   // Run the bytecode logic
    for(auto& bc : bytecode()) {
       if(childIdx >= node->arity()) return false;
       switch(bc->type) {

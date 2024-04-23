@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string_view>
+
 #include "target/Target.h"
 #include "utils/EnumMacros.h"
 
@@ -15,37 +16,45 @@ public:
    int getPointerSizeInBits() const override { return 64; }
 };
 
+// clang-format off
 // x86 MC patterns
-#define x86MCInstList(F) F(ADD) F(SUB) F(AND) F(XOR) F(OR) F(MOV)
+#define x86MCInstList(F)          \
+   F(ADD_RM) F(ADD_MR) F(ADD_MI)  \
+   F(SUB_RM) F(SUB_MR) F(SUB_MI)  \
+   F(AND_RM) F(AND_MR) F(AND_MI)  \
+   F(XOR_RM) F(XOR_MR) F(XOR_MI)  \
+   F( OR_RM) F( OR_MR) F( OR_MI)  \
+   F(MOV_RM) F(MOV_MR) F(MOV_MI)
 DECLARE_ENUM(x86MCInst, x86MCInstList)
+// clang-format on
 
 // x86 MC pattern fragments
 #define x86MCFragList(F) F(MemFrag)
 DECLARE_ENUM(x86MCFrag, x86MCFragList)
 
 // x86 Register Classes
-#define x86RegClassList(F) F(GPR32) F(GPR64)
+#define x86RegClassList(F) F(GPR8) F(GPR16) F(GPR32) F(GPR64)
 DECLARE_ENUM(x86RegClass, x86RegClassList)
 
 // x86 Registers (all of them)
 // clang-format off
 #define x86RegList(F) \
-   F(EAX) F(RAX)      \
-   F(EBX) F(RBX)      \
-   F(ECX) F(RCX)      \
-   F(EDX) F(RDX)      \
-   F(RSI) F(ESI)      \
-   F(RDI) F(EDI)      \
-   F(R8)  F(R8d)      \
-   F(R9)  F(R9d)      \
-   F(R10) F(R10d)     \
-   F(R11) F(R11d)     \
-   F(R12) F(R12d)     \
-   F(R13) F(R13d)     \
-   F(R14) F(R14d)     \
-   F(R15) F(R15d)     \
-// clang-format on
+   F(RAX) F(EAX)  F(AX)   F(AL)     \
+   F(RBX) F(EBX)  F(BX)   F(BL)     \
+   F(RCX) F(ECX)  F(CX)   F(CL)     \
+   F(RDX) F(EDX)  F(DX)   F(DL)     \
+   F(RSI) F(ESI)  F(SI)   F(SIL)    \
+   F(RDI) F(EDI)  F(DI)   F(DIL)    \
+   F(R8)  F(R8d)  F(R8w)  F(R8b)    \
+   F(R9)  F(R9d)  F(R9w)  F(R9b)    \
+   F(R10) F(R10d) F(R10w) F(R10b)   \
+   F(R11) F(R11d) F(R11w) F(R11b)   \
+   F(R12) F(R12d) F(R12w) F(R12b)   \
+   F(R13) F(R13d) F(R13w) F(R13b)   \
+   F(R14) F(R14d) F(R14w) F(R14b)   \
+   F(R15) F(R15d) F(R15w) F(R15b)
 DECLARE_ENUM(x86Reg, x86RegList)
+// clang-format on
 
 // MC target description
 class x86TargetDesc final : public target::TargetDesc {
@@ -76,7 +85,8 @@ public:
    /// @brief Returns the MCPattern class for DAG pattern matching
    const mc::MCPatterns& getMCPatterns() const override;
    /// @brief Checks if the x86 register class can be assigned to the MIR type
-   bool isRegisterClass(unsigned classIdx, mc::InstSelectNode::Type type) const override;
+   bool isRegisterClass(unsigned classIdx,
+                        mc::InstSelectNode::Type type) const override;
 
 private:
    DECLARE_STRING_TABLE(x86MCInst, x86MCInstStringTable, x86MCInstList)

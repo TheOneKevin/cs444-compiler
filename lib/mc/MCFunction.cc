@@ -131,10 +131,10 @@ InstSelectNode* MCFunction::matchAndReplace(InstSelectNode* root) const {
       for(auto* pat : def->patterns()) {
          operands.resize(def->adjustOperandIndex(def->numInputs(), TD), nullptr);
          nodesToDelete.clear();
-         if(pat->matches(
-                  mc::MatchOptions{TD, def, operands, nodesToDelete, root})) {
+         mc::MatchOptions MO{TD, def, operands, nodesToDelete, root};
+         if(pat->matches(MO)) {
             // Now we build the new node
-            return root->selectPattern(alloc_, def, operands, nodesToDelete);
+            return root->selectPattern(MO);
          }
       }
    }
