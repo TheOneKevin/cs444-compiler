@@ -50,7 +50,7 @@ ISN* ISN::selectPattern(BumpAllocator& alloc,
 }
 
 void ISN::printNodeTable(utils::DotPrinter& dp) const {
-   auto colspan = arity_ + (arity_ < numChildren() ? 1 : 0);
+   auto colspan = arity_ + (arity_ < numChildren() ? 1 : 0) + 1;
    auto type = type_;
    dp.print_html_start("tr");
    {
@@ -190,7 +190,7 @@ void ISN::buildAdjacencyList(std::unordered_map<ISN*, std::vector<ISN*>> &adj) {
       if (child->kind() == NodeKind::Constant || child->kind() == NodeKind::Register 
       || child->kind() == NodeKind::FrameIndex || child->kind() == NodeKind::Argument 
       || child->kind() == NodeKind::BasicBlock || child->kind() == NodeKind::Entry 
-      || child->kind() == NodeKind::GlobalAddress) {
+      || child->kind() == NodeKind::GlobalAddress || child->kind() == NodeKind::Predicate) {
          continue;
       }
 
@@ -203,7 +203,7 @@ void ISN::buildAdjacencyList(std::unordered_map<ISN*, std::vector<ISN*>> &adj) {
       if (child->kind() == NodeKind::Constant || child->kind() == NodeKind::Register 
       || child->kind() == NodeKind::FrameIndex || child->kind() == NodeKind::Argument 
       || child->kind() == NodeKind::BasicBlock || child->kind() == NodeKind::Entry 
-      || child->kind() == NodeKind::GlobalAddress) {
+      || child->kind() == NodeKind::GlobalAddress || child->kind() == NodeKind::Predicate) {
          continue;
       }
 
