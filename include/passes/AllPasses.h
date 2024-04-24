@@ -38,6 +38,7 @@ DECLARE_PASS(PrintCFG);
 /* ===--------------------------------------------------------------------=== */
 
 DECLARE_PASS(InstSelect);
+DECLARE_PASS(InstSched);
 DECLARE_PASS(MIRBuilder);
 
 /* ===--------------------------------------------------------------------=== */
@@ -63,4 +64,5 @@ static void BuildOptPasses(utils::PassManager& PM) {
    NewPrintCFG(PM);
    NewInstSelect(PM);
    NewMIRBuilder(PM);
+   NewInstSched(PM);
 }

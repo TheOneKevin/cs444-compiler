@@ -196,9 +196,6 @@ public:
    auto liveRange() const { return std::make_tuple(topoIdx_, liveRangeTo_); }
    /// @brief Gets the topological index of this node
    auto topoIdx() const { return topoIdx_; }
-   /// @brief Build the adjacency list of the DAG
-   void buildAdjacencyList(
-         std::unordered_map<InstSelectNode*, std::vector<InstSelectNode*>>& adj);
    /// @brief Sets the topological index of this node and updates live range.
    void setTopoIdx(int idx) {
       topoIdx_ = idx;

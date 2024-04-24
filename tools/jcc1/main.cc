@@ -310,7 +310,7 @@ int main(int argc, char** argv) {
    }
 
    OptPM.Reset();
-   OptPM.PO().EnablePass("isel");
+   OptPM.PO().EnablePass("isched");
    OptPM.Run();
 
    return 0;

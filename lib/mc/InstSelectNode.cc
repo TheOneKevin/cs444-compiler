@@ -208,18 +208,6 @@ int ISN::printDotNode(utils::DotPrinter& dp,
    return id;
 }
 
-void ISN::buildAdjacencyList(std::unordered_map<ISN*, std::vector<ISN*>>& adj) {
-   for(auto* child : users()) {
-      if(!child || child->arity() == 0) continue;
-      adj[this].push_back(cast<ISN>(child));
-   }
-   for(unsigned i = numChildren(); i > 0; i--) {
-      auto child = getChild(i - 1);
-      if(!child || child->arity() == 0) continue;
-      child->buildAdjacencyList(adj);
-   }
-}
-
 utils::Generator<ISN*> ISN::childNodes() const {
    for(auto* child : children()) {
       co_yield child ? cast<ISN>(child) : nullptr;
