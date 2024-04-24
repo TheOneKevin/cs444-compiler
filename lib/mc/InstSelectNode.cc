@@ -123,7 +123,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
    switch(kind()) {
       case NodeKind::Constant: {
          auto imm = get<ImmValue>();
-         dp.startTLabel(id, {"style", "filled", "bgcolor", "gainboro"});
+         dp.startTLabel(id, {"style", "filled"}, "1", "gainsboro");
          dp.printTableSingleRow("Constant");
          dp.printTableDoubleRow("Value", std::to_string(imm.value));
          dp.printTableDoubleRow("Bits", std::to_string(imm.bits));
@@ -132,7 +132,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
       }
       case NodeKind::Register: {
          auto reg = get<VReg>().idx;
-         dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
+         dp.startTLabel(id, {"style", "filled"}, "1", "gainsboro");
          dp.printTableSingleRow("Register");
          dp.printTableDoubleRow("VReg", std::to_string(reg));
          dp.endTLabel();
@@ -140,7 +140,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
       }
       case NodeKind::FrameIndex: {
          auto idx = get<StackSlot>().idx;
-         dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
+         dp.startTLabel(id, {"style", "filled"}, "1", "gainsboro");
          dp.printTableSingleRow("FrameIndex");
          dp.printTableSingleRow("Type: " + typeToString(type_));
          dp.printTableDoubleRow("Idx", std::to_string(idx));
@@ -149,17 +149,11 @@ int ISN::printDotNode(utils::DotPrinter& dp,
       }
       case NodeKind::Argument: {
          auto idx = get<VReg>().idx;
-         dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
+         dp.startTLabel(id, {"style", "filled"}, "1", "gainsboro");
          dp.printTableSingleRow("Argument");
          dp.printTableDoubleRow("Idx", std::to_string(idx));
          dp.endTLabel();
          break;
-      }
-      case NodeKind::BasicBlock: {
-         // Defer the printing of connections to MCFunction
-         dp.printLabel(
-               id, "BasicBlock", {"style", "filled", "fillcolor", "lightblue"});
-         return id;
       }
       case NodeKind::Entry: {
          dp.printLabel(id,
@@ -170,7 +164,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
       }
       case NodeKind::GlobalAddress: {
          auto GO = get<tir::GlobalObject*>();
-         dp.startTLabel(id, {"style", "filled", "bgcolor", "lightblue"});
+         dp.startTLabel(id, {"style", "filled"}, "1", "gainsboro");
          dp.printTableSingleRow("GlobalAddress");
          dp.printTableDoubleRow("Id", GO->name());
          dp.endTLabel();
@@ -181,8 +175,13 @@ int ISN::printDotNode(utils::DotPrinter& dp,
             dp.printLabel(id,
                           NodeKind_to_string(kind_, "??"),
                           {"style", "filled", "fillcolor", "lightblue"});
+            if(kind_ == NodeKind::BasicBlock) return id;
          } else {
-            dp.startTLabel(id, {}, "3");
+            dp.startTLabel(
+                  id,
+                  {},
+                  "3",
+                  (kind_ == NodeKind::MachineInstr) ? "lightpink" : "white");
             printNodeTable(dp);
             dp.endTLabel();
          }

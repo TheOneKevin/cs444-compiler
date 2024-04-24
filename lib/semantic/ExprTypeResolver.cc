@@ -457,8 +457,11 @@ Type const* ExprTypeResolver::evalArrayAccess(ArrayAccessOp& op, const Type* arr
                                               const Type* index) const {
    if(op.resultType()) return op.resultType();
    auto arrayType = dynamic_cast<const ArrayType*>(array);
-   assert(arrayType && "Not an array type");
-
+   if(!arrayType) {
+      throw diag.ReportError(loc_)
+            << "invalid type for array access, non-array" << argLocation(0)
+            << "is type " << array->toString();
+   }
    if(!index->isNumeric()) {
       throw diag.ReportError(loc_)
             << "invalid type for array index, non-numeric" << argLocation(0)

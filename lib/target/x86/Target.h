@@ -76,6 +76,11 @@ public:
       return x86MCFrag_to_string(ty, "??");
    }
 
+   /// @brief Gets the name of the register class
+   static constexpr std::string_view GetRegClassName(RegClass ty) {
+      return x86RegClass_to_string(ty, "??");
+   }
+
    /// @brief Initializes the target description
    void initialize() override;
    /// @brief Gets the number of MC register classes
@@ -87,10 +92,13 @@ public:
    /// @brief Checks if the x86 register class can be assigned to the MIR type
    bool isRegisterClass(unsigned classIdx,
                         mc::InstSelectNode::Type type) const override;
+   void dumpPatterns() const override;
+   std::ostream& printPatterns(std::ostream& os) const override;
 
 private:
    DECLARE_STRING_TABLE(x86MCInst, x86MCInstStringTable, x86MCInstList)
    DECLARE_STRING_TABLE(x86MCFrag, x86MCFragStringTable, x86MCFragList)
+   DECLARE_STRING_TABLE(x86RegClass, x86RegClassStringTable, x86RegClassList)
 };
 
 bool MatchMemoryPatternFragment(mc::MatchOptions&, mc::InstSelectNode*&);

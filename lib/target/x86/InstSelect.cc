@@ -75,8 +75,8 @@ private:
          define{inst}
             << inputs{frag(F::MemFrag), imm(bits)}
             << outputs{/* Nothing, as it's a store */}
-            << pattern{N::STORE, 0, {node, {N::LOAD, 0}, 1}}
-            << (commutes ? pattern{N::STORE, 0, {node, 1, {N::LOAD, 0}}} : pattern{})
+            << pattern{N::STORE, {node, {N::LOAD, 0}, 1}, 0}
+            << (commutes ? pattern{N::STORE, {node, 1, {N::LOAD, 0}}, 0} : pattern{})
       );
       // clang-format on
    }
@@ -90,8 +90,8 @@ private:
          define{inst}
             << inputs{frag(F::MemFrag), reg(r)}
             << outputs{/* Nothing, as it's a store */}
-            << pattern{N::STORE, 0, {node, {N::LOAD, 0}, 1}}
-            << (commutes ? pattern{N::STORE, 0, {node, 1, {N::LOAD, 0}}} : pattern{})
+            << pattern{N::STORE, {node, {N::LOAD, 0}, 1}, 0}
+            << (commutes ? pattern{N::STORE, {node, 1, {N::LOAD, 0}}, 0} : pattern{})
       );
       // clang-format on
    }
@@ -122,27 +122,16 @@ private:
    }
 
    // Adds the load/store instructions
-   static consteval auto AddLoadStoreInsts() {
+   static consteval auto AddLoadStoreInsts(int bits) {
+      auto r = GetRegClass(bits);
       // clang-format off
       return std::make_tuple(
-         // Load r32
          define{I::MOV_MR}
             << inputs{frag(F::MemFrag)}
-            << outputs{reg(R::GPR32)}
+            << outputs{reg(r)}
             << pattern{N::LOAD, 0},
-         // Load r64
-         define{I::MOV_MR}
-            << inputs{frag(F::MemFrag)}
-            << outputs{reg(R::GPR64)}
-            << pattern{N::LOAD, 0},
-         // Store r32
          define{I::MOV_RM}
-            << inputs{frag(F::MemFrag), reg(R::GPR32)}
-            << outputs{}
-            << pattern{N::STORE, 1, 0},
-         // Store r64
-         define{I::MOV_RM}
-            << inputs{frag(F::MemFrag), reg(R::GPR64)}
+            << inputs{frag(F::MemFrag), reg(r)}
             << outputs{}
             << pattern{N::STORE, 1, 0}
       );
@@ -151,8 +140,11 @@ private:
 
 public:
    static consteval auto GetPatterns() {
-      return std::tuple_cat(AddAllScalarInsts(), AddLoadStoreInsts());
-      // return AddLoadStoreInsts();
+      return std::tuple_cat(AddAllScalarInsts(),
+                            AddLoadStoreInsts(8),
+                            AddLoadStoreInsts(16),
+                            AddLoadStoreInsts(32),
+                            AddLoadStoreInsts(64));
    }
 
    static consteval auto GetFragments() {
@@ -222,6 +214,41 @@ bool x86Patterns::matchFragment(mc::MCPatternFragment const& frag,
    }
 }
 
+static bool patternCompare(const mc::MCPatternDef* a, const mc::MCPatternDef* b) {
+   using Op = mc::details::MCOperand::Type;
+   // Place patterns with more inputs first
+   if(a->numInputs() != b->numInputs()) return a->numInputs() > b->numInputs();
+   // Otherwise, prioritize the patterns with less register inputs
+   int regA = 0, regB = 0;
+   for(unsigned i = 0; i < a->numInputs(); i++)
+      if(a->getInput(i).type == Op::Register) regA++;
+   for(unsigned i = 0; i < b->numInputs(); i++)
+      if(b->getInput(i).type == Op::Register) regB++;
+   return regA < regB;
+}
+
+using mc::details::MCOperand;
+static std::ostream& printOperand(std::ostream& os, MCOperand op) {
+   using Op = mc::details::MCOperand::Type;
+   switch(op.type) {
+      case Op::Immediate:
+         os << "Imm(" << op.data << ")";
+         break;
+      case Op::Register:
+         os << "Reg(" << x86TargetDesc::GetRegClassName((x86RegClass)op.data)
+            << ")";
+         break;
+      case Op::Fragment:
+         os << "Frag(" << x86TargetDesc::GetFragmentName((x86MCFrag)op.data)
+            << ")";
+         break;
+      default:
+         os << "??";
+         break;
+   }
+   return os;
+}
+
 void x86TargetDesc::initialize() {
    // Add the patterns to the map
    for(auto& Def : PatternsArray_) {
@@ -231,12 +258,30 @@ void x86TargetDesc::initialize() {
    for(auto& Frag : FragmentsArray_) {
       FragmentMap_[Frag.kind()] = &Frag;
    }
-   // Sort the patterns by its length (decending order)
+   // Sort the patterns in increasing order of priority
    for(auto& [_, list] : PatternMap_) {
-      std::sort(list.begin(), list.end(), [](auto* a, auto* b) {
-         return a->maxTapeLength() > b->maxTapeLength();
-      });
+      std::sort(list.begin(), list.end(), patternCompare);
    }
+}
+
+void x86TargetDesc::dumpPatterns() const { printPatterns(std::cerr); }
+
+std::ostream& x86TargetDesc::printPatterns(std::ostream& os) const {
+   for(auto& [frag, list] : PatternMap_) {
+      os << "Patterns for "
+         << mc::InstSelectNode::NodeKind_to_string((mc::NodeKind)frag, "??")
+         << ":\n";
+      for(auto* def : list) {
+         os << "  " << def->name() << ": ";
+         for(unsigned i = 0; i < def->numInputs(); i++)
+            printOperand(os, def->getInput(i)) << " ";
+         os << "-> ";
+         for(unsigned i = 0; i < def->numOutputs(); i++)
+            printOperand(os, def->getOutput(i)) << " ";
+         os << "\n";
+      }
+   }
+   return os;
 }
 
 // Get the patterns for the x86 target description

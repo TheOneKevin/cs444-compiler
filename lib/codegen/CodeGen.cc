@@ -23,7 +23,9 @@ CG::CodeGenerator(tir::Context& ctx, tir::CompilationUnit& cu,
 
 tir::Type* CG::emitType(ast::Type const* type) {
    using Kind = ast::BuiltInType::Kind;
-   if(isAstTypeReference(type)) {
+   if(!type) {
+      return tir::Type::getVoidTy(ctx);
+   } else if(isAstTypeReference(type)) {
       return tir::Type::getPointerTy(ctx);
    } else if(type->isPrimitive()) {
       auto ty = cast<ast::BuiltInType>(type);

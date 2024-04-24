@@ -49,8 +49,7 @@ public:
 
    /// @brief Enables or disables a pass given the pass name
    void EnablePass(std::string_view name, bool enabled = true) {
-      if(auto it = pass_descs_.find(std::string{name});
-         it != pass_descs_.end()) {
+      if(auto it = pass_descs_.find(std::string{name}); it != pass_descs_.end()) {
          it->second.enabled = enabled;
       } else {
          assert(false && "Pass not found");
@@ -58,7 +57,8 @@ public:
    }
 
    /// @brief Iterate through the pass names
-   utils::Generator<std::pair<std::string_view, std::string_view>> PassNames() {
+   utils::Generator<std::pair<std::string_view, std::string_view>> PassNames()
+         const {
       for(auto& [name, desc] : pass_descs_) co_yield {name, desc.desc};
    }
 
@@ -245,8 +245,10 @@ public:
       passes_.emplace_back(new T(*this, std::forward<Args>(args)...));
       T& result = *cast<T*>(passes_.back().get());
       // If the pass has a name, register it as constructible from the command
-      // line options
+      // line options. Also, toggle isRunning_ to allow PO() access briefly.
+      isRunning_ = true;
       if(!result.Name().empty()) result.RegisterCLI();
+      isRunning_ = false;
       return result;
    }
 
@@ -254,7 +256,10 @@ public:
    diagnostics::DiagnosticEngine& Diag() { return diag_; }
 
    /// @brief Gets the pass options
-   PassOptions& PO() { return options_; }
+   PassOptions& PO() {
+      // FIXME(kevin): Prevent PO() from being called in pass constructors
+      return options_;
+   }
 
    /// @brief Outside method to get a pass by type
    template <typename T>
@@ -343,6 +348,7 @@ private:
    std::unordered_map<Pass*, int> passDeps_;
    PassOptions options_;
    bool reuseHeaps_;
+   bool isRunning_ = false;
 };
 
 template <typename T>

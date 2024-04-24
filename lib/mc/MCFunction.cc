@@ -98,47 +98,10 @@ void MCFunction::topoSort(
    if(topologicalOrder.empty()) return;
    InstSelectNode* current = topologicalOrder.front();
    for(size_t i = 1; i < topologicalOrder.size(); ++i) {
-      current->link(topologicalOrder[i]);
+      topologicalOrder[i]->insertAfter(current);
       current = topologicalOrder[i];
    }
    return;
-}
-
-void MCFunction::selectInstructions() {
-   std::queue<InstSelectNode*> worklist;
-   std::unordered_set<InstSelectNode*> visited;
-   for(auto* root : graphs_) worklist.emplace(root);
-   while(!worklist.empty()) {
-      auto* root = worklist.front();
-      worklist.pop();
-      if(visited.count(root)) continue;
-      visited.emplace(root);
-      if(root->arity() > 0 && root->kind() != NodeKind::MachineInstr) {
-         root = matchAndReplace(root);
-      }
-      for(auto* child : root->childNodes()) {
-         if(child) {
-            worklist.emplace(child);
-         }
-      }
-   }
-}
-
-InstSelectNode* MCFunction::matchAndReplace(InstSelectNode* root) const {
-   std::vector<InstSelectNode*> operands;
-   std::vector<InstSelectNode*> nodesToDelete;
-   for(auto* def : TD.getMCPatterns().getPatternFor(root->kind())) {
-      for(auto* pat : def->patterns()) {
-         operands.resize(def->adjustOperandIndex(def->numInputs(), TD), nullptr);
-         nodesToDelete.clear();
-         mc::MatchOptions MO{TD, def, operands, nodesToDelete, root};
-         if(pat->matches(MO)) {
-            // Now we build the new node
-            return root->selectPattern(MO);
-         }
-      }
-   }
-   return root;
 }
 
 } // namespace mc

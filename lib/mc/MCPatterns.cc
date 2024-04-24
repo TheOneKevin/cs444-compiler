@@ -97,18 +97,19 @@ bool MCPattern::matches(MatchOptions opt) const {
    }
    // Run the bytecode logic
    for(auto& bc : bytecode()) {
-      if(childIdx >= node->arity()) return false;
+      if((bc->type != MCOperand::Type::Pop) && (childIdx >= node->arity()))
+         return false;
       switch(bc->type) {
          case MCOperand::Type::Push: {
             node = node->getChild(childIdx);
             stack.push({childIdx, node});
-            childIdx++;
+            childIdx = 0;
             nodesToDelete.push_back(node);
             break;
          }
          case MCOperand::Type::Pop: {
             stack.pop();
-            childIdx = stack.top().first;
+            childIdx = stack.top().first + 1;
             node = stack.top().second;
             break;
          }

@@ -6,7 +6,6 @@
 
 #include "codegen/CodeGen.h"
 #include "diagnostics/Diagnostics.h"
-#include "mc/DAGBuilder.h"
 #include "passes/AllPasses.h"
 #include "passes/CompilerPasses.h"
 #include "passes/IRContextPass.h"
@@ -60,6 +59,7 @@ int main(int argc, char** argv) {
    app.add_flag("--enable-dfa-check", "Check if the DFA is correct");
    app.add_flag("--disable-heap-reuse", optHeapReuse, "Do not reuse heap memory between passes (for debugging heap GC issues)");
    app.add_flag("--freestanding", optFreestanding, "Do not include the standard library in the compilation");
+   app.add_flag("--debug-mc", "Dump each function's machine code DAG to .dot files for debugging");
    // clang-format on
 
    // Build the front-end pipeline
@@ -284,7 +284,7 @@ int main(int argc, char** argv) {
    }
 
    // Run the middle-end pipeline now and add the IR context pass
-   NewIRContextPass(OptPM, CU);
+   NewIRContextPass(OptPM, CU, TD);
    OptPM.PreserveAnalysis<IRContextPass>();
    for(auto const& name : optPassNames) {
       OptPM.PO().EnablePass(name);
@@ -305,20 +305,13 @@ int main(int argc, char** argv) {
    }
 
    TD.initialize();
-
-   // Run the backend pipeline now (it's not based off the pass pipeline)
-   {
-      auto const& Pass = OptPM.FindPass<IRContextPass>();
-      for(auto const* F : Pass.CU().functions()) {
-         if(!F->hasBody()) continue;
-         auto* MCF = mc::DAGBuilder::Build(Alloc, F, TD);
-         std::ofstream out1{std::string{F->name()} + ".dag.dot"};
-         MCF->printDot(out1);
-         MCF->selectInstructions();
-         MCF->scheduleMIR();
-         std::ofstream out2{std::string{F->name()} + ".dag.isel.dot"};
-         MCF->printDot(out2);
-      }
+   if(verboseLevel >= 3) {
+      TD.dumpPatterns();
    }
+
+   OptPM.Reset();
+   OptPM.PO().EnablePass("isel");
+   OptPM.Run();
+
    return 0;
 }

@@ -17,7 +17,6 @@
 namespace mc {
 
 class InstSelectNode;
-class DAGBuilder;
 class MCFunction;
 struct MatchOptions;
 
@@ -111,10 +110,9 @@ public:
    DECLARE_STRING_TABLE(NodeKind, NodeTypeStrings, NodeTypeList)
 
    /* ===-----------------------------------------------------------------=== */
-   // Private constructors, used by the DAGBuilder
+   // Public constructors, used by the DAGBuilder
    /* ===-----------------------------------------------------------------=== */
-private:
-   friend class DAGBuilder;
+public:
    // Internal constructor for N-ary nodes
    InstSelectNode(BumpAllocator& alloc, NodeKind kind, unsigned arity,
                   DataOpt data, Type type, MCFunction* parent)
@@ -159,8 +157,7 @@ private:
                         Type{static_cast<uint32_t>(bits)},
                         InstSelectNode::ImmValue{bits, value});
    }
-
-public:
+   // Build a machine instruction leaf node
    static InstSelectNode* CreateCustom(BumpAllocator& alloc, MCFunction* parent) {
       return CreateLeaf(
             alloc, parent, NodeKind::MachineInstr, Type{0}, std::nullopt);
@@ -200,7 +197,8 @@ public:
    /// @brief Gets the topological index of this node
    auto topoIdx() const { return topoIdx_; }
    /// @brief Build the adjacency list of the DAG
-   void buildAdjacencyList(std::unordered_map<InstSelectNode*, std::vector<InstSelectNode*>> &adj);
+   void buildAdjacencyList(
+         std::unordered_map<InstSelectNode*, std::vector<InstSelectNode*>>& adj);
    /// @brief Sets the topological index of this node and updates live range.
    void setTopoIdx(int idx) {
       topoIdx_ = idx;
@@ -223,7 +221,19 @@ public:
       if(prev_) prev_->next_ = this;
       node->prev_ = this;
    }
-   
+   /**
+    * @brief Insert this node after the given node in the list
+    *
+    * @param node The node to insert after
+    */
+   void insertAfter(InstSelectNode* node) {
+      assert(prev_ == nullptr && next_ == nullptr);
+      next_ = node->next_;
+      prev_ = node;
+      if(next_) next_->prev_ = this;
+      node->next_ = this;
+   }
+
    /**
     * @brief Compare if two nodes are referring to the same thing. This means
     * pointer equality for non-leaf nodes.
@@ -245,16 +255,11 @@ public:
    auto type() const { return type_; }
    // Get the parent
    auto* parent() { return parent_; }
-
-   // @brief Link the current node with the next node
-   void link(InstSelectNode* node) {
-      assert(next_ == nullptr);
-      next_ = node;
-      if(next_) node->prev_ = this;
-   }
-   
    InstSelectNode* prev() const { return prev_; }
    InstSelectNode* next() const { return next_; }
+   void addChild(InstSelectNode* child) {
+      utils::GraphNodeUser<InstSelectNode>::addChild(child);
+   }
 
 private:
    const NodeKind kind_;

@@ -1,8 +1,9 @@
 #pragma once
 
 #include <diagnostics/SourceManager.h>
-#include <utils/PassManager.h>
 #include <tir/CompilationUnit.h>
+#include <utils/PassManager.h>
+#include "target/TargetDesc.h"
 
 /* ===--------------------------------------------------------------------=== */
 // Front-end passes
@@ -24,20 +25,27 @@ DECLARE_PASS(DFAPass);
 // Optimization passes
 /* ===--------------------------------------------------------------------=== */
 
-utils::Pass& NewIRContextPass(utils::PassManager&, tir::CompilationUnit&);
+utils::Pass& NewIRContextPass(utils::PassManager&, tir::CompilationUnit&,
+                              target::TargetDesc const&);
 
 DECLARE_PASS(SimplifyCFG);
 DECLARE_PASS(GlobalDCE);
 DECLARE_PASS(MemToReg);
 DECLARE_PASS(PrintCFG);
-DECLARE_PASS(AsmWriter);
+
+/* ===--------------------------------------------------------------------=== */
+// Backend passes
+/* ===--------------------------------------------------------------------=== */
+
+DECLARE_PASS(InstSelect);
+DECLARE_PASS(MIRBuilder);
 
 /* ===--------------------------------------------------------------------=== */
 // Functions to automatically add all these passes
 /* ===--------------------------------------------------------------------=== */
 
 /// @brief Adds all the front-end passes EXCEPT for parsing passes (per file)
-static void BuildFrontEndPasses(utils::PassManager&PM) {
+static void BuildFrontEndPasses(utils::PassManager& PM) {
    NewAstContextPass(PM);
    NewLinkerPass(PM);
    NewPrintASTPass(PM);
@@ -53,5 +61,6 @@ static void BuildOptPasses(utils::PassManager& PM) {
    NewGlobalDCE(PM);
    NewMemToReg(PM);
    NewPrintCFG(PM);
-   NewAsmWriter(PM);
+   NewInstSelect(PM);
+   NewMIRBuilder(PM);
 }

@@ -37,6 +37,8 @@ public:
     */
    template <ArchType>
    static TargetDesc& Get();
+   virtual void dumpPatterns() const = 0;
+   virtual std::ostream& printPatterns(std::ostream& os) const = 0;
 };
 
 } // namespace target

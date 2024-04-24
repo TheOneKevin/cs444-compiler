@@ -77,7 +77,8 @@ public:
 
    /// @brief Starts a DOT label that is also an HTML table
    void startTLabel(int id, string_list attrs = {},
-                    string_view cellpadding = "1") {
+                    string_view cellpadding = "1",
+                    string_view bgcolor = "white") {
       indent() << "node" << id << " [shape=none margin=0.01";
       print_attr_list(attrs, false);
       os << " label=<\n";
@@ -90,7 +91,8 @@ public:
             "cellborder", "1",
             "cellspacing", "0",
             "cellpadding", cellpadding,
-            "margin", "0"
+            "margin", "0",
+            "bgcolor", bgcolor
          }
       );
       // clang-format on
