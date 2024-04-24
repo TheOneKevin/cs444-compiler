@@ -93,6 +93,16 @@ public:
     * @return unsigned The adjusted index
     */
    unsigned adjustOperandIndex(unsigned index, target::TargetDesc const& TD) const;
+   /**
+    * @brief Get the input operand where the index has been adjusted to be
+    * contiguous with the pattern fragments. This means, the pattern fragment
+    * inputs are expanded into the input array and can be indexed directly.
+    * 
+    * @param idx The adjusted index
+    * @param TD The target description
+    * @return MCOperand The input operand
+    */
+   MCOperand getInputAdjusted(unsigned idx, target::TargetDesc const& TD) const;
 
 public:
    virtual MCOperand getInput(unsigned idx) const = 0;
@@ -319,10 +329,9 @@ public:
    /**
     * @brief
     *
-    * @param kind
     */
    virtual bool matchFragment(MCPatternFragment const&, MatchOptions&,
-                              InstSelectNode*&) const = 0;
+                              unsigned) const = 0;
    /// @brief Virtual destructor
    virtual ~MCPatterns() = default;
 };

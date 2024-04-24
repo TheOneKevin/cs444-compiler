@@ -101,7 +101,7 @@ private:
    DECLARE_STRING_TABLE(x86RegClass, x86RegClassStringTable, x86RegClassList)
 };
 
-bool MatchMemoryPatternFragment(mc::MatchOptions&, mc::InstSelectNode*&);
+bool MatchMemoryPatternFragment(mc::MatchOptions&, unsigned);
 
 } // namespace target::x86
 

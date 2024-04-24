@@ -70,7 +70,7 @@ void InstSelect::Run() {
 void InstSelect::selectInstructions(mc::MCFunction* F) {
    std::queue<InstSelectNode*> worklist;
    std::unordered_set<InstSelectNode*> visited;
-   for(auto* root : F->subgraphs()) worklist.emplace(root);
+   for(auto& mbb : F->subgraphs()) worklist.emplace(mbb.root);
    while(!worklist.empty()) {
       auto* root = worklist.front();
       worklist.pop();

@@ -129,7 +129,8 @@ void MIRBuilder::buildMCFunction(tir::Function const* F) {
    }
    // Now we rearrange the children of entry so they are children of the
    // first branch instruction instead
-   for(auto* bb : MCF->subgraphs()) {
+   for(auto& mbb : MCF->subgraphs()) {
+      auto* bb = mbb.root;
       // First, find the branch of the BB
       InstSelectNode* branch = nullptr;
       for(auto* child : bb->childNodes()) {

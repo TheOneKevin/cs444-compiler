@@ -13,20 +13,20 @@ std::ostream& MCFunction::printDot(std::ostream& os) const {
    dp.startGraph();
    dp.print("compound=true;");
    // First, print all the nodes and connections
-   for(auto* graph : graphs_) dp.id(graph);
-   for(auto* graph : graphs_) {
-      dp.startSubgraph(dp.getId(graph));
-      graph->printDotNode(dp, visited);
+   for(auto& mbb : graphs_) dp.id(mbb.root);
+   for(auto& mbb : graphs_) {
+      dp.startSubgraph(dp.getId(mbb.root));
+      mbb.root->printDotNode(dp, visited);
       dp.endSubgraph();
    }
    // Next. print the edges that cross the subgraphs
-   for(auto* graph : graphs_) {
-      for(auto* pred : graph->users()) {
+   for(auto& mbb : graphs_) {
+      for(auto* pred : mbb.root->users()) {
          if(pred->kind() != NodeKind::BasicBlock) continue;
          // FIXME(kevin): This seems like a bad bug, why does this occur?
          if(dp.getId(pred) == -1) continue;
          auto from = dp.getId(pred);
-         auto to = dp.getId(graph);
+         auto to = dp.getId(mbb.root);
          dp.printConnection(from, to, {"color", "blue", "style", "dashed"});
       }
    }

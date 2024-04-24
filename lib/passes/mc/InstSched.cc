@@ -33,7 +33,7 @@ private:
    // Recursively build the adjacency list of the DAG
    void buildAdjacencyList(ISN* node);
    // Topological sort the DAG
-   void topoSort();
+   InstSelectNode* topoSort();
 
    void computeDependencies() override {
       ComputeDependency(GetPass<IRContextPass>());
@@ -77,11 +77,11 @@ void InstSched::Run() {
 
 void InstSched::runOnFunction(MCFunction* MCF) {
    std::unordered_set<Edge> edgesRemoved{};
-   for(auto* graph : MCF->subgraphs()) {
-      assert(graph->kind() == NodeKind::Entry && "Graph root is not Entry node");
+   for(auto& mbb : MCF->subgraphs()) {
+      assert(mbb.root->kind() == NodeKind::Entry && "Graph root is not Entry node");
       adj.clear();
-      buildAdjacencyList(graph);
-      topoSort();
+      buildAdjacencyList(mbb.root);
+      mbb.entry = topoSort();
    }
 }
 
@@ -90,7 +90,7 @@ void InstSched::runOnFunction(MCFunction* MCF) {
 /* ===--------------------------------------------------------------------=== */
 
 void InstSched::buildAdjacencyList(ISN* node) {
-   for(auto* child : node->users()) {
+   for(auto* child : node->childNodes()) {
       if(!child || child->arity() == 0) continue;
       adj[node].push_back(cast<ISN>(child));
    }
@@ -101,7 +101,7 @@ void InstSched::buildAdjacencyList(ISN* node) {
    }
 }
 
-void InstSched::topoSort() {
+InstSelectNode* InstSched::topoSort() {
    std::unordered_map<InstSelectNode*, int> inDegree;
    std::queue<InstSelectNode*> queue;
    std::vector<InstSelectNode*> topologicalOrder;
@@ -126,13 +126,21 @@ void InstSched::topoSort() {
          if(inDegree[neighbor] == 0) queue.push(neighbor);
       }
    }
-   if(topologicalOrder.empty()) return;
+   assert(!topologicalOrder.empty());
    InstSelectNode* current = topologicalOrder.front();
    for(size_t i = 1; i < topologicalOrder.size(); ++i) {
-      topologicalOrder[i]->insertAfter(current);
+      // Chain the nodes in reverse topological order
+      current->insertAfter(topologicalOrder[i]);
       current = topologicalOrder[i];
+      // Update the live ranges of each node
+      for(auto& [user, index] : current->uses()) {
+         // Skip chain nodes
+         if(index >= user->arity() || user->topoIdx() < 0) continue;
+         // Updates uses, assuming use does not escape the bb
+         current->updateLiveRange(user->topoIdx());
+      }
    }
-   return;
+   return current;
 }
 
 REGISTER_PASS(InstSched)

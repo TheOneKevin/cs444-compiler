@@ -77,6 +77,30 @@ unsigned MCPatternDef::adjustOperandIndex(unsigned index,
    return counter;
 }
 
+details::MCOperand MCPatternDef::getInputAdjusted(
+      unsigned index, target::TargetDesc const& TD) const {
+   using mc::details::MCOperand;
+   unsigned counter = 0;
+   for(unsigned i = 0; i < numInputs(); i++) {
+      auto curop = getInput(i);
+      if(curop.type == MCOperand::Type::Fragment) {
+         // FIXME(kevin): Assumes fragments do not contain fragments
+         // Also, this is horribly inefficient :)
+         auto& Frag = TD.getMCPatterns().getFragment(curop.data);
+         for(unsigned j = 0; j < Frag.numInputs(); j++) {
+            if(counter == index) return Frag.getInput(j);
+            counter++;
+         }
+         assert(Frag.numInputs() > 0);
+      } else {
+         if(counter == index) return curop;
+         counter++;
+      }
+   }
+   assert(false);
+   std::unreachable();
+}
+
 bool MCPattern::matches(MatchOptions opt) const {
    auto [TD, def, ops, nodesToDelete, node] = opt;
    using N = mc::NodeKind;
@@ -137,13 +161,11 @@ bool MCPattern::matches(MatchOptions opt) const {
                   break;
                }
                case MCOperand::Type::Fragment: {
-                  InstSelectNode* newChild = nullptr;
                   auto optCopy = opt;
                   optCopy.node = child;
                   auto& P = TD.getMCPatterns();
                   auto& Frag = P.getFragment(operand.data);
-                  if(!P.matchFragment(Frag, optCopy, newChild)) return false;
-                  if(newChild) ops[adjustedIndex] = newChild;
+                  if(!P.matchFragment(Frag, optCopy, adjustedIndex)) return false;
                   break;
                }
                default:
@@ -151,10 +173,13 @@ bool MCPattern::matches(MatchOptions opt) const {
                   std::unreachable();
             }
             // Check if the operand matches what we've seen before
-            if(!ops[adjustedIndex]) {
-               ops[adjustedIndex] = child;
-            } else if(*ops[adjustedIndex] != *child) {
-               return false;
+            // (if it's not a fragment).
+            if(operand.type != MCOperand::Type::Fragment) {
+               if(!ops[adjustedIndex]) {
+                  ops[adjustedIndex] = child;
+               } else if(*ops[adjustedIndex] != *child) {
+                  return false;
+               }
             }
             break;
          }

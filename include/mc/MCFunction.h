@@ -8,6 +8,13 @@ namespace mc {
 
 class MCFunction final {
 public:
+   struct MCBasicBlock {
+      InstSelectNode* root;
+      InstSelectNode* entry;
+      InstSelectNode* successors[2];
+   };
+
+public:
    MCFunction(BumpAllocator& alloc, target::TargetInfo const& TI,
               target::TargetDesc const& TD)
          : alloc_{alloc}, TI_{TI}, TD_{TD}, graphs_{alloc} {}
@@ -23,8 +30,10 @@ public:
    /// @brief Adds a subgraph (basic block) to the function
    void addSubgraph(InstSelectNode* graph) {
       assert(graph->kind() == NodeKind::Entry && "Subgraph must be an entry node");
-      graphs_.push_back(graph);
+      graphs_.push_back(MCBasicBlock{graph, nullptr, {nullptr, nullptr}});
    }
+   /// @brief Iterate the subgraphs of the function
+   auto subgraphs() { return std::views::all(graphs_); }
    /// @brief Iterate the subgraphs of the function
    auto subgraphs() const { return std::views::all(graphs_); }
 
@@ -32,8 +41,7 @@ private:
    BumpAllocator& alloc_;
    target::TargetInfo const& TI_;
    target::TargetDesc const& TD_;
-   std::pmr::vector<InstSelectNode*> graphs_;
-   InstSelectNode* mirRoot_;
+   std::pmr::vector<MCBasicBlock> graphs_;
 };
 
 } // namespace mc

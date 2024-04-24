@@ -126,12 +126,16 @@ private:
       auto r = GetRegClass(bits);
       // clang-format off
       return std::make_tuple(
-         define{I::MOV_MR}
+         define{I::MOV_RM}
             << inputs{frag(F::MemFrag)}
             << outputs{reg(r)}
             << pattern{N::LOAD, 0},
-         define{I::MOV_RM}
+         define{I::MOV_MR}
             << inputs{frag(F::MemFrag), reg(r)}
+            << outputs{}
+            << pattern{N::STORE, 1, 0},
+         define{I::MOV_MI}
+            << inputs{frag(F::MemFrag), imm(bits == 64 ? 32 : bits)}
             << outputs{}
             << pattern{N::STORE, 1, 0}
       );
@@ -160,8 +164,8 @@ public:
    PatternGenerator getPatternFor(mc::NodeKind kind) const override;
    PatternGenerator patterns() const override;
    mc::MCPatternFragment const& getFragment(unsigned kind) const override;
-   bool matchFragment(mc::MCPatternFragment const& frag, mc::MatchOptions& mo,
-                      mc::InstSelectNode*& out) const override;
+   bool matchFragment(mc::MCPatternFragment const&, mc::MatchOptions&,
+                      unsigned) const override;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -203,11 +207,10 @@ mc::MCPatternFragment const& x86Patterns::getFragment(unsigned kind) const {
 
 // Match the fragment
 bool x86Patterns::matchFragment(mc::MCPatternFragment const& frag,
-                                mc::MatchOptions& mo,
-                                mc::InstSelectNode*& out) const {
+                                mc::MatchOptions& mo, unsigned idx) const {
    switch(static_cast<x86MCFrag>(frag.kind())) {
       case x86MCFrag::MemFrag:
-         return MatchMemoryPatternFragment(mo, out);
+         return MatchMemoryPatternFragment(mo, idx);
       case x86MCFrag::LAST_MEMBER:
          assert(false);
          std::unreachable();

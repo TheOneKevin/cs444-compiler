@@ -62,6 +62,12 @@ ISN* ISN::selectPattern(MatchOptions options) {
    return newNode;
 }
 
+static std::string getLiveRangeStr(ISN const* node) {
+   if(node->topoIdx() < 0) return "Live range N/A";
+   auto [from, to] = node->liveRange();
+   return "Live: [" + std::to_string(from) + ", " + std::to_string(to) + "]";
+}
+
 void ISN::printNodeTable(utils::DotPrinter& dp) const {
    auto colspan = arity_ + (arity_ < numChildren() ? 1 : 0);
    auto type = type_;
@@ -90,7 +96,7 @@ void ISN::printNodeTable(utils::DotPrinter& dp) const {
    if(topoIdx_ >= 0) {
       dp.print_html_start("tr");
       dp.print_html_start("td", {"colspan", std::to_string(colspan)});
-      dp.sanitize("TopoIdx: " + std::to_string(topoIdx()));
+      dp.sanitize(getLiveRangeStr(this));
       dp.print_html_end("td");
       dp.print_html_end("tr");
    }
@@ -100,7 +106,19 @@ void ISN::printNodeTable(utils::DotPrinter& dp) const {
       for(unsigned i = 0; i < arity_; i++) {
          auto str = std::to_string(i);
          dp.print_html_start("td", {"port", str});
-         dp.sanitize(str);
+         // If the kind is a machine instr, add a "*" beside the ports that
+         // are suppsoed to be immediate values (glued to the instr)
+         if(kind_ == NodeKind::MachineInstr) {
+            auto* pat = get<details::MCPatDefBase const*>();
+            if(pat->getInputAdjusted(i, parent_->TD()).type ==
+               details::MCOperand::Type::Immediate) {
+               dp.sanitize(str + "*");
+            } else {
+               dp.sanitize(str);
+            }
+         } else {
+            dp.sanitize(str);
+         }
          dp.print_html_end("td");
       }
       if(arity_ < numChildren()) {
@@ -127,6 +145,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          dp.printTableSingleRow("Constant");
          dp.printTableDoubleRow("Value", std::to_string(imm.value));
          dp.printTableDoubleRow("Bits", std::to_string(imm.bits));
+         dp.printTableSingleRow(getLiveRangeStr(this));
          dp.endTLabel();
          break;
       }
@@ -135,6 +154,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          dp.startTLabel(id, {"style", "filled"}, "1", "gainsboro");
          dp.printTableSingleRow("Register");
          dp.printTableDoubleRow("VReg", std::to_string(reg));
+         dp.printTableSingleRow(getLiveRangeStr(this));
          dp.endTLabel();
          break;
       }
@@ -144,6 +164,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          dp.printTableSingleRow("FrameIndex");
          dp.printTableSingleRow("Type: " + typeToString(type_));
          dp.printTableDoubleRow("Idx", std::to_string(idx));
+         dp.printTableSingleRow(getLiveRangeStr(this));
          dp.endTLabel();
          break;
       }
@@ -152,6 +173,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          dp.startTLabel(id, {"style", "filled"}, "1", "gainsboro");
          dp.printTableSingleRow("Argument");
          dp.printTableDoubleRow("Idx", std::to_string(idx));
+         dp.printTableSingleRow(getLiveRangeStr(this));
          dp.endTLabel();
          break;
       }
@@ -167,6 +189,7 @@ int ISN::printDotNode(utils::DotPrinter& dp,
          dp.startTLabel(id, {"style", "filled"}, "1", "gainsboro");
          dp.printTableSingleRow("GlobalAddress");
          dp.printTableDoubleRow("Id", GO->name());
+         dp.printTableSingleRow(getLiveRangeStr(this));
          dp.endTLabel();
          break;
       }

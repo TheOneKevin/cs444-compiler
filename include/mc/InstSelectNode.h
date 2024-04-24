@@ -207,27 +207,14 @@ public:
       liveRangeTo_ = liveRangeTo_ == -1 ? to : std::min(liveRangeTo_, to);
    }
    /**
-    * @brief Insert this node before the given node in the list
-    *
-    * @param node The node to insert before
-    */
-   void insertBefore(InstSelectNode* node) {
-      assert(prev_ == nullptr && next_ == nullptr);
-      prev_ = node->prev_;
-      next_ = node;
-      if(prev_) prev_->next_ = this;
-      node->prev_ = this;
-   }
-   /**
     * @brief Insert this node after the given node in the list
     *
     * @param node The node to insert after
     */
    void insertAfter(InstSelectNode* node) {
-      assert(prev_ == nullptr && next_ == nullptr);
+      if(node->next_) node->next_->prev_ = this;
       next_ = node->next_;
       prev_ = node;
-      if(next_) next_->prev_ = this;
       node->next_ = this;
    }
 
