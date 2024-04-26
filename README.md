@@ -21,7 +21,18 @@ cmake .. && make
 
 Make sure you are either using Clang 16 (preferred) or later or GCC 12 or later.
 There is currently [a bug in older GCC compilers](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85282)
-that would not compile this project. Our project directory structure is:
+that would not compile this project. In addition, here is a summary of the dependencies:
+
+1. `CMake` >= 3.21
+2. `Clang` >= 16
+3. `libstdc++-12-dev` or later (must have C++23 support)
+4. `flex` >= 2.6.4 and `bison` >= 3.8.2
+
+In addition, if you wish to build the debug version, you will need:
+1. `xsltproc` (for debug builds)
+2. One of `libdw-dev`, `binutils-dev` or `libdwarf-dev` (for backward.cpp)
+
+Our project directory structure is:
 
 - `lib/`: Contains the core compiler libraries. Includes AST, parser grammar and other files.
 - `tests/`: Contains the unit test drivers and data files.

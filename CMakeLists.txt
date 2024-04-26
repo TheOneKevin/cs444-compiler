@@ -4,6 +4,7 @@ project(OLKCompiler VERSION 1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+cmake_policy(SET CMP0135 NEW)
 include(FetchContent)
 enable_testing()
 
@@ -52,6 +53,15 @@ string(CONCAT CMAKE_CXX_FLAGS_RELEASE
     " -g"
 )
 
+# Set the bison debug mode flags
+set(BISON_COMPILE_FLAGS "-v --locations -k")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    string(CONCAT BISON_COMPILE_FLAGS
+        "${BISON_COMPILE_FLAGS}"
+        " --report=state --html --graph --color=always"
+    )
+endif()
+
 # Define YYDEBUG for bison
 add_compile_definitions(YYDEBUG=1)
 
@@ -81,7 +91,7 @@ bison_target(
     DEFINES_FILE
     "${PARSER_DIR}/joos1w.parser.tab.h"
     COMPILE_FLAGS
-    "--report=state -v --locations --html --graph -k --color=always"
+    "${BISON_COMPILE_FLAGS}"
 )
 
 add_flex_bison_dependency(LEXER PARSER)
@@ -158,29 +168,6 @@ file(GLOB GENERATED_TEST_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/tests/generated/*.cc)
 #              For every tool, create a new add_*() call below                 #
 ################################################################################
 
-add_my_test(
-    all_tests
-    "tests/common.cc"
-    "tests/lexer_tests.cc"
-    "tests/parser_tests.cc"
-    "tests/parser_more_tests.cc"
-    "tests/ast_tests.cc"
-    "tools/genfrags/basic_fragments.cc"
-    "tools/genfrags/class_fragments.cc"
-    "tools/genfrags/method_fragments.cc"
-    "tools/genfrags/FragmentGenerator.cc"
-    ${GENERATED_TEST_SRCS}
-)
-
-add_tool(
-    genfrags
-    "tools/genfrags/main.cc"
-    "tools/genfrags/basic_fragments.cc"
-    "tools/genfrags/class_fragments.cc"
-    "tools/genfrags/method_fragments.cc"
-    "tools/genfrags/FragmentGenerator.cc"
-)
-
 add_tool(
     scanner
     "tools/scanner/main.cc"
@@ -189,11 +176,6 @@ add_tool(
 add_tool(
     parser
     "tools/parser/main.cc"
-)
-
-add_tool(
-    joosc
-    "tools/joosc/main.cc"
 )
 
 add_tool(
