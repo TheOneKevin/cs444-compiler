@@ -304,9 +304,8 @@ int main(int argc, char** argv) {
       std::cerr << "*** Running backend machine-code pipeline... ***" << std::endl;
    }
 
-   TD.initialize();
    if(verboseLevel >= 3) {
-      TD.dumpPatterns();
+      TD.patternProvider().dumpPatterns();
    }
 
    OptPM.Reset();

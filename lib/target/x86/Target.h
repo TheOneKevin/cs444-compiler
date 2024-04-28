@@ -7,36 +7,23 @@
 
 namespace target::x86 {
 
-// x86 IR target info
-class x86TargetInfo final : public target::TargetInfo {
-public:
-   /// @brief Returns the size of the stack alignment in bytes
-   int getStackAlignment() const override { return 8; }
-   /// @brief Returns the size of the pointer in bits
-   int getPointerSizeInBits() const override { return 64; }
-};
+// Instruction patterns
+#define x86PatternList(F) F(ADD) F(SUB) F(XOR) F(AND) F(OR) F(MOV)
+DECLARE_ENUM(x86Pattern, x86PatternList)
 
-// clang-format off
-// x86 MC patterns
-#define x86MCInstList(F)          \
-   F(ADD_RM) F(ADD_MR) F(ADD_MI)  \
-   F(SUB_RM) F(SUB_MR) F(SUB_MI)  \
-   F(AND_RM) F(AND_MR) F(AND_MI)  \
-   F(XOR_RM) F(XOR_MR) F(XOR_MI)  \
-   F( OR_RM) F( OR_MR) F( OR_MI)  \
-   F(MOV_RM) F(MOV_MR) F(MOV_MI)
-DECLARE_ENUM(x86MCInst, x86MCInstList)
-// clang-format on
+// Instruction pattern variants
+#define x86VariantList(F) F(RI) F(MI) F(MR) F(RR) F(RM)
+DECLARE_ENUM(x86Variant, x86VariantList)
 
-// x86 MC pattern fragments
-#define x86MCFragList(F) F(MemFrag)
-DECLARE_ENUM(x86MCFrag, x86MCFragList)
+// Pattern fragments
+#define x86FragmentList(F) F(MemFrag)
+DECLARE_ENUM(x86Fragment, x86FragmentList)
 
-// x86 Register Classes
+// Register classes
 #define x86RegClassList(F) F(GPR8) F(GPR16) F(GPR32) F(GPR64)
 DECLARE_ENUM(x86RegClass, x86RegClassList)
 
-// x86 Registers (all of them)
+// Registers (all of them)
 // clang-format off
 #define x86RegList(F) \
    F(RAX) F(EAX)  F(AX)   F(AL)     \
@@ -56,24 +43,37 @@ DECLARE_ENUM(x86RegClass, x86RegClassList)
 DECLARE_ENUM(x86Reg, x86RegList)
 // clang-format on
 
+bool MatchMemoryPatternFragment(mc::MatchOptions&, unsigned);
+
+// x86 IR target info
+class x86TargetInfo final : public target::TargetInfo {
+public:
+   /// @brief Returns the size of the stack alignment in bytes
+   int getStackAlignment() const override { return 8; }
+   /// @brief Returns the size of the pointer in bits
+   int getPointerSizeInBits() const override { return 64; }
+};
+
 // MC target description
 class x86TargetDesc final : public target::TargetDesc {
 public:
-   using InstType = x86MCInst;
-   using FragType = x86MCFrag;
+   using PatternType = x86Pattern;
+   using PatternVariantType = x86Variant;
+   using FragmentType = x86Fragment;
+   using VariantType = x86Variant;
    using RegClass = x86RegClass;
    static constexpr int MaxStates = 40;
    static constexpr int MaxOperands = 5;
    static constexpr int MaxPatternsPerDef = 2;
 
    /// @brief Gets the name of the pattern
-   static constexpr std::string_view GetPatternName(InstType ty) {
-      return x86MCInst_to_string(ty, "??");
+   static constexpr std::string_view GetPatternName(PatternType ty) {
+      return x86Pattern_to_string(ty, "??");
    }
 
    /// @brief Gets the name of the fragment
-   static constexpr std::string_view GetFragmentName(FragType ty) {
-      return x86MCFrag_to_string(ty, "??");
+   static constexpr std::string_view GetFragmentName(FragmentType ty) {
+      return x86Fragment_to_string(ty, "??");
    }
 
    /// @brief Gets the name of the register class
@@ -81,31 +81,24 @@ public:
       return x86RegClass_to_string(ty, "??");
    }
 
-   /// @brief Initializes the target description
-   void initialize() override;
-   /// @brief Gets the number of MC register classes
-   int numMCRegClasses() const override { return 0; }
-   /// @brief Gets the total number of distinct MC registers
-   int numMCRegisters() const override { return 0; }
+public:
    /// @brief Returns the MCPattern class for DAG pattern matching
-   const mc::MCPatterns& getMCPatterns() const override;
+   const mc::PatternProviderBase& patternProvider() const override;
+
    /// @brief Checks if the x86 register class can be assigned to the MIR type
    bool isRegisterClass(unsigned classIdx,
                         mc::InstSelectNode::Type type) const override;
-   void dumpPatterns() const override;
-   std::ostream& printPatterns(std::ostream& os) const override;
 
 private:
-   DECLARE_STRING_TABLE(x86MCInst, x86MCInstStringTable, x86MCInstList)
-   DECLARE_STRING_TABLE(x86MCFrag, x86MCFragStringTable, x86MCFragList)
+   DECLARE_STRING_TABLE(x86Pattern, x86MCInstStringTable, x86PatternList)
+   DECLARE_STRING_TABLE(x86Fragment, x86MCFragStringTable, x86FragmentList)
    DECLARE_STRING_TABLE(x86RegClass, x86RegClassStringTable, x86RegClassList)
 };
 
-bool MatchMemoryPatternFragment(mc::MatchOptions&, unsigned);
-
 } // namespace target::x86
 
-#undef x86MCInstList
-#undef x86MCFragList
+#undef x86PatternList
+#undef x86VariantList
+#undef x86FragmentList
 #undef x86RegClassList
 #undef x86RegList

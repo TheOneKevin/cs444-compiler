@@ -2,7 +2,7 @@
 
 #include "mc/InstSelectNode.h"
 #include "mc/MCFunction.h"
-#include "mc/MCPatterns.h"
+#include "mc/Patterns.h"
 #include "passes/IRContextPass.h"
 #include "target/TargetDesc.h"
 #include "utils/PassManager.h"
@@ -91,7 +91,7 @@ InstSelectNode* InstSelect::matchAndReplace(InstSelectNode* root) {
    // Arrays for matching, see mc::MatchOptions
    std::vector<InstSelectNode*> operands;
    std::vector<InstSelectNode*> nodesToDelete;
-   for(auto* def : TD->getMCPatterns().getPatternFor(root->kind())) {
+   for(auto* def : TD->patternProvider().getPatternFor(root->kind())) {
       for(auto* pat : def->patterns()) {
          operands.resize(def->adjustOperandIndex(def->numInputs(), *TD));
          // Important! Clear the operands array after resize.

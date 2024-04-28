@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mc/InstSelectNode.h"
-#include "mc/MCPatterns.h"
+#include "mc/Patterns.h"
 
 namespace target {
 
@@ -12,14 +12,8 @@ enum class ArchType;
  */
 class TargetDesc {
 public:
-   /// @brief Initializes any target-specific information
-   virtual void initialize() = 0;
-   /// @brief Gets the number of MC register classes
-   virtual int numMCRegClasses() const = 0;
-   /// @brief Gets the total number of distinct MC registers
-   virtual int numMCRegisters() const = 0;
-   /// @brief Returns the MCPattern class for DAG pattern matching
-   virtual const mc::MCPatterns& getMCPatterns() const = 0;
+   /// @brief Returns the pattern provider for DAG pattern matching
+   virtual const mc::PatternProviderBase& patternProvider() const = 0;
    /**
     * @brief Checks if the register given class can be used for the given
     * instruction selection node type
@@ -29,6 +23,8 @@ public:
     */
    virtual bool isRegisterClass(unsigned classIdx,
                                 mc::InstSelectNode::Type type) const = 0;
+
+public:
    /**
     * @brief
     *
@@ -37,8 +33,6 @@ public:
     */
    template <ArchType>
    static TargetDesc& Get();
-   virtual void dumpPatterns() const = 0;
-   virtual std::ostream& printPatterns(std::ostream& os) const = 0;
 };
 
 } // namespace target

@@ -1,7 +1,7 @@
 #include "mc/InstSelectNode.h"
 
 #include "mc/MCFunction.h"
-#include "mc/MCPatterns.h"
+#include "mc/Patterns.h"
 #include "tir/Constant.h"
 #include "utils/DotPrinter.h"
 
@@ -84,7 +84,7 @@ void ISN::printNodeTable(utils::DotPrinter& dp) const {
    {
       dp.print_html_start("td", {"colspan", std::to_string(colspan)});
       if(kind_ == NodeKind::MachineInstr) {
-         auto* pat = get<details::MCPatDefBase const*>();
+         auto* pat = get<details::PatDefBase const*>();
          dp.sanitize(pat->name());
       } else {
          dp.sanitize("Type: " + typeToString(type));
@@ -109,9 +109,9 @@ void ISN::printNodeTable(utils::DotPrinter& dp) const {
          // If the kind is a machine instr, add a "*" beside the ports that
          // are suppsoed to be immediate values (glued to the instr)
          if(kind_ == NodeKind::MachineInstr) {
-            auto* pat = get<details::MCPatDefBase const*>();
+            auto* pat = get<details::PatDefBase const*>();
             if(pat->getInputAdjusted(i, parent_->TD()).type ==
-               details::MCOperand::Type::Immediate) {
+               details::Operand::Type::Immediate) {
                dp.sanitize(str + "*");
             } else {
                dp.sanitize(str);

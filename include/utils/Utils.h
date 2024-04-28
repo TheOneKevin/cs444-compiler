@@ -5,6 +5,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "utils/Assert.h" // IWYU pragma: keep
+
 namespace utils {
 
 template <typename T>
@@ -294,6 +296,16 @@ constexpr auto array_from_tuple(T&& tuple) {
       return std::array{std::forward<decltype(x)>(x)...};
    };
    return std::apply(get_array, std::forward<T>(tuple));
+}
+
+// Helper function to apply a function to a tuple and return a tuple
+template <typename T, typename V>
+consteval auto map_tuple(T f, V tuple) {
+   return std::apply(
+         [f](auto... x) {
+            return std::tuple_cat([f](auto x0) { return f(x0); }(x)...);
+         },
+         tuple);
 }
 
 } // namespace utils

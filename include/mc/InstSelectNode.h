@@ -21,7 +21,7 @@ class MCFunction;
 struct MatchOptions;
 
 namespace details {
-class MCPatDefBase;
+class PatDefBase;
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -104,7 +104,7 @@ public:
                       /* Constant immediate value */ ImmValue,
                       /* Predicate value */ tir::Instruction::Predicate,
                       /* Global object pointer */ tir::GlobalObject*,
-                      /* For inst select */ details::MCPatDefBase const*>;
+                      /* For inst select */ details::PatDefBase const*>;
    using DataOpt = std::optional<DataUnion>;
 
    DECLARE_STRING_TABLE(NodeKind, NodeTypeStrings, NodeTypeList)

@@ -1,10 +1,10 @@
 #include "Target.h"
 
 // Global target descriptor
-static target::x86::x86TargetDesc TD;
+static target::x86::x86TargetDesc TD{};
 
 // Global target info
-static target::x86::x86TargetInfo TI;
+static target::x86::x86TargetInfo TI{};
 
 namespace target::x86 {
 

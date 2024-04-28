@@ -2,7 +2,7 @@
 
 #include "Target.h"
 #include "mc/InstSelectNode.h"
-#include "mc/MCPatterns.h"
+#include "mc/Patterns.h"
 
 namespace target::x86 {
 
