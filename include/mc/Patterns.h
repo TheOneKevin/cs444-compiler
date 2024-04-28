@@ -84,27 +84,11 @@ template <typename TD>
 class PatternBuilderContext;
 } // namespace mc
 
-template <class T, std::size_t N>
-concept has_tuple_element = requires(T t) {
-   typename std::tuple_element_t<N, std::remove_const_t<T>>;
-   { get<N>(t) } -> std::convertible_to<const std::tuple_element_t<N, T>&>;
-};
-
-template <class T>
-concept tuple_like = !std::is_reference_v<T> && requires(T t) {
-   typename std::tuple_size<T>::type;
-   requires std::derived_from<
-         std::tuple_size<T>,
-         std::integral_constant<std::size_t, std::tuple_size_v<T>>>;
-} && []<std::size_t... N>(std::index_sequence<N...>) {
-   return (has_tuple_element<T, N> && ...);
-}(std::make_index_sequence<std::tuple_size_v<T>>());
-
 namespace mc::details {
 template <typename T, typename TD>
 concept IsPatternBuilder = requires {
-   { T::GetAllPatterns() } -> tuple_like;
-   { T::GetAllFragments() } -> tuple_like;
+   { T::GetAllPatterns() } -> utils::tuple_like;
+   { T::GetAllFragments() } -> utils::tuple_like;
    {
       T::ComparePattern(std::declval<mc::details::PatDefBase const*>(),
                         std::declval<mc::details::PatDefBase const*>())

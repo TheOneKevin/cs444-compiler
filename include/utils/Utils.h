@@ -298,7 +298,15 @@ constexpr auto array_from_tuple(T&& tuple) {
    return std::apply(get_array, std::forward<T>(tuple));
 }
 
-// Helper function to apply a function to a tuple and return a tuple
+/**
+ * @brief 
+ * 
+ * @tparam T 
+ * @tparam V 
+ * @param f 
+ * @param tuple 
+ * @return consteval 
+ */
 template <typename T, typename V>
 consteval auto map_tuple(T f, V tuple) {
    return std::apply(
@@ -307,5 +315,32 @@ consteval auto map_tuple(T f, V tuple) {
          },
          tuple);
 }
+
+/**
+ * @brief 
+ * 
+ * @tparam T 
+ * @tparam N 
+ */
+template <class T, std::size_t N>
+concept has_tuple_element = requires(T t) {
+   typename std::tuple_element_t<N, std::remove_const_t<T>>;
+   { get<N>(t) } -> std::convertible_to<const std::tuple_element_t<N, T>&>;
+};
+
+/**
+ * @brief 
+ * 
+ * @tparam T 
+ */
+template <class T>
+concept tuple_like = !std::is_reference_v<T> && requires(T t) {
+   typename std::tuple_size<T>::type;
+   requires std::derived_from<
+         std::tuple_size<T>,
+         std::integral_constant<std::size_t, std::tuple_size_v<T>>>;
+} && []<std::size_t... N>(std::index_sequence<N...>) {
+   return (has_tuple_element<T, N> && ...);
+}(std::make_index_sequence<std::tuple_size_v<T>>());
 
 } // namespace utils
