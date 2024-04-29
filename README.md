@@ -24,7 +24,7 @@ There is currently [a bug in older GCC compilers](https://gcc.gnu.org/bugzilla/s
 that would not compile this project. In addition, here is a summary of the dependencies:
 
 1. `CMake` >= 3.21
-2. `Clang` >= 16
+2. `Clang` >= 17 for C++23 support
 3. `libstdc++-12-dev` or later (must have C++23 support)
 4. `flex` >= 2.6.4 and `bison` >= 3.8.2
 
