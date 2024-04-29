@@ -133,8 +133,9 @@ public:
    uint32_t getBitWidth() const { return getData(); }
    uint32_t getSizeInBits() const override { return getBitWidth(); }
    bool isSizeBounded() const override { return true; }
-   [[clang::no_sanitize("shift-exponent")]]
-   uint64_t getMask() const { return (1ULL << getBitWidth()) - 1; }
+   [[clang::no_sanitize("shift-exponent")]] uint64_t getMask() const {
+      return (1ULL << getBitWidth()) - 1;
+   }
 };
 
 /**
@@ -153,15 +154,14 @@ public:
       // First, search ctx for existing FunctionType with types.
       for(auto* type : ctx.pimpl().functionTypes) {
          auto data = type->getChildTypes();
+         if(size != data.size) continue;
          assert(data.size > 0 && "FunctionType has no return type");
          bool typesEqual = returnTy == data.array[0];
          uint32_t i = 1;
          types.for_each([&](Type* ty) {
             if(data.array[i++] != ty) typesEqual = false;
          });
-         if(size == data.size && typesEqual) {
-            return type;
-         }
+         if(typesEqual) return type;
       }
       // If not found, create a new FunctionType with types.
       void* buf = ctx.alloc().allocate_bytes(sizeof(FunctionType),
