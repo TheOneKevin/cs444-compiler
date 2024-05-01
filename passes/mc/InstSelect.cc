@@ -3,7 +3,7 @@
 #include "mc/InstSelectNode.h"
 #include "mc/MCFunction.h"
 #include "mc/Patterns.h"
-#include "passes/IRContextPass.h"
+#include "../IRContextPass.h"
 #include "target/TargetDesc.h"
 #include "utils/PassManager.h"
 

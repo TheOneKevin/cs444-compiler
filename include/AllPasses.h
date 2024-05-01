@@ -1,8 +1,8 @@
 #pragma once
 
-#include <diagnostics/SourceManager.h>
-#include <tir/CompilationUnit.h>
-#include <utils/PassManager.h>
+#include "diagnostics/SourceManager.h"
+#include "tir/CompilationUnit.h"
+#include "utils/PassManager.h"
 #include "target/TargetDesc.h"
 
 /* ===--------------------------------------------------------------------=== */

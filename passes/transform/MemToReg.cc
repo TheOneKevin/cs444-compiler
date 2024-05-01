@@ -3,7 +3,7 @@
 #include <unordered_set>
 
 #include "diagnostics/Diagnostics.h"
-#include "passes/IRContextPass.h"
+#include "../IRContextPass.h"
 #include "tir/BasicBlock.h"
 #include "tir/Constant.h"
 #include "tir/Instructions.h"

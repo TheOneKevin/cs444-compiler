@@ -111,7 +111,7 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
 # Create a library target for our compiler with sources under lib/
-file(GLOB_RECURSE LIB_SOURCES "lib/*.cc")
+file(GLOB_RECURSE LIB_SOURCES "lib/*.cc" "passes/*.cc")
 add_library(OLKCompilerLib
     # flex bison
     "${LEXER_OUT}"
@@ -157,12 +157,12 @@ target_link_libraries(OLKCompilerLib PUBLIC Backward::Interface)
 #            Run python program right now to generate the tests                #
 ################################################################################
 
-execute_process(
-    COMMAND python3 "tests/generate_gtest.py"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-)
-
-file(GLOB GENERATED_TEST_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/tests/generated/*.cc)
+# execute_process(
+#     COMMAND python3 "tests/generate_gtest.py"
+#     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+# )
+# 
+# file(GLOB GENERATED_TEST_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/tests/generated/*.cc)
 
 ################################################################################
 #              For every tool, create a new add_*() call below                 #

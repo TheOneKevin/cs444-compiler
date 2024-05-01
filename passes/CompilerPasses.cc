@@ -1,4 +1,4 @@
-#include "passes/CompilerPasses.h"
+#include "CompilerPasses.h"
 
 #include <memory>
 #include <string_view>

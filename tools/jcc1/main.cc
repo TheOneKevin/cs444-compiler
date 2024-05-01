@@ -6,7 +6,7 @@
 
 #include "codegen/CodeGen.h"
 #include "diagnostics/Diagnostics.h"
-#include "passes/AllPasses.h"
+#include "AllPasses.h"
 #include "passes/CompilerPasses.h"
 #include "passes/IRContextPass.h"
 #include "target/Target.h"

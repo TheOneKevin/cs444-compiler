@@ -1,4 +1,4 @@
-#include "passes/IRContextPass.h"
+#include "IRContextPass.h"
 
 #include "target/TargetDesc.h"
 #include "tir/CompilationUnit.h"

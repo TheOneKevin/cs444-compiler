@@ -1,6 +1,6 @@
 #include <unordered_set>
 
-#include "passes/IRContextPass.h"
+#include "../IRContextPass.h"
 #include "tir/BasicBlock.h"
 #include "tir/Instructions.h"
 #include "utils/PassManager.h"
