@@ -18,7 +18,7 @@ public:
    string_view Name() const override { return "isel"; }
    string_view Desc() const override { return "Instruction selection on MIR DAG"; }
    void Init() override {
-      dumpDot = PM().PO().GetExistingOption("--debug-mc")->count();
+      dumpDot = PM().GetExistingOption("--debug-mc")->count();
    }
    void Run() override;
 
@@ -40,9 +40,9 @@ private:
    InstSelectNode* matchAndReplace(InstSelectNode* root);
 
 private:
-   void computeDependencies() override {
-      ComputeDependency(GetPass<IRContextPass>());
-      ComputeDependency(GetPass("mirbuilder"));
+   void ComputeDependencies() override {
+      AddDependency(GetPass<IRContextPass>());
+      AddDependency(GetPass("mirbuilder"));
    }
 
    target::TargetDesc const* TD;

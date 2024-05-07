@@ -23,8 +23,8 @@ public:
    string_view Desc() const override { return "Dump CFG DOT (per function)"; }
 
 private:
-   void computeDependencies() override {
-      ComputeDependency(GetPass<IRContextPass>());
+   void ComputeDependencies() override {
+      AddDependency(GetPass<IRContextPass>());
    }
    int number = 0;
 };

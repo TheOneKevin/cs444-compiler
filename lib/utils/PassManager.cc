@@ -1,199 +1,359 @@
-#include <third-party/CLI11.h>
-#include <utils/Error.h>
-#include <utils/PassManager.h>
+#include "utils/PassManager.h"
+
+#include <memory>
+#include <queue>
+#include <unordered_set>
+
+#include "third-party/CLI11.h"
+#include "utils/BumpAllocator.h"
+#include "utils/Error.h"
 
 namespace utils {
 
 /* ===--------------------------------------------------------------------=== */
-// PassOptions
+// Static helper functions & Default pass dispatcher
 /* ===--------------------------------------------------------------------=== */
 
-bool PassOptions::IsPassDisabled(Pass* p) {
-   auto it = pass_descs_.find(std::string{p->Name()});
-   if(it == pass_descs_.end()) return false;
-   return !it->second.enabled;
+namespace {
+
+/**
+ * @brief Get the single name of a command line option
+ * @param name The option name to get the single name of (ie., "-o,--option")
+ * @return std::string The single name (ie., "option")
+ */
+std::string GetSingleName(std::string_view name) {
+   std::vector<std::string> s, l;
+   std::string p;
+   std::tie(s, l, p) =
+         CLI::detail::get_names(CLI::detail::split_names(std::string{name}));
+   if(!l.empty()) return l[0];
+   if(!s.empty()) return s[0];
+   if(!p.empty()) return p;
+   return std::string{name};
 }
 
-void PassOptions::setPassEnabled(Pass* p, bool enabled) {
-   pass_descs_[std::string{p->Name()}].enabled = enabled;
+inline void sat_sub(unsigned& a, unsigned b) {
+   if(a < b)
+      a = 0;
+   else
+      a -= b;
 }
+
+class DefaultDispatcher final : public PassDispatcher {
+public:
+   std::string_view Name() override { return "Default Dispatcher"; }
+   bool CanDispatch(Pass&) override { return true; }
+   Generator<void*> Iterate() override { co_yield nullptr; }
+};
+
+DefaultDispatcher DefaultDispatcherInstance{};
+
+} // namespace
 
 /* ===--------------------------------------------------------------------=== */
 // Pass
 /* ===--------------------------------------------------------------------=== */
 
-void Pass::ComputeDependency(Pass& pass) {
-   // This function serves a many purposes depending on the state
-   // 1. PropagateEnabled: Recursively propagate the enabled state
-   // 2. AcquireResources: We acquire any heap resources
-   // 3. RegisterDependencies: Register the dep with PM to build the depgraph
-   // 4. Cleanup: We only free the heap resources
+void Pass::AddDependency(Pass& pass) { PM().addDependency(*this, pass); }
 
-   if(state == PropagateEnabled) {
-      // If we're disabled, then we don't need to do anything
-      if(PM().PO().IsPassDisabled(this)) return;
-      // Otherwise, we propagate the enabled state
-      PM().PO().setPassEnabled(&pass, true);
-      pass.state = PropagateEnabled;
-      pass.computeDependencies();
-      return;
+CustomBufferResource* Pass::NewHeap(Pass::Lifetime lifetime) {
+   // Check the pass is running
+   if(state != State::Running) {
+      throw FatalError("Pass requesting a heap is not running");
    }
-
-   for(auto& heap : PM().heaps_) {
-      if(heap.owner != &pass) continue;
-      if(state == AcquireResources) {
-         heap.refCount++;
-      } else if(state == Cleanup) {
-         PM().freeHeap(heap);
-      }
-   }
-
-   if(state == RegisterDependencies) {
-      PM().addDependency(*this, pass);
-   }
+   // Grab or create a free heap
+   auto& heap = PM().findHeapFor(this, lifetime);
+   // Re/initialize the heap
+   heap.owner = this;
+   heap.lifetime = lifetime;
+   heap.refcount = ShouldPreserve() ? 2 : 1;
+   heap.get()->reset();
+   return heap.get();
 }
 
-CustomBufferResource* Pass::NewHeap() { return PM().newHeap(*this); }
-
-void Pass::RegisterCLI() {
-   auto& PO = PM().PO();
-   PO.pass_descs_[std::string{Name()}] =
-         PassOptions::PassDesc{false, std::string{Desc()}};
+BumpAllocator& Pass::NewAlloc(Pass::Lifetime lifetime) {
+   // Check the pass is running
+   if(state != State::Running) {
+      throw FatalError("Pass requesting an allocator is not running");
+   }
+   // Create the allocator if not exists
+   auto* heap = NewHeap(lifetime);
+   return allocs_.emplace_back(heap);
 }
 
 Pass& Pass::GetPass(std::string_view name) { return PM().getPass(name); }
 
 /* ===--------------------------------------------------------------------=== */
+// PassManager helpers
+/* ===--------------------------------------------------------------------=== */
+
+CLI::Option* PassManager::FindOption(std::string_view name) {
+   std::string test_name = "--" + GetSingleName(name);
+   if(test_name.size() == 3) test_name.erase(0, 1);
+   return app_.get_option_no_throw(test_name);
+}
+
+CLI::Option* PassManager::GetExistingOption(std::string name) {
+   auto opt = FindOption(name);
+   if(opt == nullptr)
+      throw FatalError("Pass requested nonexistent option: " + name);
+   return opt;
+}
+
+void PassManager::addDependency(Pass& pass, Pass& depends) {
+   if(state_ != State::Uninitialized) {
+      throw FatalError("Cannot add dependencies after initialization. " +
+                       std::string{pass.Name()} + " depends on " +
+                       std::string{depends.Name()});
+   }
+   depGraph_[&depends].transpose.push_back(&pass);
+   depGraph_[&pass].forward.push_back(&depends);
+}
+
+void PassManager::validate() const {
+   for(int i = 0; static_cast<unsigned>(i) < passes_.size(); i++) {
+      assert(passes_[i]->topoIdx == i);
+   }
+}
+
+PassManager::HeapResource& PassManager::findHeapFor(Pass* owner,
+                                                    Pass::Lifetime lifetime) {
+   using Lifetime = Pass::Lifetime;
+   for(auto& heap : heaps_) {
+      if(!reuseHeaps_) [[unlikely]]
+         break;
+      /**
+       * Conditions for reusing a resource:
+       * 1) The resource is free (i.e., refcount is 0)
+       * 2) The resource is temporary and we are requesting a temporary resource
+       *    from the same pass
+       */
+      bool canReuse = heap.refcount == 0;
+      canReuse |= lifetime == Lifetime::Temporary && heap.lifetime == lifetime &&
+                  heap.owner == owner;
+      if(canReuse) {
+         if(Diag().Verbose(2))
+            Diag().ReportDebug() << "[HH] Reusing heap " << heap.id;
+         return heap;
+      }
+   }
+   // 3. Otherwise, create the resource and return it
+   auto& heap = heaps_.emplace_back(std::make_unique<CustomBufferResource>());
+   if(Diag().Verbose(2)) Diag().ReportDebug() << "[HH] Creating heap " << heap.id;
+   return heap;
+}
+
+void PassManager::runPassLifeCycle(Pass& pass, int left, int right,
+                                   bool lastIter) {
+   if(pass.state != Pass::State::Initialized) {
+      throw FatalError("Pass " + std::string{pass.Name()} +
+                       " is not in the initialized state");
+   }
+
+   // 1. Run the pass
+   if(Diag().Verbose(2)) {
+      Diag().ReportDebug() << "[=>] Running pass #" << pass.topoIdx << " \""
+                           << pass.Name() << "\": " << pass.Desc();
+   }
+   pass.state = Pass::State::Running;
+   pass.Run();
+   pass.state = Pass::State::Valid;
+   assert((validate(), true));
+
+   // 2. Persist any of the pass's resources and free self-resources
+   pass.allocs_.clear();
+   for(auto& heap : heaps_) {
+      if(heap.owner != &pass) continue;
+      // 2a. Check if anyone wants to acquire the current pass's resources
+      for(auto pred : depGraph_[&pass].transpose) {
+         // lastIter == we should acquire inter-chunk dependencies
+         if(!lastIter && (pred->topoIdx < left || pred->topoIdx > right)) continue;
+         heap.refcount++;
+      }
+      // 2b. Free the self-refs and temporary resources
+      if(heap.lifetime == Pass::Lifetime::Managed) {
+         sat_sub(heap.refcount, 1);
+      } else {
+         heap.refcount = 0;
+      }
+   }
+
+   // 3. Free any of the pass's (non self-ref) resources
+   for(auto succ : depGraph_[&pass].forward) {
+      // lastIter == we should release inter-chunk dependencies
+      if(!lastIter && (succ->topoIdx < left || succ->topoIdx > right)) continue;
+      for(auto& heap : heaps_) {
+         if(heap.owner != succ) continue;
+         if(heap.lifetime == Pass::Lifetime::Managed) {
+            sat_sub(heap.refcount, 1);
+         }
+      }
+   }
+
+   // 4. Print the heaps-in-use
+   if(Diag().Verbose(2)) {
+      for(auto& heap : heaps_) {
+         if(heap.refcount > 0) {
+            Diag().ReportDebug()
+                  << "[--] Heap " << heap.id << " in use by "
+                  << heap.owner->topoIdx << " (refcount: " << heap.refcount << ")";
+         } else {
+            Diag().ReportDebug() << "[--] Heap " << heap.id << " free";
+         }
+      }
+   }
+}
+
+/* ===--------------------------------------------------------------------=== */
 // PassManager
 /* ===--------------------------------------------------------------------=== */
 
-CustomBufferResource* PassManager::newHeap(Pass& pass) {
-   // Check the pass is running
-   if(pass.state != Pass::Running && pass.state != Pass::AcquireResources) {
-      throw utils::FatalError("Pass requesting a heap is not running");
-   }
-   // First, find a free heap
-   for(auto& heap : heaps_) {
-      if(heap.owner != nullptr) continue;
-      // We found a free heap, so we can use it
-      heap.refCount = pass.ShouldPreserve() ? 2 : 1;
-      heap.owner = &pass;
-      return heap.heap.get();
-   }
-   // If we can't find a free heap, then create a new one
-   heaps_.emplace_back(&pass);
-   return heaps_.back().heap.get();
-}
-
-void PassManager::freeHeap(Heap& h) {
-   // If fully is true, then we destroy the heap
-   // Otherwise, just decrement the ref count
-   if(h.refCount > 0) {
-      h.refCount--;
-   }
-   // If the ref count is 0, then we can destroy the heap
-   if(h.refCount == 0) {
-      if(Diag().Verbose(2)) {
-         Diag().ReportDebug() << "[=>] Freeing heap for " << h.owner->Desc();
-      }
-      if(reuseHeaps_) {
-         h.owner = nullptr;
-         h.heap->reset();
-      } else {
-         h.heap->destroy();
-      }
-   }
-   return;
-}
-
 void PassManager::Reset() {
-   for(auto& heap : heaps_) {
-      heap.owner = nullptr;
-      heap.heap->reset();
-   }
-   depgraph_.clear();
    lastRun_ = nullptr;
-   passDeps_.clear();
    for(auto& pass : passes_) {
-      PO().setPassEnabled(pass.get(), false);
-      pass->state = Pass::Uninitialized;
+      pass->state = Pass::State::Initialized;
+      pass->enabled = false;
+      pass->allocs_.clear();
    }
+   for(auto& heap : heaps_) heap.refcount = 0;
+   state_ = State::Initialized;
 }
 
-bool PassManager::Run() {
+void PassManager::Init() {
+   assert(state_ == State::Uninitialized && "PassManager already initialized");
    std::vector<Pass*> S;
-   std::vector<Pass*> L;
-   // 1a Propagate the enabled state
+   std::unordered_map<Pass*, unsigned> passDeps;
+   std::unordered_set<Pass*> visited;
+   S.reserve(passes_.size());
+   // 1a. Build the adjacency list of passes
+   depGraph_.clear();
    for(auto& pass : passes_) {
-      pass->state = Pass::PropagateEnabled;
-      pass->computeDependencies();
-   }
-   // 1b Acquire resources for the passes
-   for(auto& pass : passes_) {
-      // If the pass is disabled, then we skip it
-      if(PO().IsPassDisabled(pass.get())) continue;
-      pass->state = Pass::AcquireResources;
+      pass->ComputeDependencies();
       pass->Init();
+      pass->state = Pass::State::Initialized;
    }
-   // 1c Propagate the heap refcounts
+   // 1b. Perform several init steps per pass here
    for(auto& pass : passes_) {
-      if(PO().IsPassDisabled(pass.get())) continue;
-      pass->computeDependencies();
-   }
-   if(Diag().Verbose(2)) {
-      for(auto& heap : heaps_) {
-         Diag().ReportDebug(2) << "[=>] Heap Owner: \"" << heap.owner->Desc()
-                               << "\" RefCount: " << heap.refCount;
+      // For topological sorting
+      passDeps[pass.get()] = depGraph_[pass.get()].forward.size();
+      if(passDeps[pass.get()] == 0) S.push_back(pass.get());
+      // Find the right dispatcher for this pass
+      pass->dispatcher = &DefaultDispatcherInstance;
+      for(auto& dispatcher : dispatchers_) {
+         if(dispatcher->CanDispatch(*pass)) {
+            pass->dispatcher = dispatcher.get();
+            break;
+         }
       }
    }
-   // 2. Build the dependency graph of passes
-   size_t NumEnabledPasses = 0;
-   for(auto& pass : passes_) {
-      if(PO().IsPassDisabled(pass.get())) continue;
-      NumEnabledPasses++;
-      passDeps_[pass.get()] = 0;
-      pass->state = Pass::RegisterDependencies;
-      pass->computeDependencies();
-      // Mark the pass in the graph
-      if(passDeps_[pass.get()] == 0) S.push_back(pass.get());
-   }
-   // 3. Run topological sort on the dependency graph
+   // 2. Run a topological sort on the dependency graph
+   unsigned PassesAdded = 0;
    while(!S.empty()) {
       auto* n = *S.begin();
       S.erase(S.begin());
-      L.push_back(n);
-      for(auto* m : depgraph_[n]) {
-         if(--passDeps_[m] == 0) S.push_back(m);
+      n->topoIdx = PassesAdded++;
+      if(!visited.contains(n)) {
+         for(auto* m : depGraph_[n].transpose)
+            if(--passDeps[m] == 0) S.push_back(m);
+         visited.insert(n);
       }
-      depgraph_[n].clear();
    }
-   // 4. Check for cycles
-   if(L.size() != NumEnabledPasses)
-      throw utils::FatalError("Cyclic pass dependency detected");
-   // 5. Run the passes in topological order
-   for(auto& pass : L) {
-      assert(pass->state != Pass::Valid && "Pass already run");
-      pass->state = Pass::Running;
-      if(Diag().Verbose()) {
-         Diag().ReportDebug() << "[=>] Running " << pass->Desc() << " Pass";
+   // 3. Check for cycles
+   if(PassesAdded++ != passes_.size())
+      throw FatalError("Cyclic pass dependency detected");
+   // 4. Sort the passes by topological order
+   std::sort(passes_.begin(),
+             passes_.end(),
+             [](const std::unique_ptr<Pass>& a, const std::unique_ptr<Pass>& b) {
+                return a->topoIdx < b->topoIdx;
+             });
+   // 5. Chunkify the passes by their dispatcher. Store the chunk
+   // indices in passChunks_.
+   for(unsigned left = 0, right = 0; right < passes_.size(); right++) {
+      if(/* Either we reached a chunk boundary */
+         passes_[right]->dispatcher != passes_[left]->dispatcher ||
+         /* Or this is the last chunk */
+         right + 1 == passes_.size()) {
+         passChunks_.emplace_back(left, right, false);
+         left = right;
       }
-      pass->Run();
-      lastRun_ = pass;
-      if(Diag().hasErrors()) {
-         pass->state = Pass::Invalid;
-         return false;
-      } else if(Diag().hasWarnings()) {
-         pass->state = Pass::Invalid;
-         return false;
-      }
-      // If the pass is running, we can free the heaps by calling
-      // computeDependencies again
-      pass->state = Pass::Cleanup;
-      pass->computeDependencies();
-      // Update the pass state
-      pass->state = Pass::Valid;
    }
+   state_ = State::Initialized;
+   assert((validate(), true));
+}
+
+bool PassManager::Run() {
+   assert(state_ == State::Initialized && "PassManager not initialized");
+   state_ = State::Running;
+
+   // Propagate enabled state
+   {
+      std::queue<Pass*> Q;
+      for(auto& pass : passes_)
+         if(pass->enabled) Q.push(pass.get());
+      while(!Q.empty()) {
+         auto* pass = Q.front();
+         Q.pop();
+         for(auto* dep : depGraph_[pass].forward) {
+            dep->enabled = true;
+            Q.push(dep);
+         }
+      }
+   }
+
+   // Also enable pass by chunk
+   for(auto& chunk : passChunks_) {
+      chunk.enabled = false;
+      for(auto i = chunk.left; i <= chunk.right; i++) {
+         if(passes_[i]->enabled) {
+            chunk.enabled = true;
+            break;
+         }
+      }
+   }
+
+   // Run the passes
+   for(auto [left, right, chunkEnabled] : passChunks_) {
+      if(!chunkEnabled) continue;
+      auto& dispatcher = *passes_[left]->dispatcher;
+      auto leftIt = passes_.begin() + left;
+      auto rightIt = passes_.begin() + right + 1;
+      auto iterated = dispatcher.Iterate();
+      auto dIt = iterated.begin();
+      if(Diag().Verbose(2)) {
+         Diag().ReportDebug() << "Running chunk [" << left << ", " << right
+                              << ") dispatched by: " << dispatcher.Name();
+      }
+      /**
+       * Take care to handle the INTER-chunk resource dependencies.
+       * The INTRA-chunk dependencies are handled by runPassLifeCycle.
+       *
+       * At the beginning of iterating this chunk, we assume (inductively)
+       * that the current chunk has acquired all resources it needs.
+       */
+      while(dIt != iterated.end()) {
+         ++dIt;
+         /**
+          * In the last iteration over this chunk, we should:
+          * 1) Release resources the current chunk has acquired
+          * 2) Allow the next chunk(s) to acquire resources in the current chunk
+          */
+         for(auto it = leftIt; it != rightIt; it++) {
+            auto& pass = *it->get();
+            if(pass.enabled)
+               runPassLifeCycle(pass, left, right, dIt == iterated.end());
+         }
+      }
+   }
+
    return true;
+}
+
+PassManager::~PassManager() {
+   // Make sure we free the passes BEFORE we free the heaps because the
+   // allocs_ array holds on to the heap for just a bit longer.
+   passes_.clear();
+   heaps_.clear();
 }
 
 } // namespace utils

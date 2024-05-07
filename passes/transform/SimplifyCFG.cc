@@ -175,8 +175,8 @@ private:
    }
 
 private:
-   void computeDependencies() override {
-      ComputeDependency(GetPass<IRContextPass>());
+   void ComputeDependencies() override {
+      AddDependency(GetPass<IRContextPass>());
    }
    std::unordered_set<tir::BasicBlock*> visited;
 };

@@ -32,14 +32,14 @@ struct Use {
    const unsigned fromIndex;
 };
 
-namespace detail {
+namespace details {
 template <typename T>
 struct UseEqual {
    bool operator()(const Use<T>& lhs, const Use<T>& rhs) const {
       return lhs.user == rhs.user && lhs.fromIndex == rhs.fromIndex;
    }
 };
-} // namespace detail
+} // namespace details
 
 } // namespace utils
 
@@ -77,7 +77,7 @@ public:
    auto numUsers() const { return uses_.size(); }
 
 protected:
-   std::pmr::unordered_set<Use<T>, std::hash<Use<T>>, detail::UseEqual<T>> uses_;
+   std::pmr::unordered_set<Use<T>, std::hash<Use<T>>, details::UseEqual<T>> uses_;
 };
 
 /* ===--------------------------------------------------------------------=== */

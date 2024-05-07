@@ -1,7 +1,5 @@
 #pragma once
 
-#include <utils/Error.h>
-
 #include <memory>
 #include <string_view>
 #include <type_traits>
@@ -11,106 +9,28 @@
 #include "diagnostics/Diagnostics.h"
 #include "third-party/CLI11.h"
 #include "utils/BumpAllocator.h"
+#include "utils/Error.h"
 #include "utils/Generator.h"
 
 namespace utils {
 
 class PassManager;
 class Pass;
+class PassDispatcher;
 class PassOptions;
 
 template <typename T>
 concept PassType = std::is_base_of_v<Pass, T>;
 
-class PassOptions {
-public:
-   PassOptions(CLI::App& app) : app_{app} {}
-   PassOptions(PassOptions const&) = delete;
-   PassOptions(PassOptions&&) = delete;
-   PassOptions& operator=(PassOptions const&) = delete;
-   PassOptions& operator=(PassOptions&&) = delete;
-   ~PassOptions() = default;
-
-   CLI::Option* FindOption(std::string_view name) {
-      std::string test_name = "--" + get_single_name(name);
-      if(test_name.size() == 3) test_name.erase(0, 1);
-      return app_.get_option_no_throw(test_name);
-   }
-
-   CLI::Option* GetExistingOption(std::string name) {
-      auto opt = FindOption(name);
-      if(opt == nullptr)
-         throw utils::FatalError("pass requested nonexistent option: " + name);
-      return opt;
-   }
-
-   /// @return True if the pass is disabled
-   bool IsPassDisabled(Pass* p);
-
-   /// @brief Enables or disables a pass given the pass name
-   void EnablePass(std::string_view name, bool enabled = true) {
-      if(auto it = pass_descs_.find(std::string{name}); it != pass_descs_.end()) {
-         it->second.enabled = enabled;
-      } else {
-         assert(false && "Pass not found");
-      }
-   }
-
-   /// @brief Iterate through the pass names
-   utils::Generator<std::pair<std::string_view, std::string_view>> PassNames()
-         const {
-      for(auto& [name, desc] : pass_descs_) co_yield {name, desc.desc};
-   }
-
-   /// @brief Get the description of a pass
-   bool HasPass(std::string_view name) {
-      return pass_descs_.find(std::string{name}) != pass_descs_.end();
-   }
-
-private:
-   /**
-    * @brief Get the single name of a command line option
-    * @param name The option name to get the single name of (ie., "-o,--option")
-    * @return std::string The single name (ie., "option")
-    */
-   static std::string get_single_name(std::string_view name) {
-      std::vector<std::string> s, l;
-      std::string p;
-      std::tie(s, l, p) =
-            CLI::detail::get_names(CLI::detail::split_names(std::string{name}));
-      if(!l.empty()) return l[0];
-      if(!s.empty()) return s[0];
-      if(!p.empty()) return p;
-      return std::string{name};
-   }
-
-   /// @brief Sets the pass to be enabled or disabled
-   /// @param p The pass to set
-   /// @param enabled If true, the pass is enabled
-   void setPassEnabled(Pass* p, bool enabled);
-
-private:
-   friend class Pass;
-   friend class PassManager;
-
-   CLI::App& app_;
-   // A list of passes parsed from the command line
-   std::string passes_;
-   /// @brief A map of pass names to descriptions and whether they are enabled
-   struct PassDesc {
-      bool enabled;
-      std::string desc;
-   };
-   std::unordered_map<std::string, PassDesc> pass_descs_;
-};
+template <typename T>
+concept DispatchType = std::is_base_of_v<PassDispatcher, T>;
 
 /* ===--------------------------------------------------------------------=== */
 // Pass
 /* ===--------------------------------------------------------------------=== */
 
 class Pass {
-private:
-   // Deleted copy and move constructor and assignment operator
+public:
    Pass(Pass const&) = delete;
    Pass(Pass&&) = delete;
    Pass& operator=(Pass const&) = delete;
@@ -130,6 +50,9 @@ public:
    void Preserve() { preserve = true; }
    /// @brief Should this pass be preserved?
    bool ShouldPreserve() const { return preserve; }
+
+public:
+   enum class Lifetime { Managed, Temporary, TemporaryNoReuse };
 
 protected:
    /// @brief Gets the pass manager that owns the pass
@@ -155,38 +78,47 @@ protected:
 
    /// @brief Computes a dependency between this and another pass
    /// @param pass The pass to add as a dependency
-   void ComputeDependency(Pass& pass);
+   void AddDependency(Pass& pass);
 
-   /// @brief Requests a new heap from the pass manager
-   /// @return CustomBufferResource* The new heap
-   CustomBufferResource* NewHeap();
+   CustomBufferResource* NewHeap(Lifetime);
+
+   BumpAllocator& NewAlloc(Lifetime);
 
 protected:
    friend class PassManager;
    /// @brief Overload to state the dependencies of this pass
-   virtual void computeDependencies() = 0;
+   virtual void ComputeDependencies() = 0;
    /// @brief Constructor for the pass
    /// @param pm The pass manager that owns the pass
    explicit Pass(PassManager& pm) noexcept : pm_(pm) {}
 
 private:
-   /// @brief Adds a switch to enable the pass
-   void RegisterCLI();
-
-private:
    PassManager& pm_;
-   enum State {
-      Uninitialized,
-      PropagateEnabled,
-      AcquireResources,
-      RegisterDependencies,
-      Running,
-      Cleanup,
-      Valid,
-      Invalid
+   enum class State {
+      Uninitialized /* Before and during Init() */,
+      Initialized /* After Init() */,
+      Running /* During Run() */,
+      Valid /* After Run() or before managed resources are freed */,
+      Invalid /* After Run() and at least 1 managed resource is freed */
    };
    State state = State::Uninitialized;
    bool preserve = false;
+   bool enabled = false;
+   int topoIdx = -1;
+   PassDispatcher* dispatcher = nullptr;
+   std::vector<BumpAllocator> allocs_;
+};
+
+/* ===--------------------------------------------------------------------=== */
+// PassDispatcher
+/* ===--------------------------------------------------------------------=== */
+
+class PassDispatcher {
+public:
+   virtual ~PassDispatcher() = default;
+   virtual std::string_view Name() = 0;
+   virtual bool CanDispatch(Pass& pass) = 0;
+   virtual Generator<void*> Iterate() = 0;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -194,162 +126,147 @@ private:
 /* ===--------------------------------------------------------------------=== */
 
 class PassManager final {
-private:
-   /// @brief A heap is a bump allocator that is used to allocate memory. The
-   /// heap is owned by a pass and is destroyed when no future passes will
-   /// require it.
-   struct Heap {
-      std::unique_ptr<CustomBufferResource> heap;
-      Pass* owner;
-      int refCount;
-      Heap(Pass* owner)
-            : heap{std::make_unique<CustomBufferResource>()},
-              owner{owner},
-              refCount{1} {}
+   friend class Pass;
+   struct Chunk {
+      int left, right;
+      bool enabled;
    };
+   struct HeapResource;
 
 public:
-   PassManager(CLI::App& app) : options_{app}, reuseHeaps_{true} {}
-   /// @brief Runs all the passes in the pass manager
-   /// @return True if all passes ran successfully
-   bool Run();
-
-   /// @brief Resets the pass manager and frees all resources
-   void Reset();
-
-   /// @return The last pass that was run by the pass manager
-   Pass const* LastRun() const { return lastRun_; }
-
-   /// @brief Sets whether the pass manager should reuse heaps
-   void SetHeapReuse(bool reuse) { reuseHeaps_ = reuse; }
-
-   // Deleted copy and move constructor and assignment operator
+   PassManager(CLI::App& app) : app_{app}, reuseHeaps_{true} {}
    PassManager(PassManager const&) = delete;
    PassManager(PassManager&&) = delete;
    PassManager& operator=(PassManager const&) = delete;
    PassManager& operator=(PassManager&&) = delete;
+   ~PassManager();
 
-   ~PassManager() {
-      // Clean up passes, and then heaps
-      passes_.clear();
-      heaps_.clear();
-   }
-
+public:
+   /// @brief Initializes the pass manager
+   void Init();
+   /// @brief Runs all the passes in the pass manager
+   /// @return True if all passes ran successfully
+   bool Run();
+   /// @brief Resets the pass manager and frees all resources
+   void Reset();
+   /// @return The last pass that was run by the pass manager
+   Pass const* LastRun() const { return lastRun_; }
+   /// @brief Sets whether the pass manager should reuse heaps
+   void SetHeapReuse(bool reuse) { reuseHeaps_ = reuse; }
    /// @brief Adds a pass to the pass manager
-   /// @tparam T The type of the passr
+   /// @tparam T The type of the pass
    /// @param ...args The remaining arguments to pass to the pass constructor.
    /// The pass manager will be passed to the pass as the first argument.
    template <typename T, typename... Args>
       requires PassType<T>
-   T& AddPass(Args&&... args) {
-      passes_.emplace_back(new T(*this, std::forward<Args>(args)...));
-      T& result = *cast<T*>(passes_.back().get());
-      // If the pass has a name, register it as constructible from the command
-      // line options. Also, toggle isRunning_ to allow PO() access briefly.
-      isRunning_ = true;
-      if(!result.Name().empty()) result.RegisterCLI();
-      isRunning_ = false;
-      return result;
-   }
-
+   T& AddPass(Args&&... args);
+   /// @brief Adds a dispatcher to the pass manager
+   /// @tparam T The type of the dispatcher
+   /// @param ...args The remaining arguments to pass to the dispatcher
+   /// constructor. The pass manager will be passed to the dispatcher as the
+   /// first argument.
+   template <typename T, typename... Args>
+      requires DispatchType<T>
+   void AddDispatcher(Args&&... args);
    /// @brief Gets a reference to the diagnostic engine
    diagnostics::DiagnosticEngine& Diag() { return diag_; }
-
-   /// @brief Gets the pass options
-   PassOptions& PO() {
-      // FIXME(kevin): Prevent PO() from being called in pass constructors
-      return options_;
-   }
-
-   /// @brief Outside method to get a pass by type
+   /// @brief External method to get a pass by type. Can be used before the
+   /// pass pipeline is run to set individual pass's properties.
    template <typename T>
       requires PassType<T>
-   T& FindPass() {
-      T* result = nullptr;
-      for(auto& pass : passes_) {
-         if(auto* p = dyn_cast<T*>(pass.get())) {
-            if(result != nullptr)
-               throw utils::FatalError("Multiple passes of type: " +
-                                       std::string(typeid(T).name()));
-            result = p;
-         }
-      }
-      if(result == nullptr) {
-         throw utils::FatalError("Pass not found: " +
-                                 std::string(typeid(T).name()));
-      }
-      return *result;
+   T& FindPass();
+   /// @brief
+   CLI::Option* FindOption(std::string_view name);
+   /// @brief
+   CLI::Option* GetExistingOption(std::string name);
+   /// @return True if the pass is disabled
+   bool IsPassDisabled(Pass& p) { return p.enabled; }
+   /// @brief Enables or disables a pass given the pass name
+   void EnablePass(std::string_view name, bool enabled = true) {
+      getPass(name).enabled = enabled;
    }
-
-   /// @brief Declare an analysis to be preserved forever
-   template <typename T>
-      requires PassType<T>
-   void PreserveAnalysis() {
-      auto& pass = FindPass<T>();
-      pass.Preserve();
+   /// @brief Iterate through the pass names
+   Generator<std::pair<std::string_view, std::string_view>> PassNames() {
+      for(auto& pass : passes_)
+         if(!pass->Name().empty()) co_yield {pass->Name(), pass->Desc()};
+   }
+   /// @returns True if the pass manager has a pass with the given name
+   bool HasPass(std::string_view name) {
+      for(auto& pass : passes_)
+         if(!pass->Name().empty() && pass->Name() == name) return true;
+      return false;
    }
 
 private:
+   // Internal function used by Pass to find a pass
    template <typename T>
       requires PassType<T>
-   T& getPass(Pass& pass) {
-      auto& result = FindPass<T>();
-      // If the requester is running, the result must be valid
-      if(pass.state == Pass::Running && result.state != Pass::Valid) {
-         throw utils::FatalError("Pass not valid: " +
-                                 std::string(typeid(T).name()));
-      }
-      return result;
-   }
-
+   T& getPass(Pass& pass);
+   // Shared function used by getPass and FindPass
    template <typename T>
       requires PassType<T>
-   Generator<T*> getPasses(Pass& pass) {
-      bool found = false;
-      for(auto& pass : passes_) {
-         if(auto* p = dyn_cast<T*>(pass.get())) {
-            // If the requester is running, the result must be valid
-            if(p->state == Pass::Running && p->state != Pass::Valid) {
-               throw utils::FatalError("Pass not valid: " +
-                                       std::string(typeid(T).name()));
-            }
-            co_yield p;
-            found = true;
-         }
-      }
-      if(!found)
-         throw utils::FatalError("Pass of type not found: " +
-                                 std::string(typeid(T).name()));
-   }
-
-   /// @brief Gets a single pass by name. Throws if no pass is found.
+   T& getPass(bool checkInit);
+   // Internal function to get all passes of a type
+   template <typename T>
+      requires PassType<T>
+   Generator<T*> getPasses(Pass& pass);
+   // Gets a single pass by name. Throws if no pass is found.
    Pass& getPass(std::string_view name) {
       for(auto& pass : passes_)
-         if(pass->Name() == name) return *pass;
-      throw utils::FatalError("Pass not found: " + std::string{name});
+         if(!pass->Name().empty() && pass->Name() == name) return *pass;
+      throw FatalError("Pass not found: " + std::string{name});
    }
 
 private:
-   friend class Pass;
-   friend class HeapRef;
-   CustomBufferResource* newHeap(Pass& pass);
-   void freeHeap(Heap& heap);
-   void addDependency(Pass& pass, Pass& depends) {
-      depgraph_[&depends].push_back(&pass);
-      passDeps_[&pass]++;
-   }
+   void runPassLifeCycle(Pass& pass, int left, int right, bool lastIter);
+   void addDependency(Pass& pass, Pass& depends);
+   void validate() const;
+   HeapResource& findHeapFor(Pass* pass, Pass::Lifetime);
 
 private:
+   enum class State {
+      Uninitialized /* Before or during Init() */,
+      Initialized /* After Init() or after Reset() */,
+      Running /* During Run() */,
+      Cleanup /* After Run() or during Reset() */
+   };
+
+   struct GraphEdge /* Of vertex u */ {
+      std::vector<Pass*> forward;   // Stores u->children
+      std::vector<Pass*> transpose; // Stores predecessor->u
+   };
+
+   struct HeapResource final {
+      using T = CustomBufferResource;
+      int id = counter++;
+      Pass* owner = nullptr;
+      Pass::Lifetime lifetime = Pass::Lifetime::Managed;
+      unsigned refcount = 0;
+      std::unique_ptr<T> resource{nullptr};
+      HeapResource(std::unique_ptr<T>&& resource)
+            : resource{std::move(resource)} {}
+      T* get() { return resource.get(); }
+
+   private:
+      static inline int counter = 0;
+   };
+
+private:
+   CLI::App& app_;
    std::vector<std::unique_ptr<Pass>> passes_;
-   std::vector<Heap> heaps_;
-   std::unordered_map<Pass*, std::vector<Pass*>> depgraph_;
+   std::vector<Chunk> passChunks_;
+   std::vector<std::unique_ptr<PassDispatcher>> dispatchers_;
+   std::vector<HeapResource> heaps_;
    diagnostics::DiagnosticEngine diag_;
    Pass* lastRun_ = nullptr;
-   std::unordered_map<Pass*, int> passDeps_;
-   PassOptions options_;
    bool reuseHeaps_;
-   bool isRunning_ = false;
+   State state_ = State::Uninitialized;
+   std::unordered_map<Pass*, GraphEdge> depGraph_;
 };
+
+/* ===--------------------------------------------------------------------=== */
+// Template implementations
+/* ===--------------------------------------------------------------------=== */
 
 template <typename T>
    requires PassType<T>
@@ -363,6 +280,83 @@ Generator<T*> Pass::GetPasses() {
    return PM().getPasses<T>(*this);
 }
 
+template <typename T>
+   requires PassType<T>
+T& PassManager::FindPass() {
+   return getPass<T>(true);
+}
+
+template <typename T, typename... Args>
+   requires PassType<T>
+T& PassManager::AddPass(Args&&... args) {
+   using namespace std;
+   passes_.emplace_back(make_unique<T>(*this, std::forward<Args>(args)...));
+   T& result = *cast<T*>(passes_.back().get());
+   return result;
+}
+
+template <typename T, typename... Args>
+   requires DispatchType<T>
+void PassManager::AddDispatcher(Args&&... args) {
+   using namespace std;
+   dispatchers_.emplace_back(make_unique<T>(*this, std::forward<Args>(args)...));
+}
+
+template <typename T>
+   requires PassType<T>
+T& PassManager::getPass(bool checkInit) {
+   T* result = nullptr;
+   for(auto& pass : passes_) {
+      if(auto* p = dyn_cast<T*>(pass.get())) {
+         if(result != nullptr)
+            throw FatalError("Multiple passes of type: " +
+                             std::string(typeid(T).name()));
+         result = p;
+      }
+   }
+   if(result == nullptr) {
+      throw FatalError("Pass not found: " + std::string(typeid(T).name()));
+   }
+   // FIXME(kevin): This check needs to be fixed
+   if(checkInit && result->state == Pass::State::Running) {
+      throw FatalError("Cannot use FindPass() while a pass is running");
+   }
+   return *result;
+}
+
+template <typename T>
+   requires PassType<T>
+T& PassManager::getPass(Pass& pass) {
+   T& result = getPass<T>(false);
+   // If the requester is running, the result must be valid
+   if(pass.state == Pass::State::Running && result.state != Pass::State::Valid) {
+      throw FatalError("Pass not valid: " + std::string(typeid(T).name()));
+   }
+   return result;
+}
+
+template <typename T>
+   requires PassType<T>
+Generator<T*> PassManager::getPasses(Pass&) {
+   bool found = false;
+   for(auto& pass : passes_) {
+      if(auto* p = dyn_cast<T*>(pass.get())) {
+         // If the requester is running, the result must be valid
+         if(p->state == Pass::State::Running && p->state != Pass::State::Valid) {
+            throw FatalError("Pass not valid: " + std::string(typeid(T).name()));
+         }
+         co_yield p;
+         found = true;
+      }
+   }
+   if(!found)
+      throw FatalError("Pass of type not found: " + std::string(typeid(T).name()));
+}
+
+/* ===--------------------------------------------------------------------=== */
+// Macro definitions to export
+/* ===--------------------------------------------------------------------=== */
+
 /**
  * @brief Registers NS::T with the pass manager.
  */
@@ -375,6 +369,9 @@ Generator<T*> Pass::GetPasses() {
 #define REGISTER_PASS(T) \
    utils::Pass& New##T(utils::PassManager& PM) { return PM.AddPass<T>(); }
 
+/**
+ * @brief Forward declares a "new pass" function.
+ */
 #define DECLARE_PASS(T) utils::Pass& New##T(utils::PassManager& PM);
 
 } // namespace utils

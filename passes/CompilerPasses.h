@@ -30,8 +30,8 @@ private:
    void checkNonAscii(std::string_view str);
 
 private:
-   void computeDependencies() override {
-      if(prev_) ComputeDependency(*prev_);
+   void ComputeDependencies() override {
+      if(prev_) AddDependency(*prev_);
    }
    SourceFile file_;
    parsetree::Node* tree_;
@@ -44,15 +44,12 @@ class AstContextPass final : public Pass {
 public:
    AstContextPass(PassManager& PM) noexcept : Pass(PM) {}
    string_view Desc() const override { return "AST Context Lifetime"; }
-   void Init() override;
    void Run() override;
    ast::Semantic& Sema() { return *sema; }
-   ~AstContextPass() override;
 
 private:
-   void computeDependencies() override {}
+   void ComputeDependencies() override {}
    std::unique_ptr<ast::Semantic> sema;
-   std::unique_ptr<BumpAllocator> alloc;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -66,9 +63,9 @@ public:
    ast::CompilationUnit* CompilationUnit() { return cu_; }
 
 private:
-   void computeDependencies() override {
-      ComputeDependency(dep);
-      ComputeDependency(GetPass<AstContextPass>());
+   void ComputeDependencies() override {
+      AddDependency(dep);
+      AddDependency(GetPass<AstContextPass>());
    }
    ast::CompilationUnit* cu_;
    Joos1WParserPass& dep;
@@ -85,9 +82,9 @@ public:
    ast::LinkingUnit* LinkingUnit() { return lu_; }
 
 private:
-   void computeDependencies() override {
-      ComputeDependency(GetPass<AstContextPass>());
-      for(auto* pass : GetPasses<AstBuilderPass>()) ComputeDependency(*pass);
+   void ComputeDependencies() override {
+      AddDependency(GetPass<AstContextPass>());
+      for(auto* pass : GetPasses<AstBuilderPass>()) AddDependency(*pass);
    }
    ast::LinkingUnit* lu_;
 };
@@ -99,21 +96,19 @@ public:
    NameResolverPass(PassManager& PM) noexcept : Pass{PM} {}
    string_view Name() const override { return "sema-name"; }
    string_view Desc() const override { return "Name Resolution"; }
-   void Init() override;
    void Run() override;
    semantic::NameResolver& Resolver() { return *NR; }
-   ~NameResolverPass() override;
 
 private:
    void replaceObjectClass(ast::AstNode* node);
    void resolveExpr(ast::Expr* expr);
    void resolveRecursive(ast::AstNode* node);
 
-   void computeDependencies() override {
-      ComputeDependency(GetPass<AstContextPass>());
-      ComputeDependency(GetPass<LinkerPass>());
+   void ComputeDependencies() override {
+      AddDependency(GetPass<AstContextPass>());
+      AddDependency(GetPass<LinkerPass>());
    }
-   std::unique_ptr<BumpAllocator> alloc;
+
    std::unique_ptr<semantic::NameResolver> NR;
 };
 
@@ -129,10 +124,10 @@ public:
    semantic::HierarchyChecker& Checker() { return checker; }
 
 private:
-   void computeDependencies() override {
-      ComputeDependency(GetPass<AstContextPass>());
-      ComputeDependency(GetPass<LinkerPass>());
-      ComputeDependency(GetPass<NameResolverPass>());
+   void ComputeDependencies() override {
+      AddDependency(GetPass<AstContextPass>());
+      AddDependency(GetPass<LinkerPass>());
+      AddDependency(GetPass<NameResolverPass>());
    }
    semantic::HierarchyChecker checker;
 };

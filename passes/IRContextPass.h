@@ -34,7 +34,7 @@ public:
    ~IRContextPass() override {}
 
 private:
-   void computeDependencies() override {}
+   void ComputeDependencies() override {}
    tir::CompilationUnit& CU_;
    target::TargetDesc const& TD_;
    std::unordered_map<tir::Function const*, mc::MCFunction*> mirFuncMap_;

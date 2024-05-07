@@ -51,7 +51,7 @@ public:
       return os;
    }
 
-   utils::Generator<const CFGNode*> getChildren() const { 
+   utils::Generator<const CFGNode*> getChildren() const {
       for(auto child : children) {
          co_yield child;
       }
@@ -119,7 +119,6 @@ private:
 };
 
 class CFGBuilder {
-   using Heap = std::pmr::memory_resource;
    struct CFGInfo {
       CFGNode* head;
       std::pmr::vector<CFGNode*> leafs;
@@ -147,11 +146,10 @@ private:
 
 public:
    CFGBuilder(diagnostics::DiagnosticEngine& diag,
-              ConstantTypeResolver* constTypeResolver, Heap* heap,
+              ConstantTypeResolver* constTypeResolver, BumpAllocator& alloc,
               ast::Semantic& sema)
          : diag{diag},
-           alloc{heap},
-           heap{heap},
+           alloc{alloc},
            sema{sema},
            constTypeResolver{constTypeResolver} {}
    CFGNode* build(const ast::Stmt* stmt) {
@@ -163,8 +161,7 @@ public:
 private:
    diagnostics::DiagnosticEngine& diag;
    SourceRange loc_;
-   mutable BumpAllocator alloc;
-   Heap* heap;
+   BumpAllocator& alloc;
    ast::Semantic& sema;
    ConstantTypeResolver* constTypeResolver;
 };

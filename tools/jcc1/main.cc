@@ -4,9 +4,9 @@
 #include <sstream>
 #include <string>
 
+#include "AllPasses.h"
 #include "codegen/CodeGen.h"
 #include "diagnostics/Diagnostics.h"
-#include "AllPasses.h"
 #include "passes/CompilerPasses.h"
 #include "passes/IRContextPass.h"
 #include "target/Target.h"
@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
    bool optSplit = false;
    bool optCompile = false;
    bool optFreestanding = false;
-   bool optHeapReuse = true;
+   bool optDisableHeapReuse = false;
    bool optCodeGen = false;
    int verboseLevel = 0;
    std::string optOutputFile = "";
@@ -57,15 +57,15 @@ int main(int argc, char** argv) {
    app.add_flag("--print-ignore-std", "If a printing pass is run, ignore the standard library");
    app.add_flag("--enable-filename-check", "Check if the file name matches the class name");
    app.add_flag("--enable-dfa-check", "Check if the DFA is correct");
-   app.add_flag("--disable-heap-reuse", optHeapReuse, "Do not reuse heap memory between passes (for debugging heap GC issues)");
+   app.add_flag("--disable-heap-reuse", optDisableHeapReuse, "Do not reuse heap memory between passes (for debugging heap GC issues)");
    app.add_flag("--freestanding", optFreestanding, "Do not include the standard library in the compilation");
    app.add_flag("--debug-mc", "Dump each function's machine code DAG to .dot files for debugging");
    // clang-format on
 
    // Build the front-end pipeline
    BuildFrontEndPasses(FEPM);
-   FEPM.PreserveAnalysis<joos1::AstContextPass>();
-   FEPM.PreserveAnalysis<joos1::NameResolverPass>();
+   FEPM.FindPass<joos1::AstContextPass>().Preserve();
+   FEPM.FindPass<joos1::NameResolverPass>().Preserve();
    // Build the optimization pipeline
    BuildOptPasses(OptPM);
    // Add the pipeline option and print the pass names
@@ -73,16 +73,14 @@ int main(int argc, char** argv) {
       std::ostringstream ss;
       ss << "The pipeline string to run. Below is a list of the passes.\n";
       ss << "  Front end passes:\n";
-      for(auto d : FEPM.PO().PassNames()) {
-         auto [name, desc] = d;
+      for(auto [name, desc] : FEPM.PassNames()) {
          // Pad name with spaces to align the descriptions
          ss << "    " << name;
          for(size_t i = name.size(); i < 15; ++i) ss << " ";
          ss << desc << "\n";
       }
       ss << "  Optimization passes:\n";
-      for(auto d : OptPM.PO().PassNames()) {
-         auto [name, desc] = d;
+      for(auto [name, desc] : OptPM.PassNames()) {
          // Pad name with spaces to align the descriptions
          ss << "    " << name;
          for(size_t i = name.size(); i < 15; ++i) ss << " ";
@@ -99,7 +97,7 @@ int main(int argc, char** argv) {
    CLI11_PARSE(app, argc, argv);
 
    // Disable heap reuse if requested
-   if(optHeapReuse) FEPM.SetHeapReuse(false);
+   if(optDisableHeapReuse) FEPM.SetHeapReuse(false);
 
    // Validate the command line options
    {
@@ -200,9 +198,9 @@ int main(int argc, char** argv) {
       std::string name;
       while(std::getline(ss, name, ',')) {
          if(name.empty()) continue;
-         if(FEPM.PO().HasPass(name)) {
+         if(FEPM.HasPass(name)) {
             fePasses.insert(name);
-         } else if(OptPM.PO().HasPass(name)) {
+         } else if(OptPM.HasPass(name)) {
             optPassNames.push_back(name);
          } else {
             std::cerr << "Error: Unknown pass " << name << std::endl;
@@ -214,7 +212,7 @@ int main(int argc, char** argv) {
          if(verboseLevel > 0) std::cerr << "Enabled front-end passes (unordered):";
          for(auto const& pass : fePasses) {
             if(verboseLevel > 0) std::cerr << " " << pass;
-            FEPM.PO().EnablePass(pass);
+            FEPM.EnablePass(pass);
          }
          if(verboseLevel > 0) std::cerr << std::endl;
       }
@@ -239,10 +237,11 @@ int main(int argc, char** argv) {
 
    // Enable the default front-end pass to run
    if(fePasses.empty()) {
-      FEPM.PO().EnablePass("dfa");
+      FEPM.EnablePass("dfa");
    }
 
    // Run the front end passes
+   FEPM.Init();
    if(!FEPM.Run()) {
       std::cerr << "Error running pass: " << FEPM.LastRun()->Desc() << std::endl;
       if(FEPM.Diag().hasErrors()) {
@@ -273,11 +272,7 @@ int main(int argc, char** argv) {
       auto& HC = FEPM.FindPass<joos1::HierarchyCheckerPass>();
       codegen::CodeGenerator CG{CGContext, CU, NR.Resolver(), HC.Checker()};
       auto& pass = FEPM.FindPass<joos1::LinkerPass>();
-      try {
-         CG.run(pass.LinkingUnit());
-      } catch(utils::AssertError& a) {
-         std::cerr << a.what() << std::endl;
-      }
+      CG.run(pass.LinkingUnit());
       if(verboseLevel > 0)
          std::cerr << "*** Done code generation, ready for optimizations now! ***"
                    << std::endl;
@@ -285,9 +280,10 @@ int main(int argc, char** argv) {
 
    // Run the middle-end pipeline now and add the IR context pass
    NewIRContextPass(OptPM, CU, TD);
-   OptPM.PreserveAnalysis<IRContextPass>();
+   OptPM.FindPass<IRContextPass>().Preserve();
+   OptPM.Init();
    for(auto const& name : optPassNames) {
-      OptPM.PO().EnablePass(name);
+      OptPM.EnablePass(name);
       OptPM.Run();
       OptPM.Reset();
    }
@@ -308,9 +304,9 @@ int main(int argc, char** argv) {
       TD.patternProvider().dumpPatterns();
    }
 
-   OptPM.Reset();
-   OptPM.PO().EnablePass("isched");
-   OptPM.Run();
+   // OptPM.Reset();
+   // OptPM.EnablePass("isched");
+   // OptPM.Run();
 
    return 0;
 }

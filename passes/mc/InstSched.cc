@@ -23,15 +23,15 @@ public:
       return "Instruction scheduling on MIR DAG";
    }
    void Init() override {
-      dumpDot = PM().PO().GetExistingOption("--debug-mc")->count();
+      dumpDot = PM().GetExistingOption("--debug-mc")->count();
    }
    void Run() override;
 
 private:
    void runOnFunction(MCFunction* F);
-   void computeDependencies() override {
-      ComputeDependency(GetPass<IRContextPass>());
-      ComputeDependency(GetPass("isel"));
+   void ComputeDependencies() override {
+      AddDependency(GetPass<IRContextPass>());
+      AddDependency(GetPass("isel"));
    }
 
 private:

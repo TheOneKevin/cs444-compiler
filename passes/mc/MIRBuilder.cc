@@ -21,7 +21,7 @@ public:
    string_view Name() const override { return "mirbuilder"; }
    string_view Desc() const override { return "Build MIR from TIR"; }
    void Init() override {
-      dumpDot = PM().PO().GetExistingOption("--debug-mc")->count();
+      dumpDot = PM().GetExistingOption("--debug-mc")->count();
    }
    void Run() override {
       auto& CU = GetPass<IRContextPass>().CU();
@@ -36,8 +36,8 @@ public:
    }
 
 private:
-   void computeDependencies() override {
-      ComputeDependency(GetPass<IRContextPass>());
+   void ComputeDependencies() override {
+      AddDependency(GetPass<IRContextPass>());
    }
 
 private:

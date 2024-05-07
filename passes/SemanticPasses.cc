@@ -7,7 +7,6 @@
 #include "semantic/ExprResolver.h"
 #include "semantic/ExprStaticChecker.h"
 #include "semantic/ExprTypeResolver.h"
-#include "utils/BumpAllocator.h"
 #include "utils/PassManager.h"
 
 using namespace joos1;
@@ -37,11 +36,10 @@ public:
       auto& NR = GetPass<NameResolverPass>().Resolver();
       auto& HC = GetPass<HierarchyCheckerPass>().Checker();
       auto& Sema = GetPass<AstContextPass>().Sema();
-      ExprResolver ER{PM().Diag(), NewHeap()};
-      ExprTypeResolver TR{PM().Diag(), NewHeap(), Sema};
+      ExprResolver ER{PM().Diag(), NewHeap(Lifetime::TemporaryNoReuse)};
+      ExprTypeResolver TR{PM().Diag(), NewHeap(Lifetime::TemporaryNoReuse), Sema};
       ExprStaticChecker ESC{PM().Diag(), NR, HC};
-      BumpAllocator alloc{NewHeap()};
-      AstChecker AC{alloc, PM().Diag(), TR};
+      AstChecker AC{NewAlloc(Lifetime::Temporary), PM().Diag(), TR};
       ER.Init(&TR, &NR, &Sema, &HC);
       TR.Init(&HC, &NR);
 
@@ -57,7 +55,7 @@ public:
 
 private:
    void evaluateAsList(Data d, ast::Expr* expr) {
-      if(PM().Diag().Verbose(2)) {
+      if(PM().Diag().Verbose(3)) {
          auto dbg = PM().Diag().ReportDebug(2);
          dbg << "[*] Location: ";
          expr->location().print(dbg.get()) << "\n";
@@ -65,7 +63,7 @@ private:
          expr->print(dbg.get(), 1);
       }
       ast::ExprNodeList list = d.ER.Evaluate(expr);
-      if(PM().Diag().Verbose(2)) {
+      if(PM().Diag().Verbose(3)) {
          auto dbg = PM().Diag().ReportDebug(2);
          dbg << "[*] Printing expression after resolution:\n  ";
          list.print(dbg.get());
@@ -98,8 +96,8 @@ private:
       // Visit the expression nodes
       if(auto* decl = dynamic_cast<ast::TypedDecl*>(node)) {
          if(auto* init = decl->mut_init()) {
-            if(PM().Diag().Verbose(2)) {
-               PM().Diag().ReportDebug(2)
+            if(PM().Diag().Verbose(3)) {
+               PM().Diag().ReportDebug(3)
                      << "[*] Resolving initializer for variable: " << decl->name();
             }
             evaluateAsList(d, init);
@@ -107,8 +105,8 @@ private:
       } else if(auto* stmt = dynamic_cast<ast::Stmt*>(node)) {
          for(auto* expr : stmt->mut_exprs()) {
             if(!expr) continue;
-            if(PM().Diag().Verbose(2)) {
-               PM().Diag().ReportDebug(2)
+            if(PM().Diag().Verbose(3)) {
+               PM().Diag().ReportDebug(3)
                      << "[*] Resolving expression in statement:";
             }
             evaluateAsList(d, expr);
@@ -123,10 +121,10 @@ private:
    }
 
 private:
-   void computeDependencies() override {
-      ComputeDependency(GetPass<AstContextPass>());
-      ComputeDependency(GetPass<NameResolverPass>());
-      ComputeDependency(GetPass<HierarchyCheckerPass>());
+   void ComputeDependencies() override {
+      AddDependency(GetPass<AstContextPass>());
+      AddDependency(GetPass<NameResolverPass>());
+      AddDependency(GetPass<HierarchyCheckerPass>());
    }
 };
 
@@ -140,15 +138,15 @@ public:
    string_view Name() const override { return "dfa"; }
    string_view Desc() const override { return "Dataflow Analysis"; }
    void Init() override {
-      optEnable = PM().PO().GetExistingOption("--enable-dfa-check")->count();
+      optEnable = PM().GetExistingOption("--enable-dfa-check")->count();
    }
    void Run() override {
       if(!optEnable) return;
       auto LU = GetPass<LinkerPass>().LinkingUnit();
       auto& Sema = GetPass<AstContextPass>().Sema();
-      ConstantTypeResolver CTR{NewHeap()};
-      DataflowAnalysis DFA{PM().Diag(), NewHeap(), Sema, LU};
-      CFGBuilder builder{PM().Diag(), &CTR, NewHeap(), Sema};
+      ConstantTypeResolver CTR{NewAlloc(Lifetime::Temporary)};
+      DataflowAnalysis DFA{PM().Diag(), NewAlloc(Lifetime::Temporary), Sema, LU};
+      CFGBuilder builder{PM().Diag(), &CTR, NewAlloc(Lifetime::Temporary), Sema};
       DFA.init(&builder);
 
       try {
@@ -159,10 +157,10 @@ public:
    }
 
 private:
-   void computeDependencies() override {
-      ComputeDependency(GetPass<AstContextPass>());
-      ComputeDependency(GetPass<LinkerPass>());
-      ComputeDependency(GetPass<ExprResolverPass>());
+   void ComputeDependencies() override {
+      AddDependency(GetPass<AstContextPass>());
+      AddDependency(GetPass<LinkerPass>());
+      AddDependency(GetPass<ExprResolverPass>());
    }
    bool optEnable;
 };

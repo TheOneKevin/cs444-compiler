@@ -3,7 +3,7 @@
 #include <memory>
 #include <string_view>
 
-#include "ast/DeclContext.h"
+#include "ast/AST.h"
 #include "diagnostics/Diagnostics.h"
 #include "diagnostics/Location.h"
 #include "diagnostics/SourceManager.h"
@@ -13,7 +13,6 @@
 #include "semantic/NameResolver.h"
 #include "semantic/Semantic.h"
 #include "third-party/CLI11.h"
-#include "utils/BumpAllocator.h"
 #include "utils/PassManager.h"
 #include "utils/Utils.h"
 
@@ -37,7 +36,7 @@ void Joos1WParserPass::Run() {
    // Check for non-ASCII characters
    checkNonAscii(SourceManager::getBuffer(file_));
    // Parse the file
-   BumpAllocator alloc{NewHeap()};
+   auto& alloc = NewAlloc(Lifetime::Managed);
    Joos1WParser parser{file_, alloc, &PM().Diag()};
    int result = parser.parse(tree_);
    // If no parse tree was generated, report error if not already reported
@@ -81,19 +80,8 @@ void Joos1WParserPass::checkNonAscii(std::string_view str) {
 // AstContextPass
 /* ===--------------------------------------------------------------------=== */
 
-void AstContextPass::Init() {
-   // Grab a long-living heap
-   alloc = std::make_unique<BumpAllocator>(NewHeap());
-}
-
 void AstContextPass::Run() {
-   sema = std::make_unique<ast::Semantic>(*alloc, PM().Diag());
-}
-
-AstContextPass::~AstContextPass() {
-   // FIXME(kevin): This is a really bad bug that occurs in many places
-   sema.reset();
-   alloc.reset();
+   sema = std::make_unique<ast::Semantic>(NewAlloc(Lifetime::Managed), PM().Diag());
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -122,7 +110,7 @@ AstBuilderPass::AstBuilderPass(PassManager& PM, Joos1WParserPass& dep) noexcept
       : Pass(PM), dep{dep} {}
 
 void AstBuilderPass::Init() {
-   optCheckName = PM().PO().GetExistingOption("--enable-filename-check");
+   optCheckName = PM().GetExistingOption("--enable-filename-check");
 }
 
 void AstBuilderPass::Run() {
@@ -130,7 +118,7 @@ void AstBuilderPass::Run() {
    auto& sema = GetPass<AstContextPass>().Sema();
    auto* PT = dep.Tree();
    // Create a new heap just for creating the AST
-   BumpAllocator alloc{NewHeap()};
+   auto& alloc = NewAlloc(Lifetime::Temporary);
    parsetree::ParseTreeVisitor visitor{sema, alloc};
    // Store the result in the pass
    try {
@@ -212,14 +200,11 @@ void HierarchyCheckerPass::Run() {
 // NameResolverPass
 /* ===--------------------------------------------------------------------=== */
 
-void NameResolverPass::Init() {
-   alloc = std::make_unique<BumpAllocator>(NewHeap());
-}
-
 void NameResolverPass::Run() {
    auto lu = GetPass<LinkerPass>().LinkingUnit();
    auto sema = &GetPass<AstContextPass>().Sema();
-   NR = std::make_unique<semantic::NameResolver>(*alloc, PM().Diag());
+   NR = std::make_unique<semantic::NameResolver>(NewAlloc(Lifetime::Managed),
+                                                 PM().Diag());
    NR->Init(lu, sema);
    if(PM().Diag().hasErrors()) return;
    resolveRecursive(lu);
@@ -284,12 +269,6 @@ void NameResolverPass::resolveRecursive(ast::AstNode* node) {
    }
 }
 
-NameResolverPass::~NameResolverPass() {
-   // FIXME(kevin): This is a really bad bug that occurs in many places
-   NR.reset();
-   alloc.reset();
-}
-
 /* ===--------------------------------------------------------------------=== */
 // PrintASTPass
 /* ===--------------------------------------------------------------------=== */
@@ -301,10 +280,10 @@ public:
    string_view Desc() const override { return "Print AST"; }
 
    void Init() override {
-      optDot = PM().PO().GetExistingOption("--print-dot");
-      optOutput = PM().PO().GetExistingOption("--print-output");
-      optSplit = PM().PO().GetExistingOption("--print-split");
-      optIgnoreStd = PM().PO().GetExistingOption("--print-ignore-std");
+      optDot = PM().GetExistingOption("--print-dot");
+      optOutput = PM().GetExistingOption("--print-output");
+      optSplit = PM().GetExistingOption("--print-split");
+      optIgnoreStd = PM().GetExistingOption("--print-ignore-std");
    }
 
    void Run() override {
@@ -313,7 +292,7 @@ public:
       auto* node = pass.LinkingUnit();
       if(!node) return;
       // 1b. Create a new heap to build a new AST if we're ignoring stdlib
-      BumpAllocator alloc{NewHeap()};
+      auto& alloc = NewAlloc(Lifetime::Temporary);
       ast::Semantic newSema{alloc, PM().Diag()};
       if(optIgnoreStd && optIgnoreStd->count()) {
          std::pmr::vector<ast::CompilationUnit*> cus{alloc};
@@ -368,9 +347,9 @@ public:
    }
 
 private:
-   void computeDependencies() override {
-      ComputeDependency(GetPass<LinkerPass>());
-      ComputeDependency(GetPass<AstContextPass>());
+   void ComputeDependencies() override {
+      AddDependency(GetPass<LinkerPass>());
+      AddDependency(GetPass<AstContextPass>());
    }
    CLI::Option *optDot, *optOutput, *optSplit, *optIgnoreStd;
 };

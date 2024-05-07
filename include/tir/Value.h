@@ -18,7 +18,7 @@ class User;
  * @brief The base class for all values (i.e., nodes) in the TIR.
  */
 class Value : public utils::GraphNode<User> {
-   using UseEqual = utils::detail::UseEqual<User>;
+   using UseEqual = utils::details::UseEqual<User>;
 
 public:
    Value(Context& ctx, Type* type)

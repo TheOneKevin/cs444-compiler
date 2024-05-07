@@ -33,10 +33,8 @@ struct ConstantReturnType {
  * nullptr if the expression is not a constant expression.
  */
 class ConstantTypeResolver final : private ast::ExprEvaluator<ConstantReturnType const*> {
-   using Heap = std::pmr::memory_resource;
-
 public:
-   ConstantTypeResolver(Heap* heap) : alloc{heap} {}
+   ConstantTypeResolver(BumpAllocator& alloc) : alloc{alloc} {}
 
    ConstantReturnType const* EvalList(ast::ExprNodeList& list) {
       return ast::ExprEvaluator<ConstantReturnType const*>::EvaluateList(list);
@@ -77,7 +75,7 @@ protected:
    }
 
 private:
-   mutable BumpAllocator alloc;
+   BumpAllocator& alloc;
 };
 
 } // namespace semantic
