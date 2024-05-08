@@ -19,3 +19,4 @@ docs/_static/doxygen-html
 
 # Misc files exclude
 out.dot
+*.vsix

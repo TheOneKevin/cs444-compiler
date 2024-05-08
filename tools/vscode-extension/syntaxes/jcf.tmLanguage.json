@@ -1,0 +1,88 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "jcf-tir",
+	"patterns": [
+		{
+			"include" : "#main"
+		}
+	],
+	"repository": {
+		"main": {
+			"patterns": [
+				{
+					"match": "(add|mul|sub|div|store|load|alloca|getelementptr|call|icast|cmp|ret|br)",
+					"name": "keyword.operator"
+				},
+				{
+					"match": "(:(ptr|i\\d+))",
+					"name": "support.type"
+				},
+				{
+					"match": "(type\\s+(([A-Za-z0-9_.]+)|(\\[\\d+\\s*x\\s*[^\\]]+\\])|(ptr|i\\d+)))",
+					"name": "support.type"
+				},
+				{
+					"match": "(\\^([A-Za-z0-9_.]+))",
+					"name": "entity.name.section"
+				},
+				{
+					"match": "(%([A-Za-z0-9_.]+))",
+					"name": "variable"
+				},
+				{
+					"match": "(@([A-Za-z0-9_.]+))",
+					"name": "entity.name.function"
+				},
+				{
+					"match": "([0-9]+)",
+					"name": "constant.numeric"
+				},
+				{
+					"match": "([\\.\\x{002c}\\(\\)\\x{003d}\\x{003a}\\{\\}]|to)",
+					"name": "keyword.other"
+				},
+				{
+					"begin": "(function)",
+					"beginCaptures": {
+						"1": {
+							"name": "keyword.operator"
+						}
+					},
+					"contentName": "keyword.operator",
+					"end": "(@([A-Za-z0-9_.]+))",
+					"endCaptures": {
+						"1": {
+							"name": "entity.name.function"
+						}
+					}
+				},
+				{
+					"begin": "(struct\\s+\\{)",
+					"beginCaptures": {
+						"1": {
+							"name": "keyword.other"
+						}
+					},
+					"contentName": "support.type",
+					"end": "(\\})",
+					"endCaptures": {
+						"1": {
+							"name": "keyword.other"
+						}
+					}
+				},
+				{
+					"match": "([^\\s])",
+					"name": "invalid"
+				}
+			]
+		},
+		"main__1": {
+			"patterns": []
+		},
+		"main__2": {
+			"patterns": []
+		}
+	},
+	"scopeName": "source.jcf-tir"
+}

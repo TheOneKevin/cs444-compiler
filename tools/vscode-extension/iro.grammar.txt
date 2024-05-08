@@ -1,0 +1,153 @@
+#################################################################
+## Iro
+################################################################ 
+##
+## * Press Ctrl + '+'/'-' To Zoom in
+## * Press Ctrl + S to save and recalculate... 
+## * Documents are saved to web storage.
+## * Only one save slot supported.
+## * Matches cannot span lines.
+## * Unicode chars must be defined in \u0000 to \uffff format.
+## * All matches must be contained by a single group ( ... )
+## * Look behinds not permitted, (?<= or (?<!
+## * Look forwards are permitted (?= or (?!
+## * Constants are defined as __my_const = (......)
+## * The \= format allows unescaped regular expressions
+## * Constants referenced by match \= $${__my_const}
+## * Constants can reference other constants
+## * You are free to delete all the default scopes.
+## * Twitter : ainslec , Web: http://eeyo.io/iro
+##
+################################################################
+
+name                   = jCF_IR
+file_extensions []     = ll;
+
+################################################################
+## Constants
+################################################################
+
+__INSTRUCTIONS \= (add|mul|sub|div|store|load|alloca|getelementptr|call|icast|cmp|ret|br)
+__TYPES \= (ptr|i\d+)
+__ID \= ([A-Za-z0-9_.]+)
+__ARRAY_TYPE \= (\[\d+\s*x\s*[^\]]+\])
+__NUMBER \= ([0-9]+)
+__PUNCTS \= ([\.,\(\)=:\{\}]|to)
+
+################################################################
+## Styles
+################################################################
+
+styles [] {
+
+.instruction : style {
+   color                = #81A1C1
+   textmate_scope       = keyword.operator
+}
+
+.type : style {
+   color                = #4C566A
+   italic               = true
+   textmate_scope       = support.type
+}
+
+.value : style {
+   color                = #ECEFF4
+   bold                 = true
+   textmate_scope       = variable
+}
+
+.label : style {
+   color                = #EBCB8B
+   textmate_scope       = entity.name.section
+}
+
+.global : style {
+   color                = #A3BE8C
+   textmate_scope       = entity.name.function
+}
+
+.number : style {
+   color                = #B48EAD
+   textmate_scope       = constant.numeric
+}
+
+.punctuation : style {
+   color                = #D8DEE9
+   textmate_scope       = keyword.other
+}
+
+.illegal : style {
+   color                = #D8DEE9
+   background_color     = #BF616A
+   ace_scope            = invalid
+   textmate_scope       = invalid
+   pygments_scope       = Generic.Error
+}
+
+}
+
+#################################################
+## Parse contexts
+#################################################
+
+contexts [] {
+
+main : context {
+   : pattern {
+      regex    \= $${__INSTRUCTIONS}
+      styles [] = .instruction;
+   }
+   : pattern {
+      regex    \= (:$${__TYPES})
+      styles [] = .type;
+   }
+   : pattern {
+      regex    \= (type\s+($${__ID}|$${__ARRAY_TYPE}|$${__TYPES}))
+      styles [] = .type;
+   }
+   : pattern {
+      regex    \= (\^$${__ID})
+      styles [] = .label;
+   }
+   : pattern {
+      regex    \= (%$${__ID})
+      styles [] = .value;
+   }
+   : pattern {
+      regex    \= (@$${__ID})
+      styles [] = .global;
+   }
+   : pattern {
+      regex    \= $${__NUMBER}
+      styles [] = .number;
+   }
+   : pattern {
+      regex    \= $${__PUNCTS}
+      styles [] = .punctuation;
+   }
+   : inline_push {
+      regex         \= (function)
+      default_style  = .instruction
+      styles []      = .instruction;
+      :pop {
+         regex    \= (@$${__ID})
+         styles [] = .global;
+      }
+   }
+   : inline_push {
+      regex          \= (struct\s+\{)
+      styles []       = .punctuation;
+      default_style   = .type
+      : pop {
+         regex       \= (\})
+         styles []    = .punctuation;
+      }
+   }
+   : pattern {
+      regex    \= ([^\s])
+      styles [] = .illegal;
+   }
+}
+  
+}

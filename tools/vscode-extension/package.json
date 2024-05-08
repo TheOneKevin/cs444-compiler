@@ -1,0 +1,25 @@
+{
+  "name": "jcf-lang",
+  "displayName": "j/CF Language Support",
+  "description": "Language support for various j/CF IR",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.89.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "jcf-tir",
+      "aliases": ["j/CF TIR"],
+      "extensions": [".ll"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "jcf-tir",
+      "scopeName": "source.jcf-tir",
+      "path": "./syntaxes/jcf.tmLanguage.json"
+    }]
+  }
+}
