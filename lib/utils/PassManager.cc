@@ -1,5 +1,6 @@
 #include "utils/PassManager.h"
 
+#include <algorithm>
 #include <memory>
 #include <queue>
 #include <unordered_set>
@@ -32,18 +33,19 @@ std::string GetSingleName(std::string_view name) {
    return std::string{name};
 }
 
-inline void sat_sub(unsigned& a, unsigned b) {
+inline unsigned sat_sub(unsigned& a, unsigned b) {
    if(a < b)
       a = 0;
    else
       a -= b;
+   return a;
 }
 
 class DefaultDispatcher final : public PassDispatcher {
 public:
    std::string_view Name() override { return "Default Dispatcher"; }
    bool CanDispatch(Pass&) override { return true; }
-   Generator<void*> Iterate() override { co_yield nullptr; }
+   Generator<void*> Iterate(PassManager&) override { co_yield nullptr; }
 };
 
 DefaultDispatcher DefaultDispatcherInstance{};
@@ -81,7 +83,7 @@ BumpAllocator& Pass::NewAlloc(Pass::Lifetime lifetime) {
    return allocs_.emplace_back(heap);
 }
 
-Pass& Pass::GetPass(std::string_view name) { return PM().getPass(name); }
+Pass& Pass::GetPass(std::string_view name) { return PM().FindPass(name); }
 
 /* ===--------------------------------------------------------------------=== */
 // PassManager helpers
@@ -125,12 +127,15 @@ PassManager::HeapResource& PassManager::findHeapFor(Pass* owner,
       /**
        * Conditions for reusing a resource:
        * 1) The resource is free (i.e., refcount is 0)
-       * 2) The resource is temporary and we are requesting a temporary resource
-       *    from the same pass
+       * 2) The resource is temporary/managed and we are requesting a
+       *    temporary/managed resource from the same pass.
        */
-      bool canReuse = heap.refcount == 0;
-      canReuse |= lifetime == Lifetime::Temporary && heap.lifetime == lifetime &&
-                  heap.owner == owner;
+      bool canReuse =
+            /* 1) */
+            (heap.refcount == 0) ||
+            /* 2) */
+            ((lifetime == Lifetime::Temporary || lifetime == Lifetime::Managed) &&
+             heap.lifetime == lifetime && heap.owner == owner);
       if(canReuse) {
          if(Diag().Verbose(2))
             Diag().ReportDebug() << "[HH] Reusing heap " << heap.id;
@@ -151,7 +156,7 @@ void PassManager::runPassLifeCycle(Pass& pass, int left, int right,
    }
 
    // 1. Run the pass
-   if(Diag().Verbose(2)) {
+   if(Diag().Verbose()) {
       Diag().ReportDebug() << "[=>] Running pass #" << pass.topoIdx << " \""
                            << pass.Name() << "\": " << pass.Desc();
    }
@@ -172,7 +177,8 @@ void PassManager::runPassLifeCycle(Pass& pass, int left, int right,
       }
       // 2b. Free the self-refs and temporary resources
       if(heap.lifetime == Pass::Lifetime::Managed) {
-         sat_sub(heap.refcount, 1);
+         if(sat_sub(heap.refcount, 1) == 0)
+            heap.owner->GC();
       } else {
          heap.refcount = 0;
       }
@@ -185,7 +191,8 @@ void PassManager::runPassLifeCycle(Pass& pass, int left, int right,
       for(auto& heap : heaps_) {
          if(heap.owner != succ) continue;
          if(heap.lifetime == Pass::Lifetime::Managed) {
-            sat_sub(heap.refcount, 1);
+            if(sat_sub(heap.refcount, 1) == 0)
+               heap.owner->GC();
          }
       }
    }
@@ -267,15 +274,13 @@ void PassManager::Init() {
              [](const std::unique_ptr<Pass>& a, const std::unique_ptr<Pass>& b) {
                 return a->topoIdx < b->topoIdx;
              });
-   // 5. Chunkify the passes by their dispatcher. Store the chunk
-   // indices in passChunks_.
-   for(unsigned left = 0, right = 0; right < passes_.size(); right++) {
-      if(/* Either we reached a chunk boundary */
-         passes_[right]->dispatcher != passes_[left]->dispatcher ||
-         /* Or this is the last chunk */
-         right + 1 == passes_.size()) {
-         passChunks_.emplace_back(left, right, false);
-         left = right;
+   // 6. Print the passes in topological order
+   if(Diag().Verbose()) {
+      Diag().ReportDebug() << "Passes sorted by topological order:";
+      for(auto& pass : passes_) {
+         Diag().ReportDebug()
+               << "  " << pass->topoIdx << ": " << pass->Name() << " ("
+               << pass->Desc() << ") Dispatcher: " << pass->dispatcher->Name();
       }
    }
    state_ = State::Initialized;
@@ -301,28 +306,49 @@ bool PassManager::Run() {
       }
    }
 
-   // Also enable pass by chunk
-   for(auto& chunk : passChunks_) {
-      chunk.enabled = false;
-      for(auto i = chunk.left; i <= chunk.right; i++) {
-         if(passes_[i]->enabled) {
-            chunk.enabled = true;
-            break;
+   // Chunkify the passes by their dispatcher. Store the chunk
+   // indices in passChunks_
+   {
+      passChunks_.clear();
+      PassDispatcher* curDispatcher = nullptr;
+      unsigned left = 0;
+      while(true) {
+         // First, move the left pointer to find an enabled pass
+         while(left < passes_.size() && !passes_[left]->enabled) left++;
+         curDispatcher = passes_[left]->dispatcher;
+         // Then, move the right pointer to find the end of the chunk,
+         // only considering enabled passes with the same dispatcher and
+         // skipping disabled passes
+         unsigned right = left;
+         while(right < passes_.size() &&
+               ((passes_[right]->dispatcher == curDispatcher &&
+                 passes_[right]->enabled) ||
+                !passes_[right]->enabled))
+            right++;
+         // Now we have a chunk, so store it
+         passChunks_.emplace_back(left, right - 1, curDispatcher);
+         left = right;
+         if(right == passes_.size()) break;
+      }
+      if(Diag().Verbose()) {
+         Diag().ReportDebug()
+               << "Passes chunked into " << passChunks_.size() << " chunks";
+         for(auto [left, right, dispatcher] : passChunks_) {
+            Diag().ReportDebug() << "  [" << left << ", " << right
+                                 << "] dispatched by: " << dispatcher->Name();
          }
       }
    }
 
    // Run the passes
-   for(auto [left, right, chunkEnabled] : passChunks_) {
-      if(!chunkEnabled) continue;
-      auto& dispatcher = *passes_[left]->dispatcher;
+   for(auto [left, right, dispatcher] : passChunks_) {
       auto leftIt = passes_.begin() + left;
-      auto rightIt = passes_.begin() + right + 1;
-      auto iterated = dispatcher.Iterate();
+      auto rightIt = passes_.begin() + right;
+      auto iterated = dispatcher->Iterate(*this);
       auto dIt = iterated.begin();
-      if(Diag().Verbose(2)) {
+      if(Diag().Verbose()) {
          Diag().ReportDebug() << "Running chunk [" << left << ", " << right
-                              << ") dispatched by: " << dispatcher.Name();
+                              << "] dispatched by: " << dispatcher->Name();
       }
       /**
        * Take care to handle the INTER-chunk resource dependencies.
@@ -340,12 +366,15 @@ bool PassManager::Run() {
           */
          for(auto it = leftIt; it != rightIt; it++) {
             auto& pass = *it->get();
-            if(pass.enabled)
-               runPassLifeCycle(pass, left, right, dIt == iterated.end());
+            if(!pass.enabled) continue;
+            runPassLifeCycle(pass, left, right, dIt == iterated.end());
+            if(Diag().hasErrors()) return false;
          }
+         for(auto it = leftIt; it != rightIt; it++)
+            it->get()->state = Pass::State::Initialized;
       }
    }
-
+   state_ = State::Cleanup;
    return true;
 }
 

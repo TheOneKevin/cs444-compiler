@@ -1,24 +1,23 @@
-#include <unordered_set>
-
-#include "../IRContextPass.h"
 #include "DominatorTree.h"
+
 #include "diagnostics/Diagnostics.h"
 #include "tir/BasicBlock.h"
 #include "tir/Constant.h"
 #include "tir/Instructions.h"
+#include "utils/BumpAllocator.h"
 #include "utils/PassManager.h"
 
 using std::string_view;
-using utils::Pass;
-using utils::PassManager;
 using DE = diagnostics::DiagnosticEngine;
 using namespace tir;
+using namespace analysis;
 
 /* ===--------------------------------------------------------------------=== */
 // DominatorTree implementation
 /* ===--------------------------------------------------------------------=== */
 
-DominatorTree::DominatorTree(Function* func) : func(func) {
+DominatorTree::DominatorTree(tir::Function* func, BumpAllocator& alloc)
+      : func{func}, alloc{alloc} {
    computePostorderIdx(func);
    computeDominators(func);
    computeFrontiers(func);
@@ -82,9 +81,10 @@ void DominatorTree::computeDominators(Function* func) {
    }
 }
 
-BasicBlock* DominatorTree::intersect(BasicBlock* b1, BasicBlock* b2) {
-   BasicBlock* finger1 = b1;
-   BasicBlock* finger2 = b2;
+tir::BasicBlock* DominatorTree::intersect(tir::BasicBlock* b1,
+                                          tir::BasicBlock* b2) {
+   auto* finger1 = b1;
+   auto* finger2 = b2;
    while(finger1 != finger2) {
       while(poidx[finger1] > poidx[finger2]) finger1 = doms[finger1];
       while(poidx[finger2] > poidx[finger1]) finger2 = doms[finger2];
@@ -110,10 +110,4 @@ void DominatorTree::computeFrontiers(Function* func) {
    }
 }
 
-/* ===--------------------------------------------------------------------=== */
-// DT pass wrapper
-/* ===--------------------------------------------------------------------=== */
-
-class DominatorTreePass : public Pass {
-
-};
+REGISTER_PASS_NS(passes, DominatorTreeWrapper);

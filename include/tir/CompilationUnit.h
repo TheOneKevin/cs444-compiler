@@ -102,6 +102,7 @@ public:
 
    /// @brief Get the context associated with this compilation unit
    auto& ctx() { return ctx_; }
+   auto const& ctx() const { return ctx_; }
 
    /// @brief Filters through the global objects and yields just the variables
    utils::Generator<GlobalVariable*> global_variables() const {

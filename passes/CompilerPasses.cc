@@ -9,7 +9,6 @@
 #include "diagnostics/SourceManager.h"
 #include "grammar/Joos1WGrammar.h"
 #include "parsetree/ParseTreeVisitor.h"
-#include "semantic/HierarchyChecker.h"
 #include "semantic/NameResolver.h"
 #include "semantic/Semantic.h"
 #include "third-party/CLI11.h"
@@ -20,13 +19,13 @@ using std::string_view;
 using utils::Pass;
 using utils::PassManager;
 
-namespace joos1 {
+namespace passes::joos1 {
 
 /* ===--------------------------------------------------------------------=== */
-// Joos1WParserPass
+// Parser
 /* ===--------------------------------------------------------------------=== */
 
-void Joos1WParserPass::Run() {
+void Parser::Run() {
    // Print the file being parsed if verbose
    if(PM().Diag().Verbose()) {
       auto os = PM().Diag().ReportDebug();
@@ -56,7 +55,7 @@ void Joos1WParserPass::Run() {
    }
 }
 
-bool Joos1WParserPass::isLiteralTypeValid(parsetree::Node* node) {
+bool Parser::isLiteralTypeValid(parsetree::Node* node) {
    if(node == nullptr) return true;
    if(node->get_node_type() == parsetree::Node::Type::Literal)
       return static_cast<parsetree::Literal*>(node)->isValid();
@@ -66,7 +65,7 @@ bool Joos1WParserPass::isLiteralTypeValid(parsetree::Node* node) {
    return true;
 }
 
-void Joos1WParserPass::checkNonAscii(std::string_view str) {
+void Parser::checkNonAscii(std::string_view str) {
    for(unsigned i = 0; i < str.length(); i++) {
       if(static_cast<unsigned char>(str[i]) > 127) {
          PM().Diag().ReportError(SourceRange{file_})
@@ -80,7 +79,7 @@ void Joos1WParserPass::checkNonAscii(std::string_view str) {
 // AstContextPass
 /* ===--------------------------------------------------------------------=== */
 
-void AstContextPass::Run() {
+void AstContext::Run() {
    sema = std::make_unique<ast::Semantic>(NewAlloc(Lifetime::Managed), PM().Diag());
 }
 
@@ -106,16 +105,16 @@ static inline void mark_node(parsetree::Node* node) {
    node->mark();
 }
 
-AstBuilderPass::AstBuilderPass(PassManager& PM, Joos1WParserPass& dep) noexcept
+AstBuilder::AstBuilder(PassManager& PM, Parser& dep) noexcept
       : Pass(PM), dep{dep} {}
 
-void AstBuilderPass::Init() {
+void AstBuilder::Init() {
    optCheckName = PM().GetExistingOption("--enable-filename-check");
 }
 
-void AstBuilderPass::Run() {
+void AstBuilder::Run() {
    // Get the parse tree and the semantic analysis
-   auto& sema = GetPass<AstContextPass>().Sema();
+   auto& sema = GetPass<AstContext>().Sema();
    auto* PT = dep.Tree();
    // Create a new heap just for creating the AST
    auto& alloc = NewAlloc(Lifetime::Temporary);
@@ -154,128 +153,26 @@ void AstBuilderPass::Run() {
 }
 
 /* ===--------------------------------------------------------------------=== */
-// LinkerPass
+// Linker
 /* ===--------------------------------------------------------------------=== */
 
-void LinkerPass::Run() {
+void Linker::Run() {
    std::pmr::vector<ast::CompilationUnit*> cus{};
    // Get the semantic analysis
-   auto& sema = GetPass<AstContextPass>().Sema();
+   auto& sema = GetPass<AstContext>().Sema();
    // Create the linking unit
-   for(auto* pass : GetPasses<AstBuilderPass>())
+   for(auto* pass : GetPasses<AstBuilder>())
       cus.push_back(pass->CompilationUnit());
    lu_ = sema.BuildLinkingUnit(cus);
 }
 
 /* ===--------------------------------------------------------------------=== */
-// HierarchyCheckerPass
+// PrintAST
 /* ===--------------------------------------------------------------------=== */
 
-void HierarchyCheckerPass::Run() {
-   auto lu = GetPass<LinkerPass>().LinkingUnit();
-   checker.Check(lu);
-   for(auto* cu : lu->compliationUnits()) {
-      auto* classDecl = dyn_cast_or_null<ast::ClassDecl>(cu->body());
-      if(!classDecl) continue;
-      // Check for each class in the LU, the super classes have a default ctor
-      for(auto* super : classDecl->superClasses()) {
-         if(!super) continue;
-         if(!dyn_cast_or_null<ast::ClassDecl>(super->decl())) continue;
-         if(cast<ast::ClassDecl>(super->decl())->hasDefaultCtor()) continue;
-         PM().Diag().ReportError(super->location())
-               << "super class "
-               << (super->decl()->hasCanonicalName()
-                         ? super->decl()->getCanonicalName()
-                         : super->decl()->name())
-               << " of "
-               << (classDecl->hasCanonicalName() ? classDecl->getCanonicalName()
-                                                 : classDecl->name())
-               << " does not have a default constructor";
-         break;
-      }
-   }
-}
-
-/* ===--------------------------------------------------------------------=== */
-// NameResolverPass
-/* ===--------------------------------------------------------------------=== */
-
-void NameResolverPass::Run() {
-   auto lu = GetPass<LinkerPass>().LinkingUnit();
-   auto sema = &GetPass<AstContextPass>().Sema();
-   NR = std::make_unique<semantic::NameResolver>(NewAlloc(Lifetime::Managed),
-                                                 PM().Diag());
-   NR->Init(lu, sema);
-   if(PM().Diag().hasErrors()) return;
-   resolveRecursive(lu);
-}
-
-void NameResolverPass::replaceObjectClass(ast::AstNode* node) {
-   auto decl = dyn_cast_or_null<ast::ClassDecl*>(node);
-   if(!decl) return;
-   // Check if the class is Object
-   if(decl != NR->GetJavaLang().Object) return;
-   // Go through the superclasses and replace Object with nullptr
-   for(int i = 0; i < 2; i++) {
-      auto super = decl->superClasses()[i];
-      if(!super) continue;
-      // If the superclass is not resolved, then we should just bail out
-      if(!PM().Diag().hasErrors())
-         assert(super->isResolved() && "Superclass should be resolved");
-      else
-         continue;
-      // Do not allow Object to extend Object
-      if(super->decl() == NR->GetJavaLang().Object)
-         decl->mut_superClasses()[i] = nullptr;
-   }
-}
-
-void NameResolverPass::resolveExpr(ast::Expr* expr) {
-   if(!expr) return;
-   for(auto node : expr->mut_nodes()) {
-      auto tyNode = dyn_cast<ast::exprnode::TypeNode>(node);
-      if(!tyNode) continue;
-      if(tyNode->isTypeResolved()) continue;
-      tyNode->resolveUnderlyingType(*NR);
-   }
-}
-
-void NameResolverPass::resolveRecursive(ast::AstNode* node) {
-   assert(node && "Node must not be null here!");
-   for(auto child : node->mut_children()) {
-      if(!child) continue;
-      if(auto cu = dyn_cast<ast::CompilationUnit*>(child)) {
-         // If the CU has no body, then we can skip to the next CU :)
-         if(!cu->body()) return;
-         // Resolve the current compilation unit's body
-         NR->BeginContext(cu);
-         resolveRecursive(cu->mut_body());
-         replaceObjectClass(cu->mut_body());
-         NR->EndContext();
-      } else if(auto ty = dyn_cast<ast::Type*>(child)) {
-         if(ty->isInvalid()) continue;
-         // If the type is not resolved, then we should resolve it
-         if(!ty->isResolved()) ty->resolve(*NR);
-      } else {
-         // Resolve any Type in expressions
-         if(auto decl = dyn_cast<ast::TypedDecl*>(child)) {
-            resolveExpr(decl->mut_init());
-         } else if(auto stmt = dyn_cast<ast::Stmt*>(child)) {
-            for(auto expr : stmt->mut_exprs()) resolveExpr(expr);
-         }
-         // This is a generic node, just resolve its children
-         resolveRecursive(child);
-      }
-   }
-}
-
-/* ===--------------------------------------------------------------------=== */
-// PrintASTPass
-/* ===--------------------------------------------------------------------=== */
-
-class PrintASTPass final : public Pass {
+class PrintAST final : public Pass {
 public:
-   PrintASTPass(PassManager& PM) noexcept : Pass(PM) {}
+   PrintAST(PassManager& PM) noexcept : Pass(PM) {}
    string_view Name() const override { return "print-ast"; }
    string_view Desc() const override { return "Print AST"; }
 
@@ -288,7 +185,7 @@ public:
 
    void Run() override {
       // 1a. Grab the AST node
-      auto& pass = GetPass<LinkerPass>();
+      auto& pass = GetPass<Linker>();
       auto* node = pass.LinkingUnit();
       if(!node) return;
       // 1b. Create a new heap to build a new AST if we're ignoring stdlib
@@ -348,8 +245,8 @@ public:
 
 private:
    void ComputeDependencies() override {
-      AddDependency(GetPass<LinkerPass>());
-      AddDependency(GetPass<AstContextPass>());
+      AddDependency(GetPass<Linker>());
+      AddDependency(GetPass<AstContext>());
    }
    CLI::Option *optDot, *optOutput, *optSplit, *optIgnoreStd;
 };
@@ -360,20 +257,16 @@ private:
 // Register the passes
 /* ===--------------------------------------------------------------------=== */
 
-REGISTER_PASS_NS(joos1, AstContextPass);
-REGISTER_PASS_NS(joos1, LinkerPass);
-REGISTER_PASS_NS(joos1, NameResolverPass);
-REGISTER_PASS_NS(joos1, HierarchyCheckerPass);
-REGISTER_PASS_NS(joos1, PrintASTPass);
+REGISTER_PASS_NS(passes::joos1, AstContext);
+REGISTER_PASS_NS(passes::joos1, Linker);
+REGISTER_PASS_NS(passes::joos1, PrintAST);
 
 Pass& NewJoos1WParserPass(PassManager& PM, SourceFile file, Pass* prev) {
-   using namespace joos1;
-   return PM.AddPass<Joos1WParserPass>(file, prev);
+   return PM.AddPass<passes::joos1::Parser>(file, prev);
 }
 
 Pass& NewAstBuilderPass(PassManager& PM, Pass* depends) {
-   using namespace joos1;
-   // "depends" must be a Joos1WParserPass
-   auto* p = cast<Joos1WParserPass*>(depends);
-   return PM.AddPass<AstBuilderPass>(*p);
+   // "depends" must be a Parser
+   auto* p = cast<passes::joos1::Parser*>(depends);
+   return PM.AddPass<passes::joos1::AstBuilder>(*p);
 }

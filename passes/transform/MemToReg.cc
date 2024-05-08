@@ -1,17 +1,16 @@
-#include <queue>
-#include <stack>
+#include <deque>
 #include <unordered_set>
 
-#include "../IRContextPass.h"
+#include "../IRPasses.h"
 #include "../analysis/DominatorTree.h"
 #include "diagnostics/Diagnostics.h"
 #include "tir/BasicBlock.h"
 #include "tir/Constant.h"
 #include "tir/Instructions.h"
+#include "utils/BumpAllocator.h"
 #include "utils/PassManager.h"
 
 using std::string_view;
-using utils::Pass;
 using utils::PassManager;
 using DE = diagnostics::DiagnosticEngine;
 using namespace tir;
@@ -20,7 +19,7 @@ using namespace tir;
 namespace {
 
 /* ===--------------------------------------------------------------------=== */
-// Class definitions
+// HoistAlloca pass definition
 /* ===--------------------------------------------------------------------=== */
 
 /**
@@ -31,74 +30,69 @@ namespace {
  * URL: https://pages.cs.wisc.edu/~fischer/cs701.f14/ssa.pdf
  * Also referenced: https://c9x.me/compile/bib/braun13cc.pdf
  */
-class HoistAlloca {
+class HoistAlloca final {
 public:
-   HoistAlloca(Function* func, DE& diag) : func{func}, DT{nullptr} {
-      // 1. Print out the dominator tree
-      if(diag.Verbose(2)) {
-         auto dbg = diag.ReportDebug();
-         DT->print(dbg.get());
-      }
-      // 2. Place PHI nodes for each alloca and record the uses
-      for(auto alloca : func->allocas()) {
-         if(canAllocaBeReplaced(alloca)) {
-            placePHINodes(alloca);
-            for(auto* user : alloca->users()) {
-               if(auto* store = dyn_cast<StoreInst>(user)) {
-                  storesToRewrite.insert(store);
-               } else if(auto* load = dyn_cast<LoadInst>(user)) {
-                  loadsToRewrite.insert(load);
-               }
-            }
-         }
-      }
-      // 3. Print out the alloca and phi nodes
-      if(diag.Verbose()) {
-         print(diag.ReportDebug().get());
-      }
-      // 4. Replace the uses of the alloca with the phi nodes
-      replaceUses(func->getEntryBlock());
-      // 5. Do DCE on the stores and loads
-      for(auto store : storesToRewrite) {
-         assert(store->uses().size() == 0);
-         store->eraseFromParent();
-      }
-      for(auto load : loadsToRewrite) {
-         assert(load->uses().size() == 0);
-         load->eraseFromParent();
-      }
-   }
-
-   std::ostream& print(std::ostream& os) const {
-      os << "*** PHI node insertion points ***\n";
-      for(auto [phi, alloca] : phiAllocaMap) {
-         os << "  ";
-         phi->printName(os) << " -> ";
-         alloca->printName(os) << std::endl;
-      }
-      return os;
-   }
-
-private:
-   Function* func;
-   DominatorTree* DT;
-   // Stores and loads to rewrite
-   std::unordered_set<Instruction*> storesToRewrite;
-   std::unordered_set<Instruction*> loadsToRewrite;
-   // Phi -> Alloca map
-   std::unordered_map<PhiNode*, AllocaInst*> phiAllocaMap;
-   // Variable stack
-   std::unordered_map<Value*, std::stack<Value*>> varStack;
-
-private:
+   HoistAlloca(analysis::DominatorTree*, tir::Function*,
+               diagnostics::DiagnosticEngine&, BumpAllocator&) noexcept;
+   std::ostream& print(std::ostream& os) const;
    void placePHINodes(AllocaInst* alloca);
    bool canAllocaBeReplaced(AllocaInst* alloca);
    void replaceUses(BasicBlock* alloca);
+
+public:
+   analysis::DominatorTree* DT;
+   BumpAllocator& alloc;
+   // Stores and loads to rewrite
+   std::pmr::unordered_set<Instruction*> storesToRewrite{alloc};
+   std::pmr::unordered_set<Instruction*> loadsToRewrite{alloc};
+   // Phi -> Alloca map
+   std::pmr::unordered_map<PhiNode*, AllocaInst*> phiAllocaMap{alloc};
+   // Variable stack
+   std::pmr::unordered_map<Value*, std::pmr::vector<Value*>> varStack{alloc};
 };
 
 /* ===--------------------------------------------------------------------=== */
 // HoistAlloca implementation
 /* ===--------------------------------------------------------------------=== */
+
+HoistAlloca::HoistAlloca(analysis::DominatorTree* DT, tir::Function* Fn,
+                         diagnostics::DiagnosticEngine& Diag,
+                         BumpAllocator& Alloc) noexcept
+      : DT{DT}, alloc{Alloc} {
+   // 1. Print out the dominator tree
+   if(Diag.Verbose(2)) {
+      auto dbg = Diag.ReportDebug();
+      DT->print(dbg.get());
+   }
+   // 2. Place PHI nodes for each alloca and record the uses
+   for(auto alloca : Fn->allocas()) {
+      if(canAllocaBeReplaced(alloca)) {
+         placePHINodes(alloca);
+         for(auto* user : alloca->users()) {
+            if(auto* store = dyn_cast<StoreInst>(user)) {
+               storesToRewrite.insert(store);
+            } else if(auto* load = dyn_cast<LoadInst>(user)) {
+               loadsToRewrite.insert(load);
+            }
+         }
+      }
+   }
+   // 3. Print out the alloca and phi nodes
+   if(Diag.Verbose()) {
+      print(Diag.ReportDebug().get());
+   }
+   // 4. Replace the uses of the alloca with the phi nodes
+   replaceUses(Fn->getEntryBlock());
+   // 5. Do DCE on the stores and loads
+   for(auto store : storesToRewrite) {
+      assert(store->uses().size() == 0);
+      store->eraseFromParent();
+   }
+   for(auto load : loadsToRewrite) {
+      assert(load->uses().size() == 0);
+      load->eraseFromParent();
+   }
+}
 
 bool HoistAlloca::canAllocaBeReplaced(AllocaInst* alloca) {
    // 1. The allocas must be a scalar type
@@ -113,19 +107,19 @@ bool HoistAlloca::canAllocaBeReplaced(AllocaInst* alloca) {
 
 // Ref from paper, Figure 4. Placement of PHI-functions
 void HoistAlloca::placePHINodes(AllocaInst* V) {
-   std::unordered_set<BasicBlock*> DFPlus;
-   std::unordered_set<BasicBlock*> Work;
-   std::queue<BasicBlock*> W;
+   std::pmr::unordered_set<BasicBlock*> DFPlus{alloc};
+   std::pmr::unordered_set<BasicBlock*> Work{alloc};
+   std::pmr::deque<BasicBlock*> W{alloc};
    // NOTE: A(V) = set of stores to V
    for(auto user : V->users()) {
       if(auto X = dyn_cast<StoreInst>(user)) {
          Work.insert(X->parent());
-         W.push(X->parent());
+         W.push_back(X->parent());
       }
    }
    while(!W.empty()) {
       BasicBlock* X = W.front();
-      W.pop();
+      W.pop_front();
       for(auto Y : DT->DF(X)) {
          if(DFPlus.contains(Y)) continue;
          auto phi = PhiNode::Create(V->ctx(), V->allocatedType(), {}, {});
@@ -135,7 +129,7 @@ void HoistAlloca::placePHINodes(AllocaInst* V) {
          DFPlus.insert(Y);
          if(!Work.contains(Y)) {
             Work.insert(Y);
-            W.push(Y);
+            W.push_back(Y);
          }
       }
    }
@@ -143,68 +137,72 @@ void HoistAlloca::placePHINodes(AllocaInst* V) {
 
 // Ref from paper, Figure 5. Construction of SSA form
 void HoistAlloca::replaceUses(BasicBlock* X) {
-   std::vector<Value*> pushed_vars;
+   std::pmr::vector<Value*> pushed_vars{alloc};
    for(auto phi : X->phis()) {
       auto alloca = phiAllocaMap[phi];
       pushed_vars.push_back(alloca);
-      varStack[alloca].push(phi);
+      varStack[alloca].push_back(phi);
    }
    for(auto inst : *X) {
       // If inst is an alloca, push it onto the stack and mark it as undef
       // and DO NOT add it to varStack[] (i.e., do not pop)
       if(auto alloca = dyn_cast<AllocaInst>(inst)) {
-         varStack[alloca].push(
+         varStack[alloca].push_back(
                Undef::Create(alloca->ctx(), alloca->allocatedType()));
          continue;
       }
       if(storesToRewrite.contains(inst)) { // "LHS"
          auto alloca = cast<AllocaInst>(inst->getChild(1));
          pushed_vars.push_back(alloca);
-         varStack[alloca].push(inst->getChild(0));
+         varStack[alloca].push_back(inst->getChild(0));
       } else if(loadsToRewrite.contains(inst)) { // "RHS"
          auto alloca = cast<AllocaInst>(inst->getChild(0));
-         auto newVar = varStack[alloca].top();
+         auto newVar = varStack[alloca].back();
          inst->replaceAllUsesWith(newVar);
       }
    }
    for(auto Y : X->successors()) {
       for(auto phi : Y->phis()) {
-         phi->replaceOrAddOperand(X, varStack[phiAllocaMap[phi]].top());
+         phi->replaceOrAddOperand(X, varStack[phiAllocaMap[phi]].back());
       }
    }
    for(auto Y : DT->getChildren(X)) {
       replaceUses(Y);
    }
-   for(auto V : pushed_vars) varStack[V].pop();
+   for(auto V : pushed_vars) varStack[V].pop_back();
 }
 
-} // namespace
-
-/* ===--------------------------------------------------------------------=== */
-// MemToReg pass wrapper
-/* ===--------------------------------------------------------------------=== */
-
-class MemToReg final : public Pass {
-public:
-   MemToReg(PassManager& PM) noexcept : Pass(PM) {}
-   void Run() override {
-      tir::CompilationUnit& CU = GetPass<IRContextPass>().CU();
-      for(auto func : CU.functions()) {
-         if(!func->hasBody() || !func->getEntryBlock()) continue;
-         if(PM().Diag().Verbose()) {
-            PM().Diag().ReportDebug()
-                  << "*** Running on function: " << func->name() << " ***";
-         }
-         HoistAlloca hoister{func, PM().Diag()};
-      }
+std::ostream& HoistAlloca::print(std::ostream& os) const {
+   os << "*** PHI node insertion points ***\n";
+   for(auto [phi, alloca] : phiAllocaMap) {
+      os << "  ";
+      phi->printName(os) << " -> ";
+      alloca->printName(os) << std::endl;
    }
+   return os;
+}
+
+/* ===--------------------------------------------------------------------=== */
+// MemToReg pass wrapper around HoistAlloca
+/* ===--------------------------------------------------------------------=== */
+
+class MemToReg final : public passes::Function {
+public:
+   MemToReg(PassManager& PM) noexcept : passes::Function(PM) {}
    string_view Name() const override { return "mem2reg"; }
    string_view Desc() const override { return "Promote memory to register"; }
 
 private:
-   void ComputeDependencies() override {
-      AddDependency(GetPass<IRContextPass>());
+   void runOnFunction(tir::Function* Fn) override {
+      assert(Fn->getEntryBlock());
+      auto DT = &GetPass<passes::DominatorTreeWrapper>().DT();
+      HoistAlloca{DT, Fn, PM().Diag(), NewAlloc(Lifetime::Temporary)};
+   }
+   void ComputeMoreDependencies() override {
+      AddDependency(GetPass<passes::DominatorTreeWrapper>());
    }
 };
+
+} // namespace
 
 REGISTER_PASS(MemToReg);

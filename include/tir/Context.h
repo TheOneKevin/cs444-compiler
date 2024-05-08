@@ -45,7 +45,7 @@ public:
    Context& operator=(const Context&) = delete;
    Context& operator=(Context&&) = delete;
 
-   BumpAllocator& alloc() { return alloc_; }
+   BumpAllocator& alloc() const { return alloc_; }
    ContextPImpl& pimpl() { return *pimpl_; }
    ContextPImpl const& pimpl() const { return *pimpl_; }
    unsigned getNextValueID() { return value_counter++; }

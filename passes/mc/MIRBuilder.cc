@@ -1,6 +1,6 @@
 #include "mc/InstSelectNode.h"
 #include "mc/MCFunction.h"
-#include "../IRContextPass.h"
+#include "../IRPasses.h"
 #include "tir/Constant.h"
 #include "utils/BumpAllocator.h"
 #include "utils/PassManager.h"
@@ -24,7 +24,7 @@ public:
       dumpDot = PM().GetExistingOption("--debug-mc")->count();
    }
    void Run() override {
-      auto& CU = GetPass<IRContextPass>().CU();
+      auto& CU = GetPass<passes::IRContext>().CU();
       for(auto* F : CU.functions()) {
          if(!F->hasBody()) continue;
          buildMCFunction(F);
@@ -37,14 +37,14 @@ public:
 
 private:
    void ComputeDependencies() override {
-      AddDependency(GetPass<IRContextPass>());
+      AddDependency(GetPass<passes::IRContext>());
    }
 
 private:
    // Build the DAG for a given TIR function
    void buildMCFunction(tir::Function const* F);
    auto& alloc() {
-      if(!alloc_) alloc_ = &GetPass<IRContextPass>().Alloc();
+      if(!alloc_) alloc_ = &GetPass<passes::IRContext>().Alloc();
       return *alloc_;
    }
 
@@ -93,7 +93,7 @@ REGISTER_PASS(MIRBuilder);
 void MIRBuilder::buildMCFunction(tir::Function const* F) {
    using namespace mc;
    using ISN = mc::InstSelectNode;
-   auto const& TD = GetPass<IRContextPass>().TD();
+   auto const& TD = GetPass<passes::IRContext>().TD();
    // Allocate the MCFunction to store the DAGs
    void* buf = alloc().allocate_bytes(sizeof(MCFunction), alignof(MCFunction));
    MCF = new(buf) MCFunction{alloc(), F->ctx().TI(), TD};
@@ -159,7 +159,7 @@ void MIRBuilder::buildMCFunction(tir::Function const* F) {
          }
       }
    }
-   GetPass<IRContextPass>().AddMIRFunction(F, MCF);
+   GetPass<passes::IRContext>().AddMIRFunction(F, MCF);
 }
 
 /* ===--------------------------------------------------------------------=== */

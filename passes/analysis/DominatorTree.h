@@ -1,6 +1,13 @@
 #pragma once
 
+#include <memory>
+#include <unordered_set>
+
+#include "../IRPasses.h"
 #include "tir/TIR.h"
+#include "utils/BumpAllocator.h"
+
+namespace analysis {
 
 /**
  * @brief A class to compute and store the dominator tree and
@@ -8,9 +15,9 @@
  * Citation: A Simple, Fast Dominance Algorithm
  * By: Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
  */
-class DominatorTree {
+class DominatorTree final {
 public:
-   DominatorTree(tir::Function*);
+   DominatorTree(tir::Function*, BumpAllocator&);
    // Print the dominator tree and dominance frontiers
    std::ostream& print(std::ostream& os) const;
    // Get the dominance frontier of block b
@@ -24,14 +31,39 @@ public:
 
 private:
    tir::Function* func;
-   std::unordered_map<tir::BasicBlock*, tir::BasicBlock*> doms;
-   std::unordered_map<tir::BasicBlock*, int> poidx;
-   std::unordered_map<tir::BasicBlock*, std::unordered_set<tir::BasicBlock*>>
-         frontiers;
-   std::unordered_map<tir::BasicBlock*, std::vector<tir::BasicBlock*>> domt;
+   BumpAllocator& alloc;
+   std::pmr::unordered_map<tir::BasicBlock*, tir::BasicBlock*> doms{alloc};
+   std::pmr::unordered_map<tir::BasicBlock*, int> poidx{alloc};
+   std::pmr::unordered_map<tir::BasicBlock*,
+                           std::pmr::unordered_set<tir::BasicBlock*>>
+         frontiers{alloc};
+   std::pmr::unordered_map<tir::BasicBlock*, std::pmr::vector<tir::BasicBlock*>>
+         domt{alloc};
 
    void computePostorderIdx(tir::Function* func);
    void computeDominators(tir::Function* func);
    tir::BasicBlock* intersect(tir::BasicBlock* b1, tir::BasicBlock* b2);
    void computeFrontiers(tir::Function* func);
 };
+
+} // namespace analysis
+
+namespace passes {
+
+class DominatorTreeWrapper final : public Function {
+public:
+   DominatorTreeWrapper(utils::PassManager& PM) noexcept : passes::Function(PM) {}
+   std::string_view Name() const override { return "dt"; }
+   std::string_view Desc() const override { return "Dominator tree analysis"; }
+   auto& DT() { return *dt_; }
+   void GC() override { dt_ = nullptr; }
+
+private:
+   void runOnFunction(tir::Function* Fn) override {
+      auto& alloc = NewAlloc(Lifetime::Managed);
+      dt_ = std::make_unique<analysis::DominatorTree>(Fn, alloc);
+   }
+   std::unique_ptr<analysis::DominatorTree> dt_;
+};
+
+} // namespace passes

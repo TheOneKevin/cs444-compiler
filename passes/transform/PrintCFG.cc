@@ -1,19 +1,20 @@
-#include "../IRContextPass.h"
+#include "../IRPasses.h"
 #include "tir/Constant.h"
 #include "utils/PassManager.h"
 
 using std::string_view;
-using utils::Pass;
 using utils::PassManager;
 
-class PrintCFG final : public Pass {
+namespace {
+
+class PrintCFG final : public passes::CompilationUnit {
 public:
-   PrintCFG(PassManager& PM) noexcept : Pass(PM) {}
-   void Run() override {
-      tir::CompilationUnit& CU = GetPass<IRContextPass>().CU();
-      for(auto fn : CU.functions()) {
+   PrintCFG(PassManager& PM) noexcept : passes::CompilationUnit(PM) {}
+   void runOnCompilationUnit(tir::CompilationUnit* CU) override {
+      for(auto fn : CU->functions()) {
          if(!fn->hasBody()) continue;
-         std::ofstream file(std::to_string(number) + "." + std::string{fn->name()} + ".dot");
+         std::ofstream file(std::to_string(number) + "." +
+                            std::string{fn->name()} + ".dot");
          fn->printDot(file);
          file.close();
       }
@@ -23,10 +24,9 @@ public:
    string_view Desc() const override { return "Dump CFG DOT (per function)"; }
 
 private:
-   void ComputeDependencies() override {
-      AddDependency(GetPass<IRContextPass>());
-   }
    int number = 0;
 };
+
+} // namespace
 
 REGISTER_PASS(PrintCFG);

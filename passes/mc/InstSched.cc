@@ -1,8 +1,6 @@
-#include <queue>
-
 #include "mc/InstSelectNode.h"
 #include "mc/MCFunction.h"
-#include "../IRContextPass.h"
+#include "../IRPasses.h"
 #include "utils/PassManager.h"
 
 using std::string_view;
@@ -30,7 +28,7 @@ public:
 private:
    void runOnFunction(MCFunction* F);
    void ComputeDependencies() override {
-      AddDependency(GetPass<IRContextPass>());
+      AddDependency(GetPass<passes::IRContext>());
       AddDependency(GetPass("isel"));
    }
 
@@ -56,7 +54,7 @@ struct std::hash<Edge> {
 };
 
 void InstSched::Run() {
-   auto& IRCP = GetPass<IRContextPass>();
+   auto& IRCP = GetPass<passes::IRContext>();
    for(auto* F : IRCP.CU().functions()) {
       if(!F->hasBody()) continue;
       auto* MCF = IRCP.FindMIRFunction(F);

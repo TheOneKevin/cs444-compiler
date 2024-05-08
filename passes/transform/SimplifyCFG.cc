@@ -1,12 +1,11 @@
 #include <unordered_set>
 
-#include "../IRContextPass.h"
+#include "../IRPasses.h"
 #include "tir/BasicBlock.h"
 #include "tir/Instructions.h"
 #include "utils/PassManager.h"
 
 using std::string_view;
-using utils::Pass;
 using utils::PassManager;
 
 namespace {
@@ -109,49 +108,43 @@ bool replaceSucessorInOneBranch(tir::BasicBlock& bb) {
    return changed;
 }
 
-} // namespace
-
 /* ===--------------------------------------------------------------------=== */
 // SimplifyCFG pass infrastructure
 /* ===--------------------------------------------------------------------=== */
 
-class SimplifyCFG final : public Pass {
+class SimplifyCFG final : public passes::Function {
 public:
-   SimplifyCFG(PassManager& PM) noexcept : Pass(PM) {}
-   void Run() override {
-      tir::CompilationUnit& CU = GetPass<IRContextPass>().CU();
-      std::vector<tir::BasicBlock*> toRemove;
-      for(auto func : CU.functions()) {
-         if(!func->hasBody()) continue;
+   SimplifyCFG(PassManager& PM) noexcept : passes::Function(PM) {}
+   void runOnFunction(tir::Function* func) override {
+      std::pmr::vector<tir::BasicBlock*> toRemove{NewAlloc(Lifetime::Temporary)};
+      if(PM().Diag().Verbose()) {
+         PM().Diag().ReportDebug()
+               << "*** Running SimplifyCFG on function: " << func->name()
+               << " ***";
+      }
+      // 1. Iteratively simplify the CFG
+      bool changed = false;
+      do {
+         changed = false;
+         visited.clear();
+         if(func->getEntryBlock()) {
+            changed = visitBB(*func->getEntryBlock());
+         }
+      } while(changed);
+      // 2. Record all the basic blocks that were not visited
+      toRemove.clear();
+      for(auto bb : func->body()) {
+         if(visited.count(bb)) continue;
+         toRemove.push_back(bb);
+      }
+      // 3. Remove the basic blocks that are unreachable
+      for(auto bb : toRemove) {
          if(PM().Diag().Verbose()) {
-            PM().Diag().ReportDebug()
-                  << "*** Running SimplifyCFG on function: " << func->name()
-                  << " ***";
+            auto dbg = PM().Diag().ReportDebug();
+            dbg << "Removing BB: ";
+            bb->printName(dbg.get());
          }
-         // 1. Iteratively simplify the CFG
-         bool changed = false;
-         do {
-            changed = false;
-            visited.clear();
-            if(func->getEntryBlock()) {
-               changed = visitBB(*func->getEntryBlock());
-            }
-         } while(changed);
-         // 2. Record all the basic blocks that were not visited
-         toRemove.clear();
-         for(auto bb : func->body()) {
-            if(visited.count(bb)) continue;
-            toRemove.push_back(bb);
-         }
-         // 3. Remove the basic blocks that are unreachable
-         for(auto bb : toRemove) {
-            if(PM().Diag().Verbose()) {
-               auto dbg = PM().Diag().ReportDebug();
-               dbg << "Removing BB: ";
-               bb->printName(dbg.get());
-            }
-            bb->eraseFromParent();
-         }
+         bb->eraseFromParent();
       }
    }
    string_view Name() const override { return "simplifycfg"; }
@@ -175,10 +168,9 @@ private:
    }
 
 private:
-   void ComputeDependencies() override {
-      AddDependency(GetPass<IRContextPass>());
-   }
    std::unordered_set<tir::BasicBlock*> visited;
 };
+
+} // namespace
 
 REGISTER_PASS(SimplifyCFG);

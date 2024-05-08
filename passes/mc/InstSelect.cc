@@ -3,7 +3,7 @@
 #include "mc/InstSelectNode.h"
 #include "mc/MCFunction.h"
 #include "mc/Patterns.h"
-#include "../IRContextPass.h"
+#include "../IRPasses.h"
 #include "target/TargetDesc.h"
 #include "utils/PassManager.h"
 
@@ -41,7 +41,7 @@ private:
 
 private:
    void ComputeDependencies() override {
-      AddDependency(GetPass<IRContextPass>());
+      AddDependency(GetPass<passes::IRContext>());
       AddDependency(GetPass("mirbuilder"));
    }
 
@@ -54,7 +54,7 @@ private:
 /* ===--------------------------------------------------------------------=== */
 
 void InstSelect::Run() {
-   auto& IRCP = GetPass<IRContextPass>();
+   auto& IRCP = GetPass<passes::IRContext>();
    TD = &IRCP.TD();
    for(auto* F : IRCP.CU().functions()) {
       if(!F->hasBody()) continue;

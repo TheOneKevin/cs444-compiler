@@ -11,6 +11,7 @@
 #include "utils/BumpAllocator.h"
 #include "utils/Error.h"
 #include "utils/Generator.h"
+#include "utils/Utils.h"
 
 namespace utils {
 
@@ -43,13 +44,17 @@ public:
    /// @brief Function to override to run the pass
    virtual void Run() = 0;
    /// @brief Function to override to get the name (id) of the pass
-   virtual std::string_view Name() const { return ""; }
+   virtual std::string_view Name() const = 0;
    /// @brief Function to override to get the description of the pass
    virtual std::string_view Desc() const = 0;
+   /// @brief The tag for this pass
+   virtual int Tag() const { return 0; }
    /// @brief Preserve the analysis results of this pass
    void Preserve() { preserve = true; }
    /// @brief Should this pass be preserved?
    bool ShouldPreserve() const { return preserve; }
+   /// @brief Garbage collect any persistent resources. This is a FIXME(kevin)!
+   virtual void GC() {};
 
 public:
    enum class Lifetime { Managed, Temporary, TemporaryNoReuse };
@@ -62,8 +67,7 @@ protected:
    /// Also throws if multiple passes of type T are found.
    /// @tparam T The type of the pass
    /// @return T& The pass of type T
-   template <typename T>
-      requires PassType<T>
+   template <PassType T>
    T& GetPass();
 
    /// @brief Gets a single pass by name. Throws if no pass is found.
@@ -72,17 +76,34 @@ protected:
    /// @brief Gets all passes of type T. Throws if no pass is found.
    /// @tparam T The type of the pass
    /// @return A generator that yields all passes of type T
-   template <typename T>
-      requires PassType<T>
+   template <PassType T>
    Generator<T*> GetPasses();
 
    /// @brief Computes a dependency between this and another pass
    /// @param pass The pass to add as a dependency
    void AddDependency(Pass& pass);
 
-   CustomBufferResource* NewHeap(Lifetime);
+   /**
+    * @brief Obtains a new heap resource given the lifetime
+    *
+    * @param lifetime Dictates the lifetime of the heap resource
+    * @return CustomBufferResource* The heap resource
+    */
+   CustomBufferResource* NewHeap(Lifetime lifetime);
 
-   BumpAllocator& NewAlloc(Lifetime);
+   /**
+    * @brief Obtains a new bump allocator given the lifetime
+    *
+    * @param lifetime The lifetime of the bump allocator
+    * @return BumpAllocator& The bump allocator
+    */
+   BumpAllocator& NewAlloc(Lifetime lifetime);
+
+   /// @brief Gets the dispatcher of type T
+   template <DispatchType T>
+   T* GetDispatcher() {
+      return cast<T>(dispatcher);
+   }
 
 protected:
    friend class PassManager;
@@ -118,7 +139,7 @@ public:
    virtual ~PassDispatcher() = default;
    virtual std::string_view Name() = 0;
    virtual bool CanDispatch(Pass& pass) = 0;
-   virtual Generator<void*> Iterate() = 0;
+   virtual Generator<void*> Iterate(PassManager&) = 0;
 };
 
 /* ===--------------------------------------------------------------------=== */
@@ -129,7 +150,7 @@ class PassManager final {
    friend class Pass;
    struct Chunk {
       int left, right;
-      bool enabled;
+      PassDispatcher* dispatcher;
    };
    struct HeapResource;
 
@@ -157,24 +178,27 @@ public:
    /// @tparam T The type of the pass
    /// @param ...args The remaining arguments to pass to the pass constructor.
    /// The pass manager will be passed to the pass as the first argument.
-   template <typename T, typename... Args>
-      requires PassType<T>
+   template <PassType T, typename... Args>
    T& AddPass(Args&&... args);
    /// @brief Adds a dispatcher to the pass manager
    /// @tparam T The type of the dispatcher
    /// @param ...args The remaining arguments to pass to the dispatcher
    /// constructor. The pass manager will be passed to the dispatcher as the
    /// first argument.
-   template <typename T, typename... Args>
-      requires DispatchType<T>
+   template <DispatchType T, typename... Args>
    void AddDispatcher(Args&&... args);
    /// @brief Gets a reference to the diagnostic engine
    diagnostics::DiagnosticEngine& Diag() { return diag_; }
    /// @brief External method to get a pass by type. Can be used before the
    /// pass pipeline is run to set individual pass's properties.
-   template <typename T>
-      requires PassType<T>
+   template <PassType T>
    T& FindPass();
+   /// @brief Gets a single pass by name. Throws if no pass is found.
+   Pass& FindPass(std::string_view name) {
+      for(auto& pass : passes_)
+         if(!pass->Name().empty() && pass->Name() == name) return *pass;
+      throw FatalError("Pass not found: " + std::string{name});
+   }
    /// @brief
    CLI::Option* FindOption(std::string_view name);
    /// @brief
@@ -183,12 +207,11 @@ public:
    bool IsPassDisabled(Pass& p) { return p.enabled; }
    /// @brief Enables or disables a pass given the pass name
    void EnablePass(std::string_view name, bool enabled = true) {
-      getPass(name).enabled = enabled;
+      FindPass(name).enabled = enabled;
    }
    /// @brief Iterate through the pass names
-   Generator<std::pair<std::string_view, std::string_view>> PassNames() {
-      for(auto& pass : passes_)
-         if(!pass->Name().empty()) co_yield {pass->Name(), pass->Desc()};
+   Generator<Pass const*> Passes() {
+      for(auto& pass : passes_) co_yield pass.get();
    }
    /// @returns True if the pass manager has a pass with the given name
    bool HasPass(std::string_view name) {
@@ -199,23 +222,14 @@ public:
 
 private:
    // Internal function used by Pass to find a pass
-   template <typename T>
-      requires PassType<T>
+   template <PassType T>
    T& getPass(Pass& pass);
    // Shared function used by getPass and FindPass
-   template <typename T>
-      requires PassType<T>
+   template <PassType T>
    T& getPass(bool checkInit);
    // Internal function to get all passes of a type
-   template <typename T>
-      requires PassType<T>
+   template <PassType T>
    Generator<T*> getPasses(Pass& pass);
-   // Gets a single pass by name. Throws if no pass is found.
-   Pass& getPass(std::string_view name) {
-      for(auto& pass : passes_)
-         if(!pass->Name().empty() && pass->Name() == name) return *pass;
-      throw FatalError("Pass not found: " + std::string{name});
-   }
 
 private:
    void runPassLifeCycle(Pass& pass, int left, int right, bool lastIter);
@@ -268,26 +282,22 @@ private:
 // Template implementations
 /* ===--------------------------------------------------------------------=== */
 
-template <typename T>
-   requires PassType<T>
+template <PassType T>
 T& Pass::GetPass() {
    return PM().getPass<T>(*this);
 }
 
-template <typename T>
-   requires PassType<T>
+template <PassType T>
 Generator<T*> Pass::GetPasses() {
    return PM().getPasses<T>(*this);
 }
 
-template <typename T>
-   requires PassType<T>
+template <PassType T>
 T& PassManager::FindPass() {
    return getPass<T>(true);
 }
 
-template <typename T, typename... Args>
-   requires PassType<T>
+template <PassType T, typename... Args>
 T& PassManager::AddPass(Args&&... args) {
    using namespace std;
    passes_.emplace_back(make_unique<T>(*this, std::forward<Args>(args)...));
@@ -295,15 +305,13 @@ T& PassManager::AddPass(Args&&... args) {
    return result;
 }
 
-template <typename T, typename... Args>
-   requires DispatchType<T>
+template <DispatchType T, typename... Args>
 void PassManager::AddDispatcher(Args&&... args) {
    using namespace std;
-   dispatchers_.emplace_back(make_unique<T>(*this, std::forward<Args>(args)...));
+   dispatchers_.emplace_back(make_unique<T>(std::forward<Args>(args)...));
 }
 
-template <typename T>
-   requires PassType<T>
+template <PassType T>
 T& PassManager::getPass(bool checkInit) {
    T* result = nullptr;
    for(auto& pass : passes_) {
@@ -324,8 +332,7 @@ T& PassManager::getPass(bool checkInit) {
    return *result;
 }
 
-template <typename T>
-   requires PassType<T>
+template <PassType T>
 T& PassManager::getPass(Pass& pass) {
    T& result = getPass<T>(false);
    // If the requester is running, the result must be valid
@@ -335,8 +342,7 @@ T& PassManager::getPass(Pass& pass) {
    return result;
 }
 
-template <typename T>
-   requires PassType<T>
+template <PassType T>
 Generator<T*> PassManager::getPasses(Pass&) {
    bool found = false;
    for(auto& pass : passes_) {
@@ -360,18 +366,20 @@ Generator<T*> PassManager::getPasses(Pass&) {
 /**
  * @brief Registers NS::T with the pass manager.
  */
-#define REGISTER_PASS_NS(NS, T) \
-   utils::Pass& New##T(utils::PassManager& PM) { return PM.AddPass<NS::T>(); }
+#define REGISTER_PASS_NS(NS, T)                        \
+   utils::Pass& New##T##Pass(utils::PassManager& PM) { \
+      return PM.AddPass<NS::T>();                      \
+   }
 
 /**
  * @brief Registers T with the pass manager.
  */
 #define REGISTER_PASS(T) \
-   utils::Pass& New##T(utils::PassManager& PM) { return PM.AddPass<T>(); }
+   utils::Pass& New##T##Pass(utils::PassManager& PM) { return PM.AddPass<T>(); }
 
 /**
  * @brief Forward declares a "new pass" function.
  */
-#define DECLARE_PASS(T) utils::Pass& New##T(utils::PassManager& PM);
+#define DECLARE_PASS(T) utils::Pass& New##T##Pass(utils::PassManager& PM);
 
 } // namespace utils

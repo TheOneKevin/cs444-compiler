@@ -1,25 +1,25 @@
-#include "../IRContextPass.h"
+#include "../IRPasses.h"
+#include "tir/CompilationUnit.h"
 #include "tir/Constant.h"
 #include "utils/PassManager.h"
 
 using std::string_view;
-using utils::Pass;
 using utils::PassManager;
 
-class GlobalDCE final : public Pass {
+class GlobalDCE final : public passes::CompilationUnit {
 public:
-   GlobalDCE(PassManager& PM) noexcept : Pass(PM) {}
-   void Run() override {
-      tir::CompilationUnit& CU = GetPass<IRContextPass>().CU();
-      bool changed;
-      do {
-         changed = removeAllGlobals(CU);
-      } while(changed);
-   }
+   GlobalDCE(PassManager& PM) noexcept : passes::CompilationUnit(PM) {}
    string_view Name() const override { return "globaldce"; }
    string_view Desc() const override { return "Global Dead Code Elimination"; }
 
 private:
+   void runOnCompilationUnit(tir::CompilationUnit* CU) override {
+      bool changed;
+      do {
+         changed = removeAllGlobals(*CU);
+      } while(changed);
+   }
+
    bool removeAllGlobals(tir::CompilationUnit& CU) {
       std::vector<std::string> toRemove;
       for(auto p : CU.global_objects_kv()) {
@@ -43,11 +43,6 @@ private:
          CU.removeGlobalObject(name);
       }
       return toRemove.size() > 0;
-   }
-
-private:
-   void ComputeDependencies() override {
-      AddDependency(GetPass<IRContextPass>());
    }
 };
 
