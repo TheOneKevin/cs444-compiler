@@ -81,6 +81,7 @@ Instruction* BasicBlock::getFirstInsertionPoint() const {
 }
 
 std::ostream& BasicBlock::print(std::ostream& os) const {
+   os << "^";
    printName(os) << ":";
    for(auto inst : *this) {
       os << "\n    ";

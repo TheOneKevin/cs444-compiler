@@ -43,7 +43,6 @@ public:
       name_ = std::pmr::string{name, ctx_.alloc()};
    }
    std::ostream& printName(std::ostream& os) const {
-      os << "%";
       if(name_) os << name_.value() << ".";
       os << valueID_;
       return os;

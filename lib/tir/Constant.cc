@@ -18,17 +18,17 @@ ConstantNullPointer* Constant::CreateNullPointer(Context& ctx) {
 }
 
 std::ostream& ConstantNullPointer::print(std::ostream& os) const {
-   os << "ptr* null";
+   os << "null";
    return os;
 }
 
 std::ostream& Undef::print(std::ostream& os) const {
-   os << *type() << " undef";
+   os << "undef";
    return os;
 }
 
 std::ostream& ConstantInt::print(std::ostream& os) const {
-   os << *type() << " " << zextValue();
+   os << zextValue() << ":" << *type();
    return os;
 }
 
@@ -43,8 +43,8 @@ Argument::Argument(Function* parent, Type* type, unsigned index)
 }
 
 std::ostream& Argument::print(std::ostream& os) const {
-   os << *type() << " ";
-   printName(os);
+   os << "%";
+   printName(os)  << ":" << *type();
    return os;
 }
 

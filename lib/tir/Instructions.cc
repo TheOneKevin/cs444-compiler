@@ -6,13 +6,23 @@
 
 namespace tir {
 
-static std::ostream& printNameOrConst(std::ostream& os, Value* val) {
+static std::ostream& printNameOrConst(std::ostream& os, Value const* val) {
    if(val->isConstant()) {
       os << *val;
    } else {
-      if(!val->type()->isLabelType()) os << *val->type() << " ";
+      if(val->type()->isLabelType())
+         os << "^";
+      else
+         os << "%";
       val->printName(os);
+      if(!val->type()->isLabelType()) os << ":" << *val->type();
    }
+   return os;
+}
+
+static std::ostream& printSelf(std::ostream& os, Value const* val) {
+   os << "%";
+   val->printName(os);
    return os;
 }
 
@@ -98,7 +108,7 @@ StoreInst::StoreInst(Context& ctx, Value* val, Value* ptr)
 
 std::ostream& StoreInst::print(std::ostream& os) const {
    os << "store ";
-   printNameOrConst(os, getChild(0)) << ", ";
+   printNameOrConst(os, getChild(0)) << " to ";
    printNameOrConst(os, getChild(1));
    return os;
 }
@@ -113,8 +123,8 @@ LoadInst::LoadInst(Context& ctx, Type* type, Value* ptr) : Instruction{ctx, type
 }
 
 std::ostream& LoadInst::print(std::ostream& os) const {
-   printName(os) << " = ";
-   os << "load " << *type() << ", ";
+   printSelf(os, this) << " = ";
+   os << "load:" << *type() << " ";
    printNameOrConst(os, getChild(0));
    return os;
 }
@@ -131,8 +141,10 @@ CallInst::CallInst(Context& ctx, Value* callee, utils::range_ref<Value*> args)
 }
 
 std::ostream& CallInst::print(std::ostream& os) const {
-   if(!type()->isVoidType()) printName(os) << " = ";
-   os << "call @" << getChild(0)->name() << "(";
+   if(!type()->isVoidType()) printSelf(os, this) << " = ";
+   os << "call";
+   if(!type()->isVoidType()) os << ":" << *type();
+   os << " @" << getChild(0)->name() << "(";
    for(unsigned i = 1; i < numChildren(); ++i) {
       printNameOrConst(os, getChild(i));
       if(i != numChildren() - 1) os << ", ";
@@ -164,13 +176,13 @@ BinaryInst::BinaryInst(Context& ctx, BinOp binop, Value* lhs, Value* rhs)
 }
 
 std::ostream& BinaryInst::print(std::ostream& os) const {
-   printName(os) << " = ";
+   printSelf(os, this) << " = ";
    const char* name = BinOp_to_string(binop(), "unknown");
    // Print name lower case
    for(unsigned i = 0; name[i] != '\0'; ++i)
       os << static_cast<char>(tolower(name[i]));
    // Print operands
-   os << " " << *type() << ", ";
+   os << ":" << *type() << " ";
    printNameOrConst(os, getChild(0)) << ", ";
    printNameOrConst(os, getChild(1));
    return os;
@@ -188,14 +200,14 @@ CmpInst::CmpInst(Context& ctx, Predicate pred, Value* lhs, Value* rhs)
 }
 
 std::ostream& CmpInst::print(std::ostream& os) const {
-   printName(os) << " = cmp ";
+   printSelf(os, this) << " = cmp:" << *type() << " ";
    auto pred = get<Predicate>();
    const char* name = Predicate_to_string(pred, "unknown");
    // Print name lower case
    for(unsigned i = 0; name[i] != '\0'; ++i)
       os << static_cast<char>(tolower(name[i]));
    // Print operands
-   os << " " << *type() << " ";
+   os << " ";
    printNameOrConst(os, getChild(0)) << ", ";
    printNameOrConst(os, getChild(1));
    return os;
@@ -212,8 +224,7 @@ AllocaInst::AllocaInst(Context& ctx, Type* type)
 
 std::ostream& AllocaInst::print(std::ostream& os) const {
    auto allocType_ = get<Type*>();
-   return printName(os) << " = "
-                        << "alloca " << *allocType_;
+   return printSelf(os, this) << " = " << "alloca type " << *allocType_;
 }
 
 /* ===--------------------------------------------------------------------=== */
@@ -227,14 +238,14 @@ ICastInst::ICastInst(Context& ctx, CastOp op, Value* val, Type* destTy)
 }
 
 std::ostream& ICastInst::print(std::ostream& os) const {
-   printName(os) << " = ";
+   printSelf(os, this) << " = ";
    os << "icast ";
    const char* name = CastOp_to_string(castop(), "unknown");
    // Print name lower case
    for(unsigned i = 0; name[i] != '\0'; ++i)
       os << static_cast<char>(tolower(name[i]));
    os << " ";
-   printNameOrConst(os, getChild(0)) << " to " << *type() << "";
+   printNameOrConst(os, getChild(0)) << " to type " << *type();
    return os;
 }
 
@@ -260,8 +271,8 @@ GetElementPtrInst::GetElementPtrInst(Context& ctx, Value* ptr, Type* ty,
 }
 
 std::ostream& GetElementPtrInst::print(std::ostream& os) const {
-   printName(os) << " = ";
-   os << "getelementptr " << *getContainedType() << ", ";
+   printSelf(os, this) << " = ";
+   os << "getelementptr type " << *getContainedType() << ", ";
    printNameOrConst(os, getChild(0));
    for(unsigned i = 1; i < numChildren(); ++i) {
       os << ", ";
@@ -291,7 +302,7 @@ PhiNode::PhiNode(Context& ctx, Type* type, utils::range_ref<Value*> values,
 }
 
 std::ostream& PhiNode::print(std::ostream& os) const {
-   printName(os) << " = ";
+   printSelf(os, this) << " = ";
    os << "phi " << *type() << ", ";
    for(unsigned i = 0; i < numChildren(); i += 2) {
       printNameOrConst(os, getChild(i)) << " [";

@@ -7,6 +7,7 @@
 
 #include "AllPasses.h"
 #include "diagnostics/Diagnostics.h"
+#include "passes/IRPasses.h"
 #include "third-party/CLI11.h"
 #include "utils/PassManager.h"
 
@@ -277,7 +278,7 @@ int main(int argc, char** argv) {
    // Dump the generated code to the output file and exit when "-s" is set
    if(optCodeGen) {
       std::ofstream out{optOutputFile};
-      // CU.print(out);
+      PM.FindPass<passes::IRContext>().CU().print(out);
       out.close();
       return 0;
    }

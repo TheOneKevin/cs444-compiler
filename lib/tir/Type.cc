@@ -23,7 +23,7 @@ std::ostream& Type::print(std::ostream& os) const {
    } else if(isFunctionType()) {
       os << "function";
    } else if(isPointerType()) {
-      os << "ptr*";
+      os << "ptr";
    } else if(isArrayType()) {
       auto ty = static_cast<const ArrayType*>(this);
       os << "[" << ty->getLength() << " x " << *ty->getElementType() << "]";
